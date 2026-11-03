@@ -16,6 +16,7 @@ O que faz
 Rotas
   GET /api/health
   GET /api/state                          tabela, jogos, elencos e últimas escalações
+  GET /api/rankings        [?tipo=gols|ataque|defesa|amarelos|vermelhos]   rankings do campeonato
   GET /api/news            [?club=id]     manchetes (título, fonte, data e link)
   GET /api/minuto-a-minuto/<id_espn>      narração completa do jogo até agora
   GET /api/minuto-a-minuto/<id_espn>/stream   o mesmo, ao vivo (Server-Sent Events)
@@ -135,10 +136,77 @@ def update_standings_and_fixtures():
                     g[8] = {"state": st["state"], "clock": comp["status"].get("displayClock"), "detail": st.get("shortDetail")}
                     if st["state"] == "in":  # ainda em andamento: placar parcial, não final
                         g[8]["live"] = True
+    add_new_cards(table, old, fixtures)
     rnd = max(int(k) for k in fixtures)
     with lock:
         state.update(standings=table, fixtures=fixtures, round=rnd, scorers=real["scorers"], updated=time.strftime("%d/%m/%Y às %H:%M"))
     log("tabela e jogos atualizados")
+
+
+cards_by_event = {}  # cartões de cada jogo encerrado (não mudam mais, então ficam guardados)
+
+
+def match_cards(eid):
+    if eid not in cards_by_event:
+        d = summary(eid)
+        out = {}
+        for t in ((d or {}).get("boxscore") or {}).get("teams", []):
+            st = {x["name"]: x.get("displayValue") for x in t.get("statistics", [])}
+            out[t["team"]["id"]] = (int(st.get("yellowCards") or 0), int(st.get("redCards") or 0))
+        if not out:
+            return {}
+        cards_by_event[eid] = out
+    return cards_by_event[eid]
+
+
+def add_new_cards(table, base, fixtures):
+    """Cartões: a base é a última tabela da CBF. Para cada clube que já jogou mais vezes do que
+    nessa base, soma os cartões dos jogos encerrados mais recentes (súmula da ESPN)."""
+    done = []
+    for games in fixtures.values():
+        for g in games:
+            if len(g) > 8 and g[7] and isinstance(g[8], dict) and g[8].get("state") == "post":
+                done.append(g)
+    done.sort(key=lambda g: (g[4] or "", g[5] or ""), reverse=True)
+    for row in table:
+        cid, j = row[0], row[2]
+        b = base.get(cid)
+        if not b:
+            continue
+        extra = j - b[2]
+        if extra <= 0:
+            continue
+        espn = CLUBS[cid]["espn"]
+        mine = [g for g in done if cid in (g[0], g[1])][:extra]
+        for g in mine:
+            try:
+                y, r = match_cards(g[7]).get(espn, (0, 0))
+            except Exception as ex:
+                log("cartões", g[7], ex)
+                continue
+            row[8] += y
+            row[9] += r
+
+
+RANK_ORDER = {
+    "gols": ("gols marcados", lambda r: (-r["gf"], -r["sg"]), lambda r: r["gf"]),
+    "ataque": ("gols marcados por jogo", lambda r: (-r["gf"] / max(r["j"], 1), -r["gf"]), lambda r: round(r["gf"] / max(r["j"], 1), 2)),
+    "defesa": ("gols sofridos por jogo", lambda r: (r["ga"] / max(r["j"], 1), r["ga"]), lambda r: round(r["ga"] / max(r["j"], 1), 2)),
+    "amarelos": ("cartões amarelos", lambda r: (-r["ca"], -r["cv"]), lambda r: r["ca"]),
+    "vermelhos": ("cartões vermelhos", lambda r: (-r["cv"], -r["ca"]), lambda r: r["cv"]),
+}
+
+
+def rankings(tipo=None):
+    with lock:
+        table, updated, rnd = state["standings"] or [], state["updated"], state["round"]
+    rows = [dict(id=t[0], pos=i + 1, p=t[1], j=t[2], gf=t[6], ga=t[7], sg=t[6] - t[7], ca=t[8], cv=t[9]) for i, t in enumerate(table)]
+    out = {}
+    for k, (label, key, val) in RANK_ORDER.items():
+        if tipo and k != tipo:
+            continue
+        out[k] = {"criterio": label, "ranking": [dict(r, rank=i + 1, valor=val(r)) for i, r in enumerate(sorted(rows, key=key))]}
+    return {"updated": updated, "round": rnd, "rankings": out}
 
 
 def update_squads():
@@ -384,6 +452,12 @@ class Handler(SimpleHTTPRequestHandler):
                 if not s.get("standings"):
                     return self.send_json({"ok": False, "message": "carregando dados"}, 503)
                 return self.send_json(s)
+            if parts[1:] == ["rankings"]:
+                tipo = (q.get("tipo") or [None])[0]
+                if tipo and tipo not in RANK_ORDER:
+                    return self.send_json({"ok": False, "message": f"tipo deve ser um de: {', '.join(RANK_ORDER)}"}, 400)
+                r = rankings(tipo)
+                return self.send_json(r) if r["rankings"] and r["updated"] else self.send_json({"ok": False, "message": "carregando dados"}, 503)
             if parts[1:] == ["news"]:
                 with lock:
                     club = (q.get("club") or [None])[0]

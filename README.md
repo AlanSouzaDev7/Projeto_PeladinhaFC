@@ -27,7 +27,7 @@ Sem a API (por exemplo, `python -m http.server`), o site funciona com os dados g
 | **Clubes** | 20 páginas no tema de cada clube, com uma **aparição animada do escudo** inspirada no que ele significa. O Cruzeiro tem a versão em tela cheia (canvas): a câmera viaja pela Via Láctea até o Cruzeiro do Sul e as cinco estrelas formam o escudo. |
 | **Elenco** | Elencos reais, escalação do último jogo de cada clube e campinho interativo: arraste jogadores para trocar ou para qualquer ponto da grama; 8 formações. |
 | **Bora pro jogo** | Prancheta tática comparando dois times com e sem a bola, leitura tática e tendência do jogo (modelo simples). |
-| **Tabela** | Classificação, números do campeonato e artilharia. |
+| **Tabela** | Classificação, números do campeonato e artilharia. Cada número (gols, ataque, defesa, amarelos, vermelhos) abre uma **subpágina de ranking** dos 20 clubes; passar o mouse ou segurar o dedo mostra uma prévia. |
 | **Partida** | Informações, comparação no campeonato e **Minuto a minuto** ao vivo. |
 
 ## API (`server/placar_api.py`)
@@ -35,6 +35,7 @@ Sem a API (por exemplo, `python -m http.server`), o site funciona com os dados g
 | Rota | Retorno |
 |---|---|
 | `GET /api/state` | tabela, jogos da rodada (com placar ao vivo), elencos e últimas escalações |
+| `GET /api/rankings?tipo=gols\|ataque\|defesa\|amarelos\|vermelhos` | rankings do campeonato; os cartões somam a súmula de cada jogo encerrado depois da última tabela da CBF |
 | `GET /api/news?club=flamengo` | manchetes recentes do clube (título, fonte, data e link) |
 | `GET /api/minuto-a-minuto/<id>` | narração do jogo até o momento |
 | `GET /api/minuto-a-minuto/<id>/stream` | narração ao vivo via Server-Sent Events |

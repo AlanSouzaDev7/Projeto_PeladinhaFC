@@ -433,21 +433,98 @@
     </div>`;
   }
 
-  /* números do campeonato, calculados da tabela real */
+  /* ---------- rankings do campeonato (subpáginas de #/tabela) ----------
+     cada ranking: título, ordem, valor principal e colunas extras */
+  const avg = (n, j) => (j ? n / j : 0).toFixed(2).replace(".", ",");
+  const RANKINGS = {
+    gols: {
+      title: "Gols por clube", kpi: "Gols", lead: "Quantos gols cada clube marcou no Brasileirão, do que mais marcou ao que menos marcou.",
+      sort: (a, b) => b.gf - a.gf || b.sg - a.sg, value: (r) => r.gf, unit: "gols marcados",
+      cols: [["Sofridos", (r) => r.ga], ["Saldo", (r) => (r.sg > 0 ? "+" : "") + r.sg], ["Nos jogos", (r) => r.gf + r.ga]],
+    },
+    ataque: {
+      title: "Melhor ataque", kpi: "Melhor ataque", lead: "Do melhor ao pior ataque, pela média de gols marcados por jogo.",
+      sort: (a, b) => b.gf / b.j - a.gf / a.j || b.gf - a.gf, value: (r) => avg(r.gf, r.j), unit: "gols por jogo",
+      cols: [["Gols", (r) => r.gf], ["Jogos", (r) => r.j]],
+    },
+    defesa: {
+      title: "Melhor defesa", kpi: "Melhor defesa", lead: "Da melhor à pior defesa, pela média de gols sofridos por jogo (quanto menos, melhor).",
+      sort: (a, b) => a.ga / a.j - b.ga / b.j || a.ga - b.ga, value: (r) => avg(r.ga, r.j), unit: "sofridos por jogo", invert: true,
+      cols: [["Sofridos", (r) => r.ga], ["Jogos", (r) => r.j]],
+    },
+    amarelos: {
+      title: "Cartões amarelos", kpi: "Mais amarelos", lead: "Do clube com mais cartões amarelos ao que tem menos.",
+      sort: (a, b) => b.ca - a.ca || b.cv - a.cv, value: (r) => r.ca, unit: "amarelos", card: "y",
+      cols: [["Por jogo", (r) => avg(r.ca, r.j)], ["Vermelhos", (r) => r.cv]],
+    },
+    vermelhos: {
+      title: "Cartões vermelhos", kpi: "Mais vermelhos", lead: "Do clube com mais cartões vermelhos ao que tem menos.",
+      sort: (a, b) => b.cv - a.cv || b.ca - a.ca, value: (r) => r.cv, unit: "vermelhos", card: "r",
+      cols: [["Amarelos", (r) => r.ca], ["Jogos", (r) => r.j]],
+    },
+  };
+  const ranked = (key) => [...state.standings].sort(RANKINGS[key].sort);
+
+  /* números do campeonato, calculados da tabela real; cada cartão leva ao ranking completo */
   function leagueStats() {
     const t = state.standings;
     const games = t.reduce((a, r) => a + r.j, 0) / 2;
     const goals = t.reduce((a, r) => a + r.gf, 0);
     const best = (k, dir = 1) => [...t].sort((x, y) => dir * (y[k] - x[k]))[0];
     const att = best("gf"), def = best("ga", -1), yel = best("ca"), red = best("cv");
-    const tile = (i, label, value, sub, c) => `<div class="kpi" style="--i:${i}${c ? `;--c1:${c.colors[0]}` : ""}"><small>${label}</small><b>${value}</b><em>${c ? `<span style="display:inline-flex;align-items:center;gap:6px">${crest(c, 16)}${sub}</span>` : sub}</em></div>`;
+    const tile = (i, key, value, sub, c) => `<a class="kpi kpi-link" href="#/tabela/${key}" data-rank-preview="${key}" style="--i:${i}${c ? `;--c1:${c.colors[0]}` : ""}">
+        <i class="kpi-sheet" aria-hidden="true"></i><i class="kpi-sheet" aria-hidden="true"></i>
+        <small>${RANKINGS[key].kpi}</small><b>${value}</b><em>${c ? `<span style="display:inline-flex;align-items:center;gap:6px">${crest(c, 16)}${sub}</span>` : sub}</em>
+        <span class="kpi-more">Ver ranking <svg viewBox="0 0 24 24" width="14" height="14"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>`;
     return `<div class="kpis league-kpis">
-      ${tile(0, "Gols", goals, `${(goals / games).toFixed(2)} por jogo · ${games} jogos`)}
-      ${tile(1, "Melhor ataque", att.gf, byId[att.id].abbr, byId[att.id])}
-      ${tile(2, "Melhor defesa", def.ga, `${byId[def.id].abbr} · gols sofridos`, byId[def.id])}
-      ${tile(3, "Mais amarelos", yel.ca, byId[yel.id].abbr, byId[yel.id])}
-      ${tile(4, "Mais vermelhos", red.cv, byId[red.id].abbr, byId[red.id])}
-    </div>`;
+      ${tile(0, "gols", goals, `${(goals / games).toFixed(2)} por jogo · ${games} jogos`)}
+      ${tile(1, "ataque", att.gf, byId[att.id].abbr, byId[att.id])}
+      ${tile(2, "defesa", def.ga, `${byId[def.id].abbr} · gols sofridos`, byId[def.id])}
+      ${tile(3, "amarelos", yel.ca, byId[yel.id].abbr, byId[yel.id])}
+      ${tile(4, "vermelhos", red.cv, byId[red.id].abbr, byId[red.id])}
+    </div>
+    <div class="rank-preview" id="rank-preview" role="tooltip" aria-hidden="true"></div>`;
+  }
+
+  /* prévia: os 5 primeiros do ranking e o último, mostrada ao passar o mouse ou segurar o dedo */
+  function rankPreviewHTML(key) {
+    const R = RANKINGS[key], list = ranked(key), top = list.slice(0, 5), last = list[list.length - 1];
+    const row = (r, i) => `<li style="--c1:${display(byId[r.id])}"><span class="rp-pos">${i}</span>${crest(byId[r.id], 18)}<span class="rp-nm">${byId[r.id].abbr}</span><b>${R.value(r)}</b></li>`;
+    return `<div class="rp-h"><b>${R.title}</b><small>${R.unit}</small></div>
+      <ol>${top.map((r, i) => row(r, i + 1)).join("")}</ol>
+      <div class="rp-gap">⋯</div><ol class="rp-last">${row(last, list.length)}</ol>
+      <div class="rp-foot">Abrir o ranking completo ›</div>`;
+  }
+
+  function pageRanking(key) {
+    const R = RANKINGS[key];
+    if (!R) return pageNotFound();
+    const list = ranked(key), vals = list.map((r) => +String(R.value(r)).replace(",", "."));
+    // barra cheia para o líder do ranking (na defesa, quem sofre menos)
+    const max = Math.max(...vals) || 1, min = Math.min(...vals.filter((v) => v > 0)) || 1;
+    const pct = (v) => Math.max(3, R.invert ? (v ? (min / v) * 100 : 100) : (v / max) * 100).toFixed(1);
+    const chips = Object.entries(RANKINGS).map(([k, x]) => `<a class="chip ${k === key ? "on" : ""}" href="#/tabela/${k}">${x.title}</a>`).join("");
+    const podium = [1, 0, 2].map((i) => {
+      const r = list[i], c = byId[r.id];
+      return `<a class="podium-step p${i + 1}" href="#/clube/${c.id}" style="--c1:${display(c)};--i:${i}">
+        ${crest(c, i ? 54 : 72)}<b>${R.value(r)}</b><span>${c.abbr}</span><i>${i + 1}º</i></a>`;
+    }).join("");
+    const rows = list.map((r, i) => {
+      const c = byId[r.id], v = vals[i];
+      return `<li class="rank-row" style="--c1:${display(c)};--i:${Math.min(i, 14)}">
+        <span class="rk-pos">${i + 1}</span>
+        <a class="rk-club" href="#/clube/${c.id}">${crest(c, 26)}<span><b>${c.abbr}</b><small>${r.pos}º na tabela</small></span></a>
+        <span class="rk-bar"><i data-w="${pct(v)}"></i></span>
+        <b class="rk-val">${R.card ? `<i class="rk-card ${R.card}"></i>` : ""}${R.value(r)}</b>
+        ${R.cols.map(([l, f]) => `<span class="rk-col"><small>${l}</small>${f(r)}</span>`).join("")}
+      </li>`;
+    }).join("");
+    return `<div class="page-head"><div>
+        <a class="back-link" href="#/tabela">‹ Classificação</a>
+        <div class="eyebrow">Brasileirão Série A · ${ROUND}ª rodada · ranking</div><h1>${R.title}</h1><p>${R.lead}</p></div></div>
+      <div class="chips rank-chips">${chips}</div>
+      <div class="podium">${podium}</div>
+      <div class="card"><ol class="rank-list">${rows}</ol>${sourceNote}</div>`;
   }
 
   function pageTable() {
@@ -519,13 +596,13 @@
       r.page === "clubes" ? pageClubs() :
       r.page === "clube" ? pageClub(r.id, r.tab) :
       r.page === "partida" ? pageMatch(r.id) :
-      r.page === "tabela" ? pageTable() :
+      r.page === "tabela" ? (r.id ? pageRanking(r.id) : pageTable()) :
       r.page === "bora-pro-jogo" ? LINEUP.pageBora(r.id, r.tab) :
       r.page === "sobre" ? pageAbout() : pageNotFound();
     view.innerHTML = html;
     const navKey = r.page === "" || r.page === "partida" ? "home" : r.page === "clube" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    document.title = club ? `${club.name} — Placar` : r.page === "partida" ? "Partida — Placar" : r.page === "bora-pro-jogo" ? "Bora pro jogo — Placar" : "Placar — Futebol Brasileiro";
+    document.title = club ? `${club.name} — Placar` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — Placar` : r.page === "partida" ? "Partida — Placar" : r.page === "bora-pro-jogo" ? "Bora pro jogo — Placar" : "Placar — Futebol Brasileiro";
     enhance();
   }
 
@@ -600,7 +677,7 @@
       io.unobserve(e.target);
     }), { threshold: 0.12 });
     $$(".reveal").forEach((el) => io.observe(el));
-    requestAnimationFrame(() => $$(".bar i[data-w]").forEach((i) => { if (!i.closest(".reveal")) i.style.width = i.dataset.w + "%"; }));
+    requestAnimationFrame(() => $$(".bar i[data-w], .rk-bar i[data-w]").forEach((i) => { if (!i.closest(".reveal")) i.style.width = i.dataset.w + "%"; }));
     // inclinação 3D nos cartões
     $$("[data-tilt]").forEach((el) => {
       el.addEventListener("pointermove", (e) => {
@@ -613,6 +690,61 @@
       });
       el.addEventListener("pointerleave", () => { el.style.setProperty("--tilt-x", "0deg"); el.style.setProperty("--tilt-y", "0deg"); });
     });
+    rankPreviews();
+  }
+
+  /* prévia dos rankings: com o mouse, aparece ao passar por cima; no toque, segurar o dedo mostra,
+     deslizar troca de cartão e soltar abre o ranking. Um toque rápido abre a subpágina direto. */
+  function rankPreviews() {
+    const tip = $("#rank-preview"), tiles = $$("[data-rank-preview]");
+    if (!tip || !tiles.length) return;
+    let cur = null, hold = null, held = false;
+    const show = (el) => {
+      if (cur === el) return;
+      tiles.forEach((t) => t.classList.toggle("peek", t === el));
+      cur = el;
+      tip.innerHTML = rankPreviewHTML(el.dataset.rankPreview);
+      tip.style.setProperty("--c1", getComputedStyle(el).getPropertyValue("--c1").trim() || "var(--accent)");
+      const b = el.getBoundingClientRect(), w = Math.min(280, innerWidth - 24);
+      tip.style.width = w + "px";
+      tip.style.left = Math.max(12, Math.min(innerWidth - w - 12, b.left + b.width / 2 - w / 2)) + "px";
+      const h = tip.offsetHeight || 300;
+      tip.style.top = (b.bottom + 10 + h < innerHeight ? b.bottom + 10 : Math.max(12, b.top - 10 - h)) + "px";
+      tip.classList.add("open");
+      tip.setAttribute("aria-hidden", "false");
+    };
+    const hide = () => { cur = null; tiles.forEach((t) => t.classList.remove("peek")); tip.classList.remove("open"); tip.setAttribute("aria-hidden", "true"); };
+    tiles.forEach((el) => {
+      el.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") show(el); });
+      el.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") hide(); });
+      el.addEventListener("focus", () => show(el));
+      el.addEventListener("blur", hide);
+      el.addEventListener("pointerdown", (e) => {
+        if (e.pointerType === "mouse") return;
+        held = false;
+        clearTimeout(hold);
+        hold = setTimeout(() => { held = true; navigator.vibrate?.(8); show(el); }, 260);
+      });
+      // depois de segurar, quem navega é o "soltar" abaixo; o clique nativo é ignorado
+      el.addEventListener("click", (e) => { if (held) e.preventDefault(); });
+      el.addEventListener("contextmenu", (e) => e.preventDefault());
+    });
+    const strip = tiles[0].parentNode;
+    strip.addEventListener("pointermove", (e) => {
+      if (e.pointerType === "mouse" || !held) return;
+      const t = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-rank-preview]");
+      if (t) show(t);
+    });
+    strip.addEventListener("touchmove", (e) => { if (held) e.preventDefault(); }, { passive: false });
+    strip.addEventListener("pointerup", (e) => {
+      if (e.pointerType === "mouse") return;
+      clearTimeout(hold);
+      if (!held) return;
+      const t = cur; hide();
+      setTimeout(() => { held = false; if (t) location.hash = t.getAttribute("href"); }, 30);
+    });
+    strip.addEventListener("pointercancel", () => { clearTimeout(hold); if (held) hide(); held = false; });
+    addEventListener("scroll", () => { if (!held) hide(); }, { passive: true });
   }
 
   /* ---------- eventos delegados ---------- */
@@ -706,12 +838,12 @@
      ========================================================================== */
   const refresh = () => {
     ({ ROUND, ROUNDS } = window.PD);
-    const sig = () => state.matches.map((m) => `${m.status}${m.hs}${m.as}${m.clock}`).join();
+    const sig = () => state.matches.map((m) => `${m.status}${m.hs}${m.as}${m.clock}`).join() + (state.route.page === "tabela" ? JSON.stringify(state.standings) : "");
     const before = sig();
     state.matches = realMatches(ROUND);
     state.standings = buildStandings();
     // não redesenha a página da partida (o minuto a minuto atualiza sozinho) nem durante a montagem do time
-    if (sig() !== before && ["", "clube"].includes(state.route.page) && state.route.tab !== "elenco") render();
+    if (sig() !== before && ["", "clube", "tabela"].includes(state.route.page) && state.route.tab !== "elenco") render();
   };
   window.addEventListener("placar:data", refresh);
   setInterval(() => {
