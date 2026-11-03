@@ -253,7 +253,7 @@
 
   /* bordão de cada clube, mostrado no topo da página do clube */
   const MOTTO = {
-    cruzeiro: "Cabuloso, sob o Cruzeiro do Sul", flamengo: "Raça, amor e paixão", "atletico-mg": "Eu acredito!",
+    cruzeiro: "Tão combatido, jamais vencido", flamengo: "Raça, amor e paixão", "atletico-mg": "Eu acredito!",
     "athletico-pr": "É o Furacão!", bahia: "Esquadrão de Aço", botafogo: "O Glorioso da Estrela Solitária",
     bragantino: "Massa Bruta", chapecoense: "Vamos, vamos, Chape!", corinthians: "Aqui é Corinthians!",
     coritiba: "Vamos, Coxa!", fluminense: "Time de guerreiros", gremio: "Imortal Tricolor",
