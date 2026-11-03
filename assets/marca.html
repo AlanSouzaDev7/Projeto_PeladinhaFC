@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PLACAR. — Marca</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg: #0b0f17; --surface: #141b28; --line: #243045; --text: #e8edf6; --text-2: #9aa6bb; --brand: #4f6bff; --live: #ff3b5c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Archivo", system-ui, sans-serif; }
+  .sheet { width: 1440px; padding: 72px; }
+  .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--brand); }
+  h1 { font-weight: 900; font-stretch: 70%; font-size: 64px; line-height: .95; margin: 10px 0 8px; text-transform: uppercase; }
+  .lead { color: var(--text-2); font-size: 17px; max-width: 760px; margin: 0 0 40px; }
+  .grid { display: grid; gap: 20px; }
+  .g-hero { grid-template-columns: 1.4fr 1fr; }
+  .g-3 { grid-template-columns: repeat(3, 1fr); margin-top: 20px; }
+  .tile { border-radius: 22px; border: 1px solid var(--line); background: var(--surface); padding: 36px; position: relative; overflow: hidden; min-height: 220px; display: grid; place-items: center; }
+  .tile small { position: absolute; left: 22px; bottom: 18px; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); }
+  .lockup { display: flex; align-items: center; gap: 26px; }
+  .mark { border-radius: 30%; display: grid; place-items: center; background: linear-gradient(145deg, color-mix(in srgb, var(--c, #4f6bff) 85%, #fff), color-mix(in srgb, var(--c, #4f6bff) 80%, #000)); color: var(--on, #fff); box-shadow: 0 20px 50px -20px var(--c, #4f6bff), inset 0 0 0 1px rgb(255 255 255 / .12); }
+  .word { font-weight: 900; font-stretch: 72%; letter-spacing: .06em; line-height: 1; display: inline-flex; align-items: flex-end; }
+  .word i { border-radius: 50%; background: var(--dot, var(--live)); }
+  .light { background: #f3f5f9; border-color: #e2e7ef; color: #121826; }
+  .light small { color: #6b778c; }
+  .build { background: #0f1520; }
+  .build { grid-template-columns: auto auto; gap: 28px; justify-content: center; }
+  .build svg { width: 260px; height: 260px; }
+  .legend { display: grid; gap: 14px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+  .legend span { display: flex; align-items: center; gap: 10px; }
+  .legend i { width: 18px; height: 18px; flex: none; }
+  .legend .ln { border-left: 2px dashed #4a5b7c; width: 2px; margin: 0 8px; }
+  .legend .cc { border: 2px dashed #4a5b7c; border-radius: 50%; }
+  .legend .sp { width: 12px; height: 12px; margin: 0 3px; border-radius: 50%; background: var(--live); }
+  .notes { display: grid; gap: 14px; align-content: start; place-items: stretch; text-align: left; }
+  .notes b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .notes span { color: var(--text-2); font-size: 14px; }
+  .swatch { display: flex; gap: 12px; margin-top: 6px; }
+  .swatch div { flex: 1; border-radius: 12px; padding: 14px; font-size: 12px; font-weight: 700; }
+  .favs { display: flex; align-items: end; gap: 26px; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="eyebrow">Identidade visual</div>
+  <h1>PLACAR<span style="color:var(--live)">.</span> — a marca</h1>
+  <p class="lead">Um “P” desenhado com as linhas do meio-campo: a haste é a linha do meio, a curva é o círculo central e o ponto é a marca do pontapé inicial. No nome, o ponto final pisca como um aviso de “ao vivo”.</p>
+
+  <div class="grid g-hero">
+    <div class="tile" style="min-height:360px">
+      <div class="lockup" id="main"></div>
+      <small>Logotipo principal</small>
+    </div>
+    <div class="tile build">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <!-- linhas de construção: campo, linha do meio e círculo central -->
+        <g fill="none" stroke="#2c3a55" stroke-width=".35" stroke-dasharray="1 1">
+          <rect x="4" y="4" width="40" height="40" rx="12"/>
+          <line x1="16.5" y1="2" x2="16.5" y2="46"/>
+          <circle cx="23" cy="20.5" r="8"/>
+          <line x1="2" y1="20.5" x2="46" y2="20.5"/>
+        </g>
+        <g fill="none" stroke="#e8edf6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".92">
+          <path d="M16.5 12.5V35.5"/><path d="M16.5 12.5H23a8 8 0 0 1 0 16h-6.5"/>
+        </g>
+        <circle cx="23" cy="20.5" r="2.6" fill="#ff3b5c"/>
+      </svg>
+      <div class="legend">
+        <span><i class="ln"></i>Linha do meio = haste</span>
+        <span><i class="cc"></i>Círculo central = curva</span>
+        <span><i class="sp"></i>Marca da saída = ponto</span>
+      </div>
+      <small>Construção</small>
+    </div>
+  </div>
+
+  <div class="grid g-3">
+    <div class="tile light"><div class="lockup" id="onlight"></div><small>Sobre fundo claro</small></div>
+    <div class="tile" style="background:#e4002b;border-color:#e4002b"><div class="lockup" id="mono"></div><small style="color:#ffd9df">Uma cor</small></div>
+    <div class="tile">
+      <div class="favs" id="favs"></div>
+      <small>Ícone · 64 · 40 · 24 · 16 px</small>
+    </div>
+  </div>
+
+  <div class="grid g-3">
+    <div class="tile"><div class="lockup" id="c1"></div><small>Tema Flamengo</small></div>
+    <div class="tile"><div class="lockup" id="c2"></div><small>Tema Palmeiras</small></div>
+    <div class="tile"><div class="lockup" id="c3"></div><small>Tema Cruzeiro</small></div>
+  </div>
+
+  <div class="grid g-3">
+    <div class="tile notes" style="grid-column: span 2">
+      <div><b>Tipografia</b><span>Archivo condensada (peso 900, largura 72%), espaçamento 6% — forte como placar de estádio, compacta como lista de resultados.</span></div>
+      <div><b>No site</b><span>O símbolo assume a cor de cada clube nas páginas de clube; o ponto da saída usa a segunda cor do time.</span></div>
+      <div><b>Área de respiro</b><span>Manter em volta do símbolo pelo menos a espessura da haste do “P”.</span></div>
+    </div>
+    <div class="tile notes">
+      <b>Cores</b>
+      <div class="swatch">
+        <div style="background:#4f6bff;color:#fff">Azul campo<br/>#4F6BFF</div>
+        <div style="background:#ff3b5c;color:#fff">Ao vivo<br/>#FF3B5C</div>
+      </div>
+      <div class="swatch">
+        <div style="background:#0b0f17;color:#e8edf6;border:1px solid #243045">Noite<br/>#0B0F17</div>
+        <div style="background:#e8edf6;color:#121826">Gelo<br/>#E8EDF6</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const P = (stroke, dot) => `<g fill="none" stroke="${stroke}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 12.5V35.5"/><path d="M16.5 12.5H23a8 8 0 0 1 0 16h-6.5"/></g><circle cx="23" cy="20.5" r="2.6" fill="${dot}"/>`;
+  const mark = (size, { c = "#4f6bff", on = "#fff", dot = "#ff3b5c", flat = false } = {}) =>
+    flat ? `<svg width="${size}" height="${size}" viewBox="0 0 48 48">${P(on, on)}</svg>`
+         : `<div class="mark" style="width:${size}px;height:${size}px;--c:${c};--on:${on}"><svg width="${size * 0.94}" height="${size * 0.94}" viewBox="0 0 48 48">${P(on, dot)}</svg></div>`;
+  const word = (px, color, dot) => `<span class="word" style="font-size:${px}px;color:${color};--dot:${dot}">PLACAR<i style="width:${px * 0.22}px;height:${px * 0.22}px;margin:0 0 ${px * 0.1}px ${px * 0.1}px"></i></span>`;
+  const lock = (id, s, opts = {}, wc = "#e8edf6", dot = "#ff3b5c") => (document.getElementById(id).innerHTML = mark(s, opts) + word(s * 0.82, wc, dot));
+  lock("main", 118);
+  lock("onlight", 64, {}, "#121826");
+  lock("mono", 64, { flat: true, on: "#fff" }, "#fff", "#fff");
+  lock("c1", 60, { c: "#e4002b", dot: "#111" });
+  lock("c2", 60, { c: "#006437", dot: "#fff" });
+  lock("c3", 60, { c: "#0033a0", dot: "#fff" });
+  document.getElementById("favs").innerHTML = [64, 40, 24, 16].map((s) => mark(s)).join("");
+</script>
+</body>
+</html>

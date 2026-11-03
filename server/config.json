@@ -1,0 +1,31 @@
+{
+  "_leia_me": "Configuração da API do PLACAR. 'setoristas' recebe nomes de jornalistas que cobrem o clube: a API busca as notícias publicadas com o nome de cada um no Google Notícias. 'fontes' limita a busca a portais (domínios).",
+  "intervalos_minutos": {
+    "tabela_e_jogos": 5,
+    "noticias": 15,
+    "elencos": 360
+  },
+  "fontes": ["ge.globo.com", "uol.com.br", "espn.com.br", "lance.com.br", "gazetaesportiva.com", "terra.com.br"],
+  "clubes": {
+    "athletico-pr": { "espn": "3458", "busca": "Athletico Paranaense", "setoristas": [] },
+    "atletico-mg": { "espn": "7632", "busca": "Atlético-MG", "setoristas": [] },
+    "bahia": { "espn": "9967", "busca": "Esporte Clube Bahia", "setoristas": [] },
+    "botafogo": { "espn": "6086", "busca": "Botafogo", "setoristas": [] },
+    "bragantino": { "espn": "6079", "busca": "Red Bull Bragantino", "setoristas": [] },
+    "chapecoense": { "espn": "9318", "busca": "Chapecoense", "setoristas": [] },
+    "corinthians": { "espn": "874", "busca": "Corinthians", "setoristas": [] },
+    "coritiba": { "espn": "3456", "busca": "Coritiba", "setoristas": [] },
+    "cruzeiro": { "espn": "2022", "busca": "Cruzeiro", "setoristas": [] },
+    "flamengo": { "espn": "819", "busca": "Flamengo", "setoristas": [] },
+    "fluminense": { "espn": "3445", "busca": "Fluminense", "setoristas": [] },
+    "gremio": { "espn": "6273", "busca": "Grêmio", "setoristas": [] },
+    "internacional": { "espn": "1936", "busca": "Internacional", "setoristas": [] },
+    "mirassol": { "espn": "9169", "busca": "Mirassol", "setoristas": [] },
+    "palmeiras": { "espn": "2029", "busca": "Palmeiras", "setoristas": [] },
+    "remo": { "espn": "4936", "busca": "Clube do Remo", "setoristas": [] },
+    "santos": { "espn": "2674", "busca": "Santos FC", "setoristas": [] },
+    "sao-paulo": { "espn": "2026", "busca": "São Paulo FC", "setoristas": [] },
+    "vasco": { "espn": "3454", "busca": "Vasco", "setoristas": [] },
+    "vitoria": { "espn": "3457", "busca": "Esporte Clube Vitória", "setoristas": [] }
+  }
+}

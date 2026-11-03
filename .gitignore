@@ -1,0 +1,11 @@
+# dados baixados pela API em tempo de execução
+server/cache/
+__pycache__/
+*.pyc
+
+# configurações locais do editor/assistente
+.claude/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini

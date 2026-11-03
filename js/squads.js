@@ -1,0 +1,2334 @@
+/* ==========================================================================
+   PLACAR — elencos reais da temporada 2026
+   Fonte: ESPN (site.api.espn.com, Brasileirão Série A), baixado em 03/11/2026.
+   Linha: [número da camisa, nome, posição (G goleiro · D defensor · M meio-campo · F atacante), idade, id ESPN]
+   Número null = ainda sem numeração no cadastro.
+   SQUADS_LAST: escalação titular (posição Opta -> jogador) e reservas do último jogo de cada clube,
+   tirada da súmula da partida na ESPN.
+   ========================================================================== */
+window.SQUADS = {"athletico-pr":[
+  [1,"Mycael","G",22,"322655"],
+  [23,"Santos","G",36,"153754"],
+  [42,"Matheus Rocha","G",21,"361393"],
+  [76,"Maksym Voronov","G",20,"382868"],
+  [80,"Carlos Eduardo","G",20,"403290"],
+  [2,"Gilberto Junior","D",21,"361454"],
+  [3,"Léo","D",30,"200660"],
+  [5,"Filipinho","D",25,"315789"],
+  [12,"Gilberto","D",33,"198761"],
+  [13,"Carlos Terán","D",26,"192080"],
+  [15,"Alemão","D",19,"417618"],
+  [15,"Gustavo Veiga","D",20,"417346"],
+  [25,"Dantas","D",22,"360826"],
+  [26,"Claudinho","D",21,"417345"],
+  [29,"Gastón Benavídez","D",31,"287688"],
+  [32,"Vitinho","D",19,"405455"],
+  [33,"Juan Felipe Aguirre","D",30,"270242"],
+  [36,"Arthur Monteiro","D",17,"422534"],
+  [37,"Lucas Esquivel","D",25,"309499"],
+  [55,"Bruno Baldini","D",19,"400904"],
+  [61,"Leonardo Derik","D",21,"338881"],
+  [65,"Arthur Dias","D",19,"381170"],
+  [null,"Murilo Camargo","D",17,"417506"],
+  [10,"Bruno Zapelli","M",24,"296574"],
+  [14,"Luiz Gustavo","M",39,"113352"],
+  [15,"Kauan Stabelini","M",19,"417347"],
+  [16,"Jádson","M",33,"173351"],
+  [17,"Alejandro García","M",25,"268187"],
+  [18,"Lucas Marezi","M",20,"417348"],
+  [27,"Juan Portilla","M",28,"94976"],
+  [39,"Leonardo Cerci","M",17,"422539"],
+  [47,"Chiqueti","M",21,"361383"],
+  [53,"Eduardo","M",20,"361357"],
+  [57,"João Cruz","M",20,"361359"],
+  [63,"Diogo Riquelme","M",21,"382858"],
+  [71,"Guilherme Back","M",20,"382862"],
+  [null,"Benjamín Brito","M",19,"418052"],
+  [7,"Stiven Mendoza","F",34,"197049"],
+  [9,"Kevin Viveros","F",26,"268476"],
+  [18,"Kerwin Vargas","F",24,"340596"],
+  [19,"Jorge Rivaldo","F",23,"378910"],
+  [21,"Leozinho","F",27,"380327"],
+  [22,"Lucas Amorim","F",20,"380149"],
+  [50,"Renan","F",23,"318152"],
+  [70,"Renan","F",26,"315283"],
+  [null,"Daniel Troiano","F",null,"3128428"],
+  [null,"Juliano Santini","F",19,"418051"],
+  [null,"Nicolas Azambuja","F",18,"401116"]],
+"atletico-mg":[
+  [1,"Gabriel Delfim","G",24,"318191"],
+  [22,"Éverson","G",36,"223953"],
+  [31,"Robert","G",21,"383039"],
+  [43,"Kaio","G",18,"398930"],
+  [46,"Pedro Cobra","G",20,"376488"],
+  [64,"Guilherme Pires Soares","G",null,"3144811"],
+  [2,"Natanael","D",24,"304699"],
+  [3,"Léo Duarte","D",30,"234015"],
+  [4,"Ruan","D",27,"268693"],
+  [13,"Lyanco","D",29,"220747"],
+  [14,"Vitor Hugo","D",35,"191995"],
+  [16,"Renan Lodi","D",28,"245858"],
+  [23,"Ángelo Preciado","D",28,"256560"],
+  [32,"Luís Gustavo","D",20,"417567"],
+  [33,"Ronaldo Gabriel","D",null,"3126206"],
+  [34,"Samuel Barros","D",20,"379721"],
+  [36,"Kauã Pascini","D",18,"417569"],
+  [37,"Samuel Almeida","D",17,"422532"],
+  [40,"Vitão","D",18,"398934"],
+  [42,"Wanderson Junior","D",19,"401051"],
+  [44,"Pedro Fachinetti","D",18,"415445"],
+  [53,"Pedro Tocantins","D",20,"410938"],
+  [5,"Alexsander","M",23,"336386"],
+  [7,"Fred","M",33,"161559"],
+  [8,"Maycon","M",29,"233416"],
+  [10,"Gustavo Scarpa","M",32,"205074"],
+  [11,"Bernard","M",34,"158272"],
+  [15,"Kevin Castaño","M",26,"307756"],
+  [17,"Igor Gomes","M",27,"268472"],
+  [19,"Reiner","M",24,"286703"],
+  [21,"Alan Franco","M",28,"262111"],
+  [25,"Tomás Pérez","M",21,"361299"],
+  [30,"Victor Hugo","M",22,"334382"],
+  [38,"Hendel Dos Santos","M",18,"398946"],
+  [39,"Mamady Cissé","M",19,"417570"],
+  [45,"Mateus Romero","M",20,"421541"],
+  [48,"Gutte","M",null,"3103553"],
+  [58,"Eric","M",20,"398929"],
+  [9,"Mateo Casierra","F",29,"215934"],
+  [18,"Thiago Borbas","F",24,"302628"],
+  [26,"Wallysson Da Silva","F",18,"413673"],
+  [27,"Alan Minda","F",23,"319422"],
+  [28,"Tomás Cuello","F",26,"252197"],
+  [29,"Cauã Soares","F",18,"417568"],
+  [41,"Murillo Fernandes","F",20,"417574"],
+  [47,"Riquelme Henrique","F",17,"421540"],
+  [49,"João Teixeira","F",18,"421542"],
+  [59,"Gabriel Veneno","F",17,"410939"],
+  [92,"Dudu","F",34,"178349"]],
+"bahia":[
+  [17,"Guido Herrera","G",34,"173174"],
+  [18,"Lautaro López","G",25,"290585"],
+  [22,"Léo","G",36,"134627"],
+  [61,"Victor","G",20,"417810"],
+  [81,"Fabio","G",18,"417982"],
+  [91,"Iuri Jean Carlo Neres Dos Santos","G",null,"422022"],
+  [96,"Ronaldo","G",30,"224106"],
+  [3,"Marco Moreno","D",25,"294932"],
+  [4,"Kanu","D",29,"252973"],
+  [31,"Román Gómez","D",22,"381149"],
+  [33,"David Duarte","D",31,"219090"],
+  [43,"Luiz Gustavo","D",20,"379502"],
+  [44,"Marcos Victor","D",24,"334243"],
+  [46,"Luciano Juba","D",27,"304757"],
+  [54,"Gerald","D",19,"418962"],
+  [66,"Zé Guilherme","D",21,"360186"],
+  [83,"Fredi Lippert","D",20,"400318"],
+  [6,"Jean Lucas","M",28,"269910"],
+  [10,"Éverton Ribeiro","M",37,"199017"],
+  [11,"Rodrigo Nestor","M",26,"266664"],
+  [14,"Erick","M",28,"253796"],
+  [15,"Michel Araújo","M",30,"227241"],
+  [19,"Caio Alexandre","M",27,"299932"],
+  [26,"Nicolás Acevedo","M",27,"285757"],
+  [55,"Sidney","M",20,"376490"],
+  [58,"Pedrinho","M",20,"400322"],
+  [63,"David Martins","M",19,"400314"],
+  [67,"Wendel Passos","M",20,"400328"],
+  [80,"Roger Gabriel","M",19,"360136"],
+  [7,"Ademir","F",31,"269675"],
+  [9,"Alejo Veliz","F",23,"318291"],
+  [12,"Willian José","F",34,"198360"],
+  [16,"Erick Pulga","F",26,"333907"],
+  [23,"Mateo Sanabria","F",22,"335673"],
+  [27,"Everaldo","F",35,"167845"],
+  [57,"Kaue Furquim","F",17,"407479"],
+  [71,"Lyan Araujo Santos","F",17,"410922"],
+  [72,"Ryan Nascimento","F",18,"418963"],
+  [77,"Ruan Pablo","F",18,"387949"],
+  [89,"Dell","F",18,"400315"],
+  [99,"Cristian Olivera","F",24,"124439"]],
+"botafogo":[
+  [12,"Gabriel Batista","G",28,"228401"],
+  [17,"Warleson","G",30,"250143"],
+  [32,"Rhyan","G",20,"381535"],
+  [40,"Cristian Loor","G",20,"361362"],
+  [62,"Cleber Lucas Chieppe Chagas","G",19,"414541"],
+  [2,"Vitinho","D",27,"268700"],
+  [3,"Arthur Chaves","D",25,"319530"],
+  [4,"Mateo Ponte","D",23,"359977"],
+  [5,"Nahuel Ferraresi","D",27,"245291"],
+  [13,"Alex Telles","D",33,"199734"],
+  [21,"Fernando Marçal","D",37,"170362"],
+  [26,"Anthony","D",21,"380536"],
+  [29,"Paulo Victor","D",31,"252544"],
+  [31,"Kaio","D",31,"236098"],
+  [33,"Lucas Monzón","D",23,"277069"],
+  [34,"Gabriel Justino","D",20,"411648"],
+  [36,"Gabriel Da Silva Abdias","D",20,"411889"],
+  [42,"Kadu","D",21,"400952"],
+  [44,"Riquelme Felipe","D",19,"407245"],
+  [54,"Kauã Serafim","D",19,"419140"],
+  [63,"Herick Garcia Da Silva Neves","D",null,"3102503"],
+  [64,"Marcos Vinagre","D",19,"402669"],
+  [67,"Jhoan Hernández","D",20,"362496"],
+  [6,"Cristian Medina","M",30,"297056"],
+  [8,"Álvaro Montoro","M",19,"379785"],
+  [14,"Jordan Barrera","M",20,"360063"],
+  [22,"Hakim Ziyech","M",33,"176733"],
+  [25,"Allan","M",35,"143883"],
+  [35,"Danilo Santos","M",25,"306764"],
+  [38,"Victor Hugo Gonçalves Dos Santos","M",null,"3102502"],
+  [45,"Caio Valle","M",19,"399182"],
+  [47,"Miguel Caldas","M",18,"417757"],
+  [48,"Arthur Novaes","M",18,"417755"],
+  [49,"Kauan Toledo","M",20,"400067"],
+  [55,"Wallace Davi","M",19,"382972"],
+  [58,"Cauã Zappelini","M",19,"399181"],
+  [75,"Victor Hugo","M",19,"398719"],
+  [80,"Bernardo Valim","M",20,"355366"],
+  [88,"Edenilson","M",36,"196849"],
+  [91,"Domingos","M",23,"297039"],
+  [7,"Júnior Santos","F",32,"269843"],
+  [9,"Tiquinho Soares","F",35,"202374"],
+  [11,"Matheus Martins","F",23,"314841"],
+  [19,"Arthur Cabral","F",28,"224103"],
+  [37,"José Kadir","F",19,"411290"],
+  [39,"Arthur Izaque","F",19,"417806"],
+  [49,"Felipe Januário","F",19,"417805"],
+  [57,"Matheusinho","F",19,"417955"],
+  [77,"Lucas Villalba","F",25,"176810"],
+  [79,"Lucas Emanuel Jales Do Nascimento","F",null,"3102504"],
+  [90,"Danilo","F",27,"272224"]],
+"chapecoense":[
+  [1,"Rafael Santos","G",37,"171811"],
+  [14,"Gabriel Werner","G",23,"338662"],
+  [30,"Matheus","G",27,"269645"],
+  [32,"Wellington","G",19,"417361"],
+  [34,"Kainã","G",21,"358786"],
+  [98,"Anderson Paixão","G",28,"276217"],
+  [3,"Eduardo Doma","D",28,"319649"],
+  [4,"João Paulo","D",29,"302533"],
+  [5,"Heitor","D",25,"285446"],
+  [6,"Mancha","D",25,"319505"],
+  [12,"Fernando","D",27,"301225"],
+  [14,"Felipe","D",18,"421902"],
+  [15,"Rafael Thyere","D",33,"199068"],
+  [21,"Kauan","D",23,"338663"],
+  [23,"Dudu","D",29,"249088"],
+  [23,"Gustavo Talles","D",23,"357180"],
+  [25,"Victor Caetano","D",29,"250918"],
+  [26,"Everton","D",31,"314590"],
+  [35,"Vinicius Eduardo De Almeida Gomes Da Silva","D",21,"418723"],
+  [91,"Bruno Pacheco","D",34,"236283"],
+  [null,"Da Silva","D",26,"421897"],
+  [null,"Eduardo","D",20,"421901"],
+  [null,"Iago","D",19,"421903"],
+  [null,"Márcio Kalebe","D",19,"421906"],
+  [null,"Yago","D",20,"421909"],
+  [null,"Ígor Rampazzo","D",null,"3093160"],
+  [10,"Giovanni Augusto","M",37,"140012"],
+  [16,"Bruno Matias","M",27,"157066"],
+  [17,"Vinicius","M",27,"307476"],
+  [19,"David","M",21,"396967"],
+  [22,"Max","M",25,"287768"],
+  [27,"Camilo","M",27,"285089"],
+  [55,"Rosivan Macedo Soares","M",null,"3097100"],
+  [66,"Juan Ferreira Leite","M",null,"3106017"],
+  [70,"Rubens Tadeu Hartmann Ricoldi","M",23,"359385"],
+  [80,"Miguel Carvalho","M",21,"306516"],
+  [88,"Yago Felipe","M",31,"202554"],
+  [null,"Bernardo","M",19,"421900"],
+  [null,"Kauan Godoy","M",19,"421904"],
+  [null,"Kauê Arno","M",18,"417350"],
+  [null,"Miguel","M",20,"421907"],
+  [7,"Marcinho","F",31,"64671"],
+  [8,"Robert Santos","F",23,"379742"],
+  [9,"Túlio Eduardo Silva De Oliveira","F",null,"3108270"],
+  [11,"Yannick Bolasie","F",37,"121921"],
+  [20,"Bruno","F",31,"234012"],
+  [29,"Franco Rossi","F",24,"317377"],
+  [31,"Maurício Garcez","F",29,"307717"],
+  [39,"Rodrigo Endrio Azevedo Tiago","F",19,"385180"],
+  [44,"Luciano Bertolo Ludwig","F",null,"3096758"],
+  [50,"Kássio Da Silva De Jesus","F",null,"3102524"],
+  [77,"Dylan Borrero","F",24,"287368"],
+  [94,"Kevin Ramírez","F",32,"199933"],
+  [99,"Rafael Cavalheira","F",27,"319739"],
+  [null,"Alberto","F",20,"421899"],
+  [null,"Gleidson","F",19,"400910"],
+  [null,"Matheus Milani","F",20,"421898"],
+  [null,"Talison","F",19,"421908"]],
+"corinthians":[
+  [1,"Hugo Souza","G",27,"257051"],
+  [40,"Felipe Longo","G",21,"361463"],
+  [50,"Matheus Corrêa","G",20,"376482"],
+  [51,"Kauê Camargo","G",22,"361442"],
+  [71,"Gustavo Milani","G",17,"421612"],
+  [2,"Mateuzinho","D",26,"272533"],
+  [3,"Gabriel Paulista","D",35,"192226"],
+  [5,"André Ramalho","D",34,"194090"],
+  [13,"Gustavo Henrique","D",33,"168981"],
+  [20,"Pedro Milans","D",24,"359849"],
+  [21,"Matheus Bidu","D",27,"287774"],
+  [26,"Fabrizio Angileri","D",32,"195756"],
+  [46,"Hugo","D",29,"303591"],
+  [47,"João Pedro","D",22,"361471"],
+  [55,"Iago Machado","D",17,"421414"],
+  [59,"Jacaré","D",19,"399414"],
+  [62,"Guilherme Pellegrin Almeida","D",20,"379516"],
+  [84,"Yago Veloso","D",19,"415446"],
+  [85,"Levi Dias","D",18,"421618"],
+  [86,"João Vitor","D",18,"421619"],
+  [7,"Breno Bidon","M",21,"338898"],
+  [8,"Rodrigo Garro","M",28,"270562"],
+  [14,"Raniele","M",29,"236099"],
+  [19,"André Carrillo","M",35,"148189"],
+  [23,"Matheus Pereira","M",28,"216098"],
+  [29,"Allan","M",29,"223437"],
+  [35,"Charles","M",30,"240557"],
+  [48,"Guilherme Amorim","M",18,"415464"],
+  [49,"André","M",20,"409662"],
+  [54,"Luiz Gustavo","M",20,"371496"],
+  [61,"Dieguinho","M",19,"382944"],
+  [65,"Pedro Thomas","M",18,"421613"],
+  [72,"Lucca Arcolini Caramico","M",null,"3126748"],
+  [75,"Guilherme Caraguá","M",19,"421615"],
+  [76,"Léonardo Rodrigues Silva","M",null,"3126749"],
+  [77,"Jesse Lingard","M",33,"169136"],
+  [80,"Alex Santana","M",31,"196879"],
+  [89,"Luiz Fabio","M",19,"417419"],
+  [9,"Yuri Alberto","F",25,"266666"],
+  [10,"Memphis Depay","F",32,"159255"],
+  [11,"Vitinho","F",33,"171652"],
+  [18,"Pedro Raúl","F",29,"234070"],
+  [31,"Kayke Ferrari","F",22,"361467"],
+  [37,"Kaio","F",22,"347456"],
+  [52,"Zakaria Labyad","F",33,"144324"],
+  [56,"Gui Negão","F",19,"382959"],
+  [57,"Nicolas Araújo","F",19,"400447"],
+  [64,"Luiz Fernando","F",19,"382961"],
+  [67,"Nícollas","F",18,"400429"],
+  [78,"Christian Santos","F",19,"421609"],
+  [79,"Kayque","F",17,"421617"]],
+"coritiba":[
+  [1,"Pedro Luccas","G",22,"364880"],
+  [13,"Keiller","G",30,"234080"],
+  [22,"Pedro Rangel","G",26,"311037"],
+  [67,"Benassi","G",22,"334277"],
+  [87,"Gabriel Leite","G",38,"203222"],
+  [2,"Tinga","D",33,"200826"],
+  [3,"Maicon","D",38,"124025"],
+  [4,"Rodrigo Moledo","D",39,"155268"],
+  [6,"Felipe Jonatan","D",28,"272437"],
+  [14,"Fabricio Bustos","D",30,"242711"],
+  [14,"Gabriel Ibson Evangelista Da Silva","D",null,"3139449"],
+  [23,"Tiago","D",22,"319507"],
+  [26,"Bruno Melo","D",34,"243831"],
+  [55,"Jacy Maranhão","D",29,"256018"],
+  [66,"Rodrigo","D",23,"358798"],
+  [86,"Lucas Taverna","D",19,"403736"],
+  [5,"Nicolás Fonseca","M",28,"276240"],
+  [9,"Thiago Azaf","M",19,"384026"],
+  [10,"Josué Pesqueira","M",36,"150215"],
+  [15,"Alejandro Ararat","M",20,"404711"],
+  [18,"Paulo Roberto","M",21,"417356"],
+  [19,"Sebastián Gómez","M",30,"128368"],
+  [21,"Thiago Santos","M",37,"188143"],
+  [25,"Richard","M",32,"198346"],
+  [30,"Khensane","M",17,"417545"],
+  [39,"Gustavo","M",24,"303474"],
+  [50,"Tissi","M",19,"402818"],
+  [null,"Miguel Silva","M",19,"417362"],
+  [7,"Joaquín Lavega","F",21,"333306"],
+  [11,"Lucas Ronier","F",21,"360137"],
+  [17,"Brian Ocampo","F",27,"276058"],
+  [20,"Keno","F",37,"203693"],
+  [28,"Fabinho","F",26,"295072"],
+  [32,"Pedro Rocha","F",32,"216846"],
+  [33,"David Alves","F",18,"421314"],
+  [36,"Vini Paulista","F",25,"316781"],
+  [37,"Crepaldi","F",19,"417542"],
+  [77,"Breno","F",30,"236324"],
+  [78,"Renato Marques","F",22,"338053"],
+  [80,"Matheus Dias","F",19,"384025"],
+  [99,"Rodrigo Rodrigues","F",30,"236410"],
+  [null,"Éberth","F",23,"377787"]],
+"cruzeiro":[
+  [1,"Cássio","G",39,"108347"],
+  [24,"Marcelo","G",20,"383087"],
+  [41,"Leó Aragão","G",24,"361949"],
+  [51,"Vitor Lamounier","G",19,"404611"],
+  [81,"Otávio Costa","G",20,"337996"],
+  [2,"Kauã Moraes Silva","D",20,"403572"],
+  [6,"Matías Viña","D",28,"254032"],
+  [12,"William","D",31,"212077"],
+  [15,"Fabrício Bruno","D",30,"236111"],
+  [23,"Fagner","D",37,"108342"],
+  [25,"Lucas Villalba","D",null,"176810"],
+  [27,"Gabriel Rojas","D",29,"238734"],
+  [34,"Jonathan Jesus","D",22,"363020"],
+  [42,"Nicolas Pontes","D",20,"383098"],
+  [43,"João Marcelo","D",26,"286558"],
+  [60,"Gustavo Carvalho","D",19,"421405"],
+  [64,"Vitor Hugo","D",18,"404207"],
+  [84,"Kelvin Coutinho","D",20,"421406"],
+  [97,"Luciano Rodríguez","D",19,"118688"],
+  [5,"Zé Lucas","M",18,"402423"],
+  [8,"Matheus Henrique","M",28,"268221"],
+  [10,"Matheus Pereira","M",null,"216098"],
+  [11,"Gerson","M",29,"210135"],
+  [16,"Lucas Silva","M",33,"108103"],
+  [22,"Neyser Villareal","M",21,"370814"],
+  [29,"Lucas Romero","M",24,"77577"],
+  [38,"Felipe Morais","M",18,"404202"],
+  [40,"Rhuan Gabriel","M",20,"371530"],
+  [50,"Alessandro","M",19,"383088"],
+  [55,"André Balbino","M",19,"421403"],
+  [58,"Eduardo Pape","M",17,"421402"],
+  [7,"Marquinhos","F",23,"297070"],
+  [9,"Bruno Rodrigues","F",29,"227737"],
+  [17,"Luis Sinisterra","F",27,"235116"],
+  [19,"Kaio Jorge","F",24,"280978"],
+  [20,"Wesley Ribeiro","F",21,"304533"],
+  [57,"Rayan Lelis","F",19,"414352"],
+  [59,"Danilo Gimenes","F",19,"421404"],
+  [67,"João Costa","F",21,"373806"],
+  [70,"Kaique Kenji","F",20,"383096"],
+  [77,"Gabriel Pec","F",25,"295005"],
+  [79,"Pietro Tavares","F",17,"413768"],
+  [94,"Wanderson","F",32,"11632"],
+  [99,"Keny Arroyo","F",20,"371534"]],
+"flamengo":[
+  [1,"Agustín Rossi","G",31,"215388"],
+  [42,"Andrew","G",25,"278802"],
+  [49,"Dyogo Alves","G",22,"343843"],
+  [58,"Leó Nannetti","G",19,"399456"],
+  [84,"Gabriel Werneck","G",17,"415444"],
+  [2,"Guillermo Varela","D",33,"188368"],
+  [3,"Léo Ortiz","D",30,"252316"],
+  [4,"Léo Pereira","D",30,"145405"],
+  [6,"Ayrton Lucas","D",29,"203077"],
+  [13,"Danilo","D",35,"170369"],
+  [22,"Emerson Royal","D",27,"246844"],
+  [26,"Alex Sandro","D",35,"125514"],
+  [44,"Vitão","D",26,"254145"],
+  [51,"Daniel Sales","D",20,"357115"],
+  [69,"Luiz Da Silva","D",29,"106507"],
+  [71,"João Victor","D",19,"376479"],
+  [74,"Gusttavo Sousa","D",20,"389773"],
+  [77,"Johnny Góes","D",19,"401309"],
+  [87,"Daniel Thuram","D",17,"417897"],
+  [5,"Erick Pulgar","M",32,"202533"],
+  [8,"Saúl Ñíguez","M",31,"172269"],
+  [10,"Giorgian de Arrascaeta","M",32,"179767"],
+  [15,"Jorge Carrascal","M",28,"208700"],
+  [16,"Samuel Lino","M",26,"253937"],
+  [18,"Nicolás de la Cruz","M",29,"251889"],
+  [20,"Lucas Paquetá","M",29,"234715"],
+  [21,"Jorginho","M",34,"165778"],
+  [50,"Juan Sayago","M",19,"421508"],
+  [52,"Evertton","M",23,"334752"],
+  [54,"João Vitor","M",17,"417895"],
+  [56,"Pablo Lucio","M",19,"398646"],
+  [69,"Kaio Nóbrega","M",19,"409577"],
+  [75,"Luiz Felipe","M",18,"400275"],
+  [76,"Gabriel Amancio","M",18,"419154"],
+  [79,"Joshua","M",19,"402494"],
+  [82,"Jhefinho","M",18,"402709"],
+  [7,"Luiz Araújo","F",30,"234765"],
+  [9,"Pedro","F",29,"235017"],
+  [14,"Anthony Valencia","F",23,"303328"],
+  [19,"Gonzalo Plata","F",26,"277352"],
+  [27,"Bruno Henrique","F",35,"201683"],
+  [30,"Joaquin Freitas","F",20,"414769"],
+  [39,"Josmar","F",18,"414359"],
+  [57,"Isaac Gomes","F",null,"3126267"],
+  [59,"Alan Santos","F",19,"417653"],
+  [62,"Diego Reyes","F",19,"386253"],
+  [66,"Ramires","F",20,"415443"],
+  [81,"Douglas Telles","F",19,"402703"]],
+"fluminense":[
+  [1,"Fábio","G",46,"158382"],
+  [27,"Marcelo Pitaluga","G",23,"269546"],
+  [50,"Gustavo Felix","G",19,"398661"],
+  [98,"Vitor Eudes","G",28,"255327"],
+  [null,"Zafir Morais","G",null,"3125447"],
+  [2,"Samuel Xavier","D",36,"146162"],
+  [3,"Thiago Silva","D",42,"96254"],
+  [4,"Ignácio","D",29,"281559"],
+  [6,"René","D",34,"173588"],
+  [13,"Guilherme Arana","D",29,"207269"],
+  [21,"Igor Rabello","D",31,"212879"],
+  [22,"Juan Freytes","D",26,"276023"],
+  [23,"Guga","D",28,"271557"],
+  [29,"Julian Millan","D",28,"235941"],
+  [31,"Kaio Borges","D",19,"398663"],
+  [33,"Gorgulho","D",19,"421388"],
+  [37,"Breno","D",19,"398657"],
+  [44,"Jemmes","D",26,"384032"],
+  [46,"Julio Fidelis","D",19,"373775"],
+  [null,"Jhonny Cardinoti Pedro","D",24,"336369"],
+  [null,"Léo Jance","D",21,"402955"],
+  [null,"Richard Wendel","D",17,"422535"],
+  [8,"Martinelli","M",25,"307946"],
+  [10,"Ganso","M",37,"175902"],
+  [16,"Nonato","M",28,"238342"],
+  [25,"Alisson","M",33,"199012"],
+  [32,"Luciano Acosta","M",32,"199958"],
+  [35,"Hércules","M",26,"336622"],
+  [36,"Vagno","M",19,"403160"],
+  [41,"Ruan Sales","M",18,"421390"],
+  [47,"Paulo Guilherme","M",18,"421389"],
+  [48,"Peter","M",18,"421385"],
+  [58,"Naarã","M",18,"404205"],
+  [94,"Otávio","M",32,"201547"],
+  [null,"Andrey Oliveira Carneiro","M",null,"3125131"],
+  [null,"Stiven Jimenez","M",19,"353751"],
+  [7,"Hulk","F",40,"124068"],
+  [9,"John Kennedy","F",24,"312741"],
+  [11,"Jefferson Savarino","F",29,"177219"],
+  [14,"Germán Cano","F",38,"165749"],
+  [15,"Matheus Reis","F",19,"371529"],
+  [17,"Agustín Canobbio","F",28,"241466"],
+  [19,"Rodrigo Castillo","F",27,"116395"],
+  [28,"Riquelme","F",19,"397260"],
+  [30,"Yeferson Soteldo","F",29,"194039"],
+  [34,"Wesley Natã","F",18,"403159"],
+  [38,"Isack Pelé","F",19,"379485"],
+  [39,"Keven Samuel","F",19,"403162"],
+  [42,"João Pedro Silverio Lourenco","F",21,"357484"],
+  [49,"Enzo","F",21,"421387"],
+  [90,"Kevin Serna","F",28,"287633"]],
+"gremio":[
+  [1,"Weverton","G",38,"198983"],
+  [12,"Gabriel Grando","G",26,"317014"],
+  [24,"Thiago Stallbaum","G",23,"379334"],
+  [31,"Gabriel Menegon","G",18,"417483"],
+  [51,"João Victor Castelo","G",20,"402659"],
+  [2,"Fabián Balbuena","D",35,"199101"],
+  [3,"Wagner Leonardo","D",27,"286201"],
+  [4,"Wálter Kannemann","D",35,"146109"],
+  [14,"Marcos Rocha","D",37,"185994"],
+  [18,"João Pedro","D",29,"213260"],
+  [23,"Marlon","D",29,"229121"],
+  [27,"Diego Caito","D",22,"358811"],
+  [32,"Vitor Ramon","D",18,"402662"],
+  [38,"Caio Paulista","D",28,"95558"],
+  [43,"Luis Eduardo","D",18,"400263"],
+  [52,"Vagner","D",18,"421523"],
+  [53,"Gustavo Martins","D",24,"314603"],
+  [54,"Pedro Gabriel","D",19,"399092"],
+  [58,"Emanuel Mariano","D",18,"421526"],
+  [82,"Wallace","D",21,"383983"],
+  [5,"Juan Nardoni","M",24,"290594"],
+  [10,"Filip Krovinovic","M",31,"226787"],
+  [15,"Danilo Barbosa","M",30,"194929"],
+  [17,"Dodi","M",30,"213879"],
+  [19,"Erick Noriega","M",25,"303030"],
+  [20,"Mathías Villasanti","M",29,"238449"],
+  [39,"Tiaguinho","M",18,"397420"],
+  [40,"Jeferson Forneck","M",19,"417484"],
+  [47,"Roger","M",18,"417485"],
+  [48,"João Borne","M",18,"421521"],
+  [50,"Bernardo Zortea","M",19,"400264"],
+  [55,"Danillo","M",18,"421524"],
+  [59,"Harlley","M",18,"421527"],
+  [60,"Artur Junior","M",20,"421528"],
+  [61,"Lago Menezes","M",18,"421529"],
+  [64,"Adrielson","M",18,"421531"],
+  [65,"Riquelme Freitas","M",20,"380443"],
+  [7,"Cristian Pavón","F",30,"24388"],
+  [9,"Francis Amuzu","F",27,"269079"],
+  [21,"Mateus Tetê","F",26,"287664"],
+  [22,"Martin Braithwaite","F",35,"187100"],
+  [30,"Matheus Nascimento","F",22,"304659"],
+  [49,"Lucca","F",18,"421522"],
+  [57,"Benjamin","F",17,"421525"],
+  [62,"Fellipe Magalhães","F",19,"421530"],
+  [63,"Arnaldo","F",19,"402657"],
+  [77,"Jovane Cabral","F",28,"250059"],
+  [95,"Carlos Vinícius","F",31,"252576"],
+  [99,"José Enamorado","F",27,"286714"]],
+"internacional":[
+  [1,"Sergio Rochet","G",33,"184206"],
+  [12,"Anthoni","G",24,"315428"],
+  [22,"Kauan","G",23,"361392"],
+  [23,"Matheus Cunha Queiroz","G",25,"315201"],
+  [24,"Filipe Borba Sirio","G",null,"3106016"],
+  [32,"Diego Esser","G",21,"379787"],
+  [43,"Henrique Menke","G",19,"382893"],
+  [3,"Guillermo Maripán","D",32,"200562"],
+  [4,"Félix Torres","D",29,"251963"],
+  [6,"Matheus Bahia","D",27,"304656"],
+  [18,"Juninho","D",31,"222664"],
+  [25,"Gabriel Mercado","D",39,"76818"],
+  [26,"Alexander Bernabei","D",26,"285029"],
+  [30,"Alisson","D",18,"412558"],
+  [41,"Victor Gabriel","D",22,"319790"],
+  [43,"Denis Marfo","D",20,"417351"],
+  [46,"Pedro Kauã","D",20,"382898"],
+  [53,"Luiz Felipe De Morais Francisco","D",null,"422157"],
+  [5,"Rodrigo Villagra","M",25,"286704"],
+  [8,"Bruno Henrique","M",37,"188485"],
+  [10,"Alan Patrick","M",35,"165232"],
+  [15,"Bruno Gomes","M",25,"295006"],
+  [16,"Ronaldo","M",30,"229574"],
+  [17,"Niclas Eliasson","M",30,"202700"],
+  [27,"Paulinho","M",29,"289499"],
+  [29,"Thiago Maia","M",29,"213239"],
+  [30,"Calebe","M",26,"304469"],
+  [31,"Allex","M",20,"361374"],
+  [33,"Benjamin Arhin","M",20,"413248"],
+  [51,"João Kempes","M",17,"417353"],
+  [52,"Gabriel Vinicius Oliveira Da Silva","M",null,"422158"],
+  [7,"Johan Carbonero","F",27,"270246"],
+  [9,"Alerrando","F",26,"270260"],
+  [11,"Kayky Chagas","F",23,"314846"],
+  [19,"Antonio Sanabria","F",30,"192162"],
+  [28,"Vitinho","F",27,"287903"],
+  [35,"Brian Aguirre","F",23,"309131"],
+  [37,"Yago","F",19,"382900"],
+  [44,"João Victor","F",19,"401055"],
+  [48,"Raykkonen","F",18,"403283"],
+  [49,"João Bezerra","F",17,"417352"],
+  [54,"Fabricio Prado","F",null,"422159"]],
+"mirassol":[
+  [1,"Georgemy","G",31,"199011"],
+  [22,"Walter","G",38,"196851"],
+  [23,"Alex Muralha","G",36,"204095"],
+  [90,"Thomazella","G",36,"203754"],
+  [2,"Lucas Oliveira","D",30,"233888"],
+  [3,"Willian Machado","D",29,"270797"],
+  [6,"Reinaldo","D",37,"115379"],
+  [12,"Victor Luis","D",33,"198108"],
+  [18,"Elias","D",27,"256905"],
+  [20,"Daniel Borges","D",33,"156502"],
+  [32,"Igor Marques","D",27,"299967"],
+  [34,"João Victor","D",29,"250899"],
+  [44,"Gabriel","D",23,"338674"],
+  [53,"Marcelo Barbosa De Santos","D",18,"418796"],
+  [5,"João Wellington","M",22,"358337"],
+  [7,"Shaylon","M",29,"252610"],
+  [8,"Denilson","M",25,"325101"],
+  [10,"Chico","M",35,"198273"],
+  [19,"Gustavo Mosquito","M",29,"250904"],
+  [21,"José Aldo","M",28,"290092"],
+  [25,"Neto Moura","M",30,"203715"],
+  [33,"Carlos Eduardo","M",37,"174782"],
+  [55,"Gustavo Cazonatti","M",30,"235998"],
+  [80,"Wallison Luiz","M",29,"269848"],
+  [9,"André Luis","F",32,"205448"],
+  [11,"Negueba","F",26,"153646"],
+  [17,"Fernando","F",29,"218913"],
+  [30,"Bruno Santos","F",29,"314915"],
+  [47,"Vinicius Bacchi De Castro","F",19,"418797"],
+  [48,"Felipe Pereira dos","F",19,"421444"],
+  [77,"Alesson","F",27,"250388"],
+  [95,"Edson Carioca","F",29,"94310"],
+  [96,"Carlos Eduardo","F",30,"218974"],
+  [99,"Zé Roberto","F",33,"201623"]],
+"palmeiras":[
+  [1,"Carlos Miguel","G",28,"276741"],
+  [14,"Marcelo Lomba","G",39,"201622"],
+  [21,"Bruno Bertinato","G",28,"225541"],
+  [72,"Kauan Lima","G",19,"412904"],
+  [73,"Luiz Fernando","G",18,"421505"],
+  [2,"Alexander Barboza","D",31,"222631"],
+  [3,"Bruno Fuchs","D",27,"257050"],
+  [4,"Agustín Giay","D",22,"315619"],
+  [6,"Jefté","D",22,"318136"],
+  [12,"Khellven","D",25,"288669"],
+  [15,"Gustavo Gómez","D",33,"118395"],
+  [22,"Joaquín Piquerez","D",28,"254007"],
+  [26,"Murilo","D",29,"252609"],
+  [43,"Luiz Benedetti","D",20,"361457"],
+  [44,"Kone Zie Mohamed","D",19,"421487"],
+  [46,"Derick","D",18,"413749"],
+  [52,"Luis Saboia","D",19,"421486"],
+  [53,"Luccas Ramon","D",18,"413761"],
+  [54,"Thiago Soares","D",20,"402698"],
+  [56,"Arthur Gabriel","D",21,"382965"],
+  [66,"André Lucas","D",20,"421503"],
+  [7,"Felipe Anderson","M",33,"152812"],
+  [8,"Andreas Pereira","M",30,"210143"],
+  [11,"Jhon Arias","M",29,"239566"],
+  [17,"Marlon Freitas","M",31,"234016"],
+  [18,"Maurício","M",25,"289046"],
+  [30,"Lucas Evangelista","M",31,"186776"],
+  [32,"Emiliano Martínez","M",27,"109962"],
+  [37,"Fabiano","M",20,"361658"],
+  [45,"Erick Machado","M",19,"402695"],
+  [47,"Victor Gabriel","M",19,"405272"],
+  [48,"Larson","M",21,"387989"],
+  [50,"Luis Felipe","M",18,"402701"],
+  [55,"Isaac","M",19,"421506"],
+  [55,"Rafael Coutinho","M",20,"382963"],
+  [57,"João Paulo","M",19,"421507"],
+  [58,"Ruan Yago","M",17,"421504"],
+  [60,"Guilherme Nogueira","M",19,"408185"],
+  [9,"Vitor Roque","F",21,"329383"],
+  [10,"Paulinho","F",26,"258271"],
+  [19,"Ramón Sosa","F",27,"301653"],
+  [29,"Miguel Bilong","F",null,"3105977"],
+  [39,"Heittor","F",19,"412292"],
+  [41,"Eduardo","F",16,"421488"],
+  [42,"José Manuel López","F",25,"311743"],
+  [49,"Juan Gabriel","F",18,"421498"],
+  [61,"Kauã","F",17,"421538"],
+  [71,"Felipe Teresa","F",20,"382846"]],
+"bragantino":[
+  [1,"Cleiton","G",29,"239368"],
+  [18,"Tiago Volpi","G",35,"145092"],
+  [37,"Fabrício","G",26,"287767"],
+  [50,"João Gabriel Montes Madeira","G",null,"3126195"],
+  [56,"Gustavo Reis","G",21,"386191"],
+  [2,"Guzmán Rodríguez","D",26,"302225"],
+  [3,"Eduardo Santos","D",28,"296900"],
+  [4,"Alix Vinicius","D",26,"257335"],
+  [12,"Vanderlan","D",24,"307933"],
+  [16,"Gustavo Marques","D",25,"334375"],
+  [23,"Agustín Sant'Anna","D",29,"253486"],
+  [29,"Juninho Capixaba","D",29,"229555"],
+  [34,"José Hurtado","D",24,"311087"],
+  [46,"Breno de Moraes","D",18,"421626"],
+  [51,"Caue Nascimento Santos","D",19,"407650"],
+  [52,"Ryan Augusto","D",19,"418512"],
+  [53,"Edgar González","D",19,"421625"],
+  [54,"Weimar Vivas","D",20,"405498"],
+  [5,"Fabinho","M",24,"307934"],
+  [6,"Gabriel","M",34,"171993"],
+  [7,"Ramires","M",26,"279941"],
+  [15,"Ignacio Sosa","M",23,"317370"],
+  [20,"Rodriguinho","M",22,"339001"],
+  [21,"Lucas Barbosa","M",25,"248584"],
+  [22,"Gustavinho","M",22,"357358"],
+  [25,"Bruno Conceicão","M",24,"289910"],
+  [27,"Davi Gomes","M",21,"398850"],
+  [28,"Patrick Silva","M",22,"361460"],
+  [35,"Matheus Fernandes","M",28,"225538"],
+  [41,"Yuri","M",20,"400891"],
+  [49,"Luis Gustavo","M",18,"404204"],
+  [55,"Chrystian Delfino","M",19,"421627"],
+  [57,"Marcelinho Braz","M",22,"361621"],
+  [58,"Gabriel Lopes","M",20,"381282"],
+  [62,"Marquinhos","M",22,"389360"],
+  [62,"Vini Krygsman","M",18,"421629"],
+  [8,"Eduardo Sasha","F",34,"199680"],
+  [9,"Isidro Pitta","F",27,"287035"],
+  [11,"Fernando","F",27,"267902"],
+  [17,"Vinicinho","F",22,"383987"],
+  [19,"Bruno Gonçalves","F",23,"319950"],
+  [30,"Henry Mosquera","F",24,"333314"],
+  [32,"José Herrera","F",23,"335360"],
+  [47,"Wallace Yan","F",21,"358167"],
+  [67,"Jhuan Nunes","F",19,"421416"]],
+"remo":[
+  [1,"Alexandre","G",19,"400948"],
+  [30,"João Victor","G",21,"400951"],
+  [88,"Marcelo Rangel","G",38,"206952"],
+  [94,"Ygor Vinhas","G",32,"269643"],
+  [97,"Ivan","G",29,"202493"],
+  [2,"João","D",28,"285280"],
+  [2,"Matheus Alexandre","D",27,"280678"],
+  [4,"Matheus Piauí","D",27,"271706"],
+  [5,"Léo Andrade","D",28,"265535"],
+  [6,"Marlon Lopes","D",32,"215815"],
+  [13,"Marllon","D",34,"157743"],
+  [17,"Cristian Tassano","D",30,"217550"],
+  [18,"Duplexe Tchamba","D",28,"254447"],
+  [27,"Zé Ivaldo","D",29,"319270"],
+  [62,"Rafael","D",20,"421943"],
+  [79,"Marcelinho","D",28,"304826"],
+  [98,"Mayk","D",27,"277092"],
+  [null,"Kauan Garcia Ferreira","D",null,"3096162"],
+  [null,"Kerlon Ormerode Brito Da Cruz","D",null,"3096158"],
+  [8,"Patrick","M",34,"198362"],
+  [14,"Leonel Picco","M",28,"286532"],
+  [22,"Yago Pikachu","M",34,"186832"],
+  [23,"Franco Catarozzi","M",26,"317381"],
+  [26,"David Francisco","M",24,"359364"],
+  [28,"José Welison","M",31,"201793"],
+  [35,"Edson Fernando","M",28,"290028"],
+  [37,"Jajá","M",27,"301185"],
+  [55,"Zé Ricardo","M",27,"276661"],
+  [61,"Tico","M",20,"400953"],
+  [65,"Miguel","M",20,"421940"],
+  [10,"Jaderson","F",26,"252833"],
+  [15,"Vitor Bueno","F",32,"200775"],
+  [19,"Gabriel Taliari","F",29,"235385"],
+  [21,"Antonio Galeano","F",26,"254464"],
+  [39,"Eduardo","F",25,"338668"],
+  [63,"Andres Gonzalez","F",20,"421939"],
+  [64,"Paulo Henrique","F",19,"421942"],
+  [99,"Gabriel Poveda","F",28,"274517"],
+  [null,"Juan Isaza Osorio","F",null,"3122297"]],
+"santos":[
+  [1,"Diogenes","G",25,"322630"],
+  [34,"João Paulo","G",31,"198561"],
+  [67,"Rodrigo Falcão","G",21,"379464"],
+  [77,"Gabriel Brazão","G",26,"266665"],
+  [79,"João Pedro","G",18,"384395"],
+  [88,"Arthur Vale","G",17,"421473"],
+  [3,"Vinicius Lira","D",19,"399409"],
+  [4,"Lucas Verissimo","D",31,"231324"],
+  [14,"Luan Peres","D",32,"198546"],
+  [18,"Igor","D",29,"235894"],
+  [23,"Rodinei","D",34,"182187"],
+  [26,"João Ananias","D",19,"408862"],
+  [31,"Gonzalo Escobar","D",29,"236353"],
+  [38,"Rafael Gonzaga","D",18,"404206"],
+  [42,"João Alencar","D",19,"403721"],
+  [99,"Marcelo Tórrez","D",20,"390968"],
+  [5,"João Schmidt","M",33,"196856"],
+  [6,"Arthur","M",30,"216254"],
+  [11,"Philippe Coutinho","M",34,"130372"],
+  [15,"Willian Arão","M",34,"173621"],
+  [16,"Thaciano","M",31,"218938"],
+  [20,"Pepê Fermino","M",19,"417617"],
+  [22,"Álvaro Barreal","M",26,"279454"],
+  [25,"Gabriel Menino","M",26,"301544"],
+  [28,"Christian Oliva","M",30,"270486"],
+  [30,"Miguel Terceros","M",22,"330665"],
+  [45,"Lima","M",30,"222955"],
+  [48,"Gustavo Henrique","M",21,"399297"],
+  [49,"Gabriel Bontempo","M",21,"399179"],
+  [58,"Vinícius Rocha","M",17,"413770"],
+  [72,"Nicola Profeta","M",20,"374817"],
+  [76,"Vinicius Fabri","M",18,"421479"],
+  [80,"Kauan Barreto","M",19,"421476"],
+  [81,"Samuel Mendes","M",18,"421478"],
+  [7,"Everton","F",30,"198940"],
+  [9,"Gabriel Barbosa","F",30,"182522"],
+  [10,"Neymar","F",34,"132948"],
+  [17,"Gustavo Caballero","F",25,"154853"],
+  [21,"Moisés","F",30,"304365"],
+  [27,"Davizinho","F",18,"422922"],
+  [29,"Kaio Ganga","F",19,"399724"],
+  [32,"Benjamín Rollheiser","F",26,"269813"],
+  [33,"Rony","F",31,"236314"],
+  [37,"Pedro Assis","F",19,"417953"],
+  [41,"João Victor Dos Santos Alves","F",19,"380360"],
+  [47,"Mateus Xavier","F",19,"386311"],
+  [55,"Fernando Pradella Rocha","F",18,"418214"],
+  [57,"Nadson","F",17,"400876"],
+  [59,"David Nogueira","F",17,"421474"],
+  [66,"Gabriel Follmer","F",19,"421475"]],
+"sao-paulo":[
+  [23,"Rafael","G",37,"199013"],
+  [31,"Carlos Coronel","G",29,"215961"],
+  [41,"João Pedro","G",20,"383059"],
+  [50,"Young","G",24,"318176"],
+  [52,"Felipe Preis","G",20,"380459"],
+  [2,"Rafael Tolói","D",36,"196855"],
+  [5,"Robert Arboleda","D",35,"201531"],
+  [6,"Cédric","D",35,"129722"],
+  [12,"Iago","D",29,"252800"],
+  [13,"Enzo Díaz","D",30,"264814"],
+  [18,"Wendell","D",33,"199065"],
+  [19,"Lucas Ramon","D",32,"206953"],
+  [20,"Buta","D",29,"238897"],
+  [22,"Domingos Duarte","D",31,"219234"],
+  [32,"Pedro Lima","D",20,"376489"],
+  [35,"Sabino","D",30,"285010"],
+  [40,"Igor Felisberto","D",19,"379484"],
+  [43,"Guilherme Reis","D",20,"383052"],
+  [44,"Matheus Souza","D",23,"358242"],
+  [51,"Igão","D",19,"386050"],
+  [53,"Isac","D",20,"371525"],
+  [54,"Luis Osorio","D",20,"383055"],
+  [56,"Nicolas","D",19,"402685"],
+  [60,"Felipe Oliveira","D",20,"421413"],
+  [8,"Marcos Antonio","M",26,"266282"],
+  [17,"André Oliveira","M",31,"270578"],
+  [21,"Damián Bobadilla","M",25,"301516"],
+  [28,"Newton","M",26,"357362"],
+  [29,"Pablo Maia","M",24,"319168"],
+  [46,"Pedro Ferreira","M",19,"399075"],
+  [48,"Djhordney Ferreira","M",19,"402686"],
+  [55,"Matheus Ferreira","M",20,"371433"],
+  [58,"Bezerra","M",19,"399079"],
+  [59,"Robert William","M",16,"421412"],
+  [80,"Cauly","M",31,"260392"],
+  [94,"Danielzinho","M",31,"196824"],
+  [7,"Lucas Moura","F",34,"130711"],
+  [9,"Jonathan Calleri","F",33,"162558"],
+  [10,"Luciano","F",33,"190483"],
+  [11,"Ferreira","F",28,"296573"],
+  [27,"Joao Victor","F",32,"259879"],
+  [34,"Tetê","F",19,"402684"],
+  [37,"Artur","F",28,"236596"],
+  [39,"Paulo Sérgio","F",21,"383041"],
+  [43,"Gustavo Santana","F",21,"402683"],
+  [45,"Lucca Marques","F",19,"399076"],
+  [47,"Brenno","F",17,"421415"],
+  [49,"Ryan Francisco","F",19,"383042"],
+  [57,"Juan Potes","F",19,"380969"]],
+"vasco":[
+  [1,"Léo Jardim","G",31,"205464"],
+  [13,"Daniel Fuzato","G",29,"252052"],
+  [37,"Pablo","G",23,"379269"],
+  [40,"Phillipe Gabriel","G",20,"371432"],
+  [79,"Marcão","G",20,"421401"],
+  [2,"José Luis Rodríguez","D",29,"43711"],
+  [4,"Alan Saldivia","D",24,"317383"],
+  [6,"Lucas Piton","D",26,"287862"],
+  [29,"Paulinho","D",22,"361585"],
+  [30,"Robert","D",23,"337099"],
+  [43,"Lucas Freitas","D",25,"312657"],
+  [46,"Carlos Cuesta","D",27,"235940"],
+  [54,"Alison","D",19,"398510"],
+  [55,"Gabriel Pereira","D",26,"285142"],
+  [60,"Jotavve Fonseca","D",21,"417752"],
+  [63,"Wanyson Nogueira","D",20,"421394"],
+  [64,"Walace","D",21,"398521"],
+  [66,"Cuiabano","D",23,"334756"],
+  [80,"Bruno André","D",19,"409768"],
+  [81,"Melim","D",18,"398524"],
+  [82,"Riquelme Avellar","D",20,"398722"],
+  [87,"Breno Vereza","D",19,"402621"],
+  [91,"Breno Sales","D",16,"421395"],
+  [96,"Paulo Henrique","D",30,"234842"],
+  [null,"Riquelme","D",24,"301860"],
+  [3,"Tchê Tchê","M",34,"198302"],
+  [5,"Santiago Sosa","M",27,"271473"],
+  [8,"Jair","M",32,"196873"],
+  [17,"Nuno Moreira","M",27,"323815"],
+  [22,"Alan Lescano","M",24,"336485"],
+  [23,"Thiago Mendes","M",34,"201717"],
+  [50,"Gustavo Guimarães","M",20,"421396"],
+  [62,"Lucca Guima","M",20,"421398"],
+  [65,"Léo Félix","M",18,"421399"],
+  [67,"Samuel de Jesus","M",20,"421400"],
+  [70,"Euder","M",21,"379363"],
+  [83,"Ramon Rique","M",19,"402641"],
+  [85,"Matheus Carvalho","M",24,"346179"],
+  [86,"Lukas Zuccarello","M",19,"379379"],
+  [88,"Cauan Barros","M",22,"357720"],
+  [null,"Guilherme Estrella","M",21,"379581"],
+  [7,"David","F",31,"219005"],
+  [9,"Facundo Colidio","F",26,"275941"],
+  [10,"Johan Rojas","F",24,"334065"],
+  [11,"Andrés Gómez","F",24,"330924"],
+  [18,"Marino Hinestroza","F",24,"285203"],
+  [19,"Bruno Duarte","F",30,"292259"],
+  [20,"Brenner","F",26,"257744"],
+  [28,"Adson","F",26,"315293"],
+  [45,"Loide","F",26,"318606"],
+  [55,"Luiz Lócio","F",20,"421397"],
+  [61,"Alex Bruno","F",18,"417750"],
+  [72,"Bruno Lopes","F",19,"379267"],
+  [74,"Andrey Fernandes","F",18,"402620"],
+  [77,"Claudio Spinelli","F",29,"250733"],
+  [84,"Anderson Felix","F",19,"402639"],
+  [90,"Diego Minete","F",17,"407363"],
+  [null,"João Vitor","F",17,"417751"]],
+"vitoria":[
+  [1,"Lucas Arcanjo","G",28,"287941"],
+  [35,"Fintelman","G",25,"302124"],
+  [71,"Yuri Sena","G",25,"266662"],
+  [2,"Emanuel Britez","D",34,"200206"],
+  [3,"Darlan Silva Dutra","D",null,"3097346"],
+  [4,"Camutanga","D",33,"272576"],
+  [5,"Riccieli","D",28,"253010"],
+  [12,"Diego Tarzia","D",23,"379661"],
+  [13,"Ramon","D",25,"269915"],
+  [15,"Guilherme Inácio","D",18,"419116"],
+  [18,"Kauan Santos","D",19,"402428"],
+  [25,"Cacá","D",27,"271773"],
+  [36,"Luan Cândido","D",25,"266676"],
+  [40,"Hiago Fernandes Da Costa","D",null,"3138214"],
+  [43,"Edu","D",26,"293047"],
+  [45,"Nathan","D",24,"318174"],
+  [48,"Ivan","D",20,"417834"],
+  [59,"Gean","D",19,"402660"],
+  [69,"Wanderson","D",18,"421952"],
+  [70,"Fabiano","D",26,"304065"],
+  [83,"Jamerson","D",28,"284450"],
+  [98,"Matheusinho","D",28,"315766"],
+  [8,"Tomás Pochettino","M",30,"215771"],
+  [10,"Matheus","M",29,"218972"],
+  [15,"Walace","M",31,"204113"],
+  [19,"Enrique Saverio","M",27,"286694"],
+  [21,"Dudu","M",27,"339115"],
+  [26,"Edenilson","M",21,"402426"],
+  [32,"Emmanuel Martínez","M",32,"218649"],
+  [41,"Wendell Sacramento","M",21,"382969"],
+  [44,"Gabriel Baralhas","M",28,"269852"],
+  [46,"Alejandro Almaraz","M",19,"251843"],
+  [52,"Lucas Lohan","M",20,"405566"],
+  [65,"Nicolas Celis","M",19,"131954"],
+  [77,"Ignacio Laquintana","M",27,"285233"],
+  [88,"Zé Vitor","M",26,"383950"],
+  [95,"Caique","M",31,"252315"],
+  [7,"Marinho","F",36,"198392"],
+  [9,"Alex Bruno Da Costa Lima","F",null,"3098485"],
+  [11,"Osvaldo","F",39,"141626"],
+  [16,"Ruben Ramos","F",19,"321370"],
+  [20,"Lucas","F",27,"253009"],
+  [23,"Fabrício Santos","F",26,"285395"],
+  [28,"Anderson Bispo Dos Santos","F",24,"420159"],
+  [33,"Erick","F",28,"256044"],
+  [49,"Marcos Vinicius","F",19,"402661"],
+  [79,"Renato Kayzer","F",30,"227314"],
+  [91,"Renê","F",23,"379359"]]};
+window.SQUADS_LAST = {
+ "athletico-pr": {
+  "date": "2026-10-30",
+  "comp": "Brasileirão",
+  "vs": "Grêmio",
+  "home": false,
+  "score": "0-2",
+  "formation": "3-4-2-1",
+  "xi": [
+   [
+    1,
+    "322655"
+   ],
+   [
+    2,
+    "197049"
+   ],
+   [
+    3,
+    "338881"
+   ],
+   [
+    4,
+    "309499"
+   ],
+   [
+    5,
+    "270242"
+   ],
+   [
+    6,
+    "381170"
+   ],
+   [
+    7,
+    "94976"
+   ],
+   [
+    8,
+    "113352"
+   ],
+   [
+    9,
+    "268476"
+   ],
+   [
+    10,
+    "380327"
+   ],
+   [
+    11,
+    "361359"
+   ]
+  ],
+  "bench": [
+   "361454",
+   "361383",
+   "361357",
+   "340596",
+   "315789",
+   "153754",
+   "400904",
+   "287688",
+   "378910",
+   "296574",
+   "315283",
+   "360826"
+  ]
+ },
+ "atletico-mg": {
+  "date": "2026-11-01",
+  "comp": "Copa do Brasil",
+  "vs": "Grêmio",
+  "home": false,
+  "score": "0-2",
+  "formation": "4-1-4-1",
+  "xi": [
+   [
+    1,
+    "318191"
+   ],
+   [
+    2,
+    "234015"
+   ],
+   [
+    3,
+    "245858"
+   ],
+   [
+    4,
+    "233416"
+   ],
+   [
+    5,
+    "220747"
+   ],
+   [
+    6,
+    "191995"
+   ],
+   [
+    7,
+    "252197"
+   ],
+   [
+    8,
+    "262111"
+   ],
+   [
+    9,
+    "334382"
+   ],
+   [
+    10,
+    "307756"
+   ],
+   [
+    11,
+    "158272"
+   ]
+  ],
+  "bench": [
+   "417570",
+   "417569",
+   "223953",
+   "205074",
+   "268472",
+   "417568",
+   "178349",
+   "398934",
+   "319422",
+   "256560",
+   "361299",
+   "304699"
+  ]
+ },
+ "bahia": {
+  "date": "2026-10-29",
+  "comp": "Brasileirão",
+  "vs": "São Paulo",
+  "home": true,
+  "score": "3-2",
+  "formation": "5-3-2",
+  "xi": [
+   [
+    1,
+    "224106"
+   ],
+   [
+    2,
+    "124439"
+   ],
+   [
+    3,
+    "304757"
+   ],
+   [
+    4,
+    "294932"
+   ],
+   [
+    5,
+    "219090"
+   ],
+   [
+    6,
+    "334243"
+   ],
+   [
+    7,
+    "269910"
+   ],
+   [
+    8,
+    "285757"
+   ],
+   [
+    9,
+    "333907"
+   ],
+   [
+    10,
+    "318291"
+   ],
+   [
+    11,
+    "266664"
+   ]
+  ],
+  "bench": [
+   "167845",
+   "299932",
+   "253796",
+   "173174",
+   "387949",
+   "335673",
+   "199017",
+   "227241",
+   "381149",
+   "379502",
+   "360186",
+   "269675"
+  ]
+ },
+ "botafogo": {
+  "date": "2026-10-29",
+  "comp": "Brasileirão",
+  "vs": "Remo",
+  "home": false,
+  "score": "1-2",
+  "formation": "4-2-3-1",
+  "xi": [
+   [
+    1,
+    "228401"
+   ],
+   [
+    2,
+    "268700"
+   ],
+   [
+    3,
+    "199734"
+   ],
+   [
+    4,
+    "398719"
+   ],
+   [
+    5,
+    "245291"
+   ],
+   [
+    6,
+    "170362"
+   ],
+   [
+    7,
+    "176733"
+   ],
+   [
+    8,
+    "297039"
+   ],
+   [
+    9,
+    "224103"
+   ],
+   [
+    10,
+    "297056"
+   ],
+   [
+    11,
+    "314841"
+   ]
+  ],
+  "bench": [
+   "196849",
+   "202374",
+   "400067",
+   "143883",
+   "359977",
+   "272224",
+   "176810",
+   "269843",
+   "277069",
+   "252544",
+   "411648",
+   "250143"
+  ]
+ },
+ "chapecoense": {
+  "date": "2026-10-28",
+  "comp": "Brasileirão",
+  "vs": "Red Bull Bragantino",
+  "home": false,
+  "score": "0-3",
+  "formation": "4-4-2",
+  "xi": [
+   [
+    1,
+    "276217"
+   ],
+   [
+    2,
+    "234012"
+   ],
+   [
+    3,
+    "236283"
+   ],
+   [
+    4,
+    "157066"
+   ],
+   [
+    5,
+    "338663"
+   ],
+   [
+    6,
+    "302533"
+   ],
+   [
+    7,
+    "64671"
+   ],
+   [
+    8,
+    "396967"
+   ],
+   [
+    9,
+    "121921"
+   ],
+   [
+    10,
+    "140012"
+   ],
+   [
+    11,
+    "301225"
+   ]
+  ],
+  "bench": [
+   "249088",
+   "319649",
+   "287768",
+   "199933",
+   "306516",
+   "3108270",
+   "3097100",
+   "317377",
+   "250918",
+   "269645"
+  ]
+ },
+ "corinthians": {
+  "date": "2026-10-30",
+  "comp": "Brasileirão",
+  "vs": "Mirassol",
+  "home": true,
+  "score": "2-0",
+  "formation": "4-2-3-1",
+  "xi": [
+   [
+    1,
+    "257051"
+   ],
+   [
+    2,
+    "272533"
+   ],
+   [
+    3,
+    "195756"
+   ],
+   [
+    4,
+    "338898"
+   ],
+   [
+    5,
+    "194090"
+   ],
+   [
+    6,
+    "168981"
+   ],
+   [
+    7,
+    "347456"
+   ],
+   [
+    8,
+    "409662"
+   ],
+   [
+    9,
+    "266666"
+   ],
+   [
+    10,
+    "270562"
+   ],
+   [
+    11,
+    "287774"
+   ]
+  ],
+  "bench": [
+   "234070",
+   "148189",
+   "216098",
+   "361442",
+   "382944",
+   "359849",
+   "171652",
+   "240557",
+   "361471",
+   "223437",
+   "421414",
+   "382959"
+  ]
+ },
+ "coritiba": {
+  "date": "2026-10-31",
+  "comp": "Brasileirão",
+  "vs": "Vitória",
+  "home": true,
+  "score": "2-0",
+  "formation": "4-2-3-1",
+  "xi": [
+   [
+    1,
+    "364880"
+   ],
+   [
+    2,
+    "200826"
+   ],
+   [
+    3,
+    "243831"
+   ],
+   [
+    4,
+    "128368"
+   ],
+   [
+    5,
+    "319507"
+   ],
+   [
+    6,
+    "256018"
+   ],
+   [
+    7,
+    "236324"
+   ],
+   [
+    8,
+    "188143"
+   ],
+   [
+    9,
+    "150215"
+   ],
+   [
+    10,
+    "276240"
+   ],
+   [
+    11,
+    "216846"
+   ]
+  ],
+  "bench": [
+   "276058",
+   "316781",
+   "333306",
+   "311037",
+   "236410",
+   "124025",
+   "358798",
+   "198346",
+   "155268",
+   "402818",
+   "242711",
+   "417356"
+  ]
+ },
+ "cruzeiro": {
+  "date": "2026-10-29",
+  "comp": "Brasileirão",
+  "vs": "Atlético-MG",
+  "home": false,
+  "score": "1-0",
+  "formation": "4-2-3-1",
+  "xi": [
+   [
+    1,
+    "337996"
+   ],
+   [
+    2,
+    "212077"
+   ],
+   [
+    3,
+    "176810"
+   ],
+   [
+    4,
+    "402423"
+   ],
+   [
+    5,
+    "363020"
+   ],
+   [
+    6,
+    "286558"
+   ],
+   [
+    7,
+    "371534"
+   ],
+   [
+    8,
+    "77577"
+   ],
+   [
+    9,
+    "280978"
+   ],
+   [
+    10,
+    "216098"
+   ],
+   [
+    11,
+    "210135"
+   ]
+  ],
+  "bench": [
+   "304533",
+   "268221",
+   "254032",
+   "236111",
+   "118688",
+   "108342",
+   "370814",
+   "238734",
+   "297070",
+   "227737",
+   "108103",
+   "108347"
+  ]
+ },
+ "flamengo": {
+  "date": "2026-10-29",
+  "comp": "Brasileirão",
+  "vs": "Vasco da Gama",
+  "home": false,
+  "score": "4-1",
+  "formation": "4-2-3-1",
+  "xi": [
+   [
+    1,
+    "215388"
+   ],
+   [
+    2,
+    "188368"
+   ],
+   [
+    3,
+    "246844"
+   ],
+   [
+    4,
+    "202533"
+   ],
+   [
+    5,
+    "252316"
+   ],
+   [
+    6,
+    "145405"
+   ],
+   [
+    7,
+    "277352"
+   ],
+   [
+    8,
+    "165778"
+   ],
+   [
+    9,
+    "235017"
+   ],
+   [
+    10,
+    "179767"
+   ],
+   [
+    11,
+    "253937"
+   ]
+  ],
+  "bench": [
+   "401309",
+   "203077",
+   "414769",
+   "343843",
+   "334752",
+   "234715",
+   "414359",
+   "254145",
+   "376479",
+   "278802",
+   "234765",
+   "201683"
+  ]
+ },
+ "fluminense": {
+  "date": "2026-10-28",
+  "comp": "Brasileirão",
+  "vs": "Internacional",
+  "home": true,
+  "score": "2-1",
+  "formation": "4-2-3-1",
+  "xi": [
+   [
+    1,
+    "158382"
+   ],
+   [
+    2,
+    "271557"
+   ],
+   [
+    3,
+    "173588"
+   ],
+   [
+    4,
+    "238342"
+   ],
+   [
+    5,
+    "281559"
+   ],
+   [
+    6,
+    "96254"
+   ],
+   [
+    7,
+    "177219"
+   ],
+   [
+    8,
+    "336622"
+   ],
+   [
+    9,
+    "124068"
+   ],
+   [
+    10,
+    "175902"
+   ],
+   [
+    11,
+    "241466"
+   ]
+  ],
+  "bench": [
+   "403159",
+   "207269",
+   "276023",
+   "201547",
+   "146162",
+   "116395",
+   "255327",
+   "212879",
+   "165749",
+   "194039",
+   "199958",
+   "287633"
+  ]
+ },
+ "gremio": {
+  "date": "2026-11-01",
+  "comp": "Copa do Brasil",
+  "vs": "Atlético-MG",
+  "home": true,
+  "score": "2-0",
+  "formation": "3-4-2-1",
+  "xi": [
+   [
+    1,
+    "198983"
+   ],
+   [
+    2,
+    "213260"
+   ],
+   [
+    3,
+    "229121"
+   ],
+   [
+    4,
+    "383983"
+   ],
+   [
+    5,
+    "199101"
+   ],
+   [
+    6,
+    "314603"
+   ],
+   [
+    7,
+    "303030"
+   ],
+   [
+    8,
+    "238449"
+   ],
+   [
+    9,
+    "252576"
+   ],
+   [
+    10,
+    "286714"
+   ],
+   [
+    11,
+    "269079"
+   ]
+  ],
+  "bench": [
+   "95558",
+   "213879",
+   "187100",
+   "185994",
+   "400264",
+   "317014",
+   "226787",
+   "146109",
+   "304659",
+   "287664",
+   "399092",
+   "286201"
+  ]
+ },
+ "internacional": {
+  "date": "2026-10-28",
+  "comp": "Brasileirão",
+  "vs": "Fluminense",
+  "home": false,
+  "score": "1-2",
+  "formation": "3-4-2-1",
+  "xi": [
+   [
+    1,
+    "361392"
+   ],
+   [
+    2,
+    "309131"
+   ],
+   [
+    3,
+    "304656"
+   ],
+   [
+    4,
+    "222664"
+   ],
+   [
+    5,
+    "200562"
+   ],
+   [
+    6,
+    "295006"
+   ],
+   [
+    7,
+    "229574"
+   ],
+   [
+    8,
+    "213239"
+   ],
+   [
+    9,
+    "270260"
+   ],
+   [
+    10,
+    "165232"
+   ],
+   [
+    11,
+    "285029"
+   ]
+  ],
+  "bench": [
+   "304469",
+   "286704",
+   "188485",
+   "401055",
+   "382893",
+   "287903",
+   "289499",
+   "319790",
+   "76818",
+   "417352",
+   "270246",
+   "202700"
+  ]
+ },
+ "mirassol": {
+  "date": "2026-10-30",
+  "comp": "Brasileirão",
+  "vs": "Corinthians",
+  "home": false,
+  "score": "0-2",
+  "formation": "4-2-3-1",
+  "xi": [
+   [
+    1,
+    "196851"
+   ],
+   [
+    2,
+    "299967"
+   ],
+   [
+    3,
+    "115379"
+   ],
+   [
+    4,
+    "203715"
+   ],
+   [
+    5,
+    "250899"
+   ],
+   [
+    6,
+    "270797"
+   ],
+   [
+    7,
+    "94310"
+   ],
+   [
+    8,
+    "269848"
+   ],
+   [
+    9,
+    "314915"
+   ],
+   [
+    10,
+    "174782"
+   ],
+   [
+    11,
+    "250388"
+   ]
+  ],
+  "bench": [
+   "218913",
+   "290092",
+   "325101",
+   "218974",
+   "203754",
+   "233888",
+   "198273",
+   "201623",
+   "156502",
+   "205448",
+   "338674",
+   "252610"
+  ]
+ },
+ "palmeiras": {
+  "date": "2026-11-01",
+  "comp": "Copa do Brasil",
+  "vs": "Vasco da Gama",
+  "home": true,
+  "score": "1-0",
+  "formation": "3-4-2-1",
+  "xi": [
+   [
+    1,
+    "276741"
+   ],
+   [
+    2,
+    "315619"
+   ],
+   [
+    3,
+    "254007"
+   ],
+   [
+    4,
+    "222631"
+   ],
+   [
+    5,
+    "118395"
+   ],
+   [
+    6,
+    "252609"
+   ],
+   [
+    7,
+    "234016"
+   ],
+   [
+    8,
+    "186776"
+   ],
+   [
+    9,
+    "311743"
+   ],
+   [
+    10,
+    "289046"
+   ],
+   [
+    11,
+    "239566"
+   ]
+  ],
+  "bench": [
+   "382965",
+   "201622",
+   "152812",
+   "402695",
+   "387989",
+   "329383",
+   "288669",
+   "210143",
+   "109962",
+   "402701",
+   "361457",
+   "257050"
+  ]
+ },
+ "bragantino": {
+  "date": "2026-11-02",
+  "comp": "Brasileirão",
+  "vs": "Santos",
+  "home": true,
+  "score": "2-1",
+  "formation": "4-2-3-1",
+  "xi": [
+   [
+    1,
+    "145092"
+   ],
+   [
+    2,
+    "418512"
+   ],
+   [
+    3,
+    "229555"
+   ],
+   [
+    4,
+    "307934"
+   ],
+   [
+    5,
+    "334375"
+   ],
+   [
+    6,
+    "302225"
+   ],
+   [
+    7,
+    "248584"
+   ],
+   [
+    8,
+    "279941"
+   ],
+   [
+    9,
+    "199680"
+   ],
+   [
+    10,
+    "358167"
+   ],
+   [
+    11,
+    "333314"
+   ]
+  ],
+  "bench": [
+   "335360",
+   "257335",
+   "296900",
+   "357358",
+   "239368",
+   "307933",
+   "287035",
+   "253486",
+   "319950",
+   "225538",
+   "171993",
+   "383987"
+  ]
+ },
+ "remo": {
+  "date": "2026-10-29",
+  "comp": "Brasileirão",
+  "vs": "Botafogo",
+  "home": true,
+  "score": "2-1",
+  "formation": "4-3-3",
+  "xi": [
+   [
+    1,
+    "206952"
+   ],
+   [
+    2,
+    "304826"
+   ],
+   [
+    3,
+    "215815"
+   ],
+   [
+    4,
+    "201793"
+   ],
+   [
+    5,
+    "157743"
+   ],
+   [
+    6,
+    "254447"
+   ],
+   [
+    7,
+    "286532"
+   ],
+   [
+    8,
+    "198362"
+   ],
+   [
+    9,
+    "235385"
+   ],
+   [
+    10,
+    "359364"
+   ],
+   [
+    11,
+    "301185"
+   ]
+  ],
+  "bench": [
+   "265535",
+   "277092",
+   "276661",
+   "254464",
+   "186832",
+   "280678",
+   "200775",
+   "269643",
+   "202493",
+   "400953",
+   "338668",
+   "290028"
+  ]
+ },
+ "santos": {
+  "date": "2026-11-02",
+  "comp": "Brasileirão",
+  "vs": "Red Bull Bragantino",
+  "home": false,
+  "score": "1-2",
+  "formation": "4-2-3-1",
+  "xi": [
+   [
+    1,
+    "322630"
+   ],
+   [
+    2,
+    "182187"
+   ],
+   [
+    3,
+    "279454"
+   ],
+   [
+    4,
+    "270486"
+   ],
+   [
+    5,
+    "403721"
+   ],
+   [
+    6,
+    "198546"
+   ],
+   [
+    7,
+    "399179"
+   ],
+   [
+    8,
+    "399297"
+   ],
+   [
+    9,
+    "182522"
+   ],
+   [
+    10,
+    "130372"
+   ],
+   [
+    11,
+    "198940"
+   ]
+  ],
+  "bench": [
+   "198561",
+   "421478",
+   "301544",
+   "269813",
+   "235894",
+   "154853",
+   "330665",
+   "236314",
+   "408862",
+   "404206",
+   "222955",
+   "216254"
+  ]
+ },
+ "sao-paulo": {
+  "date": "2026-10-29",
+  "comp": "Brasileirão",
+  "vs": "Bahia",
+  "home": false,
+  "score": "2-3",
+  "formation": "3-4-2-1",
+  "xi": [
+   [
+    1,
+    "199013"
+   ],
+   [
+    2,
+    "376489"
+   ],
+   [
+    3,
+    "199065"
+   ],
+   [
+    4,
+    "285010"
+   ],
+   [
+    5,
+    "201531"
+   ],
+   [
+    6,
+    "357362"
+   ],
+   [
+    7,
+    "301516"
+   ],
+   [
+    8,
+    "319168"
+   ],
+   [
+    9,
+    "162558"
+   ],
+   [
+    10,
+    "190483"
+   ],
+   [
+    11,
+    "130711"
+   ]
+  ],
+  "bench": [
+   "196824",
+   "383055",
+   "260392",
+   "270578",
+   "402686",
+   "399075",
+   "259879",
+   "196855",
+   "402683",
+   "383042",
+   "215961",
+   "206953"
+  ]
+ },
+ "vasco": {
+  "date": "2026-11-01",
+  "comp": "Copa do Brasil",
+  "vs": "Palmeiras",
+  "home": false,
+  "score": "0-1",
+  "formation": "4-1-4-1",
+  "xi": [
+   [
+    1,
+    "205464"
+   ],
+   [
+    2,
+    "234842"
+   ],
+   [
+    3,
+    "287862"
+   ],
+   [
+    4,
+    "271473"
+   ],
+   [
+    5,
+    "317383"
+   ],
+   [
+    6,
+    "337099"
+   ],
+   [
+    7,
+    "315293"
+   ],
+   [
+    8,
+    "336485"
+   ],
+   [
+    9,
+    "292259"
+   ],
+   [
+    10,
+    "201717"
+   ],
+   [
+    11,
+    "275941"
+   ]
+  ],
+  "bench": [
+   "285142",
+   "43711",
+   "285203",
+   "257744",
+   "402641",
+   "323815",
+   "312657",
+   "334756",
+   "252052",
+   "219005",
+   "196873",
+   "198302"
+  ]
+ },
+ "vitoria": {
+  "date": "2026-10-31",
+  "comp": "Brasileirão",
+  "vs": "Coritiba",
+  "home": false,
+  "score": "0-2",
+  "formation": "4-1-4-1",
+  "xi": [
+   [
+    1,
+    "287941"
+   ],
+   [
+    2,
+    "402660"
+   ],
+   [
+    3,
+    "200206"
+   ],
+   [
+    4,
+    "252315"
+   ],
+   [
+    5,
+    "402426"
+   ],
+   [
+    6,
+    "271773"
+   ],
+   [
+    7,
+    "256044"
+   ],
+   [
+    8,
+    "383950"
+   ],
+   [
+    9,
+    "379359"
+   ],
+   [
+    10,
+    "218649"
+   ],
+   [
+    11,
+    "379661"
+   ]
+  ],
+  "bench": [
+   "266662",
+   "269852",
+   "3097346",
+   "253009",
+   "3098485",
+   "421952",
+   "285395",
+   "227314",
+   "218972",
+   "215771",
+   "285233",
+   "321370"
+  ]
+ }
+};
+window.SQUADS_META = {"source": "ESPN", "updated": "03/11/2026"};
