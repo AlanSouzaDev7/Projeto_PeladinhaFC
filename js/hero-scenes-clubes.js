@@ -9,10 +9,7 @@
   const TAU = Math.PI * 2;
 
   /* ---------- peças comuns ---------- */
-  const layout = (st) => {
-    const { w, h } = st, cs = Math.min(h * 0.56, w * 0.28);
-    return { w, h, cs, cx: w - Math.max(cs * 0.8, w * 0.17), cy: h * 0.46 };
-  };
+  const layout = (st) => ({ w: st.w, h: st.h, ...HERO_SCENES.kit.crestSpot(st.w, st.h) });
   function sky(ctx, w, h, stops) {
     const g = ctx.createLinearGradient(0, 0, 0, h);
     stops.forEach(([o, c]) => g.addColorStop(o, c));

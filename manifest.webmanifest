@@ -1,0 +1,14 @@
+{
+  "name": "PLACAR. — futebol brasileiro",
+  "short_name": "Placar",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b0f17",
+  "theme_color": "#0b0f17",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/logo-mark.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

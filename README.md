@@ -42,6 +42,19 @@ Sem a API (por exemplo, `python -m http.server`), o site funciona com os dados g
 
 Intervalos de atualização, portais monitorados e **setoristas** de cada clube ficam em [`server/config.json`](server/config.json).
 
+## Celular (iPhone e Android)
+
+O site é testado automaticamente num **iPhone 15** (motor WebKit, o mesmo do Safari) e num **Pixel 7** (Chrome Android), com [Playwright](https://playwright.dev):
+
+```bash
+npm install
+npx playwright install webkit
+npm run api            # em outro terminal
+npm run test:mobile    # relatório e prints em tests/mobile/out/
+```
+
+O teste abre as 8 páginas principais e confere rolagem lateral, tamanho dos alvos de toque (≥ 40 px), texto legível, erros e o arrastar com o dedo no campinho. Ajustes feitos para celular: escudo da cena no canto de cima, áreas seguras do iPhone, busca sem zoom automático do iOS, altura de tela estável (`100dvh`), prefixos do Safari, ícones e manifesto para "Adicionar à tela inicial", e canvas que reduz resolução e ritmo sozinho em aparelhos mais lentos.
+
 ## Estrutura
 
 ```

@@ -20,6 +20,12 @@
   };
   function rand(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
   const bez = (p0, p1, p2, t) => (1 - t) ** 2 * p0 + 2 * (1 - t) * t * p1 + t * t * p2;
+  /* onde o escudo se forma: à direita no computador; no celular, no canto de cima (o texto fica embaixo) */
+  function crestSpot(w, h) {
+    if (w < 700) { const cs = Math.min(w * 0.36, h * 0.3); return { cs, cx: w - cs * 0.62 - 6, cy: cs * 0.62 + 10 }; }
+    const cs = Math.min(h * 0.56, w * 0.28);
+    return { cs, cx: w - Math.max(cs * 0.8, w * 0.17), cy: h * 0.46 };
+  }
 
   /* ---------- palco ---------- */
   class Stage {
@@ -42,7 +48,9 @@
       if (reduced) { this.draw(99); } else this.loop();
     }
     resize() {
-      const r = this.c.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+      // celular: resolução menor (a tela já é densa); se o aparelho estiver lento, cai ainda mais
+      const small = innerWidth < 700, cap = this.lowPower ? 1 : small ? 1.5 : 2;
+      const r = this.c.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, cap);
       this.w = Math.max(1, r.width); this.h = Math.max(1, r.height); this.dpr = dpr;
       this.c.width = Math.round(this.w * dpr); this.c.height = Math.round(this.h * dpr);
       // mudar o tamanho apaga o canvas: redesenha na hora para não piscar
@@ -61,6 +69,13 @@
       if (this.raf || !this.alive) return;
       const tick = (now) => {
         this.raf = null;
+        // mede o tempo entre quadros; abaixo de ~40 fps, passa a desenhar em resolução menor e a 30 fps
+        if (this.last) {
+          const dt = now - this.last; this.avg = this.avg ? this.avg * 0.92 + dt * 0.08 : dt;
+          if (!this.lowPower && this.avg > 25 && now - this.t0 > 1500) { this.lowPower = true; this.resize(); }
+        }
+        this.last = now;
+        if (this.lowPower && (this.skip = !this.skip)) { this.raf = requestAnimationFrame(tick); return; }
         if (!this.alive || !this.c.isConnected) return this.destroy();
         // fora da tela: confere de novo daqui a pouco em vez de depender só do observador
         if (!this.visible || document.hidden) { this.idle = setTimeout(() => this.loop(), 400); return; }
@@ -89,7 +104,7 @@
     register: (id, f) => (registry[id] = f),
     has: (id) => !!registry[id],
     mount,
-    kit: { clamp, lerp, span, ease, rand, bez },
+    kit: { clamp, lerp, span, ease, rand, bez, crestSpot },
   };
 })();
 
@@ -199,7 +214,7 @@ HERO_SCENES.register("cruzeiro", (st) => {
       const tIdle = Math.max(0, t - 6);
 
       // onde o escudo fica na tela (lado direito do topo)
-      const cs = Math.min(h * 0.56, w * 0.28), cx = w - Math.max(cs * 0.8, w * 0.17), cy = h * 0.46;
+      const { cs, cx, cy } = HERO_SCENES.kit.crestSpot(w, h);
       // câmera: começa aberta e vai fechando no Cruzeiro do Sul, que termina sobre o escudo
       const zoom = lerp(0.85, 1.45, tCam);
       const scale = Math.min(w, h * 1.6) * 0.16 * lerp(1, 1.15, tCam); // tamanho da cruz em px

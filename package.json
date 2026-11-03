@@ -1,0 +1,12 @@
+{
+  "name": "placar-portfolio",
+  "private": true,
+  "description": "PLACAR. — testes automatizados em celular (iPhone/WebKit e Android/Chrome)",
+  "scripts": {
+    "api": "python -X utf8 server/placar_api.py",
+    "test:mobile": "node tests/mobile/run.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.48.2"
+  }
+}

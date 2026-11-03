@@ -26,8 +26,8 @@
   --radius-sm: 9px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --font: "Archivo", system-ui, sans-serif;
-  --font-display: "Archivo", system-ui, sans-serif;
+  --font: "Archivo", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Archivo", "Arial Narrow", -apple-system, Roboto, sans-serif;
   --header-h: 64px;
 
   /* cores do clube ativo (sobrescritas via JS nas páginas de clube) */
@@ -61,8 +61,10 @@
 
 html { scroll-behavior: smooth; }
 
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   margin: 0;
+  -webkit-tap-highlight-color: transparent;
   font-family: var(--font);
   font-size: 14px;
   line-height: 1.45;
@@ -115,6 +117,7 @@ img, svg { display: block; }
   gap: 24px;
   padding: 0 24px;
   background: color-mix(in srgb, var(--bg) 78%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
   backdrop-filter: blur(14px) saturate(1.4);
   border-bottom: 1px solid var(--line-soft);
   view-transition-name: header;
@@ -746,6 +749,7 @@ img.crest { object-fit: contain; }
 
 /* campinho do tamanho da tela: tudo visível sem rolar */
 .lineup { --lu-h: calc(100vh - var(--header-h) - 64px - 128px); gap: 10px; }
+@supports (height: 100dvh) { .lineup { --lu-h: calc(100dvh - var(--header-h) - 64px - 128px); } }
 .lu-grid { grid-template-columns: auto minmax(0, 1fr); gap: 16px; }
 .lu-pitch { height: calc(var(--lu-h) - 104px); min-height: 380px; width: auto; aspect-ratio: 68 / 100; margin: 0; }
 .lu-bench { margin-top: 8px; padding: 8px 10px; width: calc((max(var(--lu-h) - 104px, 380px)) * 0.68); box-sizing: border-box; }
@@ -919,6 +923,7 @@ img.crest { object-fit: contain; }
   border-radius: 8px;
   background: rgb(0 0 0 / 0.35);
   color: #fff;
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
 .club-card .go {
@@ -1007,6 +1012,7 @@ img.crest { object-fit: contain; }
   border-radius: 999px;
   background: color-mix(in srgb, var(--on-c1) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--on-c1) 18%, transparent);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   font-weight: 600;
   font-size: 13px;
@@ -1102,6 +1108,7 @@ img.crest { object-fit: contain; }
   margin: 0 calc(50% - 50vw) 24px;
   padding: 0 24px;
   background: color-mix(in srgb, var(--bg) 85%, transparent);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line-soft);
 }
@@ -1439,6 +1446,7 @@ img.crest { object-fit: contain; }
   padding: 8px;
   border-radius: 18px;
   background: color-mix(in srgb, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
@@ -1450,4 +1458,57 @@ img.crest { object-fit: contain; }
   *,
   *::before,
   *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+
+/* ==========================================================================
+   Celular (iPhone e Android) — toque, leitura e áreas seguras
+   ========================================================================== */
+@media (max-width: 700px) {
+  /* topo dos clubes: escudo da cena no canto de cima, texto embaixo, sem cortar o nome */
+  .hero--canvas { min-height: 0; padding-top: calc(min(36vw, 30vh) * 1.25 + 20px); padding-bottom: 28px; }
+  .hero--canvas .hero-inner { grid-template-columns: minmax(0, 1fr); }
+  .hero--canvas .crest-big { display: none; }
+  .hero h1 { font-size: clamp(40px, 13vw, 64px); overflow-wrap: anywhere; }
+  .hero .facts span { font-size: 12px; padding: 6px 10px; }
+  .hero-scene-cap { display: none; }
+
+  /* alvos de toque de pelo menos 40–44 px */
+  .star { padding: 12px; margin: -12px; }
+  .round-nav button { width: 44px; height: 44px; }
+  .logo-mark { width: 40px; height: 40px; }
+  .table td.club a { min-height: 40px; }
+  .league-h a, .card-h small a, .card-h a { display: inline-block; padding: 12px 8px; margin: -12px -8px; }
+  .chip { min-height: 38px; }
+  .tab { padding: 10px 14px; }
+  .icon-btn { width: 44px; height: 44px; }
+  .bottom-nav a { min-width: 56px; min-height: 44px; justify-content: center; }
+
+  /* texto legível */
+  .card-h small, .source, .league-h small, .legend, .lu-source, .lu-hint { font-size: 12px; }
+  .lu-pitch .slot .nm { font-size: 11px; }
+  .lu-pitch .slot small { display: none; }
+  .slot.b .nm { font-size: 11px; }
+  .lu-h small { font-size: 11px; }
+  .source a { display: inline-block; padding: 12px 6px; margin: -12px -6px; }
+
+  /* busca: 16 px evita o zoom automático do iOS ao tocar no campo */
+  .search input { font-size: 16px; }
+
+  /* Bora pro jogo */
+  .bp-pick { min-width: 0; }
+  .bp-pick select { width: 100%; min-width: 0; font-size: 22px; }
+  .bp-head [data-bp-swap] { justify-self: center; }
+  .bt em { display: none; }
+  .bt span { width: 24px; height: 24px; font-size: 11px; }
+  .board { max-width: 100%; }
+
+  /* barra inferior acima da barra de gestos do iPhone */
+  .bottom-nav { bottom: calc(12px + env(safe-area-inset-bottom)); left: calc(12px + env(safe-area-inset-left)); right: calc(12px + env(safe-area-inset-right)); }
+  body { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .header { padding-left: calc(16px + env(safe-area-inset-left)); padding-right: calc(16px + env(safe-area-inset-right)); }
+}
+@media (hover: none) {
+  /* no toque não existe "passar o mouse": nada de efeitos presos depois do toque */
+  .club-card:hover .card-scene, .club-card:hover { transform: none; }
 }
