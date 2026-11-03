@@ -1,5 +1,9 @@
 # PLACAR. — futebol brasileiro em tempo real
 
+### ▶ [Acessar o site](https://alansouzadev7.github.io/Projeto_PeladinhaFC/)
+
+> Versão publicada no GitHub Pages, com os dados gravados no projeto. Para os dados ao vivo (placares, notícias e minuto a minuto), rode a API localmente — veja [Como rodar](#como-rodar).
+
 Projeto de portfólio: uma plataforma de resultados do **Brasileirão Série A 2026** com página temática para cada um dos 20 clubes, dados reais, campinho interativo para montar o time, prancheta tática e narração minuto a minuto.
 
 Feito com **HTML, CSS e JavaScript puro** (sem frameworks) e uma **API em Python** (só biblioteca padrão).
