@@ -352,7 +352,7 @@
     return `<div class="club-page">
       <section class="hero ${HERO_SCENES.has(id) ? "hero--canvas" : ""}" data-short="${c.short}">
         ${HERO_SCENES.has(id) ? `<canvas class="hero-canvas" data-hero-scene="${id}" aria-hidden="true"></canvas>
-          <div class="hero-scene-cap"><b>${SCENES.caption(id)}</b><span>toque no céu para ver de novo</span></div>` : `<div class="kit-bg" style="background:${kitBg(c)}"></div>`}
+          <div class="hero-scene-cap"><b>${SCENES.caption(id)}</b><span>toque para ver de novo</span></div>` : `<div class="kit-bg" style="background:${kitBg(c)}"></div>`}
         <div class="hero-inner">
           <div class="crest-big">${crest(c, 128, true)}</div>
           <div>
