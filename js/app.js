@@ -318,7 +318,7 @@
             ${byId[nextOf(id)] ? `<div class="card reveal"><div class="card-h">Próximo adversário</div>
               <a class="derby" href="#/clube/${nextOf(id)}">${crest(c, 34)}<span class="vs">VS</span>${crest(byId[nextOf(id)], 34)}<div style="margin-left:6px"><b>${byId[nextOf(id)].name}</b><br/><small style="color:var(--text-3)">${rowOf(nextOf(id)).pos}º · ${rowOf(nextOf(id)).p} pts</small></div></a></div>` : ""}
             ${scorersCard(3, id)}
-            ${c.idol ? `<div class="card idol reveal"><div class="eyebrow" style="color:inherit;opacity:.8">Ídolo eterno</div><h4>${c.idol}</h4></div>` : ""}
+            ${c.idol ? `<div class="card idol reveal${c.idolPhoto ? " has-photo" : ""}">${c.idolPhoto ? `<img class="idol-photo" src="${c.idolPhoto}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('has-photo');this.remove()" />` : ""}<div class="eyebrow" style="color:inherit;opacity:.8">Ídolo eterno</div><h4>${c.idol}</h4>${c.idolPhoto ? `<small class="idol-credit">Foto: Wikimedia Commons</small>` : ""}</div>` : ""}
             ${LIVE.on() ? `<div class="card news" data-news="${id}"><div class="card-h">Últimas notícias <small>Google Notícias</small></div><ul><li class="mam-empty">Buscando notícias…</li></ul></div>` : ""}
             <div class="card reveal">
               <div class="card-h">Ficha do clube</div>

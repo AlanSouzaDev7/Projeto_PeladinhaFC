@@ -77,5 +77,6 @@ prints/               capturas de tela
 
 - Tabela e artilharia: **CBF**. Jogos, elencos, escalações e lances: **ESPN**. Resultados: **ge.globo**. Manchetes: **Google Notícias** (só título, fonte e link).
 - Escudos: imagens oficiais via **Wikimedia Commons**, marcas registradas dos respectivos clubes, usadas apenas para identificação em projeto sem fins comerciais.
+- Fotos dos ídolos: imagens livres do **Wikimedia Commons** (as mesmas usadas na Wikipédia em português), com os créditos e licenças de cada autor na página do arquivo.
 - Ilustrações das aparições, marca PLACAR. e narração do minuto a minuto são próprias.
 - Modelo de "tendência do jogo" é uma estimativa simples, não uma previsão oficial.

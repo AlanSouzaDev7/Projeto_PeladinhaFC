@@ -56,6 +56,28 @@ const CRESTS = {
 };
 CLUBS.forEach((c) => (c.logo = CRESTS[c.id]));
 
+/* fotos dos ídolos: imagens livres do Wikimedia Commons (as mesmas da Wikipédia em português) */
+const IDOL_PHOTOS = {
+  "athletico-pr": "Atletiba_1972.jpg",
+  "atletico-mg": "JPP4693_(54137928249)_(cropped).jpg",
+  bahia: "Bobô_em_Amigos_de_Neymar_vs._Seleção_Baiana.jpg",
+  botafogo: "MFdSantos-Garrincha_(cropped).jpg",
+  corinthians: "Socrates87660.jpg",
+  cruzeiro: "Tostão_(Eduardo_Gonçalves_de_Andrade,_1970).jpg",
+  flamengo: "Zico_2012_3.jpg",
+  fluminense: "Castilho,_1956.tif",
+  gremio: "Renato_Portaluppi_-_Grêmio.png",
+  internacional: "Paulo_Roberto_Falcão,_Roma_1983-84.jpg",
+  palmeiras: "WK_74,_training_Brazilie_Ademir_da_Guia,_Bestanddeelnr_927-2956.jpg",
+  santos: "Pele_con_brasil_(cropped).jpg",
+  "sao-paulo": "Rogerio-Ceni-Sao-Paulo-Juventude-jun-2022_(cropped).jpg",
+  vasco: "Roberto_Dinamite_Vasco_da_Gama.jpg",
+};
+CLUBS.forEach((c) => {
+  const f = IDOL_PHOTOS[c.id];
+  if (f) c.idolPhoto = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(f)}?width=640`;
+});
+
 const byId = Object.fromEntries(CLUBS.map((c) => [c.id, c]));
 
 /* ---------- gerador pseudoaleatório com semente (mulberry32) ---------- */

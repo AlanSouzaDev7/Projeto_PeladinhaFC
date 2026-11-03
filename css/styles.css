@@ -1167,6 +1167,18 @@ img.crest { object-fit: contain; }
   animation: spin 40s linear infinite;
 }
 .idol h4 { margin: 4px 0 0; font: 900 34px / 1 var(--font-display); font-stretch: 70%; text-transform: uppercase; }
+/* foto do ídolo ao fundo, sumindo num degradê da cor sólida do clube */
+.idol.has-photo { min-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; background: var(--c1); }
+.idol.has-photo::before { display: none; }
+.idol-photo { position: absolute; inset: 0 0 0 auto; width: 72%; height: 100%; object-fit: cover; object-position: 50% 18%; filter: grayscale(.25) contrast(1.05); }
+.idol.has-photo::after {
+  content: ""; position: absolute; inset: 0;
+  background:
+    linear-gradient(90deg, var(--c1) 28%, color-mix(in srgb, var(--c1) 70%, transparent) 55%, transparent 100%),
+    linear-gradient(0deg, var(--c1) 0%, transparent 45%);
+}
+.idol.has-photo > :not(.idol-photo) { position: relative; z-index: 1; }
+.idol-credit { margin-top: 8px; font-size: 11px; opacity: .65; }
 
 .derby {
   display: flex;
