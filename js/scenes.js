@@ -251,5 +251,16 @@
   }
   function replay(el) { el.classList.remove("play"); void el.offsetWidth; el.classList.add("play"); }
 
-  window.SCENES = { scene, mount, caption: (id) => S[id] && S[id].cap };
+  /* bordão de cada clube, mostrado no topo da página do clube */
+  const MOTTO = {
+    cruzeiro: "Cabuloso, sob o Cruzeiro do Sul", flamengo: "Raça, amor e paixão", "atletico-mg": "Eu acredito!",
+    "athletico-pr": "É o Furacão!", bahia: "Esquadrão de Aço", botafogo: "O Glorioso da Estrela Solitária",
+    bragantino: "Massa Bruta", chapecoense: "Vamos, vamos, Chape!", corinthians: "Aqui é Corinthians!",
+    coritiba: "Vamos, Coxa!", fluminense: "Time de guerreiros", gremio: "Imortal Tricolor",
+    internacional: "O Clube do Povo", mirassol: "Vai, Leão!", palmeiras: "Avanti, Palestra!",
+    remo: "Fenômeno Azul", santos: "Alvinegro Praiano", "sao-paulo": "Soberano",
+    vasco: "Gigante da Colina", vitoria: "Leão da Barra",
+  };
+
+  window.SCENES = { scene, mount, caption: (id) => S[id] && S[id].cap, motto: (id) => MOTTO[id] || (S[id] && S[id].cap) };
 })();
