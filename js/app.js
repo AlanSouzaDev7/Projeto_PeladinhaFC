@@ -481,6 +481,8 @@
         </a>`).join("")}</div>`;
   }
 
+  // cenas de dia (mais claras) pedem uma sombra mais forte atrás do texto do topo
+  const SCRIM = { bahia: 0.8, mirassol: 0.84, chapecoense: 0.62, coritiba: 0.6 };
   function pageClub(id, tab = "geral") {
     const c = byId[id];
     if (!c) return pageNotFound();
@@ -562,7 +564,7 @@
     }
 
     return `<div class="club-page">
-      <section class="hero hero--gb ${HERO_SCENES.has(id) ? "hero--canvas" : ""}" data-short="${c.short}">
+      <section class="hero hero--gb ${HERO_SCENES.has(id) ? "hero--canvas" : ""}" data-short="${c.short}"${SCRIM[id] ? ` style="--scrim:${SCRIM[id]}"` : ""}>
         ${HERO_SCENES.has(id) ? `<canvas class="hero-canvas" data-hero-scene="${id}" aria-hidden="true"></canvas>` : `<div class="kit-bg" style="background:${kitBg(c)}"></div>`}
         <div class="hero-inner">
           <div class="hero-text">

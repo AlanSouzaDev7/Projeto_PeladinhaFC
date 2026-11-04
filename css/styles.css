@@ -1916,7 +1916,20 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 /* cena em canvas no fundo (o urubu sobre o Rio, a Via Láctea do Cruzeiro…), terminando no escudo do placar */
 .hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -3; display: block; cursor: pointer; }
 .hero--canvas { background: #020a24; min-height: 480px; }
-.hero--canvas::before { background: linear-gradient(to top, var(--bg) 0%, transparent 22%); }
+/* com a cena (sempre noturna/escura) no fundo, o texto do topo é branco em todos os clubes;
+   antes, clubes de camisa branca (São Paulo, Corinthians, Santos) ficavam com texto preto sobre a cena */
+.hero--canvas { --on-c1: #ffffff; color: #fff; }
+.hero--canvas .hero-text, .hero--canvas .gb-motto { text-shadow: 0 2px 14px rgb(0 0 0 / 0.5); }
+.hero--canvas::before { background:
+    linear-gradient(to top, var(--bg) 0%, transparent 22%),
+    /* sombra atrás do nome e dos dados (esquerda) e da frase do placar (direita): legível em cena clara ou escura */
+    linear-gradient(90deg, rgb(0 0 0 / var(--scrim, 0.55)) 0%, rgb(0 0 0 / calc(var(--scrim, 0.55) * 0.85)) 38%, rgb(0 0 0 / calc(var(--scrim, 0.55) * 0.3)) 52%, transparent 64%),
+    radial-gradient(ellipse 26% 22% at 86% 74%, rgb(0 0 0 / 0.5), transparent 75%); }
+@media (max-width: 1180px) {
+  .hero--canvas::before { background:
+    linear-gradient(to top, var(--bg) 0%, transparent 22%),
+    linear-gradient(to top, rgb(0 0 0 / calc(var(--scrim, 0.55) + 0.03)) 0%, rgb(0 0 0 / calc(var(--scrim, 0.55) - 0.13)) 55%, rgb(0 0 0 / 0.12) 80%, transparent 100%); }
+}
 .hero--canvas::after { display: none; }
 .gb.wait { opacity: 0; }
 .gb.wait + .gb-motto { opacity: 0; animation: none; }
@@ -1950,11 +1963,14 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .gb-clock { box-shadow: 0 0.6em 1em -0.4em rgb(0 0 0 / 0.35); position: absolute; left: 14.2em; top: 4.75em; width: 6.4em; height: 2em; display: grid; place-items: center; border-radius: 0 0 0.6em 0.6em; background: #fff; color: #0b1020; }
 .gb-clock span { font: 900 1.3em/1 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
 .gb-motto { margin: 0.9em 0 0; text-align: right; color: var(--on-c1); }
+.hero--canvas .gb-motto { width: fit-content; margin: 0.9em 0 0 auto; padding: 0.45em 0.8em 0.5em; border-radius: 0.6em;
+  background: linear-gradient(90deg, rgb(4 8 20 / 0.58), rgb(4 8 20 / 0.74)); }
 .gb-motto b { display: block; font: 900 1.6em/1.1 var(--font-display); font-stretch: 72%; letter-spacing: 0.05em; text-transform: uppercase; text-wrap: balance; }
 .gb-motto span { font-size: max(11px, 0.8em); opacity: 0.72; }
 
 /* --- animação --- */
-.gb.play .gb-bar { animation: gbBar 0.4s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+/* entrada da faixa: recorta só para os lados e não fica valendo depois (o escudo pode vazar da faixa) */
+.gb.play .gb-bar { animation: gbBar 0.4s cubic-bezier(0.2, 0.9, 0.3, 1) backwards; }
 .gb.play .gb-team { animation: gbTeam 6.4s linear both; }
 .gb.play .gb-crest { animation: gbCrest 6.4s linear both; }
 .gb.play .gb-art { animation: gbArt 6.4s linear both; }
@@ -1985,7 +2001,7 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .gb.still, .gb.still * { animation: none !important; }
 .gb.still .gb-wipe { display: none; }
 
-@keyframes gbBar { from { clip-path: inset(0 100% 0 0 round 0.5em); } to { clip-path: inset(0 0 0 0 round 0.5em); } }
+@keyframes gbBar { from { clip-path: inset(-60% 100% -60% -10%); } to { clip-path: inset(-60% -10% -60% -10%); } }
 @keyframes gbTeam { 0%, 8.6% { clip-path: polygon(0 0, 0 0, 0 50%, 0 100%, 0 100%); } 13.3%, 100% { clip-path: polygon(0 0, 100% 0, 66% 50%, 100% 100%, 0 100%); } }
 @keyframes gbCrest {
   0%, 10.9% { opacity: 0; transform: scale(0.2) rotate(-25deg); }
@@ -2023,6 +2039,7 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
   .hero-gb { order: -1; justify-self: stretch; font-size: min(15px, calc((100vw - 40px) / 37.5)); }
   .hero-gb .gb { margin: 0 auto; }
   .gb-motto { text-align: center; }
+  .hero--canvas .gb-motto { margin: 0.9em auto 0; }
 }
 @media (max-width: 560px) {
   .hero--gb { min-height: 0; padding-top: 26px; padding-bottom: 30px; }

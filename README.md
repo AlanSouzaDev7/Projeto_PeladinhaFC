@@ -96,6 +96,8 @@ node tests/mobile/qa.mjs                           # QA completo: contraste, lin
 node tests/mobile/desempenho.mjs                   # carregamento, peso e saltos de layout
 node tests/mobile/visual.mjs                       # prints do tema escuro e claro
 node tests/mobile/gol.mjs                          # o GOL! dos 20 clubes, quadro a quadro, no PC e no celular
+node tests/mobile/escudos.mjs                      # escudo inteiro (pode vazar da faixa) no topo, na cortina e no gol ao vivo, 20 clubes × 3 aparelhos
+node tests/mobile/topo-contraste.mjs               # texto do topo legível (≥ 4,5:1) sobre a cena de cada clube
 node tests/mobile/gol-ao-vivo.mjs                  # jogo simulado: o GOL! aparece em cada gol, com placar e minuto
 node tests/mobile/alinhamento.mjs                  # botões desalinhados em todas as páginas (PC, iPhone, Android)
 node tests/mobile/bora-arrastar.mjs                # arrastar jogadores na prancheta (mouse e dedo)
