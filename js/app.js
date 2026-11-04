@@ -112,6 +112,37 @@
   const sourceNote = `<div class="source">Fonte: <a href="${REAL.url}" target="_blank" rel="noopener">${REAL.source}</a> · atualizado em ${REAL.updated}</div>`;
 
   /* artilharia oficial */
+  /* ---------- estatísticas do elenco: pendurados, sequência, departamento médico e minutagem dos reservas ----------
+     full = false: resumo de 4 blocos na visão geral; full = true: aba "Estatísticas" com tudo */
+  function playerStatsHTML(id, full = false) {
+    const all = window.PLAYER_STATS, d = all && all.clubs && all.clubs[id];
+    if (!d) return full ? `<div class="card"><div class="empty" style="padding:40px">Estatísticas dos jogadores ainda não disponíveis.</div></div>` : "";
+    const nums = Object.fromEntries((window.SQUADS[id] || []).map((p) => [p[4], p[0]]));
+    const n = full ? 99 : 4;
+    const fmt = (iso) => (iso ? iso.split("-").reverse().slice(0, 2).join("/") : "");
+    const num = (pid) => `<span class="ps-n">${nums[pid] ?? "–"}</span>`;
+    const empty = (t) => `<li class="ps-empty">${t}</li>`;
+    const src = (x) => x ? `<a class="ps-src" href="${x.link}" target="_blank" rel="noopener" title="${(x.manchete || "").replace(/"/g, "&quot;")}">${x.fonte}${x.setorista ? " · setorista" : ""} · ${fmt(x.data)} ↗</a>` : "";
+    const blocks = [
+      ["pend", "Pendurados", "2 amarelos: o próximo suspende", d.pendurados.length
+        ? d.pendurados.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-tag ${p.so_imprensa ? "warn" : p.imprensa ? "ok" : ""}">${p.so_imprensa ? "segundo a imprensa" : p.imprensa ? "confirmado pela imprensa" : "pela súmula"}</span><span class="ps-v"><i class="rk-card y"></i>${p.amarelos ?? "–"}</span>${full ? src(p.imprensa) : ""}</li>`).join("")
+        : empty("Nenhum jogador pendurado.")],
+      ["seq", "Jogos seguidos", "partidas em sequência, sem desfalcar", d.sequencia.length
+        ? d.sequencia.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-sub">${p.titular} como titular</span><span class="ps-v">${p.jogos}</span></li>`).join("")
+        : empty("Ninguém com 2 ou mais jogos seguidos.")],
+      ["dm", "Departamento médico", "lesões noticiadas pela imprensa", d.lesionados.length
+        ? d.lesionados.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-tag ${p.confirmado ? "ok" : "warn"}">${p.confirmado ? `${p.fontes.length} fonte${p.fontes.length > 1 ? "s" : ""}` : "1 fonte"}</span>${full ? p.noticias.map(src).join("") : src(p.noticias[0])}</li>`).join("")
+        : empty("Nenhuma lesão noticiada nos últimos 21 dias.")],
+      ["res", "Reservas mais usados", "minutos de quem foi titular em menos da metade dos jogos", d.reservas.length
+        ? (() => { const max = d.reservas[0].minutos || 1; return d.reservas.slice(0, full ? 99 : 5).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-sub">${p.jogos} jogos · ${p.titular} titular</span><span class="ps-v">${p.minutos}'</span><span class="ps-bar"><i data-w="${((p.minutos / max) * 100).toFixed(1)}"></i></span></li>`).join(""); })()
+        : empty("Sem reservas com minutos.")],
+    ];
+    const foot = `<div class="source">Súmulas: ${d.fontes?.sumulas || "ESPN"} · ${d.jogos} jogos do Brasileirão · lesões e pendurados conferidos em ${(d.fontes?.imprensa || []).length ? d.fontes.imprensa.join(", ") : "ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra"} e com os setoristas · atualizado em ${all.updated}</div>`;
+    const grid = `<div class="pstats ${full ? "full" : ""}">${blocks.map(([k, t, sub, li]) => `<section class="ps-b ps-${k}"><h4>${t}<small>${sub}</small></h4><ul>${li}</ul></section>`).join("")}</div>`;
+    return full ? `<div class="card">${grid}${foot}</div>`
+      : `<div class="card reveal"><div class="card-h">Estatísticas do elenco <small><a href="#/clube/${id}/estatisticas" style="color:var(--accent)">ver tudo ›</a></small></div>${grid}${foot}</div>`;
+  }
+
   function scorersCard(limit = 10, clubId = null, clubs = null) {
     const list = REAL.scorers.filter((x) => (!clubId || x[1] === clubId) && (!clubs || clubs.includes(x[1]))).slice(0, limit);
     if (!list.length) return "";
@@ -274,7 +305,7 @@
     const words = c.name.split(" ");
     const m = state.matches.find((x) => x.home === id || x.away === id);
     const rival = byId[c.rival];
-    const tabs = [["geral", "Visão geral"], ["partidas", "Partidas"], ["elenco", "Elenco"], ["tabela", "Tabela"]];
+    const tabs = [["geral", "Visão geral"], ["partidas", "Partidas"], ["elenco", "Elenco"], ["estatisticas", "Estatísticas"], ["tabela", "Tabela"]];
     let body = "";
 
     if (tab === "geral") {
@@ -292,6 +323,7 @@
             </div>
             ${m ? `<div class="card reveal"><div class="card-h">Jogo da ${ROUND}ª rodada <small>${m.venue || ""}</small></div>
               <a class="card-b feature" href="#/partida/${m.id}" style="display:block;${matchVars(m)}">${scoreline(m, false)}<div style="margin-top:12px">${compareHTML(m, 4)}</div></a></div>` : ""}
+            ${playerStatsHTML(id)}
           </div>
           <div>
             <div class="card reveal">
@@ -344,6 +376,7 @@
     }
 
     if (tab === "elenco") body = LINEUP.builder(id);
+    if (tab === "estatisticas") body = playerStatsHTML(id, true);
 
     if (tab === "tabela") {
       body = `<div class="card">${standingsTable(state.standings, id)}${legend}</div>`;
@@ -677,7 +710,7 @@
       io.unobserve(e.target);
     }), { threshold: 0.12 });
     $$(".reveal").forEach((el) => io.observe(el));
-    requestAnimationFrame(() => $$(".bar i[data-w], .rk-bar i[data-w]").forEach((i) => { if (!i.closest(".reveal")) i.style.width = i.dataset.w + "%"; }));
+    requestAnimationFrame(() => $$(".bar i[data-w], .rk-bar i[data-w], .ps-bar i[data-w]").forEach((i) => { if (!i.closest(".reveal")) i.style.width = i.dataset.w + "%"; }));
     // inclinação 3D nos cartões
     $$("[data-tilt]").forEach((el) => {
       el.addEventListener("pointermove", (e) => {

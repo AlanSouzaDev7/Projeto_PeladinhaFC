@@ -1624,3 +1624,38 @@ img.crest { object-fit: contain; }
   .rk-col { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .kpi-link, .kpi-sheet, .rank-preview { transition: none; } }
+
+
+/* ==========================================================================
+   Estatísticas do elenco (visão geral do clube e aba "Estatísticas")
+   ========================================================================== */
+.pstats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line-soft); }
+.ps-b { background: var(--surface); padding: 14px 16px 12px; min-width: 0; }
+.ps-b h4 { margin: 0 0 8px; font: 900 15px/1.1 var(--font-display); font-stretch: 80%; text-transform: uppercase; letter-spacing: .02em; display: flex; flex-direction: column; gap: 3px; }
+.ps-b h4::before { content: ""; width: 26px; height: 3px; border-radius: 3px; background: color-mix(in srgb, var(--c1) 60%, var(--text-2)); margin-bottom: 4px; }
+.ps-b h4 small { font: 600 11px/1.3 var(--font); color: var(--text-3); text-transform: none; letter-spacing: 0; }
+.ps-pend h4::before { background: #f5c518; }
+.ps-dm h4::before { background: #e5383b; }
+.ps-b ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.ps-b li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; grid-auto-rows: auto; align-items: center; column-gap: 8px; row-gap: 2px; padding: 7px 0; border-top: 1px solid var(--line-soft); }
+.ps-b li:first-child { border-top: 0; }
+.ps-b li b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ps-n { grid-row: span 2; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; font-weight: 900; font-size: 12px;
+  background: color-mix(in srgb, var(--c1) 22%, var(--line-soft)); color: var(--text); }
+.ps-v { grid-column: 3; grid-row: 1; justify-self: end; display: inline-flex; align-items: center; gap: 5px; font: 900 18px/1 var(--font-display); font-stretch: 75%; font-variant-numeric: tabular-nums; }
+.ps-sub, .ps-tag, .ps-src, .ps-bar { grid-column: 2 / 4; }
+.ps-sub { font-size: 11.5px; color: var(--text-3); }
+.ps-tag { justify-self: start; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 99px; background: var(--line-soft); color: var(--text-2); }
+.ps-tag.ok { background: color-mix(in srgb, var(--win) 22%, transparent); color: var(--win); }
+.ps-tag.warn { background: color-mix(in srgb, #f5c518 22%, transparent); color: #c99a00; }
+:root:not([data-theme="light"]) .ps-tag.warn { color: #f5c518; }
+.ps-src { font-size: 11.5px; color: var(--text-2); text-underline-offset: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 22px; display: flex; align-items: center; }
+.ps-bar { height: 5px; border-radius: 9px; background: var(--line-soft); overflow: hidden; margin-top: 3px; }
+.ps-bar i { display: block; height: 100%; width: 0; background: color-mix(in srgb, var(--c1) 55%, var(--text-2)); border-radius: inherit; transition: width 1s var(--ease); }
+.ps-empty { grid-template-columns: 1fr !important; color: var(--text-3); font-size: 13px; }
+.pstats.full .ps-b { padding: 18px 20px; }
+.pstats + .source { padding: 10px 16px 14px; }
+@media (max-width: 700px) {
+  .pstats { grid-template-columns: minmax(0, 1fr); }
+  .ps-src { min-height: 40px; }
+}

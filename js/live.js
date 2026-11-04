@@ -20,6 +20,7 @@
     PD.ROUNDS = Object.keys(PD.FIXTURES).map(Number).sort((a, b) => a - b);
     if (s.squads) window.SQUADS = s.squads;
     if (s.last) window.SQUADS_LAST = s.last;
+    if (s.players) window.PLAYER_STATS = s.players;
     PD.LIVE = true;
   }
 

@@ -17,6 +17,9 @@ Rotas
   GET /api/health
   GET /api/state                          tabela, jogos, elencos e últimas escalações
   GET /api/rankings        [?tipo=gols|ataque|defesa|amarelos|vermelhos]   rankings do campeonato
+  GET /api/jogadores       [?club=id]     pendurados, sequência de jogos, lesionados e minutagem dos reservas
+
+Gera também o arquivo do site sem a API (GitHub Pages):  python server/placar_api.py --snapshot
   GET /api/news            [?club=id]     manchetes (título, fonte, data e link)
   GET /api/minuto-a-minuto/<id_espn>      narração completa do jogo até agora
   GET /api/minuto-a-minuto/<id_espn>/stream   o mesmo, ao vivo (Server-Sent Events)
@@ -39,6 +42,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE = os.path.join(HERE, "cache", "state.json")
+MATCHES_FILE = os.path.join(HERE, "cache", "partidas.json")   # súmula resumida de cada jogo encerrado
 CONFIG = json.load(open(os.path.join(HERE, "config.json"), encoding="utf-8"))
 CLUBS = CONFIG["clubes"]
 BY_ESPN = {v["espn"]: k for k, v in CLUBS.items()}
@@ -47,7 +51,7 @@ LEAGUES = ["bra.1", "bra.copa_do_brazil", "conmebol.libertadores", "conmebol.sud
 COMP_NAME = {"bra.1": "Brasileirão", "bra.copa_do_brazil": "Copa do Brasil", "conmebol.libertadores": "Libertadores", "conmebol.sudamericana": "Sul-Americana"}
 
 lock = threading.Lock()
-state = {"updated": None, "standings": None, "round": None, "fixtures": None, "squads": None, "last": None, "news": {}, "errors": []}
+state = {"updated": None, "standings": None, "round": None, "fixtures": None, "squads": None, "last": None, "news": {}, "players": None, "errors": []}
 
 
 def log(*a):
@@ -265,6 +269,238 @@ def update_squads():
     log("elencos e últimas escalações atualizados")
 
 
+# ---------------------------------------------------------------------------
+# Jogadores: pendurados, sequência, lesionados e minutagem dos reservas
+# ---------------------------------------------------------------------------
+SUSPENSAO_AMARELOS = 3   # no Brasileirão, o 3º amarelo suspende; com 2 o jogador está "pendurado"
+LESAO = re.compile(r"les[ãa]o|lesionad|departamento m[ée]dico|\bDM\b|cirurgia|contus[ãa]o|estiramento|entorse|fratura|ruptura|ligamento|tratamento|vetado|machuc|edema|hérnia|hernia|\bdores?\b|problema f[íi]sico", re.I)
+
+
+# manchetes de quem já se recuperou não contam como lesão atual
+RECUPERADO = re.compile(r"recuperad|retorna|volta a treinar|volta aos|liberad|após retornar|de volta|reaparece|alta m[ée]dica|descart\w* les|sem les[ãa]o|n[ãa]o tem les|reforça|relacionad|treina normal", re.I)
+# o mesmo portal aparece com nomes diferentes no Google Notícias
+SOURCE_NAMES = {"ge": "ge", "globo esporte": "ge", "lance!": "Lance", "lance": "Lance", "espn brasil": "ESPN", "espn": "ESPN", "uol": "UOL", "uol esporte": "UOL",
+                "gazeta esportiva": "Gazeta Esportiva", "terra": "Terra"}
+
+# como cada clube aparece nas manchetes
+HEADLINE_NAMES = {
+    "athletico-pr": ["Athletico", "Furacão", "CAP"], "atletico-mg": ["Atlético-MG", "Atlético Mineiro", "Galo"], "bahia": ["Bahia", "Tricolor de Aço"],
+    "botafogo": ["Botafogo", "Fogão"], "bragantino": ["Bragantino", "Massa Bruta"], "chapecoense": ["Chapecoense", "Chape"],
+    "corinthians": ["Corinthians", "Timão"], "coritiba": ["Coritiba", "Coxa"], "cruzeiro": ["Cruzeiro", "Raposa"], "flamengo": ["Flamengo", "Mengão", "Fla"],
+    "fluminense": ["Fluminense", "Flu"], "gremio": ["Grêmio", "Gremio"], "internacional": ["Internacional", "Inter", "Colorado"], "mirassol": ["Mirassol"],
+    "palmeiras": ["Palmeiras", "Verdão"], "remo": ["Remo", "Leão Azul"], "santos": ["Santos", "Peixe"], "sao-paulo": ["São Paulo", "Tricolor Paulista", "SPFC"],
+    "vasco": ["Vasco"], "vitoria": ["Vitória", "Leão da Barra"],
+}
+
+
+def minute(txt):
+    m = re.match(r"\s*(\d+)", txt or "")
+    return min(int(m.group(1)), 90) if m else None
+
+
+def match_extract(eid):
+    """Resumo de um jogo encerrado: para cada time, quem jogou, quanto tempo e os cartões."""
+    d = get_json(f"{ESPN}/site/v2/sports/soccer/bra.1/summary?event={eid}")
+    out = {"date": d["header"]["competitions"][0]["date"][:10], "teams": {}}
+    for r in d.get("rosters", []):
+        rows = []
+        for x in r.get("roster", []):
+            st = {k["name"]: k.get("value") or 0 for k in x.get("stats", [])}
+            if not (x.get("starter") or x.get("subbedIn")):
+                continue
+            sub_min = [minute(pl["clock"]["displayValue"]) for pl in x.get("plays", []) if pl.get("substitution")]
+            red_min = [minute(pl["clock"]["displayValue"]) for pl in x.get("plays", []) if pl.get("redCard")]
+            if x.get("starter"):
+                start, end = 0, (sub_min[0] if x.get("subbedOut") and sub_min else 90)
+            else:
+                start, end = (sub_min[0] or 45) if sub_min else 45, 90
+                if x.get("subbedOut") and len(sub_min) > 1:
+                    end = sub_min[1]
+            if red_min and red_min[0] is not None:
+                end = min(end, red_min[0])
+            rows.append([x["athlete"]["id"], x["athlete"]["displayName"], bool(x.get("starter")), max(0, (end or 90) - (start or 0)),
+                         int(st.get("yellowCards", 0)), int(st.get("redCards", 0))])
+        out["teams"][r["team"]["id"]] = rows
+    return out
+
+
+def load_matches():
+    try:
+        return json.load(open(MATCHES_FILE, encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def club_player_stats(cid, matches, squad_names, news):
+    espn = CLUBS[cid]["espn"]
+    sched = get_json(f"{ESPN}/site/v2/sports/soccer/bra.1/teams/{espn}/schedule?season={time.strftime('%Y')}")
+    evs = sorted((e for e in sched.get("events", []) if e["competitions"][0]["status"]["type"].get("completed")), key=lambda e: e["date"])
+    for e in evs:
+        if e["id"] not in matches:
+            try:
+                matches[e["id"]] = match_extract(e["id"])
+                time.sleep(0.25)
+            except Exception as ex:
+                log("súmula", e["id"], ex)
+    games = [matches[e["id"]] for e in evs if e["id"] in matches]
+    P = {}
+    for gi, g in enumerate(games):
+        for pid, nm, starter, mins, yc, rc in g["teams"].get(espn, []):
+            q = P.setdefault(pid, {"id": pid, "name": squad_names.get(pid, nm), "apps": 0, "starts": 0, "min": 0, "yc": 0, "rc": 0, "played": set(), "started": set(), "last_yc": None})
+            q["apps"] += 1; q["starts"] += starter; q["min"] += mins; q["yc"] += yc; q["rc"] += rc
+            q["played"].add(gi)
+            if starter:
+                q["started"].add(gi)
+            if yc:
+                q["last_yc"] = g["date"]
+    n = len(games)
+
+    def streak(idx):
+        k = 0
+        for gi in range(n - 1, -1, -1):
+            if gi not in idx:
+                break
+            k += 1
+        return k
+
+    pend, seq, res = [], [], []
+    for q in P.values():
+        if q["yc"] and q["yc"] % SUSPENSAO_AMARELOS == SUSPENSAO_AMARELOS - 1:
+            pend.append({"id": q["id"], "name": q["name"], "amarelos": q["yc"], "ultimo": q["last_yc"]})
+        sp, ss = streak(q["played"]), streak(q["started"])
+        if sp >= 2:
+            seq.append({"id": q["id"], "name": q["name"], "jogos": sp, "titular": ss})
+        # reserva: entrou em campo, mas foi titular em menos da metade dos jogos do clube
+        if q["apps"] and q["starts"] * 2 < n:
+            res.append({"id": q["id"], "name": q["name"], "minutos": q["min"], "jogos": q["apps"], "titular": q["starts"], "media": round(q["min"] / q["apps"])})
+    pend.sort(key=lambda x: (x["ultimo"] or ""), reverse=True)
+    seq.sort(key=lambda x: (-x["jogos"], -x["titular"]))
+    res.sort(key=lambda x: -x["minutos"])
+
+    # nomes do elenco que dá para achar numa manchete (nome completo ou sobrenome sem ambiguidade)
+    names = {}
+    for pid, nm in squad_names.items():
+        parts = [w for w in re.split(r"\s+", nm) if len(w) >= 4]
+        for k in {nm} | ({parts[-1]} if parts else set()):
+            names.setdefault(k.lower(), set()).add(pid)
+
+    club_words = {w.lower() for w in (CLUBS[cid]["busca"], *HEADLINE_NAMES.get(cid, []))}
+
+    def cited(t):
+        """Jogadores do elenco citados na manchete. Para evitar confundir nomes, a manchete precisa citar o clube,
+        e um sobrenome sozinho não vale quando vem logo depois de outro nome ("Paulo Henrique" não é "Bruno Henrique")."""
+        if not any(re.search(rf"(?<!\w){re.escape(w)}(?!\w)", t, re.I) for w in club_words):
+            return set()
+        out = set()
+        for k, p in names.items():
+            if len(p) != 1:
+                continue
+            pid = next(iter(p))
+            full = squad_names[pid].lower()
+            for m in re.finditer(rf"(?<!\w){re.escape(k)}(?!\w)", t, re.I):
+                before = re.search(r"([A-ZÀ-Ý][\wÀ-ÿ'-]+)\s+$", t[:m.start()])
+                after = re.match(r"\s+([A-ZÀ-Ý][\wÀ-ÿ'-]+)", t[m.end():])
+                if k != full and ((before and before.group(1).lower() not in full) or (after and after.group(1).lower() not in full)):
+                    continue
+                out.add(pid)
+                break
+        return out
+
+    def item(it):
+        return {"manchete": it.get("title"), "fonte": it.get("source"), "link": it.get("link"), "setorista": it.get("tag") not in (None, "clube"),
+                "data": time.strftime("%Y-%m-%d", time.localtime(it.get("ts") or 0))}
+
+    # lesionados: só portais jornalísticos e setoristas; cada jogador guarda quantas fontes diferentes citam a lesão
+    inj = {}
+    recent = time.time() - 21 * 86400
+    cleared = set()  # a notícia mais recente diz que está liberado: notícias de lesão mais antigas não contam
+    for it in sorted(news, key=lambda x: -(x.get("ts") or 0)):
+        t = it.get("title") or ""
+        if (it.get("ts") or 0) < recent:
+            continue
+        if RECUPERADO.search(t):
+            cleared |= cited(t) - set(inj)
+            continue
+        if not LESAO.search(t):
+            continue
+        fonte = SOURCE_NAMES.get((it.get("source") or "").lower(), it.get("source"))
+        for pid in cited(t) - cleared:
+            q = inj.setdefault(pid, {"id": pid, "name": squad_names[pid], "fontes": [], "noticias": []})
+            if fonte not in q["fontes"]:
+                q["fontes"].append(fonte)
+                q["noticias"].append(dict(item(it), fonte=fonte))
+    for q in inj.values():
+        q["confirmado"] = len(q["fontes"]) >= 2 or any(x["setorista"] for x in q["noticias"])
+    lesionados = sorted(inj.values(), key=lambda q: (q["confirmado"], len(q["fontes"]), max(x["data"] for x in q["noticias"])), reverse=True)
+
+    # pendurados: a conta da súmula (ESPN) é conferida com o que a imprensa publicou
+    press = {}
+    for it in news:
+        t = it.get("title") or ""
+        if re.search(r"pendurad", t, re.I):
+            for pid in cited(t):
+                press.setdefault(pid, item(it))
+    for p in pend:
+        p["imprensa"] = press.get(p["id"])
+    known = {p["id"] for p in pend}
+    for pid, it in press.items():
+        if pid not in known:  # a imprensa cita, a súmula não fecha a conta: mostra marcado como "segundo a imprensa"
+            q = P.get(pid, {})
+            pend.append({"id": pid, "name": squad_names[pid], "amarelos": q.get("yc"), "ultimo": q.get("last_yc"), "imprensa": it, "so_imprensa": True})
+    return {"jogos": n, "pendurados": pend, "sequencia": seq[:12], "lesionados": lesionados[:10], "reservas": res[:12],
+            "fontes": {"sumulas": "ESPN", "imprensa": sorted({x["fonte"] for q in inj.values() for x in q["noticias"] if x["fonte"]})}}
+
+
+def press_news(c):
+    """Manchetes de lesão e de pendurados nos portais configurados e com os setoristas do clube."""
+    sites = " OR ".join(f"site:{s}" for s in CONFIG["fontes"])
+    terms = '(lesão OR lesionado OR "departamento médico" OR cirurgia OR desfalque OR vetado OR pendurado OR pendurados)'
+    items = [dict(x, tag="clube") for x in news_query(f'"{c["busca"]}" {terms} ({sites}) when:21d')]
+    for rep in c.get("setoristas", []):
+        items += [dict(x, tag=rep) for x in news_query(f'"{rep}" "{c["busca"]}" {terms} when:21d')]
+    return items
+
+
+def update_players():
+    with lock:
+        squads = state["squads"] or {}
+        club_news = dict(state["news"])
+    if not squads:  # sem cache: usa o elenco gravado no site
+        src = open(os.path.join(ROOT, "js", "squads.js"), encoding="utf-8").read()
+        squads = json.loads(src[src.index("window.SQUADS = ") + 16:src.index("window.SQUADS_LAST")].strip().rstrip(";"))
+    matches = load_matches()
+    out = {}
+    for cid, c in CLUBS.items():
+        names = {row[4]: row[1] for row in squads.get(cid, []) if row[4]}
+        try:
+            news = press_news(c) + club_news.get(cid, [])
+        except Exception as ex:
+            log("notícias de lesão", cid, ex)
+            news = club_news.get(cid, [])
+        try:
+            out[cid] = club_player_stats(cid, matches, names, news)
+        except Exception as ex:
+            log("jogadores", cid, ex)
+        time.sleep(0.5)
+    os.makedirs(os.path.dirname(MATCHES_FILE), exist_ok=True)
+    json.dump(matches, open(MATCHES_FILE, "w", encoding="utf-8"), ensure_ascii=False)
+    with lock:
+        state["players"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "clubs": out}
+    log("estatísticas de jogadores atualizadas")
+
+
+def write_snapshot():
+    """Grava js/player-stats.js para o site funcionar sem a API (GitHub Pages)."""
+    update_players()
+    with lock:
+        data = state["players"]
+    path = os.path.join(ROOT, "js", "player-stats.js")
+    head = ("/* PLACAR — estatísticas de jogadores (gerado por: python server/placar_api.py --snapshot)\n"
+            "   Súmulas: ESPN · lesões: manchetes do Google Notícias que citam o jogador. */\n")
+    open(path, "w", encoding="utf-8").write(head + "window.PLAYER_STATS = " + json.dumps(data, ensure_ascii=False) + ";\n")
+    log("gravado", path)
+
+
 def news_query(q):
     url = "https://news.google.com/rss/search?" + urllib.parse.urlencode({"q": q, "hl": "pt-BR", "gl": "BR", "ceid": "BR:pt-419"})
     root = ET.fromstring(get(url))
@@ -448,7 +684,7 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json({"ok": True, "updated": state["updated"], "errors": state["errors"]})
             if parts[1:] == ["state"]:
                 with lock:
-                    s = {k: state[k] for k in ("updated", "standings", "round", "fixtures", "squads", "last", "scorers") if k in state}
+                    s = {k: state[k] for k in ("updated", "standings", "round", "fixtures", "squads", "last", "scorers", "players") if k in state}
                 if not s.get("standings"):
                     return self.send_json({"ok": False, "message": "carregando dados"}, 503)
                 return self.send_json(s)
@@ -458,6 +694,15 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json({"ok": False, "message": f"tipo deve ser um de: {', '.join(RANK_ORDER)}"}, 400)
                 r = rankings(tipo)
                 return self.send_json(r) if r["rankings"] and r["updated"] else self.send_json({"ok": False, "message": "carregando dados"}, 503)
+            if parts[1:] == ["jogadores"]:
+                with lock:
+                    pl = state.get("players")
+                if not pl:
+                    return self.send_json({"ok": False, "message": "carregando dados"}, 503)
+                club = (q.get("club") or [None])[0]
+                if club:
+                    return self.send_json({"updated": pl["updated"], "club": club, **pl["clubs"].get(club, {})})
+                return self.send_json(pl)
             if parts[1:] == ["news"]:
                 with lock:
                     club = (q.get("club") or [None])[0]
@@ -500,7 +745,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
-    port = int(os.environ.get("PORT", sys.argv[1] if len(sys.argv) > 1 else 8000))
+    port = int(os.environ.get("PORT", next((a for a in sys.argv[1:] if a.isdigit()), 8000)))
     if os.path.exists(CACHE_FILE):  # começa com o que já tinha sido baixado
         try:
             state.update(json.load(open(CACHE_FILE, encoding="utf-8")))
@@ -511,9 +756,13 @@ def main():
     every(iv["tabela_e_jogos"], update_standings_and_fixtures)
     every(iv["elencos"], update_squads)
     every(iv["noticias"], update_news)
+    every(iv.get("jogadores", 60), update_players)
     log(f"PLACAR no ar: http://localhost:{port}")
     ThreadingHTTPServer(("", port), Handler).serve_forever()
 
 
 if __name__ == "__main__":
-    main()
+    if "--snapshot" in sys.argv:
+        write_snapshot()
+    else:
+        main()
