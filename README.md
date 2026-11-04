@@ -48,7 +48,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | **Retrospecto** | Na visão geral de cada clube: **últimos 5 jogos** (V/E/D, placar, pênaltis, casa ou fora) e **próximos 5**, em todas as competições (Brasileirão, Copa do Brasil, Libertadores e Sul-Americana). Sem a API, a página busca a agenda atualizada direto da ESPN. |
 | **Estatísticas do elenco** | Na visão geral de cada clube e na aba "Estatísticas": **pendurados** (2 amarelos, o próximo suspende), **jogos seguidos**, **departamento médico** e **reservas mais usados** por minutagem. Cartões e minutos vêm das súmulas de todos os jogos do Brasileirão; lesões e pendurados são conferidos nas manchetes de ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra e dos setoristas cadastrados, com o número de fontes que confirmam cada caso. |
 | **Elenco** | Elencos reais, escalação do último jogo de cada clube e campinho interativo: arraste jogadores para trocar ou para qualquer ponto da grama; 8 formações. |
-| **Bora pro jogo** | Prancheta tática comparando dois times com e sem a bola, leitura tática e tendência do jogo (modelo simples). **Arraste os jogadores** (mouse ou dedo) para mudar a posição em tempo real: as setas de ataque acompanham, cada fase guarda as suas posições e "Restaurar posições" desfaz. |
+| **Bora pro jogo** | Prancheta tática comparando dois times com e sem a bola, leitura tática e tendência do jogo (modelo simples). **Arraste os jogadores** (mouse ou dedo) para mudar a posição em tempo real: as setas de ataque acompanham, cada fase guarda as suas posições e "Restaurar posições" desfaz. Ao segurar um jogador, aparece o **mapa de calor** de onde ele costuma atuar, com as posições em % e os minutos no Brasileirão. |
 | **Tabela** | Classificação, números do campeonato e artilharia. Cada número (gols, ataque, defesa, amarelos, vermelhos) abre uma **subpágina de ranking** dos 20 clubes; passar o mouse ou segurar o dedo mostra uma prévia. |
 | **Partida** | Placar com o **resumo dos gols e expulsões** de cada time (jogador e minuto, gol contra e de pênalti marcados), informações, comparação no campeonato e **Minuto a minuto** ao vivo. |
 
@@ -66,6 +66,10 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | `GET /api/health` | situação das atualizações |
 
 Intervalos de atualização, portais monitorados e **setoristas** de cada clube ficam em [`server/config.json`](server/config.json).
+
+## Mapa de calor dos jogadores (estimado)
+
+Nenhum site oficial publica o mapa de calor de cada jogador do Brasileirão: os das transmissões (Premiere, SporTV, ESPN) vêm de empresas de rastreamento contratadas pelas emissoras, e sites como SofaScore e FotMob proíbem copiar os dados. Por isso o mapa do "Bora pro jogo" é **estimado com dados reais**: as escalações da ESPN dizem, em cada jogo do campeonato, a formação, o número da posição e a sigla de cada titular, e quem entrou no lugar de quem. O servidor soma os minutos de cada jogador em cada posição ([`js/heatmaps.js`](js/heatmaps.js), 721 jogadores) e o site ([`js/heatmap.js`](js/heatmap.js)) desenha a área típica de movimentação de cada função, pesada por esses minutos — quem finaliza muito ganha mais calor na área. A leitura de cada sigla depende da formação (no 4-2-3-1 da ESPN, "LM/RM" são os volantes; no 4-3-3, os meias por dentro).
 
 ## Identidade visual
 
@@ -95,6 +99,7 @@ node tests/mobile/gol.mjs                          # o GOL! dos 20 clubes, quadr
 node tests/mobile/gol-ao-vivo.mjs                  # jogo simulado: o GOL! aparece em cada gol, com placar e minuto
 node tests/mobile/alinhamento.mjs                  # botões desalinhados em todas as páginas (PC, iPhone, Android)
 node tests/mobile/bora-arrastar.mjs                # arrastar jogadores na prancheta (mouse e dedo)
+node tests/mobile/bora-calor.mjs                   # mapa de calor de quem está sendo arrastado (PC e celular)
 node tests/mobile/elenco.mjs                       # campinho do elenco dos 20 clubes: nomes sem encostar, no PC, notebook e celular
 ```
 
@@ -121,6 +126,8 @@ js/squads.js          elencos e últimas escalações (base)
 js/live.js            troca a base pelos dados da API e liga minuto a minuto/notícias
 js/app.js             páginas, roteador e transições
 js/lineup.js          campinho interativo e "Bora pro jogo"
+js/heatmap.js         mapa de calor estimado (desenho e leitura das posições da ESPN)
+js/heatmaps.js        minutos de cada jogador em cada posição (gerado pelo servidor)
 js/scenes.js          aparições dos escudos nos cartões da lista de clubes
 js/goal-bug.js        o "GOL!" de cada clube no placar do topo (símbolos em SVG)
 js/backdrop.js        fundo com brilho nas bordas e pontinhos

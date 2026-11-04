@@ -512,21 +512,31 @@ def minute(txt):
     return min(int(m.group(1)), 90) if m else None
 
 
-MATCH_VERSION = 2  # 2: súmula também guarda gols, assistências, finalizações e pênaltis
+MATCH_VERSION = 3  # 2: gols, assistências, finalizações e pênaltis · 3: posição em campo (formação, nº da posição e sigla da ESPN)
 
 
 def match_extract(eid):
     """Resumo de um jogo encerrado: para cada time, quem jogou, quanto tempo, cartões, gols e finalizações.
-    Linha: [id, nome, titular, minutos, amarelos, vermelhos, gols, assistências, finalizações, no alvo, gols de pênalti]"""
+    Linha: [id, nome, titular, minutos, amarelos, vermelhos, gols, assistências, finalizações, no alvo, gols de pênalti,
+            posição: [formação, nº da posição (1–11), sigla da ESPN]] — quem entrou herda a posição de quem saiu"""
     d = get_json(f"{ESPN}/site/v2/sports/soccer/bra.1/summary?event={eid}")
-    pens = {}
+    pens, subs = {}, []
     for k in d.get("keyEvents", []):
         if k.get("scoringPlay") and "penalty" in (k.get("type") or {}).get("type", "") and k.get("participants"):
             a = k["participants"][0]["athlete"].get("id")
             pens[a] = pens.get(a, 0) + 1
+        # substituição na ESPN: primeiro quem entra, depois quem sai
+        if (k.get("type") or {}).get("type") == "substitution" and len(k.get("participants") or []) >= 2:
+            subs.append((k["participants"][0]["athlete"].get("id"), k["participants"][1]["athlete"].get("id")))
     out = {"v": MATCH_VERSION, "date": d["header"]["competitions"][0]["date"][:10], "teams": {}}
     for r in d.get("rosters", []):
         rows = []
+        form = r.get("formation") or ""
+        pos = {x["athlete"]["id"]: [form, int(x.get("formationPlace") or 0), (x.get("position") or {}).get("abbreviation") or ""]
+               for x in r.get("roster", []) if x.get("starter")}
+        for i_in, i_out in subs:  # em ordem: quem entra no lugar de um substituto herda a posição dele
+            if i_out in pos and i_in not in pos:
+                pos[i_in] = pos[i_out]
         for x in r.get("roster", []):
             st = {k["name"]: k.get("value") or 0 for k in x.get("stats", [])}
             if not (x.get("starter") or x.get("subbedIn")):
@@ -544,7 +554,7 @@ def match_extract(eid):
             aid = x["athlete"]["id"]
             rows.append([aid, x["athlete"]["displayName"], bool(x.get("starter")), max(0, (end or 90) - (start or 0)),
                          int(st.get("yellowCards", 0)), int(st.get("redCards", 0)), int(st.get("totalGoals", 0)), int(st.get("goalAssists", 0)),
-                         int(st.get("totalShots", 0)), int(st.get("shotsOnTarget", 0)), pens.get(aid, 0)])
+                         int(st.get("totalShots", 0)), int(st.get("shotsOnTarget", 0)), pens.get(aid, 0), pos.get(aid)])
         out["teams"][r["team"]["id"]] = rows
     return out
 
@@ -695,7 +705,7 @@ def scorer_profiles(matches, scorers, squads):
         tids = list(m["teams"])
         for tid, rows in m["teams"].items():
             me, opp = club_of.get(tid), next((club_of.get(t) for t in tids if t != tid), None)
-            for pid, nm, starter, mins, yc, rc, g, a, sh, sot, pen in rows:
+            for pid, nm, starter, mins, yc, rc, g, a, sh, sot, pen, *_ in rows:
                 q = P.setdefault(pid, {"name": nm, "jogos": 0, "titular": 0, "min": 0, "gols": 0, "assist": 0, "chutes": 0, "noAlvo": 0, "pen": 0,
                                        "amarelos": 0, "vermelhos": 0, "jogosComGol": 0, "ultimoGol": None, "adv": {}, "clubes": {}})
                 q["jogos"] += 1; q["titular"] += starter; q["min"] += mins; q["gols"] += g; q["assist"] += a
@@ -725,6 +735,29 @@ def scorer_profiles(matches, scorers, squads):
                     "adversarios": sorted(([k, v] for k, v in q["adv"].items()), key=lambda x: -x[1]),
                     "clubes": [[k, v[0], v[1]] for k, v in q["clubes"].items()]})
     return out
+
+
+def position_profiles(matches):
+    """Onde cada jogador atuou no Brasileirão: minutos em cada posição (formação + nº da posição + sigla da ESPN),
+    jogos, minutos, gols e finalizações. É a base do mapa de calor estimado do "Bora pro jogo"."""
+    P = {}
+    for m in (m for m in matches.values() if m.get("v", 1) >= 3):
+        for rows in m["teams"].values():
+            for row in rows:
+                pid, nm, starter, mins = row[:4]
+                g, sh, where = row[6], row[8], (row[11] if len(row) > 11 else None)
+                if not mins:
+                    continue
+                q = P.setdefault(pid, {"n": nm, "j": 0, "m": 0, "g": 0, "c": 0, "p": {}})
+                q["j"] += 1; q["m"] += mins; q["g"] += g; q["c"] += sh
+                if where:
+                    key = f"{where[0]}|{where[1]}|{where[2]}"
+                    q["p"][key] = q["p"].get(key, 0) + mins
+    # posições ordenadas pelos minutos; corta o que tem menos de 3% do tempo (ruído)
+    for q in P.values():
+        tot = sum(q["p"].values()) or 1
+        q["p"] = [[k, v] for k, v in sorted(q["p"].items(), key=lambda x: -x[1]) if v / tot >= 0.03]
+    return P
 
 
 def update_players():
@@ -763,8 +796,14 @@ def update_players():
     except Exception as ex:
         log("artilheiros", ex)
         artilheiros = []
+    try:
+        posicoes = position_profiles(matches)
+    except Exception as ex:
+        log("posições", ex)
+        posicoes = {}
     with lock:
         state["players"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "clubs": out, "artilheiros": artilheiros}
+        state["positions"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "players": posicoes}
     log("estatísticas de jogadores atualizadas")
 
 
@@ -798,13 +837,15 @@ def write_snapshot():
     with lock:
         live = {k: state.get(k) for k in ("updated", "standings", "round", "fixtures", "scorers")}
         live["news"] = {cid: [{k: x.get(k) for k in ("title", "link", "source", "ts", "tag")} for x in items[:8]] for cid, items in (state.get("news") or {}).items()}
-        players, form = state.get("players"), state.get("form")
+        players, form, positions = state.get("players"), state.get("form"), state.get("positions")
     if live["standings"]:
         write_js("live-data.js", "LIVE_DATA", live, "tabela, jogos e manchetes (só título, fonte e link). Fontes: ESPN, CBF, Google Notícias")
     if players:
         write_js("player-stats.js", "PLAYER_STATS", players, "estatísticas de jogadores. Súmulas: ESPN · lesões: manchetes que citam o jogador")
     if form:
         write_js("club-form.js", "CLUB_FORM", form, "temporada de cada clube, últimos 5 e próximos 5 jogos. Fonte: ESPN")
+    if positions and positions.get("players"):
+        write_js("heatmaps.js", "HEATMAPS", positions, "posições de cada jogador no Brasileirão (minutos por posição), base do mapa de calor estimado. Fonte: escalações da ESPN")
 
 
 def news_query(q):

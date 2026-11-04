@@ -360,7 +360,7 @@
           <button class="chip" data-phase="b">${B.abbr} ataca</button>
           <button class="chip" data-phase-play>▶ Simular</button>
           <button class="chip" data-board-reset hidden>↺ Restaurar posições</button>
-          <span class="board-tip">Arraste os jogadores para mudar a posição</span>
+          <span class="board-tip">Arraste os jogadores para mudar a posição e ver o mapa de calor</span>
         </div>
         <div class="board">
           <svg class="board-lines" viewBox="0 0 105 68" preserveAspectRatio="none" fill="none" stroke="rgba(255,255,255,.5)" stroke-width=".35">
@@ -370,7 +370,9 @@
           <svg class="board-arrows" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>${["a", "b"].map((s) => `<marker id="ah-${s}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--c${s})"/></marker>`).join("")}</defs><g></g>
           </svg>
+          <canvas class="board-heat" aria-hidden="true"></canvas>
           ${boardTokens(a, "a")}${boardTokens(b, "b")}
+          <div class="board-heatcard" role="status" aria-live="polite" hidden></div>
         </div>
         <p class="board-cap"></p>
       </div>
@@ -428,6 +430,38 @@
     location.hash = pk.dataset.bpPick === "a" ? `#/bora-pro-jogo/${pk.value}/${b}` : `#/bora-pro-jogo/${a}/${pk.value}`;
   });
 
+  /* ---------- mapa de calor de quem está sendo arrastado ---------- */
+  function showHeat(root, bt) {
+    const field = root.querySelector(".board"), cv = field.querySelector(".board-heat"), card = field.querySelector(".board-heatcard");
+    if (!cv || !window.HEATMAP) return;
+    const [a, b] = root.dataset.board.split("|"), side = bt.dataset.side, cid = side === "a" ? a : b;
+    const s = shape(cid)[+bt.dataset.i], c = byId[cid];
+    const draw = () => {
+      if (!bt.classList.contains("grab")) return;
+      const pr = HEATMAP.profile(s.p?.id, s.role);
+      HEATMAP.paint(cv, pr.blobs, { flip: side === "b" });
+      cv.classList.add("on");
+      const { top, base } = HEATMAP.summary(pr);
+      card.style.setProperty("--tc", display(c));
+      card.innerHTML = `<div class="hc-head"><span class="hc-n" style="background:${display(c)};color:${onColor(display(c))}">${s.p?.n ?? "–"}</span><div><b>${s.p ? s.p.name : s.role}</b><small>${crest(c, 14)} ${c.abbr} · ${s.role} na escalação</small></div></div>
+        <div class="hc-roles">${top}</div><div class="hc-meta">${base}</div>
+        <div class="hc-scale" aria-hidden="true"><i></i><span>menos</span><span>mais tempo</span></div>
+        <div class="hc-src">Mapa de calor estimado: posições em que jogou (escalações da ESPN), pesadas pelos minutos</div>`;
+      // o cartão fica do lado oposto ao calor (no celular, fica em cima do campo)
+      const W = pr.blobs.reduce((t, b) => t + b[4], 0) || 1, cx = pr.blobs.reduce((t, b) => t + b[0] * b[4], 0) / W;
+      card.classList.toggle("right", (side === "a" ? cx : 100 - cx) < 50);
+      card.hidden = false;
+      requestAnimationFrame(() => card.classList.add("on"));
+    };
+    if (window.HEATMAPS) draw(); else HEATMAP.load().then(draw);
+  }
+  function hideHeat(root) {
+    const field = root.querySelector(".board");
+    field?.querySelector(".board-heat")?.classList.remove("on");
+    const card = field?.querySelector(".board-heatcard");
+    if (card) { card.classList.remove("on"); clearTimeout(card._h); card._h = setTimeout(() => { if (!card.classList.contains("on")) card.hidden = true; }, 220); }
+  }
+
   /* ---------- prancheta: arrastar jogadores em tempo real ---------- */
   let grab = null;
   document.addEventListener("pointerdown", (e) => {
@@ -443,6 +477,7 @@
     grab = { bt, root, field, r, id: e.pointerId, dx: e.clientX - ax, dy: e.clientY - ay, moved: false };
     bt.classList.add("grab");
     root.classList.add("dragging");
+    showHeat(root, bt);
   });
   document.addEventListener("pointermove", (e) => {
     if (!grab || e.pointerId !== grab.id) return;
@@ -460,6 +495,7 @@
     if (!grab || (e && e.pointerId !== grab.id)) return;
     grab.bt.classList.remove("grab");
     grab.root.classList.remove("dragging");
+    hideHeat(grab.root);
     if (grab.moved) { saveCustom(); const [a, b] = grab.root.dataset.board.split("|"); layoutBoard(grab.root, a, b); }
     grab = null;
   };
@@ -482,6 +518,7 @@
       bp.phase = ["a", "b"].includes(f) ? f : "def";
       const [a, b] = board.dataset.board.split("|");
       layoutBoard(board, a, b);
+      window.HEATMAP?.load();
     }
   }
 
