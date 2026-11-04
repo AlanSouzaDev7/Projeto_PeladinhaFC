@@ -217,5 +217,15 @@
     });
   }
 
-  window.GOALBUG = { html, mount, has: (id) => !!SYM[id] };
+  // faixa da cortina (ao entrar num clube): sigla, escudo e nome, no mesmo estilo do placar do gol
+  function bar(club) {
+    const [band, bink, base, ink] = PAL[club.id] || [club.colors[0], "#fff", club.colors[0], "#fff"];
+    return `<div class="cbar" style="--band:${band};--bink:${bink};--base:${base};--ink:${ink}">
+      <div class="cbar-name"><b>${club.abbr}</b></div>
+      <div class="gb-team cbar-team"><span>${club.short}</span></div>
+      <div class="cbar-crest">${club.logo ? `<img src="${club.logo}" alt="" decoding="async"/>` : ""}</div>
+    </div>`;
+  }
+
+  window.GOALBUG = { html, mount, bar, has: (id) => !!SYM[id] };
 })();

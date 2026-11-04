@@ -1362,8 +1362,29 @@ img.crest { object-fit: contain; }
   place-items: center;
   opacity: 0;
 }
-.curtain.in .mark { animation: fade 0.3s ease forwards 0.25s; }
-.curtain.out .mark { opacity: 1; animation: fade 0.2s ease reverse forwards; }
+.curtain.in .mark { opacity: 1; }
+/* faixa escura atrás do placar: separa a faixa do clube das listras da cortina */
+.curtain .mark::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: min(150px, 30vw); transform: translateY(-50%) scaleX(0); background: linear-gradient(90deg, rgb(4 8 20 / 0.2), rgb(4 8 20 / 0.62) 30%, rgb(4 8 20 / 0.62) 70%, rgb(4 8 20 / 0.2)); }
+.curtain.in .mark::before { animation: cbBand 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) 0.12s both; }
+.curtain.out .mark::before { transform: translateY(-50%); animation: cbOut 0.22s ease-in both; }
+@keyframes cbBand { to { transform: translateY(-50%) scaleX(1); } }
+.curtain.out .mark { opacity: 1; }
+/* faixa no estilo do placar do gol: sigla, escudo saltando e o nome do clube */
+.cbar { position: relative; width: 37.5em; height: 4.75em; font-size: min(16px, calc((100vw - 32px) / 37.5)); }
+.cbar-name, .cbar-team { position: absolute; inset: 0; border-radius: 0.5em; overflow: hidden; }
+.cbar-name { left: 13.5em; background: var(--base); color: var(--ink); display: flex; align-items: center; padding-left: 1.6em; border-radius: 0 0.5em 0.5em 0; box-shadow: 0 0 0 0.12em rgb(255 255 255 / 0.5), 0 1.2em 2em -0.4em rgb(0 0 0 / 0.45); }
+.cbar-name b { font: 900 2.7em/1 var(--font-display); font-stretch: 75%; text-transform: uppercase; letter-spacing: -0.01em; white-space: nowrap; }
+.cbar-crest { position: absolute; left: 7.9em; top: 50%; width: 5.9em; height: 5.9em; margin-top: -2.95em; z-index: 2; }
+.cbar-crest img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0.25em 0.45em rgb(0 0 0 / 0.4)); }
+.curtain .cbar-team, .curtain .cbar-name, .curtain .cbar-crest { opacity: 0; }
+.curtain.in .cbar-team { opacity: 1; animation: cbWipe 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) 0.2s both; }
+.curtain.in .cbar-name { opacity: 1; animation: cbName 0.32s cubic-bezier(0.2, 0.9, 0.3, 1) 0.36s both; }
+.curtain.in .cbar-name b { animation: gbSlide 0.4s cubic-bezier(0.3, 1.4, 0.5, 1) 0.42s both; }
+.curtain.in .cbar-crest { opacity: 1; animation: gbPop 0.45s cubic-bezier(0.3, 1.5, 0.5, 1) 0.3s both; }
+.curtain.out .cbar-team, .curtain.out .cbar-name, .curtain.out .cbar-crest { opacity: 1; animation: cbOut 0.22s ease-in both; }
+@keyframes cbWipe { from { clip-path: polygon(0 0, 0 0, 0 50%, 0 100%, 0 100%); } to { clip-path: polygon(0 0, 100% 0, 66% 50%, 100% 100%, 0 100%); } }
+@keyframes cbName { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes cbOut { to { opacity: 0; transform: translateX(3em); } }
 
 /* View Transitions API (Chrome/Edge/Safari 18+) */
 ::view-transition-old(page) { animation: vtOut 0.28s var(--ease) both; }

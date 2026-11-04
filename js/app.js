@@ -883,13 +883,13 @@
     const el = $("#curtain");
     const [a, b] = club.colors;
     el.innerHTML = Array.from({ length: 6 }, (_, i) => `<i style="--i:${i};--cc:${i % 2 ? b : a}"></i>`).join("") +
-      `<div class="mark">${crest(club, 110)}</div>`;
+      `<div class="mark">${GOALBUG.bar(club)}</div>`;
     el.className = "curtain in";
-    await sleep(520);
+    await sleep(820);
     render();
     window.scrollTo({ top: 0, behavior: "instant" });
     el.className = "curtain out";
-    await sleep(700);
+    await sleep(760);
     el.className = "curtain";
     el.innerHTML = "";
   }
