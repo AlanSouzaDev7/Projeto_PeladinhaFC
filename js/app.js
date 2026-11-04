@@ -231,8 +231,95 @@
     return `<div class="card reveal"><div class="card-h">Artilharia <small>${REAL.source}</small></div>
       <ul class="squad-list">${list.map(([name, cid, g]) => {
         const pos = REAL.scorers.findIndex((x) => x[0] === name) + 1;
-        return `<li><span class="n">${pos}º</span>${crest(byId[cid], 22)}<div style="flex:1;min-width:0"><b>${name}</b><div class="bar" style="height:5px;margin-top:5px"><i data-w="${(g / max) * 100}" style="background:${display(byId[cid])}"></i></div></div><b class="goals">${g}</b></li>`;
-      }).join("")}</ul></div>`;
+        const ficha = scorerOf(name, cid);
+        return `<li${ficha ? ` class="has-ficha" data-scorer="${name}|${cid}" tabindex="0" aria-label="Ficha de ${name}"` : ""}><span class="n">${pos}º</span>${crest(byId[cid], 22)}<div style="flex:1;min-width:0"><b>${name}</b><div class="bar" style="height:5px;margin-top:5px"><i data-w="${(g / max) * 100}" style="background:${display(byId[cid])}"></i></div></div><b class="goals">${g}</b>${ficha ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`;
+      }).join("")}</ul>${list.some(([n, c]) => scorerOf(n, c)) ? `<div class="source">Passe o mouse (ou toque) no jogador para ver a ficha</div>` : ""}</div>`;
+  }
+
+  /* ---------- Ficha do artilheiro (cartão flutuante) ----------
+     Dados do elenco e das súmulas da ESPN de todos os jogos do Brasileirão (gravados pela API / GitHub Actions). */
+  const scorerOf = (name, cid) => (window.PLAYER_STATS?.artilheiros || []).find((x) => x.name === name && x.club === cid && x.jogos);
+  const POSICAO = { G: "Goleiro", D: "Defensor", M: "Meio-campista", F: "Atacante" };
+  const dataBR = (d) => (d ? d.slice(8, 10) + "/" + d.slice(5, 7) : "—");
+  function scorerHTML(p) {
+    const c = byId[p.club], cor = display(c);
+    const fatos = [
+      ["Posição", POSICAO[p.posicao] || "—"], ["Idade", p.idade ? `${p.idade} anos` : "—"], ["Camisa", p.camisa ?? "—"],
+      ["Jogos", `${p.jogos} <small>(${p.titular} como titular)</small>`], ["Minutos", p.min.toLocaleString("pt-BR")],
+      ["Gols por jogo", (p.gols / p.jogos).toFixed(2).replace(".", ",")], ["Minutos por gol", p.gols ? Math.round(p.min / p.gols) : "—"],
+      ["Assistências", p.assist], ["Finalizações", `${p.chutes} <small>(${p.noAlvo} no alvo)</small>`], ["Gols de pênalti", p.pen],
+      ["Cartões", `${p.amarelos} 🟨 · ${p.vermelhos} 🟥`], ["Último gol", dataBR(p.ultimoGol)],
+    ];
+    const maxAdv = p.adversarios[0]?.[1] || 1;
+    return `<div class="sc-h" style="--sc:${cor}">
+        ${crest(c, 40)}
+        <div><b>${p.name}</b><small>${c.name} · ${p.pos}º na artilharia</small></div>
+        <div class="sc-g"><b>${p.gols}</b><small>gols</small></div>
+      </div>
+      <div class="sc-sec">Ficha técnica</div>
+      <dl class="sc-ficha">${fatos.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+      ${p.clubes.length > 1 ? `<div class="sc-sec">Gols por clube na temporada</div>
+        <ul class="sc-clubes">${p.clubes.map(([k, j, g]) => `<li>${crest(byId[k], 18)}<span>${byId[k].abbr}</span><small>${j} jogos</small><b>${g}</b></li>`).join("")}</ul>` : ""}
+      <div class="sc-sec">Contra quem marcou <small>${p.adversarios.length} clubes</small></div>
+      ${p.adversarios.length ? `<ul class="sc-adv">${p.adversarios.map(([k, g]) => `<li>${crest(byId[k], 18)}<span>${byId[k].abbr}</span><i style="--w:${(g / maxAdv) * 100}%;background:${cor}"></i><b>${g}</b></li>`).join("")}</ul>` : `<p class="sc-none">Nenhum gol nas súmulas.</p>`}
+      <div class="sc-src">Súmulas: ESPN${p.golsSumulas !== p.gols ? ` · ${p.golsSumulas} gols nas súmulas do Brasileirão` : ""}</div>`;
+  }
+  let scTip = null;
+  function scorerCards(root) {
+    const items = $$("[data-scorer]", root);
+    if (!items.length) return;
+    if (!scTip) {
+      scTip = document.createElement("div");
+      scTip.className = "scorer-card";
+      scTip.setAttribute("role", "dialog");
+      scTip.setAttribute("aria-hidden", "true");
+      document.body.appendChild(scTip);
+      // toque fora fecha (celular)
+      document.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" && !e.target.closest("[data-scorer], .scorer-card")) hideScorer(); });
+      addEventListener("scroll", () => { if (scTip.dataset.by === "mouse") hideScorer(); }, { passive: true });
+      addEventListener("hashchange", hideScorer);
+    }
+    items.forEach((el) => {
+      const [name, cid] = el.dataset.scorer.split("|");
+      const open = (by) => { const p = scorerOf(name, cid); if (p) showScorer(el, p, by); };
+      el.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") open("mouse"); });
+      el.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") hideScorer(); });
+      // toque: abre; tocar de novo fecha (o foco do próprio toque pode já ter aberto a ficha: ela não fecha na mesma hora)
+      el.addEventListener("click", (e) => {
+        if (e.pointerType === "mouse") return;
+        const aberto = scTip.dataset.for === el.dataset.scorer && scTip.classList.contains("open");
+        if (aberto && Date.now() - +scTip.dataset.t > 450) hideScorer(); else open("touch");
+      });
+      el.addEventListener("focus", () => open("key"));
+      el.addEventListener("blur", hideScorer);
+      el.addEventListener("keydown", (e) => { if (e.key === "Escape") hideScorer(); });
+    });
+  }
+  function showScorer(el, p, by) {
+    $$("[data-scorer].peek").forEach((x) => x.classList.remove("peek"));
+    el.classList.add("peek");
+    scTip.innerHTML = scorerHTML(p);
+    scTip.dataset.for = el.dataset.scorer;
+    if (scTip.dataset.for !== el.dataset.scorer || !scTip.classList.contains("open")) scTip.dataset.t = Date.now();
+    scTip.dataset.by = by;
+    const b = el.getBoundingClientRect(), w = Math.min(340, innerWidth - 24);
+    scTip.style.width = w + "px";
+    const h = scTip.offsetHeight;
+    // computador: ao lado da lista (à esquerda dela, que fica na coluna da direita); celular: abaixo ou acima do jogador
+    const side = innerWidth >= 900 && b.left - w - 14 > 12;
+    const left = side ? b.left - w - 14 : Math.max(12, Math.min(innerWidth - w - 12, b.left + b.width / 2 - w / 2));
+    const top = side ? Math.max(12, Math.min(innerHeight - h - 12, b.top + b.height / 2 - h / 2))
+      : b.bottom + 8 + h < innerHeight ? b.bottom + 8 : Math.max(12, b.top - 8 - h);
+    scTip.style.left = left + "px";
+    scTip.style.top = top + "px";
+    scTip.classList.add("open");
+    scTip.setAttribute("aria-hidden", "false");
+  }
+  function hideScorer() {
+    if (!scTip) return;
+    scTip.classList.remove("open");
+    scTip.setAttribute("aria-hidden", "true");
+    $$("[data-scorer].peek").forEach((x) => x.classList.remove("peek"));
   }
 
   /* pontos de todos os clubes, com o clube atual em destaque */
@@ -289,7 +376,7 @@
       state.filter === "all" ? true :
       state.filter === "fav" ? state.favs.has(m.home) || state.favs.has(m.away) :
       state.filter === "ft" ? m.status === "ft" : m.status !== "ft");
-    const featured = state.matches.find((m) => m.status === "progress") || state.matches.find((m) => m.status === "ns") || state.matches[0];
+    const feats = featuredList(), fi = featIndex(feats), featured = feats[fi];
     const favClubs = CLUBS.filter((c) => state.favs.has(c.id));
     const round = state.round;
     const ri = ROUNDS.indexOf(round);
@@ -341,15 +428,7 @@
       </section>
 
       <aside>
-        <a class="card feature" href="#/partida/${featured.id}" style="display:block;${matchVars(featured)}" data-feature="${featured.id}">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-            <span class="${featured.status === "progress" ? "pill" : "pill muted"}">${featured.status === "progress" ? "Agora" : "Próximo jogo"}</span>
-            <small style="color:var(--text-3)">${featured.venue || ""}</small>
-          </div>
-          ${scoreline(featured, false)}
-          <div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em">No campeonato</div>
-          <div style="margin-top:6px">${compareHTML(featured, 3)}</div>
-        </a>
+        ${featureCard(feats, fi)}
         ${voteCard(featured)}
         ${scorersCard(5)}
         <div class="card">
@@ -527,6 +606,68 @@
   }
 
   /* palpite de quem está vendo (guardado só neste navegador) */
+  /* ---------- Próximo jogo: passa pelos jogos da rodada ----------
+     Ordem: jogos rolando, depois os próximos pelo horário, até o último da rodada (sem jogo por vir: todos). */
+  function featuredList() {
+    const byKick = [...state.matches].sort((a, b) => (a.kick ?? Infinity) - (b.kick ?? Infinity));
+    const open = byKick.filter((m) => m.status !== "ft" && !m.adiado);
+    return open.length ? [...open.filter((m) => m.status === "progress"), ...open.filter((m) => m.status !== "progress")] : byKick;
+  }
+  // continua no jogo escolhido mesmo quando a página é redesenhada (placar ao vivo, favoritos...)
+  function featIndex(list) {
+    const i = list.findIndex((m) => m.id === state.featId);
+    return i >= 0 ? i : 0;
+  }
+  function featureCard(list, i) {
+    const m = list[i], n = list.length;
+    const label = m.status === "progress" ? "Agora" : m.status === "ft" ? "Encerrado" : i === 0 || list[i - 1]?.status === "progress" ? "Próximo jogo" : "Depois";
+    return `<div class="card feature" style="${matchVars(m)}" data-feature="${m.id}">
+        <div class="feat-top">
+          <span class="${m.status === "progress" ? "pill" : "pill muted"}">${label}</span>
+          ${n > 1 ? `<div class="feat-nav">
+            <button data-feat="${i - 1}" ${i > 0 ? "" : "disabled"} aria-label="Jogo anterior">‹</button>
+            <span aria-live="polite"><b>${i + 1}</b> de ${n}</span>
+            <button data-feat="${i + 1}" ${i < n - 1 ? "" : "disabled"} aria-label="Próximo jogo da rodada">›</button>
+          </div>` : ""}
+        </div>
+        <a class="feat-link" href="#/partida/${m.id}">
+          ${scoreline(m, false)}
+          ${m.venue ? `<small class="feat-venue">${m.venue}</small>` : ""}
+          <div class="feat-sub">No campeonato</div>
+          <div style="margin-top:6px">${compareHTML(m, 3)}</div>
+        </a>
+        ${n > 1 ? `<div class="feat-dots">${list.map((x, k) => `<button data-feat="${k}" class="${k === i ? "on" : ""}" aria-label="${byId[x.home].abbr} x ${byId[x.away].abbr}"></button>`).join("")}</div>` : ""}
+      </div>`;
+  }
+  function showFeature(i, dir) {
+    const list = featuredList(), card = $("[data-feature]");
+    if (!card || !list[i]) return;
+    state.featId = list[i].id;
+    card.outerHTML = featureCard(list, i);
+    const vote = $("aside [data-vote-card]");
+    if (vote) vote.outerHTML = voteCard(list[i]);
+    const fresh = $("[data-feature]");
+    if (!reduced && dir) fresh.querySelector(".feat-link").animate([{ opacity: 0, transform: `translateX(${dir * 28}px)` }, { opacity: 1, transform: "none" }], { duration: 320, easing: "cubic-bezier(.2,.8,.2,1)" });
+    requestAnimationFrame(() => $$(".bar i[data-w]", fresh).forEach((x) => (x.style.width = x.dataset.w + "%")));
+    featSwipe(fresh);
+  }
+  // celular: arrastar o cartão para o lado também passa o jogo
+  function featSwipe(card) {
+    if (!card) return;
+    let x0 = null, y0 = 0, moved = false;
+    card.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; moved = false; }, { passive: true });
+    card.addEventListener("touchend", (e) => {
+      if (x0 == null) return;
+      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      moved = true;
+      const cur = featIndex(featuredList()), next = cur + (dx < 0 ? 1 : -1);
+      if (next >= 0 && next < featuredList().length) showFeature(next, dx < 0 ? 1 : -1);
+    });
+    card.addEventListener("click", (e) => { if (moved) { e.preventDefault(); moved = false; } }, true);
+  }
+
   function voteCard(m) {
     const mine = store.get("votes", {})[m.id];
     const closed = m.status === "ft";
@@ -760,6 +901,8 @@
     HERO_SCENES.mount(view);
     LINEUP.mount(view);
     LIVE.mount(view);
+    featSwipe($("[data-feature]", view));
+    scorerCards(view);
     // tinta deslizante das abas
     $$("[data-tabs]").forEach((t) => {
       const ink = $(".tab-ink", t), on = $(".tab.on", t);
@@ -904,6 +1047,13 @@
     }
     const f = e.target.closest("[data-filter]");
     if (f) { state.filter = f.dataset.filter; soft(); return; }
+    const ft = e.target.closest("[data-feat]");
+    if (ft) {
+      e.preventDefault();
+      const i = +ft.dataset.feat, cur = featIndex(featuredList());
+      if (i !== cur) showFeature(i, i > cur ? 1 : -1);
+      return;
+    }
     const rd = e.target.closest("[data-round]");
     if (rd && rd.dataset.round) { state.round = +rd.dataset.round; soft(); return; }
     const v = e.target.closest("[data-vote]");

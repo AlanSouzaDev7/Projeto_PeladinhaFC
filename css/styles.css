@@ -1752,3 +1752,51 @@ img.crest { object-fit: contain; }
   .hm-team b { font-size: 13px; }
   .hm-sum span { min-width: 0; flex: 1 1 28%; }
 }
+
+/* ---------- Próximo jogo: passar pelos jogos da rodada ---------- */
+.feature .feat-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+.feat-nav { display: flex; align-items: center; gap: 8px; color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.feat-nav b { color: var(--text); font-variant-numeric: tabular-nums; }
+.feat-nav button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 70%, transparent);
+  font-size: 18px; line-height: 1; color: var(--text); transition: background 0.2s, transform 0.2s var(--ease-bounce), color 0.2s; }
+.feat-nav button:not(:disabled):hover { background: var(--accent); color: var(--on-accent); transform: scale(1.08); }
+.feat-nav button:disabled { opacity: 0.3; cursor: default; }
+.feat-link { display: block; color: inherit; touch-action: pan-y; }
+.feat-venue { display: block; text-align: center; color: var(--text-3); margin-top: 10px; font-size: 12px; }
+.feat-sub { margin-top: 14px; font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; }
+.feat-dots { display: flex; justify-content: center; gap: 2px; margin-top: 10px; flex-wrap: wrap; }
+.feat-dots button { width: 22px; height: 22px; padding: 0; border: 0; background: none; position: relative; }
+.feat-dots button::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--text-3); opacity: 0.45; transition: transform 0.2s, opacity 0.2s, background 0.2s; }
+.feat-dots button.on::after { background: var(--accent); opacity: 1; transform: scale(1.5); }
+
+/* ---------- Ficha do artilheiro ---------- */
+.squad-list li.has-ficha { cursor: pointer; position: relative; transition: background 0.2s; border-radius: 10px; }
+.squad-list li.has-ficha:hover, .squad-list li.has-ficha.peek, .squad-list li.has-ficha:focus-visible { background: var(--surface-2); outline: none; }
+.sc-more { order: 9; margin-left: 2px; color: var(--text-3); font-size: 18px; line-height: 1; transition: transform 0.2s var(--ease), color 0.2s; }
+.squad-list li.has-ficha:hover .sc-more, .squad-list li.has-ficha.peek .sc-more { color: var(--accent); transform: translateX(2px); }
+.scorer-card { position: fixed; z-index: 70; padding: 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line);
+  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.55), 0 2px 0 rgba(255, 255, 255, 0.04) inset; max-height: calc(100dvh - 24px); overflow: auto;
+  opacity: 0; transform: translateY(6px) scale(0.98); transform-origin: top center; pointer-events: none; transition: opacity 0.18s, transform 0.22s var(--ease); }
+.scorer-card.open { opacity: 1; transform: none; pointer-events: auto; }
+.sc-h { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px; border-radius: 12px; margin: -4px -4px 10px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--sc) 34%, transparent), transparent 75%); }
+.sc-h b { display: block; font: 900 20px/1.05 var(--font-display); font-stretch: 75%; text-transform: uppercase; }
+.sc-h small { color: var(--text-2); font-size: 12px; }
+.sc-g { text-align: center; }
+.sc-g b { font-size: 32px; line-height: 1; }
+.sc-sec { display: flex; justify-content: space-between; align-items: baseline; margin: 12px 0 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); }
+.sc-sec small { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.sc-ficha { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0; }
+.sc-ficha div { padding: 7px 9px; border-radius: 10px; background: var(--surface-2); min-width: 0; }
+.sc-ficha dt { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+.sc-ficha dd { margin: 2px 0 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+.sc-ficha dd small { color: var(--text-3); font-weight: 600; }
+.sc-adv, .sc-clubes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sc-adv li { display: grid; grid-template-columns: 18px 96px 1fr 22px; gap: 8px; align-items: center; font-size: 13px; }
+.sc-adv span, .sc-clubes span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-adv i { display: block; height: 6px; width: var(--w); border-radius: 4px; min-width: 6px; }
+.sc-adv b, .sc-clubes b { text-align: right; font-variant-numeric: tabular-nums; }
+.sc-clubes li { display: grid; grid-template-columns: 18px 1fr auto 24px; gap: 8px; align-items: center; font-size: 13px; }
+.sc-clubes small { color: var(--text-3); }
+.sc-none { color: var(--text-3); margin: 0; font-size: 13px; }
+.sc-src { margin-top: 12px; font-size: 11px; color: var(--text-3); }

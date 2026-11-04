@@ -512,10 +512,19 @@ def minute(txt):
     return min(int(m.group(1)), 90) if m else None
 
 
+MATCH_VERSION = 2  # 2: súmula também guarda gols, assistências, finalizações e pênaltis
+
+
 def match_extract(eid):
-    """Resumo de um jogo encerrado: para cada time, quem jogou, quanto tempo e os cartões."""
+    """Resumo de um jogo encerrado: para cada time, quem jogou, quanto tempo, cartões, gols e finalizações.
+    Linha: [id, nome, titular, minutos, amarelos, vermelhos, gols, assistências, finalizações, no alvo, gols de pênalti]"""
     d = get_json(f"{ESPN}/site/v2/sports/soccer/bra.1/summary?event={eid}")
-    out = {"date": d["header"]["competitions"][0]["date"][:10], "teams": {}}
+    pens = {}
+    for k in d.get("keyEvents", []):
+        if k.get("scoringPlay") and "penalty" in (k.get("type") or {}).get("type", "") and k.get("participants"):
+            a = k["participants"][0]["athlete"].get("id")
+            pens[a] = pens.get(a, 0) + 1
+    out = {"v": MATCH_VERSION, "date": d["header"]["competitions"][0]["date"][:10], "teams": {}}
     for r in d.get("rosters", []):
         rows = []
         for x in r.get("roster", []):
@@ -532,8 +541,10 @@ def match_extract(eid):
                     end = sub_min[1]
             if red_min and red_min[0] is not None:
                 end = min(end, red_min[0])
-            rows.append([x["athlete"]["id"], x["athlete"]["displayName"], bool(x.get("starter")), max(0, (end or 90) - (start or 0)),
-                         int(st.get("yellowCards", 0)), int(st.get("redCards", 0))])
+            aid = x["athlete"]["id"]
+            rows.append([aid, x["athlete"]["displayName"], bool(x.get("starter")), max(0, (end or 90) - (start or 0)),
+                         int(st.get("yellowCards", 0)), int(st.get("redCards", 0)), int(st.get("totalGoals", 0)), int(st.get("goalAssists", 0)),
+                         int(st.get("totalShots", 0)), int(st.get("shotsOnTarget", 0)), pens.get(aid, 0)])
         out["teams"][r["team"]["id"]] = rows
     return out
 
@@ -550,7 +561,7 @@ def club_player_stats(cid, matches, squad_names, news):
     sched = get_json(f"{ESPN}/site/v2/sports/soccer/bra.1/teams/{espn}/schedule?season={time.strftime('%Y')}")
     evs = sorted((e for e in sched.get("events", []) if e["competitions"][0]["status"]["type"].get("completed")), key=lambda e: e["date"])
     for e in evs:
-        if e["id"] not in matches:
+        if e["id"] not in matches or matches[e["id"]].get("v", 1) < MATCH_VERSION:
             try:
                 matches[e["id"]] = match_extract(e["id"])
                 time.sleep(0.25)
@@ -559,7 +570,7 @@ def club_player_stats(cid, matches, squad_names, news):
     games = [matches[e["id"]] for e in evs if e["id"] in matches]
     P = {}
     for gi, g in enumerate(games):
-        for pid, nm, starter, mins, yc, rc in g["teams"].get(espn, []):
+        for pid, nm, starter, mins, yc, rc, *_ in g["teams"].get(espn, []):
             q = P.setdefault(pid, {"id": pid, "name": squad_names.get(pid, nm), "apps": 0, "starts": 0, "min": 0, "yc": 0, "rc": 0, "played": set(), "started": set(), "last_yc": None})
             q["apps"] += 1; q["starts"] += starter; q["min"] += mins; q["yc"] += yc; q["rc"] += rc
             q["played"].add(gi)
@@ -675,6 +686,47 @@ def press_news(c):
     return items
 
 
+def scorer_profiles(matches, scorers, squads):
+    """Ficha de cada artilheiro do campeonato: dados do elenco e, pelas súmulas, jogos, minutos,
+    assistências, finalizações, pênaltis e contra quais clubes (e por quais clubes) marcou."""
+    club_of = {str(c["espn"]): cid for cid, c in CLUBS.items()}
+    P = {}
+    for m in sorted((m for m in matches.values() if m.get("v", 1) >= MATCH_VERSION), key=lambda m: m["date"]):
+        tids = list(m["teams"])
+        for tid, rows in m["teams"].items():
+            me, opp = club_of.get(tid), next((club_of.get(t) for t in tids if t != tid), None)
+            for pid, nm, starter, mins, yc, rc, g, a, sh, sot, pen in rows:
+                q = P.setdefault(pid, {"name": nm, "jogos": 0, "titular": 0, "min": 0, "gols": 0, "assist": 0, "chutes": 0, "noAlvo": 0, "pen": 0,
+                                       "amarelos": 0, "vermelhos": 0, "jogosComGol": 0, "ultimoGol": None, "adv": {}, "clubes": {}})
+                q["jogos"] += 1; q["titular"] += starter; q["min"] += mins; q["gols"] += g; q["assist"] += a
+                q["chutes"] += sh; q["noAlvo"] += sot; q["pen"] += pen; q["amarelos"] += yc; q["vermelhos"] += rc
+                if me:
+                    q["clubes"].setdefault(me, [0, 0])
+                    q["clubes"][me][0] += 1; q["clubes"][me][1] += g
+                if g:
+                    q["jogosComGol"] += 1; q["ultimoGol"] = m["date"]
+                    if opp:
+                        q["adv"][opp] = q["adv"].get(opp, 0) + g
+    squad = {row[4]: (cid, row) for cid, rows in squads.items() for row in rows if row[4]}
+    out = []
+    for pos, (name, cid, goals) in enumerate(scorers, 1):
+        # nomes repetidos (ex.: dois "Pedro"): fica quem jogou pelo clube do artilheiro e fez mais gols
+        cands = [(pid, q) for pid, q in P.items() if q["name"] == name]
+        cands.sort(key=lambda x: (cid in x[1]["clubes"], x[1]["gols"]), reverse=True)
+        if not cands:
+            out.append({"pos": pos, "name": name, "club": cid, "gols": goals})
+            continue
+        pid, q = cands[0]
+        sc, row = squad.get(pid, (None, None))
+        out.append({"pos": pos, "id": pid, "name": name, "club": cid, "gols": goals, "golsSumulas": q["gols"],
+                    "camisa": row[0] if row else None, "posicao": row[2] if row else None, "idade": row[3] if row else None,
+                    "jogos": q["jogos"], "titular": q["titular"], "min": q["min"], "assist": q["assist"], "chutes": q["chutes"], "noAlvo": q["noAlvo"],
+                    "pen": q["pen"], "amarelos": q["amarelos"], "vermelhos": q["vermelhos"], "jogosComGol": q["jogosComGol"], "ultimoGol": q["ultimoGol"],
+                    "adversarios": sorted(([k, v] for k, v in q["adv"].items()), key=lambda x: -x[1]),
+                    "clubes": [[k, v[0], v[1]] for k, v in q["clubes"].items()]})
+    return out
+
+
 def update_players():
     with lock:
         squads = state["squads"] or {}
@@ -699,7 +751,20 @@ def update_players():
     os.makedirs(os.path.dirname(MATCHES_FILE), exist_ok=True)
     json.dump(matches, open(MATCHES_FILE, "w", encoding="utf-8"), ensure_ascii=False)
     with lock:
-        state["players"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "clubs": out}
+        scorers = state.get("scorers") or []
+    if not scorers:  # sem cache: usa a artilharia gravada no site
+        try:
+            src = open(LIVE_DATA_FILE, encoding="utf-8").read()
+            scorers = json.loads(src[src.index("{"):src.rindex("}") + 1]).get("scorers") or []
+        except Exception:
+            scorers = []
+    try:
+        artilheiros = scorer_profiles(matches, scorers, squads)
+    except Exception as ex:
+        log("artilheiros", ex)
+        artilheiros = []
+    with lock:
+        state["players"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "clubs": out, "artilheiros": artilheiros}
     log("estatísticas de jogadores atualizadas")
 
 
