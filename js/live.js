@@ -43,6 +43,50 @@
     if (s) { apply(s); window.dispatchEvent(new Event("placar:data")); }
   }, 60000);
 
+  /* ---------------- Placar em tempo real ----------------
+     Funciona com ou sem a API (no GitHub Pages também): enquanto houver jogo da rodada perto do horário
+     ou em andamento, o navegador consulta o placar da ESPN a cada 20 s e atualiza a página. */
+  const ESPN_SB = "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard";
+  const ESPN_CLUB = { 3458: "athletico-pr", 7632: "atletico-mg", 9967: "bahia", 6086: "botafogo", 6079: "bragantino", 9318: "chapecoense", 874: "corinthians", 3456: "coritiba", 2022: "cruzeiro", 819: "flamengo", 3445: "fluminense", 6273: "gremio", 1936: "internacional", 9169: "mirassol", 2029: "palmeiras", 4936: "remo", 2674: "santos", 2026: "sao-paulo", 3454: "vasco", 3457: "vitoria" };
+  const kickOf = (g) => (g[4] && g[5] ? new Date(`${g[4]}T${g[5]}:00-03:00`).getTime() : null);
+  // jogo que precisa de placar ao vivo: começa em até 15 min, está rolando ou acabou há pouco sem resultado final
+  const needsLive = (g, now) => {
+    const k = kickOf(g), st = g[8] && g[8].state;
+    return k && st !== "post" && now > k - 15 * 60e3 && now < k + 3 * 3600e3;
+  };
+
+  async function pollScores() {
+    const games = PD.FIXTURES[PD.ROUND] || [], now = Date.now();
+    const days = [...new Set(games.filter((g) => needsLive(g, now)).map((g) => g[4].replace(/-/g, "")))];
+    if (!days.length) return false;
+    let changed = false;
+    for (const day of days) {
+      let sb;
+      try { sb = await (await fetch(`${ESPN_SB}?dates=${day}`, { cache: "no-store" })).json(); } catch { continue; }
+      for (const ev of sb.events || []) {
+        const comp = ev.competitions[0], side = {};
+        comp.competitors.forEach((c) => (side[c.homeAway] = c));
+        const h = ESPN_CLUB[side.home?.team.id], a = ESPN_CLUB[side.away?.team.id];
+        const g = games.find((x) => x[0] === h && x[1] === a);
+        if (!g) continue;
+        while (g.length < 9) g.push(null);
+        const st = comp.status.type.state;
+        const before = JSON.stringify(g);
+        g[7] = ev.id;
+        if (st === "in" || st === "post") { g[2] = +side.home.score; g[3] = +side.away.score; }
+        g[8] = { state: st, clock: comp.status.displayClock, detail: comp.status.type.shortDetail, live: st === "in" };
+        if (JSON.stringify(g) !== before) changed = true;
+      }
+    }
+    if (changed) window.dispatchEvent(new Event("placar:data"));
+    return true;
+  }
+  (async function loop() {
+    await window.PD_BOOT;
+    const live = await pollScores().catch(() => false);
+    setTimeout(loop, live ? 20000 : 60000);
+  })();
+
   /* ---------------- Minuto a minuto ---------------- */
   const ICO = { goal: "⚽", "yellow-card": "🟨", "red-card": "🟥", substitution: "🔁", status: "⏱", panorama: "📊" };
   const streams = new Set();

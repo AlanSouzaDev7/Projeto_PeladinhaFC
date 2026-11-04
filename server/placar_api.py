@@ -26,6 +26,7 @@ Gera também o arquivo do site sem a API (GitHub Pages):  python server/placar_a
 
 Notícias: só título, fonte, data e link — o texto das matérias fica no site de origem.
 """
+import calendar
 import email.utils
 import gzip
 import json
@@ -211,6 +212,53 @@ def rankings(tipo=None):
             continue
         out[k] = {"criterio": label, "ranking": [dict(r, rank=i + 1, valor=val(r)) for i, r in enumerate(sorted(rows, key=key))]}
     return {"updated": updated, "round": rnd, "rankings": out}
+
+
+def kickoff(g):
+    """Horário do apito em segundos (o horário da tabela é de Brasília, UTC-3)."""
+    try:
+        return calendar.timegm(time.strptime(f"{g[4]} {g[5]}", "%Y-%m-%d %H:%M")) + 3 * 3600
+    except Exception:
+        return None
+
+
+def live_loop():
+    """Placar ao vivo: a cada 30 s, enquanto houver jogo da rodada perto do horário ou em andamento.
+    Quando um jogo termina, recalcula a tabela e as estatísticas dos jogadores (pendurados etc.)."""
+    while True:
+        try:
+            with lock:
+                fixtures, rnd = state["fixtures"], state["round"]
+            games = (fixtures or {}).get(str(rnd)) or (fixtures or {}).get(rnd) or []
+            now = time.time()
+            days = {g[4] for g in games if g[4] and g[5] and not (len(g) > 8 and isinstance(g[8], dict) and g[8].get("state") == "post")
+                    and kickoff(g) and kickoff(g) - 900 < now < kickoff(g) + 3 * 3600}
+            ended = False
+            for day in days:
+                sb = get_json(f"{ESPN}/site/v2/sports/soccer/bra.1/scoreboard?dates={day.replace('-', '')}")
+                for ev in sb.get("events", []):
+                    comp = ev["competitions"][0]
+                    side = {c.get("homeAway"): c for c in comp["competitors"]}
+                    h, a = BY_ESPN.get(side["home"]["team"]["id"]), BY_ESPN.get(side["away"]["team"]["id"])
+                    with lock:
+                        for g in games:
+                            if g[0] == h and g[1] == a:
+                                while len(g) < 9:
+                                    g.append(None)
+                                st = comp["status"]["type"]["state"]
+                                was = g[8].get("state") if isinstance(g[8], dict) else None
+                                g[7] = ev["id"]
+                                if st in ("in", "post"):
+                                    g[2], g[3] = int(side["home"]["score"]), int(side["away"]["score"])
+                                g[8] = {"state": st, "clock": comp["status"].get("displayClock"), "detail": comp["status"]["type"].get("shortDetail"), "live": st == "in"}
+                                ended |= st == "post" and was != "post"
+            if ended:
+                log("jogo encerrado: atualizando tabela e estatísticas dos jogadores")
+                threading.Thread(target=lambda: (update_standings_and_fixtures(), update_players(), persist()), daemon=True).start()
+            time.sleep(30 if days else 60)
+        except Exception as ex:
+            log("placar ao vivo", ex)
+            time.sleep(60)
 
 
 def update_squads():
@@ -757,6 +805,7 @@ def main():
     every(iv["elencos"], update_squads)
     every(iv["noticias"], update_news)
     every(iv.get("jogadores", 60), update_players)
+    threading.Thread(target=live_loop, daemon=True).start()
     log(f"PLACAR no ar: http://localhost:{port}")
     ThreadingHTTPServer(("", port), Handler).serve_forever()
 

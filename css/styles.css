@@ -1659,3 +1659,9 @@ img.crest { object-fit: contain; }
   .pstats { grid-template-columns: minmax(0, 1fr); }
   .ps-src { min-height: 40px; }
 }
+
+/* pendurados: aviso de que o número é o total da temporada */
+.ps-b li.ps-note { display: block; margin: 2px 0 6px; padding: 10px 12px; border: 0; border-radius: 10px; border-left: 4px solid #f5c518;
+  background: color-mix(in srgb, #f5c518 16%, var(--surface)); font-size: 12px; line-height: 1.4; color: var(--text-2); }
+.ps-b li.ps-note b { display: block; color: var(--text); font-size: 12.5px; white-space: normal; margin-bottom: 2px; }
+.ps-v small { font: 700 10px/1 var(--font); color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; margin-left: 2px; }

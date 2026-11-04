@@ -124,9 +124,11 @@
     const empty = (t) => `<li class="ps-empty">${t}</li>`;
     const src = (x) => x ? `<a class="ps-src" href="${x.link}" target="_blank" rel="noopener" title="${(x.manchete || "").replace(/"/g, "&quot;")}">${x.fonte}${x.setorista ? " · setorista" : ""} · ${fmt(x.data)} ↗</a>` : "";
     const blocks = [
-      ["pend", "Pendurados", "2 amarelos: o próximo suspende", d.pendurados.length
-        ? d.pendurados.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-tag ${p.so_imprensa ? "warn" : p.imprensa ? "ok" : ""}">${p.so_imprensa ? "segundo a imprensa" : p.imprensa ? "confirmado pela imprensa" : "pela súmula"}</span><span class="ps-v"><i class="rk-card y"></i>${p.amarelos ?? "–"}</span>${full ? src(p.imprensa) : ""}</li>`).join("")
-        : empty("Nenhum jogador pendurado.")],
+      ["pend", "Pendurados", "a um amarelo da suspensão", `<li class="ps-note"><b>O número ao lado do nome é o total de amarelos na temporada.</b>
+          <span>No Brasileirão, o 3º, o 6º, o 9º… amarelo suspendem. Quem tem 2, 5 ou 8 está pendurado: mais um cartão e fica fora do próximo jogo.</span></li>` +
+        (d.pendurados.length
+        ? d.pendurados.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-tag ${p.so_imprensa ? "warn" : p.imprensa ? "ok" : ""}">${p.so_imprensa ? "segundo a imprensa" : p.imprensa ? "confirmado pela imprensa" : "pela súmula"}${p.amarelos ? ` · suspende no ${p.amarelos + 1}º` : ""}</span><span class="ps-v" title="${p.amarelos ?? "–"} amarelos na temporada"><i class="rk-card y"></i>${p.amarelos ?? "–"}<small>na temporada</small></span>${full ? src(p.imprensa) : ""}</li>`).join("")
+        : empty("Nenhum jogador pendurado."))],
       ["seq", "Jogos seguidos", "partidas em sequência, sem desfalcar", d.sequencia.length
         ? d.sequencia.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-sub">${p.titular} como titular</span><span class="ps-v">${p.jogos}</span></li>`).join("")
         : empty("Ninguém com 2 ou mais jogos seguidos.")],
@@ -876,6 +878,14 @@
     state.matches = realMatches(ROUND);
     state.standings = buildStandings();
     // não redesenha a página da partida (o minuto a minuto atualiza sozinho) nem durante a montagem do time
+    // na página da partida, troca só o placar do topo (o minuto a minuto continua onde está)
+    if (sig() !== before && state.route.page === "partida") {
+      const m = findMatch(state.route.id), el = $(".match-hero .scoreline");
+      if (m && el) {
+        el.outerHTML = scoreline(m);
+        $(".match-hero .pill")?.classList.toggle("muted", m.status !== "progress");
+      }
+    }
     if (sig() !== before && ["", "clube", "tabela"].includes(state.route.page) && state.route.tab !== "elenco") render();
   };
   window.addEventListener("placar:data", refresh);
