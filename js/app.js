@@ -145,6 +145,41 @@
       : `<div class="card reveal"><div class="card-h">Estatísticas do elenco <small><a href="#/clube/${id}/estatisticas" style="color:var(--accent)">ver tudo ›</a></small></div>${grid}${foot}</div>`;
   }
 
+  /* ---------- retrospecto: últimos 5 e próximos 5 jogos, em todas as competições ---------- */
+  function formInner(id, d) {
+    if (!d || (!d.last?.length && !d.next?.length)) return `<div class="empty" style="padding:28px">Retrospecto ainda não disponível.</div>`;
+    const c = byId[id];
+    const oppCrest = (e) => (e.oppId && byId[e.oppId] ? crest(byId[e.oppId], 26) : e.oppLogo ? `<img class="crest" src="${e.oppLogo}" width="26" height="26" alt="" loading="lazy" />` : `<i class="fm-nocrest"></i>`);
+    const dm = (iso) => iso.split("-").reverse().slice(0, 2).join("/");
+    const wk = (iso) => WD[new Date(`${iso}T12:00:00-03:00`).getDay()];
+    const tag = (e) => `<span class="fm-comp">${e.comp}${e.stage ? ` · ${e.stage}` : ""}</span>`;
+    const where = (e) => `<span class="fm-where ${e.home ? "casa" : "fora"}">${e.home ? "Casa" : "Fora"}</span>`;
+    const RES = { V: "Vitória", E: "Empate", D: "Derrota" };
+    const pts = d.last.reduce((t, e) => t + (e.res === "V" ? 3 : e.res === "E" ? 1 : 0), 0);
+    const last = d.last.map((e, i) => `<li class="fm-row" style="--i:${i}">
+        <span class="fm-res ${e.res}" title="${RES[e.res]}">${e.res}</span>
+        <span class="fm-date"><b>${dm(e.date)}</b><small>${wk(e.date)}</small></span>
+        <span class="fm-opp">${oppCrest(e)}<span><b>${e.home ? "" : "@ "}${e.oppId ? byId[e.oppId].abbr : e.opp}</b>${tag(e)}</span></span>
+        <span class="fm-score"><b>${e.home ? `${e.gf}–${e.ga}` : `${e.ga}–${e.gf}`}</b>${e.pen ? `<small>pên. ${e.home ? `${e.pen[0]}–${e.pen[1]}` : `${e.pen[1]}–${e.pen[0]}`}</small>` : ""}</span>
+        ${where(e)}</li>`).join("");
+    const next = d.next.map((e, i) => `<li class="fm-row" style="--i:${i}">
+        <span class="fm-n">${i + 1}</span>
+        <span class="fm-date"><b>${dm(e.date)}</b><small>${wk(e.date)} · ${e.time}</small></span>
+        <span class="fm-opp">${oppCrest(e)}<span><b>${e.home ? "" : "@ "}${e.oppId ? byId[e.oppId].abbr : e.opp}</b>${tag(e)}</span></span>
+        <span class="fm-score"><small>${e.venue || ""}</small></span>
+        ${where(e)}</li>`).join("");
+    return `<div class="fm-grid">
+        <section><h4>Últimos 5 <span class="fm-strip">${d.last.slice().reverse().map((e) => `<i class="fm-res ${e.res}" title="${dm(e.date)} · ${RES[e.res]}">${e.res}</i>`).join("")}</span>
+          <small>${pts} de ${d.last.length * 3} pontos possíveis · do mais recente ao mais antigo</small></h4><ul>${last || `<li class="ps-empty">Sem jogos.</li>`}</ul></section>
+        <section><h4>Próximos 5 <small>${d.next.length ? `próximo: ${dm(d.next[0].date)} às ${d.next[0].time}` : "sem jogos marcados"}</small></h4><ul>${next || `<li class="ps-empty">Sem jogos marcados.</li>`}</ul></section>
+      </div>
+      <div class="source">Todas as competições (Brasileirão, Copa do Brasil, Libertadores e Sul-Americana) · fonte: ESPN · placar sempre do ponto de vista do mandante · “@” = ${c.abbr} fora de casa</div>`;
+  }
+  function formCard(id) {
+    const d = window.CLUB_FORM?.clubs?.[id];
+    return `<div class="card reveal fm" data-form="${id}"><div class="card-h">Retrospecto <small>últimos 5 e próximos 5 jogos</small></div>${formInner(id, d)}</div>`;
+  }
+
   function scorersCard(limit = 10, clubId = null, clubs = null) {
     const list = REAL.scorers.filter((x) => (!clubId || x[1] === clubId) && (!clubs || clubs.includes(x[1]))).slice(0, limit);
     if (!list.length) return "";
@@ -317,6 +352,7 @@
           <div class="kpi" style="--i:2"><small>Vitórias</small><b data-count="${r.w}">0</b><em>${r.d} empates · ${r.l} derrotas</em></div>
           <div class="kpi" style="--i:3"><small>Saldo</small><b data-count="${r.sg}" data-sign>0</b><em>${r.gf} marcados · ${r.ga} sofridos</em></div>
         </div>
+        ${formCard(id)}
         <div class="grid-2">
           <div>
             <div class="card reveal">
@@ -726,6 +762,16 @@
       el.addEventListener("pointerleave", () => { el.style.setProperty("--tilt-x", "0deg"); el.style.setProperty("--tilt-y", "0deg"); });
     });
     rankPreviews();
+    // sem a API (GitHub Pages), o retrospecto é atualizado direto da ESPN ao abrir o clube
+    $$("[data-form]").forEach((el) => {
+      if (LIVE.on()) return;
+      LIVE.form(el.dataset.form).then((d) => {
+        if (!d || !el.isConnected) return;
+        window.CLUB_FORM = window.CLUB_FORM || { clubs: {} };
+        window.CLUB_FORM.clubs[el.dataset.form] = d;
+        el.innerHTML = el.querySelector(".card-h").outerHTML + formInner(el.dataset.form, d);
+      }).catch(() => {});
+    });
   }
 
   /* prévia dos rankings: com o mouse, aparece ao passar por cima; no toque, segurar o dedo mostra,

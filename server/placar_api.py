@@ -17,6 +17,7 @@ Rotas
   GET /api/health
   GET /api/state                          tabela, jogos, elencos e últimas escalações
   GET /api/rankings        [?tipo=gols|ataque|defesa|amarelos|vermelhos]   rankings do campeonato
+  GET /api/retrospecto     [?club=id]     últimos 5 e próximos 5 jogos de cada clube, em todas as competições
   GET /api/jogadores       [?club=id]     pendurados, sequência de jogos, lesionados e minutagem dos reservas
 
 Gera também o arquivo do site sem a API (GitHub Pages):  python server/placar_api.py --snapshot
@@ -290,6 +291,71 @@ def add_upcoming_rounds(fixtures):
         log("próximas rodadas:", ", ".join(f"{k}ª" for k in sorted(fixtures, key=int) if int(k) > last))
 
 
+# ---------------------------------------------------------------------------
+# Retrospecto: últimos 5 jogos e próximos 5 de cada clube, em todas as competições
+# ---------------------------------------------------------------------------
+STAGE_PT = {"Semifinals": "Semifinal", "Final": "Final", "Finals": "Final", "Quarterfinals": "Quartas de final", "Round of 16": "Oitavas de final",
+            "Group Stage": "Fase de grupos", "Knockout Round Playoffs": "Playoffs", "Third Round": "3ª fase", "Fifth Round": "5ª fase", "Fourth Round": "4ª fase"}
+
+
+def score_of(c):
+    s = c.get("score")
+    if isinstance(s, dict):
+        return (int(s.get("value") or 0), s.get("shootoutScore"))
+    return (int(s) if s not in (None, "") else None, None)
+
+
+def form_event(ev, espn_id, lg):
+    comp = ev["competitions"][0]
+    me = [c for c in comp["competitors"] if c["team"]["id"] == espn_id][0]
+    op = [c for c in comp["competitors"] if c["team"]["id"] != espn_id][0]
+    st = comp["status"]["type"]
+    t = time.gmtime(calendar.timegm(time.strptime(ev["date"][:16], "%Y-%m-%dT%H:%M")) - 3 * 3600)
+    out = {"id": ev["id"], "date": time.strftime("%Y-%m-%d", t), "time": time.strftime("%H:%M", t), "comp": COMP_NAME[lg],
+           "stage": STAGE_PT.get((ev.get("seasonType") or {}).get("name"), "") if lg != "bra.1" else "",
+           "home": me.get("homeAway") == "home", "opp": op["team"].get("displayName"), "oppId": BY_ESPN.get(op["team"]["id"]),
+           "oppLogo": ((op["team"].get("logos") or [{}])[0]).get("href"), "state": st.get("state"), "venue": (comp.get("venue") or {}).get("fullName")}
+    if st.get("state") == "post":
+        (gf, pf), (ga, pa) = score_of(me), score_of(op)
+        out.update(gf=gf, ga=ga, res="V" if gf > ga else "D" if gf < ga else "E")
+        if pf is not None and pa is not None:
+            out["pen"] = [int(pf), int(pa)]
+    return out
+
+
+def club_form(cid):
+    espn = CLUBS[cid]["espn"]
+    past, nxt = [], []
+    for lg in LEAGUES:
+        for fx in ("", "&fixture=true"):
+            try:
+                d = get_json(f"{ESPN_WEB}/site/v2/sports/soccer/{lg}/teams/{espn}/schedule?season={time.strftime('%Y')}{fx}")
+            except Exception:
+                continue
+            for ev in d.get("events", []):
+                try:
+                    e = form_event(ev, espn, lg)
+                except Exception:
+                    continue
+                (past if e["state"] == "post" else nxt).append(e)
+    dedup = lambda xs: list({x["id"]: x for x in xs}.values())
+    past = sorted(dedup(past), key=lambda x: x["date"] + x["time"])[-5:][::-1]
+    nxt = sorted(dedup(nxt), key=lambda x: x["date"] + x["time"])[:5]
+    return {"last": past, "next": nxt}
+
+
+def update_form():
+    out = {}
+    for cid in CLUBS:
+        try:
+            out[cid] = club_form(cid)
+        except Exception as ex:
+            log("retrospecto", cid, ex)
+    with lock:
+        state["form"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "clubs": out}
+    log("retrospecto atualizado")
+
+
 def kickoff(g):
     """Horário do apito em segundos (o horário da tabela é de Brasília, UTC-3)."""
     try:
@@ -331,7 +397,7 @@ def live_loop():
                                 ended |= st == "post" and was != "post"
             if ended:
                 log("jogo encerrado: atualizando tabela e estatísticas dos jogadores")
-                threading.Thread(target=lambda: (update_standings_and_fixtures(), update_players(), persist()), daemon=True).start()
+                threading.Thread(target=lambda: (update_standings_and_fixtures(), update_players(), update_form(), persist()), daemon=True).start()
             time.sleep(30 if days else 60)
         except Exception as ex:
             log("placar ao vivo", ex)
@@ -624,6 +690,13 @@ def write_snapshot():
             "   Súmulas: ESPN · lesões: manchetes do Google Notícias que citam o jogador. */\n")
     open(path, "w", encoding="utf-8").write(head + "window.PLAYER_STATS = " + json.dumps(data, ensure_ascii=False) + ";\n")
     log("gravado", path)
+    update_form()
+    with lock:
+        fm = state["form"]
+    path = os.path.join(ROOT, "js", "club-form.js")
+    open(path, "w", encoding="utf-8").write("/* PLACAR — últimos 5 e próximos 5 jogos de cada clube (gerado por: python server/placar_api.py --snapshot). Fonte: ESPN. */\n"
+                                            "window.CLUB_FORM = " + json.dumps(fm, ensure_ascii=False) + ";\n")
+    log("gravado", path)
 
 
 def news_query(q):
@@ -809,7 +882,7 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json({"ok": True, "updated": state["updated"], "errors": state["errors"]})
             if parts[1:] == ["state"]:
                 with lock:
-                    s = {k: state[k] for k in ("updated", "standings", "round", "fixtures", "squads", "last", "scorers", "players") if k in state}
+                    s = {k: state[k] for k in ("updated", "standings", "round", "fixtures", "squads", "last", "scorers", "players", "form") if k in state}
                 if not s.get("standings"):
                     return self.send_json({"ok": False, "message": "carregando dados"}, 503)
                 return self.send_json(s)
@@ -819,6 +892,13 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json({"ok": False, "message": f"tipo deve ser um de: {', '.join(RANK_ORDER)}"}, 400)
                 r = rankings(tipo)
                 return self.send_json(r) if r["rankings"] and r["updated"] else self.send_json({"ok": False, "message": "carregando dados"}, 503)
+            if parts[1:] == ["retrospecto"]:
+                with lock:
+                    fm = state.get("form")
+                if not fm:
+                    return self.send_json({"ok": False, "message": "carregando dados"}, 503)
+                club = (q.get("club") or [None])[0]
+                return self.send_json({"updated": fm["updated"], "club": club, **fm["clubs"].get(club, {})} if club else fm)
             if parts[1:] == ["jogadores"]:
                 with lock:
                     pl = state.get("players")
@@ -882,6 +962,7 @@ def main():
     every(iv["elencos"], update_squads)
     every(iv["noticias"], update_news)
     every(iv.get("jogadores", 60), update_players)
+    every(iv.get("retrospecto", 30), update_form)
     threading.Thread(target=live_loop, daemon=True).start()
     log(f"PLACAR no ar: http://localhost:{port}")
     ThreadingHTTPServer(("", port), Handler).serve_forever()

@@ -25,6 +25,7 @@ Sem a API (por exemplo, `python -m http.server`), o site funciona com os dados g
 |---|---|
 | **Ao vivo** | Rodada agrupada por dia, navegação entre rodadas, favoritos, próximo jogo e artilharia. **Placar em tempo real** mesmo sem a API (no GitHub Pages também): com jogo perto do horário ou rolando, o navegador consulta o placar da ESPN a cada 20 s. As **próximas rodadas** entram sozinhas pelo calendário da ESPN (agrupadas por data, já que a ESPN não informa o número da rodada; jogos adiados aparecem marcados), e o site passa para a rodada seguinte quando a atual termina. |
 | **Clubes** | 20 páginas no tema de cada clube, com uma **aparição animada do escudo** inspirada no que ele significa. O Cruzeiro tem a versão em tela cheia (canvas): a câmera viaja pela Via Láctea até o Cruzeiro do Sul e as cinco estrelas formam o escudo. |
+| **Retrospecto** | Na visão geral de cada clube: **últimos 5 jogos** (V/E/D, placar, pênaltis, casa ou fora) e **próximos 5**, em todas as competições (Brasileirão, Copa do Brasil, Libertadores e Sul-Americana). Sem a API, a página busca a agenda atualizada direto da ESPN. |
 | **Estatísticas do elenco** | Na visão geral de cada clube e na aba "Estatísticas": **pendurados** (2 amarelos, o próximo suspende), **jogos seguidos**, **departamento médico** e **reservas mais usados** por minutagem. Cartões e minutos vêm das súmulas de todos os jogos do Brasileirão; lesões e pendurados são conferidos nas manchetes de ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra e dos setoristas cadastrados, com o número de fontes que confirmam cada caso. |
 | **Elenco** | Elencos reais, escalação do último jogo de cada clube e campinho interativo: arraste jogadores para trocar ou para qualquer ponto da grama; 8 formações. |
 | **Bora pro jogo** | Prancheta tática comparando dois times com e sem a bola, leitura tática e tendência do jogo (modelo simples). |
@@ -37,6 +38,7 @@ Sem a API (por exemplo, `python -m http.server`), o site funciona com os dados g
 |---|---|
 | `GET /api/state` | tabela, jogos da rodada (com placar ao vivo), elencos e últimas escalações |
 | `GET /api/rankings?tipo=gols\|ataque\|defesa\|amarelos\|vermelhos` | rankings do campeonato; os cartões somam a súmula de cada jogo encerrado depois da última tabela da CBF |
+| `GET /api/retrospecto?club=flamengo` | últimos 5 e próximos 5 jogos, em todas as competições; atualiza a cada 30 min e ao fim de cada jogo |
 | `GET /api/jogadores?club=flamengo` | pendurados, jogos seguidos, lesionados (com fontes) e minutagem dos reservas; atualiza a cada hora |
 | `GET /api/news?club=flamengo` | manchetes recentes do clube (título, fonte, data e link) |
 | `GET /api/minuto-a-minuto/<id>` | narração do jogo até o momento |

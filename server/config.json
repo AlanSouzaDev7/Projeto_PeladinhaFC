@@ -4,7 +4,8 @@
     "tabela_e_jogos": 5,
     "noticias": 15,
     "elencos": 360,
-    "jogadores": 60
+    "jogadores": 60,
+    "retrospecto": 30
   },
   "fontes": ["ge.globo.com", "uol.com.br", "espn.com.br", "lance.com.br", "gazetaesportiva.com", "terra.com.br"],
   "clubes": {

@@ -21,6 +21,7 @@
     if (s.squads) window.SQUADS = s.squads;
     if (s.last) window.SQUADS_LAST = s.last;
     if (s.players) window.PLAYER_STATS = s.players;
+    if (s.form) window.CLUB_FORM = s.form;
     PD.LIVE = true;
   }
 
@@ -220,7 +221,50 @@
     }
   }
 
+  /* ---------------- Retrospecto (últimos 5 e próximos 5) direto da ESPN ----------------
+     Sem a API, a página do clube busca a agenda atualizada das 4 competições (mesma regra da API). */
+  const LEAGUES = { "bra.1": "Brasileirão", "bra.copa_do_brazil": "Copa do Brasil", "conmebol.libertadores": "Libertadores", "conmebol.sudamericana": "Sul-Americana" };
+  const STAGE_PT = { Semifinals: "Semifinal", Final: "Final", Finals: "Final", Quarterfinals: "Quartas de final", "Round of 16": "Oitavas de final", "Group Stage": "Fase de grupos", "Knockout Round Playoffs": "Playoffs" };
+  const ESPN_ID = Object.fromEntries(Object.entries(ESPN_CLUB).map(([k, v]) => [v, k]));
+  const scoreOf = (c) => (c.score && typeof c.score === "object" ? [+c.score.value, c.score.shootoutScore] : [c.score === "" || c.score == null ? null : +c.score, null]);
+
+  async function fetchForm(cid) {
+    const espn = ESPN_ID[cid], year = new Date().getFullYear(), past = [], next = [];
+    const urls = Object.keys(LEAGUES).flatMap((lg) => ["", "&fixture=true"].map((fx) => [lg, `https://site.web.api.espn.com/apis/site/v2/sports/soccer/${lg}/teams/${espn}/schedule?season=${year}${fx}`]));
+    const res = await Promise.all(urls.map(([lg, u]) => fetch(u, { cache: "no-store" }).then((r) => r.json()).then((d) => [lg, d]).catch(() => [lg, null])));
+    if (res.every(([, d]) => !d)) return null;
+    for (const [lg, d] of res) {
+      for (const ev of d?.events || []) {
+        const comp = ev.competitions[0], me = comp.competitors.find((c) => c.team.id === espn), op = comp.competitors.find((c) => c.team.id !== espn);
+        if (!me || !op) continue;
+        const t = brt(ev.date), st = comp.status.type.state;
+        const e = { id: ev.id, date: t.slice(0, 10), time: t.slice(11, 16), comp: LEAGUES[lg], stage: lg === "bra.1" ? "" : STAGE_PT[ev.seasonType?.name] || "",
+          home: me.homeAway === "home", opp: op.team.displayName, oppId: ESPN_CLUB[op.team.id] || null, oppLogo: op.team.logos?.[0]?.href, state: st, venue: comp.venue?.fullName };
+        if (st === "post") {
+          const [gf, pf] = scoreOf(me), [ga, pa] = scoreOf(op);
+          Object.assign(e, { gf, ga, res: gf > ga ? "V" : gf < ga ? "D" : "E" });
+          if (pf != null && pa != null) e.pen = [+pf, +pa];
+        }
+        (st === "post" ? past : next).push(e);
+      }
+    }
+    const uniq = (xs) => [...new Map(xs.map((x) => [x.id, x])).values()];
+    const key = (x) => x.date + x.time;
+    return { last: uniq(past).sort((a, b) => key(a).localeCompare(key(b))).slice(-5).reverse(), next: uniq(next).sort((a, b) => key(a).localeCompare(key(b))).slice(0, 5) };
+  }
+
+  // guarda por 5 min: a página do clube é redesenhada a cada lance ao vivo e não precisa baixar tudo de novo
+  const formCache = new Map();
+  const cachedForm = (cid) => {
+    const hit = formCache.get(cid);
+    if (hit && Date.now() - hit.t < 5 * 60e3) return hit.p;
+    const p = fetchForm(cid).catch(() => null);
+    formCache.set(cid, { t: Date.now(), p });
+    return p;
+  };
+
   window.LIVE = {
+    form: cachedForm,
     mount(root) {
       streams.forEach((s) => s.close()); streams.clear();
       if (!PD.LIVE) return;

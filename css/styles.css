@@ -1668,3 +1668,44 @@ img.crest { object-fit: contain; }
 
 /* jogo adiado de rodada anterior, disputado junto com esta */
 .match .time .adiado { display: block; margin-top: 2px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #c99a00; }
+
+/* ==========================================================================
+   Retrospecto do clube: últimos 5 e próximos 5 jogos
+   ========================================================================== */
+.fm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line-soft); }
+.fm-grid > section { background: var(--surface); padding: 14px 16px 10px; min-width: 0; }
+.fm-grid h4 { margin: 0 0 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font: 900 15px/1.1 var(--font-display); font-stretch: 80%; text-transform: uppercase; }
+.fm-grid h4 small { flex-basis: 100%; font: 600 11.5px/1.3 var(--font); color: var(--text-3); text-transform: none; }
+.fm-strip { display: inline-flex; gap: 4px; }
+.fm-res { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; font: 900 12px/1 var(--font); font-style: normal; color: #fff; flex: none; }
+.fm-res.V { background: var(--win, #16a34a); }
+.fm-res.E { background: #8b93a7; }
+.fm-res.D { background: var(--loss, #e5383b); }
+.fm-strip .fm-res { width: 22px; height: 22px; font-size: 11px; animation: pop .4s var(--ease-bounce) both; }
+.fm-strip .fm-res:nth-child(2) { animation-delay: .06s } .fm-strip .fm-res:nth-child(3) { animation-delay: .12s }
+.fm-strip .fm-res:nth-child(4) { animation-delay: .18s } .fm-strip .fm-res:nth-child(5) { animation-delay: .24s }
+.fm-grid ul { list-style: none; margin: 0; padding: 0; }
+.fm-row { display: grid; grid-template-columns: 26px 46px minmax(0, 1fr) auto 42px; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line-soft);
+  animation: rise .45s var(--ease) both; animation-delay: calc(var(--i) * 45ms); }
+.fm-row:first-child { border-top: 0; }
+.fm-n { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 7px; font-weight: 900; font-size: 12px; background: var(--line-soft); color: var(--text-2); }
+.fm-date b { display: block; font-size: 13px; font-variant-numeric: tabular-nums; }
+.fm-date small { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.fm-opp { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fm-opp > span { min-width: 0; display: grid; }
+.fm-opp b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fm-opp img.crest { object-fit: contain; flex: none; }
+.fm-nocrest { width: 26px; height: 26px; border-radius: 50%; background: var(--line-soft); flex: none; }
+.fm-comp { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fm-score { text-align: right; min-width: 0; }
+.fm-score b { font: 900 18px/1 var(--font-display); font-stretch: 75%; font-variant-numeric: tabular-nums; }
+.fm-score small { display: block; font-size: 10.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+.fm-where { justify-self: end; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; padding: 3px 6px; border-radius: 6px; background: var(--line-soft); color: var(--text-2); }
+.fm-where.casa { background: color-mix(in srgb, var(--c1) 20%, var(--line-soft)); color: var(--text); }
+.fm .source { padding: 10px 16px 14px; }
+@media (max-width: 900px) { .fm-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) {
+  .fm-row { grid-template-columns: 24px 66px minmax(0, 1fr) auto; gap: 8px; }
+  .fm-where { display: none; }
+  .fm-score small { max-width: 90px; }
+}
