@@ -142,7 +142,11 @@ def update_standings_and_fixtures():
                     if st["state"] == "in":  # ainda em andamento: placar parcial, não final
                         g[8]["live"] = True
     add_new_cards(table, old, fixtures)
-    rnd = max(int(k) for k in fixtures)
+    try:
+        add_upcoming_rounds(fixtures)
+    except Exception as ex:  # sem as próximas rodadas, o resto continua
+        log("próximas rodadas", ex)
+    rnd = current_round(fixtures)
     with lock:
         state.update(standings=table, fixtures=fixtures, round=rnd, scorers=real["scorers"], updated=time.strftime("%d/%m/%Y às %H:%M"))
     log("tabela e jogos atualizados")
@@ -214,6 +218,78 @@ def rankings(tipo=None):
     return {"updated": updated, "round": rnd, "rankings": out}
 
 
+ESPN_WEB = "https://site.web.api.espn.com/apis"
+LAST_ROUND = 38
+
+
+def finished(g):
+    return (len(g) > 8 and isinstance(g[8], dict) and g[8].get("state") == "post") or (g[2] is not None and not (len(g) > 8 and isinstance(g[8], dict) and g[8].get("state") == "in"))
+
+
+def current_round(fixtures):
+    """Rodada em andamento: a primeira que ainda tem jogo por terminar (ou a última, se todas acabaram)."""
+    rounds = sorted(int(k) for k in fixtures)
+    for r in rounds:
+        if any(not finished(g) for g in fixtures[str(r)] if not (len(g) > 9 and g[9] == "adiado")):
+            return r
+    return rounds[-1]
+
+
+def group_rounds(games, first):
+    """Agrupa jogos futuros em rodadas pela data (a ESPN não informa o número da rodada).
+    Uma rodada nova começa depois de mais de 3 dias sem jogo ou quando um time voltaria a jogar na mesma rodada.
+    Blocos pequenos (jogos antecipados ou adiados) entram na rodada seguinte; se o time já joga nela, o jogo é marcado como adiado."""
+    blocks, cur = [], None
+    for g in sorted(games, key=lambda g: (g["date"], g["time"] or "")):
+        day = time.strptime(g["date"], "%Y-%m-%d")
+        if cur is None or (calendar.timegm(day) - calendar.timegm(cur["last"])) > 3 * 86400 or ({g["home"], g["away"]} & cur["teams"] and day != cur["last"]):
+            cur = {"games": [], "teams": set(), "last": day}
+            blocks.append(cur)
+        cur["games"].append(g)
+        cur["teams"] |= {g["home"], g["away"]}
+        cur["last"] = day
+    out = []
+    for i, b in enumerate(blocks):
+        if len(b["games"]) < 5 and i + 1 < len(blocks):
+            nxt = {t for x in blocks[i + 1]["games"] for t in (x["home"], x["away"])}
+            for g in b["games"]:
+                g["adiado"] = bool({g["home"], g["away"]} & nxt)
+            blocks[i + 1]["games"] = b["games"] + blocks[i + 1]["games"]
+            continue
+        out.append(b["games"])
+    return {first + i: gs for i, gs in enumerate(out) if first + i <= LAST_ROUND}
+
+
+def add_upcoming_rounds(fixtures):
+    """Busca no calendário da ESPN os jogos que ainda não estão na tabela de jogos e monta as próximas rodadas."""
+    known = {(g[0], g[1]) for gs in fixtures.values() for g in gs}
+    last = max(int(k) for k in fixtures)
+    if last >= LAST_ROUND:
+        return
+    cal = get_json(f"{ESPN_WEB}/site/v2/sports/soccer/bra.1/scoreboard")["leagues"][0].get("calendar", [])
+    today = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 3 * 3600))
+    new = []
+    for day in sorted({c[:10] for c in cal if c[:10] >= today}):
+        for ev in get_json(f"{ESPN_WEB}/site/v2/sports/soccer/bra.1/scoreboard?dates={day.replace('-', '')}").get("events", []):
+            comp = ev["competitions"][0]
+            side = {c.get("homeAway"): c for c in comp["competitors"]}
+            h, a = BY_ESPN.get(side["home"]["team"]["id"]), BY_ESPN.get(side["away"]["team"]["id"])
+            if not h or not a or (h, a) in known:
+                continue
+            # horário de Brasília (UTC-3)
+            t = time.gmtime(calendar.timegm(time.strptime(ev["date"][:16], "%Y-%m-%dT%H:%M")) - 3 * 3600)
+            st = comp["status"]["type"]["state"]
+            new.append({"home": h, "away": a, "date": time.strftime("%Y-%m-%d", t), "time": time.strftime("%H:%M", t),
+                        "venue": (comp.get("venue") or {}).get("fullName"), "espn": ev["id"],
+                        "hs": int(side["home"]["score"]) if st in ("in", "post") else None, "as": int(side["away"]["score"]) if st in ("in", "post") else None,
+                        "live": {"state": st, "clock": comp["status"].get("displayClock"), "detail": comp["status"]["type"].get("shortDetail"), "live": st == "in"}})
+            known.add((h, a))
+    for rd, gs in group_rounds(new, last + 1).items():
+        fixtures[str(rd)] = [[g["home"], g["away"], g["hs"], g["as"], g["date"], g["time"], g["venue"], g["espn"], g["live"]] + (["adiado"] if g.get("adiado") else []) for g in gs]
+    if new:
+        log("próximas rodadas:", ", ".join(f"{k}ª" for k in sorted(fixtures, key=int) if int(k) > last))
+
+
 def kickoff(g):
     """Horário do apito em segundos (o horário da tabela é de Brasília, UTC-3)."""
     try:
@@ -229,7 +305,8 @@ def live_loop():
         try:
             with lock:
                 fixtures, rnd = state["fixtures"], state["round"]
-            games = (fixtures or {}).get(str(rnd)) or (fixtures or {}).get(rnd) or []
+            # todas as rodadas: jogos adiados e antecipados também podem estar rolando
+            games = [g for gs in (fixtures or {}).values() for g in gs]
             now = time.time()
             days = {g[4] for g in games if g[4] and g[5] and not (len(g) > 8 and isinstance(g[8], dict) and g[8].get("state") == "post")
                     and kickoff(g) and kickoff(g) - 900 < now < kickoff(g) + 3 * 3600}

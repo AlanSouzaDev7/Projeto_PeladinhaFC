@@ -179,12 +179,12 @@ const ROUNDS = Object.keys(FIXTURES).map(Number);
 
 /* status pelo relógio: antes do apito "ns"; até 2h depois "progress"; depois disso, sem placar, "pending" */
 function realMatches(round = ROUND, now = Date.now()) {
-  return (FIXTURES[round] || []).map(([home, away, hs, as, date, time, venue, espn, live]) => {
+  return (FIXTURES[round] || []).map(([home, away, hs, as, date, time, venue, espn, live, flag]) => {
     const kick = date && time ? new Date(`${date}T${time}:00-03:00`).getTime() : null;
     // com a API ligada, "live" diz a situação real do jogo; sem ela, a situação sai do relógio
     const status = live ? ({ in: "progress", post: "ft", pre: "ns" }[live.state] || "ns")
       : hs != null ? "ft" : !kick || now < kick ? "ns" : now < kick + 2 * 3600e3 ? "progress" : "pending";
-    return { id: `${home}-x-${away}-r${round}`, round, home, away, hs, as, date, time, venue, kick, status, espn, clock: live && live.state === "in" ? live.clock : null };
+    return { id: `${home}-x-${away}-r${round}`, round, home, away, hs, as, date, time, venue, kick, status, espn, clock: live && live.state === "in" ? live.clock : null, adiado: flag === "adiado" };
   });
 }
 

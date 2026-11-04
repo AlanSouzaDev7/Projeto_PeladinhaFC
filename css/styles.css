@@ -1665,3 +1665,6 @@ img.crest { object-fit: contain; }
   background: color-mix(in srgb, #f5c518 16%, var(--surface)); font-size: 12px; line-height: 1.4; color: var(--text-2); }
 .ps-b li.ps-note b { display: block; color: var(--text); font-size: 12.5px; white-space: normal; margin-bottom: 2px; }
 .ps-v small { font: 700 10px/1 var(--font); color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; margin-left: 2px; }
+
+/* jogo adiado de rodada anterior, disputado junto com esta */
+.match .time .adiado { display: block; margin-top: 2px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #c99a00; }

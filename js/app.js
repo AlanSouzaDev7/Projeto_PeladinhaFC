@@ -82,7 +82,7 @@
     const fav = state.favs.has(m.home) || state.favs.has(m.away);
     const lose = (s) => m.status === "ft" && (s === "home" ? m.hs < m.as : m.as < m.hs);
     return `<a class="match" href="#/partida/${m.id}" data-match="${m.id}" style="--i:${i};${matchVars(m)}">
-      <div class="time ${live ? "live" : ""}">${statusLabel(m)}</div>
+      <div class="time ${live ? "live" : ""}">${statusLabel(m)}${m.adiado ? `<small class="adiado">adiado</small>` : ""}</div>
       <div class="teams">
         <div class="team ${lose("home") ? "loser" : ""}">${crest(h, 18)}<span>${h.abbr}</span></div>
         <div class="team ${lose("away") ? "loser" : ""}">${crest(a, 18)}<span>${a.abbr}</span></div>

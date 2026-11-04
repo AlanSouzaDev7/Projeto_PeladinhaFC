@@ -33,8 +33,86 @@
     } catch { return null; } finally { clearTimeout(t); }
   }
 
-  /* o site espera isto antes de desenhar a primeira tela */
-  window.PD_BOOT = location.protocol.startsWith("http") ? fetchState().then((s) => s && apply(s)) : Promise.resolve();
+  /* ---------------- ESPN direto do navegador ----------------
+     Usado sem a API (GitHub Pages): placar ao vivo e jogos das próximas rodadas. */
+  // site.web.api libera o acesso a qualquer navegador; site.api bloqueia (CORS) navegadores de computador
+  const ESPN_SB = ["https://site.web.api.espn.com", "https://site.api.espn.com"].map((h) => `${h}/apis/site/v2/sports/soccer/bra.1/scoreboard`);
+  const ESPN_CLUB = { 3458: "athletico-pr", 7632: "atletico-mg", 9967: "bahia", 6086: "botafogo", 6079: "bragantino", 9318: "chapecoense", 874: "corinthians", 3456: "coritiba", 2022: "cruzeiro", 819: "flamengo", 3445: "fluminense", 6273: "gremio", 1936: "internacional", 9169: "mirassol", 2029: "palmeiras", 4936: "remo", 2674: "santos", 2026: "sao-paulo", 3454: "vasco", 3457: "vitoria" };
+  const LAST_ROUND = 38;
+  const kickOf = (g) => (g[4] && g[5] ? new Date(`${g[4]}T${g[5]}:00-03:00`).getTime() : null);
+  const allGames = () => Object.values(PD.FIXTURES).flat();
+
+  async function scoreboard(q = "") {
+    for (const url of ESPN_SB) {
+      try { return await (await fetch(`${url}${q}`, { cache: "no-store" })).json(); } catch { /* tenta o próximo endereço */ }
+    }
+    return null;
+  }
+  const sides = (ev) => {
+    const s = {};
+    ev.competitions[0].competitors.forEach((c) => (s[c.homeAway] = c));
+    return { s, h: ESPN_CLUB[s.home?.team.id], a: ESPN_CLUB[s.away?.team.id] };
+  };
+  const liveOf = (ev) => {
+    const st = ev.competitions[0].status;
+    return { state: st.type.state, clock: st.displayClock, detail: st.type.shortDetail, live: st.type.state === "in" };
+  };
+  // data e hora de Brasília (UTC-3) a partir do horário da ESPN
+  const brt = (iso) => new Date(new Date(iso).getTime() - 3 * 3600e3).toISOString();
+
+  /* rodada em andamento: a primeira que ainda tem jogo por terminar (jogo adiado não segura a rodada) */
+  function currentRound() {
+    const rounds = Object.keys(PD.FIXTURES).map(Number).sort((a, b) => a - b);
+    const done = (g) => (g[8] && g[8].state === "post") || (g[2] != null && !(g[8] && g[8].state === "in"));
+    return rounds.find((r) => PD.FIXTURES[r].some((g) => g[9] !== "adiado" && !done(g))) || rounds[rounds.length - 1];
+  }
+
+  /* próximas rodadas: a ESPN não informa o número da rodada, então os jogos futuros são agrupados pela data
+     (mesma regra da API: rodada nova depois de mais de 3 dias sem jogo ou quando um time voltaria a jogar;
+     blocos pequenos entram na rodada seguinte e, se o time já joga nela, viram "adiado") */
+  async function addUpcoming() {
+    const last = Math.max(...Object.keys(PD.FIXTURES).map(Number));
+    if (last >= LAST_ROUND) return;
+    const base = await scoreboard();
+    const today = brt(new Date().toISOString()).slice(0, 10);
+    const days = [...new Set((base?.leagues?.[0]?.calendar || []).map((c) => c.slice(0, 10)).filter((d) => d >= today))];
+    const known = new Set(allGames().map((g) => `${g[0]}|${g[1]}`));
+    const boards = await Promise.all(days.map((d) => scoreboard(`?dates=${d.replace(/-/g, "")}`)));
+    const games = [];
+    boards.forEach((sb) => (sb?.events || []).forEach((ev) => {
+      const { s, h, a } = sides(ev), lv = liveOf(ev), t = brt(ev.date);
+      if (!h || !a || known.has(`${h}|${a}`)) return;
+      known.add(`${h}|${a}`);
+      const sc = lv.state === "in" || lv.state === "post";
+      games.push([h, a, sc ? +s.home.score : null, sc ? +s.away.score : null, t.slice(0, 10), t.slice(11, 16), ev.competitions[0].venue?.fullName || null, ev.id, lv]);
+    }));
+    games.sort((x, y) => (x[4] + x[5]).localeCompare(y[4] + y[5]));
+    const blocks = [];
+    let cur = null;
+    for (const g of games) {
+      const day = new Date(`${g[4]}T00:00:00Z`).getTime();
+      if (!cur || day - cur.last > 3 * 864e5 || ((cur.teams.has(g[0]) || cur.teams.has(g[1])) && day !== cur.last)) blocks.push((cur = { games: [], teams: new Set(), last: day }));
+      cur.games.push(g); cur.teams.add(g[0]).add(g[1]); cur.last = day;
+    }
+    let rd = last + 1;
+    blocks.forEach((b, i) => {
+      const next = blocks[i + 1];
+      if (b.games.length < 5 && next) {
+        b.games.forEach((g) => { if (next.teams.has(g[0]) || next.teams.has(g[1])) g[9] = "adiado"; });
+        next.games.unshift(...b.games);
+        return;
+      }
+      if (rd <= LAST_ROUND) PD.FIXTURES[rd++] = b.games;
+    });
+    PD.ROUNDS = Object.keys(PD.FIXTURES).map(Number).sort((a, b) => a - b);
+    PD.ROUND = currentRound();
+  }
+
+  /* o site espera isto antes de desenhar a primeira tela; sem a API, busca as próximas rodadas na ESPN (no máximo 4 s) */
+  const timeout = (p, ms) => Promise.race([p, new Promise((res) => setTimeout(res, ms))]);
+  window.PD_BOOT = location.protocol.startsWith("http")
+    ? fetchState().then((s) => (s ? apply(s) : timeout(addUpcoming().catch(() => {}), 4000)))
+    : Promise.resolve();
 
   /* atualização em segundo plano a cada minuto */
   setInterval(async () => {
@@ -44,12 +122,8 @@
   }, 60000);
 
   /* ---------------- Placar em tempo real ----------------
-     Funciona com ou sem a API (no GitHub Pages também): enquanto houver jogo da rodada perto do horário
-     ou em andamento, o navegador consulta o placar da ESPN a cada 20 s e atualiza a página. */
-  // site.web.api libera o acesso a qualquer navegador; site.api bloqueia (CORS) navegadores de computador
-  const ESPN_SB = ["https://site.web.api.espn.com", "https://site.api.espn.com"].map((h) => `${h}/apis/site/v2/sports/soccer/bra.1/scoreboard`);
-  const ESPN_CLUB = { 3458: "athletico-pr", 7632: "atletico-mg", 9967: "bahia", 6086: "botafogo", 6079: "bragantino", 9318: "chapecoense", 874: "corinthians", 3456: "coritiba", 2022: "cruzeiro", 819: "flamengo", 3445: "fluminense", 6273: "gremio", 1936: "internacional", 9169: "mirassol", 2029: "palmeiras", 4936: "remo", 2674: "santos", 2026: "sao-paulo", 3454: "vasco", 3457: "vitoria" };
-  const kickOf = (g) => (g[4] && g[5] ? new Date(`${g[4]}T${g[5]}:00-03:00`).getTime() : null);
+     Funciona com ou sem a API: enquanto houver jogo perto do horário ou em andamento (de qualquer rodada,
+     inclusive adiados), o navegador consulta o placar da ESPN a cada 20 s e atualiza a página. */
   // jogo que precisa de placar ao vivo: começa em até 15 min, está rolando ou acabou há pouco sem resultado final
   const needsLive = (g, now) => {
     const k = kickOf(g), st = g[8] && g[8].state;
@@ -57,20 +131,15 @@
   };
 
   async function pollScores() {
-    const games = PD.FIXTURES[PD.ROUND] || [], now = Date.now();
+    const games = allGames(), now = Date.now();
     const days = [...new Set(games.filter((g) => needsLive(g, now)).map((g) => g[4].replace(/-/g, "")))];
     if (!days.length) return false;
     let changed = false;
     for (const day of days) {
-      let sb = null;
-      for (const url of ESPN_SB) {
-        try { sb = await (await fetch(`${url}?dates=${day}`, { cache: "no-store" })).json(); break; } catch { /* tenta o próximo endereço */ }
-      }
+      const sb = await scoreboard(`?dates=${day}`);
       if (!sb) continue;
       for (const ev of sb.events || []) {
-        const comp = ev.competitions[0], side = {};
-        comp.competitors.forEach((c) => (side[c.homeAway] = c));
-        const h = ESPN_CLUB[side.home?.team.id], a = ESPN_CLUB[side.away?.team.id];
+        const comp = ev.competitions[0], { s: side, h, a } = sides(ev);
         const g = games.find((x) => x[0] === h && x[1] === a);
         if (!g) continue;
         while (g.length < 9) g.push(null);
@@ -82,7 +151,10 @@
         if (JSON.stringify(g) !== before) changed = true;
       }
     }
-    if (changed) window.dispatchEvent(new Event("placar:data"));
+    if (changed) {
+      if (!PD.LIVE) PD.ROUND = currentRound(); // rodada terminou: passa para a próxima
+      window.dispatchEvent(new Event("placar:data"));
+    }
     return true;
   }
   (async function loop() {
