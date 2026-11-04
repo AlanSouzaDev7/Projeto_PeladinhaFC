@@ -1709,3 +1709,46 @@ img.crest { object-fit: contain; }
   .fm-where { display: none; }
   .fm-score small { max-width: 90px; }
 }
+
+
+/* ==========================================================================
+   Aba Partidas: temporada inteira do clube
+   ========================================================================== */
+.hm-top { display: grid; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line-soft); }
+.hm-chips { margin: 0; }
+.hm-sum { display: flex; flex-wrap: wrap; gap: 8px; }
+.hm-sum span { display: grid; min-width: 70px; padding: 8px 12px; border-radius: 12px; background: var(--line-soft); font-size: 11px; color: var(--text-3); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.hm-sum b { font: 900 24px/1 var(--font-display); font-stretch: 75%; color: var(--text); text-transform: none; letter-spacing: 0; }
+.hm-sum .v b { color: var(--win, #16a34a); } .hm-sum .e b { color: #8b93a7; } .hm-sum .d b { color: var(--loss, #e5383b); }
+.hm-jump { justify-self: start; font-weight: 800; font-size: 13px; color: var(--accent); text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; }
+.hm-list { list-style: none; margin: 0; padding: 0; }
+.hm-month { position: sticky; top: calc(var(--header-h, 64px) + 52px); z-index: 2; padding: 8px 16px; font: 900 12px/1 var(--font); text-transform: uppercase; letter-spacing: .1em; color: var(--text-3);
+  background: color-mix(in srgb, var(--surface) 92%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line-soft); }
+.hm-row { display: grid; grid-template-columns: 52px 120px minmax(0, 1fr) 30px minmax(0, 160px); align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line-soft); }
+.hm-row.pre { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+.hm-row.in { background: color-mix(in srgb, var(--loss, #e5383b) 8%, transparent); }
+.hm-date b { display: block; font-size: 14px; font-variant-numeric: tabular-nums; }
+.hm-date small, .hm-comp small { display: block; font-size: 11px; color: var(--text-3); }
+.hm-comp { font-size: 12px; font-weight: 700; color: var(--text-2); }
+.hm-match { display: grid; grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr); align-items: center; gap: 10px; }
+.hm-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hm-match > .hm-team:first-child { justify-content: flex-end; text-align: right; flex-direction: row-reverse; }
+.hm-team b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-team img.crest { object-fit: contain; flex: none; }
+.hm-mid { text-align: center; display: grid; justify-items: center; }
+.hm-score { font: 900 22px/1 var(--font-display); font-stretch: 75%; font-variant-numeric: tabular-nums; padding: 4px 10px; border-radius: 8px; background: var(--line-soft); white-space: nowrap; }
+.hm-score i { font-style: normal; opacity: .45; margin: 0 4px; font-size: 16px; }
+.hm-score.live { background: color-mix(in srgb, var(--loss, #e5383b) 20%, transparent); }
+.hm-mid small { font-size: 10.5px; color: var(--text-3); margin-top: 3px; white-space: nowrap; }
+.hm-mid small.live { color: var(--loss, #e5383b); font-weight: 800; }
+.hm-time { font-size: 14px; font-weight: 900; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line-soft); white-space: nowrap; }
+.hm-time.tbd { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #c99a00; border-color: color-mix(in srgb, #f5c518 50%, transparent); background: color-mix(in srgb, #f5c518 12%, transparent); }
+.hm-venue { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; }
+.hm .source { padding: 12px 16px 16px; }
+@media (max-width: 900px) {
+  .hm-row { grid-template-columns: 46px minmax(0, 1fr) 26px; grid-template-areas: "d c r" "m m m"; row-gap: 8px; }
+  .hm-date { grid-area: d; } .hm-comp { grid-area: c; } .hm-res { grid-area: r; } .hm-match { grid-area: m; } .hm-venue { display: none; }
+  .hm-match { grid-template-columns: minmax(0, 1fr) 84px minmax(0, 1fr); }
+  .hm-team b { font-size: 13px; }
+  .hm-sum span { min-width: 0; flex: 1 1 28%; }
+}

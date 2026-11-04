@@ -53,9 +53,9 @@
     return date === today ? `Hoje · ${dm}` : date === tomorrow ? `Amanhã · ${dm}` : date === yesterday ? `Ontem · ${dm}` : `${WD[d.getUTCDay()]} · ${dm}`;
   }
   const statusLabel = (m) =>
-    m.status === "ft" ? "Fim" : m.status === "progress" ? `<span>●</span> ${m.clock || "Agora"}` : m.status === "pending" ? "Aguard." : m.time || "—";
+    m.status === "ft" ? "Fim" : m.status === "progress" ? `<span>●</span> ${m.clock || "Agora"}` : m.status === "pending" ? "Aguard." : m.time || "A definir";
   const statusText = (m) =>
-    m.status === "ft" ? "Encerrado" : m.status === "progress" ? `Ao vivo${m.clock ? ` · ${m.clock}` : ""}` : m.status === "pending" ? "Aguardando resultado" : m.time ? `${dayName(m.date)} · ${m.time}` : "A definir";
+    m.status === "ft" ? "Encerrado" : m.status === "progress" ? `Ao vivo${m.clock ? ` · ${m.clock}` : ""}` : m.status === "pending" ? "Aguardando resultado" : m.time ? `${dayName(m.date)} · ${m.time}` : m.date ? `${dayName(m.date)} · horário a definir` : "A definir";
   const posClass = (p) => (p <= 4 ? "lib" : p <= 6 ? "pre" : p <= 12 ? "sul" : p >= 17 ? "z4" : "");
   /* ==========================================================================
      Tema do clube (cores aplicadas no :root)
@@ -164,17 +164,61 @@
         ${where(e)}</li>`).join("");
     const next = d.next.map((e, i) => `<li class="fm-row" style="--i:${i}">
         <span class="fm-n">${i + 1}</span>
-        <span class="fm-date"><b>${dm(e.date)}</b><small>${wk(e.date)} · ${e.time}</small></span>
+        <span class="fm-date"><b>${dm(e.date)}</b><small>${wk(e.date)} · ${e.time || "A definir"}</small></span>
         <span class="fm-opp">${oppCrest(e)}<span><b>${e.home ? "" : "@ "}${e.oppId ? byId[e.oppId].abbr : e.opp}</b>${tag(e)}</span></span>
         <span class="fm-score"><small>${e.venue || ""}</small></span>
         ${where(e)}</li>`).join("");
     return `<div class="fm-grid">
         <section><h4>Últimos 5 <span class="fm-strip">${d.last.slice().reverse().map((e) => `<i class="fm-res ${e.res}" title="${dm(e.date)} · ${RES[e.res]}">${e.res}</i>`).join("")}</span>
           <small>${pts} de ${d.last.length * 3} pontos possíveis · do mais recente ao mais antigo</small></h4><ul>${last || `<li class="ps-empty">Sem jogos.</li>`}</ul></section>
-        <section><h4>Próximos 5 <small>${d.next.length ? `próximo: ${dm(d.next[0].date)} às ${d.next[0].time}` : "sem jogos marcados"}</small></h4><ul>${next || `<li class="ps-empty">Sem jogos marcados.</li>`}</ul></section>
+        <section><h4>Próximos 5 <small>${d.next.length ? `próximo: ${dm(d.next[0].date)} ${d.next[0].time ? `às ${d.next[0].time}` : "· horário a definir"}` : "sem jogos marcados"}</small></h4><ul>${next || `<li class="ps-empty">Sem jogos marcados.</li>`}</ul></section>
       </div>
       <div class="source">Todas as competições (Brasileirão, Copa do Brasil, Libertadores e Sul-Americana) · fonte: ESPN · placar sempre do ponto de vista do mandante · “@” = ${c.abbr} fora de casa</div>`;
   }
+  /* ---------- aba Partidas: temporada inteira (resultados e jogos por vir), por mês, com filtro de competição ---------- */
+  const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  function historyHTML(id, d, filtro = state.histFilter || "Todas") {
+    const c = byId[id];
+    if (!d?.all?.length) return `<div class="card"><div class="empty" style="padding:40px">Buscando os jogos do ${c.abbr}…</div></div>`;
+    const comps = ["Todas", ...new Set(d.all.map((e) => e.comp))];
+    if (!comps.includes(filtro)) filtro = "Todas";
+    const list = d.all.filter((e) => filtro === "Todas" || e.comp === filtro);
+    const done = list.filter((e) => e.state === "post");
+    const n = (r) => done.filter((e) => e.res === r).length;
+    const gp = done.reduce((t, e) => t + e.gf, 0), gc = done.reduce((t, e) => t + e.ga, 0);
+    const side = (club, name, logo) => `<span class="hm-team">${club ? crest(club, 24) : logo ? `<img class="crest" src="${logo}" width="24" height="24" alt="" loading="lazy" />` : `<i class="fm-nocrest"></i>`}<b>${club ? club.abbr : name}</b></span>`;
+    const opp = (e) => (e.oppId && byId[e.oppId] ? byId[e.oppId] : null);
+    const row = (e) => {
+      const H = e.home ? side(c) : side(opp(e), e.opp, e.oppLogo), A = e.home ? side(opp(e), e.opp, e.oppLogo) : side(c);
+      const hs = e.home ? e.gf : e.ga, as = e.home ? e.ga : e.gf;
+      const mid = e.state === "post" ? `<b class="hm-score">${hs}<i>×</i>${as}</b>${e.pen ? `<small>pên. ${e.home ? e.pen[0] : e.pen[1]}–${e.home ? e.pen[1] : e.pen[0]}</small>` : ""}`
+        : e.state === "in" ? `<b class="hm-score live">${hs}<i>×</i>${as}</b><small class="live">● ${e.clock || "ao vivo"}</small>`
+        : `<b class="hm-time ${e.time ? "" : "tbd"}">${e.time || "A definir"}</b>`;
+      return `<li class="hm-row ${e.state} ${e.res ? `r${e.res}` : ""}">
+        <span class="hm-date"><b>${e.date.slice(8, 10)}/${e.date.slice(5, 7)}</b><small>${WD[new Date(`${e.date}T12:00:00-03:00`).getDay()]}</small></span>
+        <span class="hm-comp">${e.comp}${e.stage ? `<small>${e.stage}</small>` : ""}</span>
+        <span class="hm-match">${H}<span class="hm-mid">${mid}</span>${A}</span>
+        <span class="hm-res">${e.res ? `<i class="fm-res ${e.res}">${e.res}</i>` : ""}</span>
+        <span class="hm-venue">${e.venue || ""}</span></li>`;
+    };
+    let month = "";
+    const rows = list.map((e) => {
+      const m = MESES[+e.date.slice(5, 7) - 1] + " " + e.date.slice(0, 4), head = m !== month ? `<li class="hm-month">${(month = m)}</li>` : "";
+      return head + row(e);
+    }).join("");
+    const hasNext = list.some((e) => e.state !== "post");
+    return `<div class="card hm">
+      <div class="card-h">Jogos do ${c.abbr} na temporada <small>${done.length} disputados · ${list.length - done.length} por vir</small></div>
+      <div class="hm-top">
+        <div class="chips hm-chips">${comps.map((x) => `<button class="chip ${x === filtro ? "on" : ""}" data-hist-filter="${x}">${x}</button>`).join("")}</div>
+        <div class="hm-sum"><span><b>${done.length}</b>jogos</span><span class="v"><b>${n("V")}</b>vitórias</span><span class="e"><b>${n("E")}</b>empates</span><span class="d"><b>${n("D")}</b>derrotas</span><span><b>${gp}</b>gols pró</span><span><b>${gc}</b>gols contra</span></div>
+        ${hasNext ? `<a class="hm-jump" href="#" data-hist-next>Ir para o próximo jogo ↓</a>` : ""}
+      </div>
+      <ul class="hm-list">${rows}</ul>
+      <div class="source">Temporada ${d.all[0].date.slice(0, 4)} · todas as competições oficiais · fonte: ESPN · horários de Brasília; "A definir" = horário ainda não marcado pela CBF/Conmebol${window.CLUB_FORM?.updated ? ` · atualizado em ${window.CLUB_FORM.updated}` : ""}</div>
+    </div>`;
+  }
+
   function formCard(id) {
     const d = window.CLUB_FORM?.clubs?.[id];
     return `<div class="card reveal fm" data-form="${id}"><div class="card-h">Retrospecto <small>últimos 5 e próximos 5 jogos</small></div>${formInner(id, d)}</div>`;
@@ -406,12 +450,7 @@
         </div>`;
     }
 
-    if (tab === "partidas") {
-      const games = ROUNDS.slice().reverse().flatMap((rd) => (rd === ROUND ? state.matches : realMatches(rd)).filter((x) => x.home === id || x.away === id));
-      body = `<div class="card" style="max-width:820px"><div class="card-h">Jogos do ${c.abbr} <small>ge.globo · CBF</small></div>
-          ${games.map((g, i) => `<div class="league-h">${flagBR}<span>${g.round}ª rodada <small>· ${dayName(g.date)}${g.venue ? ` · ${g.venue}` : ""}</small></span></div>${matchRow(g, i)}`).join("")}
-        </div>`;
-    }
+    if (tab === "partidas") body = `<div data-history="${id}">${historyHTML(id, window.CLUB_FORM?.clubs?.[id])}</div>`;
 
     if (tab === "elenco") body = LINEUP.builder(id);
     if (tab === "estatisticas") body = playerStatsHTML(id, true);
@@ -460,7 +499,7 @@
     const info = [
       ["Competição", `Brasileirão Série A · ${m.round}ª rodada`],
       ["Data", m.date ? dayName(m.date) : "—"],
-      ["Horário", m.time ? `${m.time} (Brasília)` : "—"],
+      ["Horário", m.time ? `${m.time} (Brasília)` : "A definir"],
       ["Estádio", m.venue || "—"],
       ["Situação", statusText(m)],
     ];
@@ -763,6 +802,16 @@
     });
     rankPreviews();
     // sem a API (GitHub Pages), o retrospecto é atualizado direto da ESPN ao abrir o clube
+    $$("[data-history]").forEach((el) => {
+      const id = el.dataset.history;
+      if (LIVE.on()) return;
+      LIVE.form(id).then((d) => {
+        if (!d || !el.isConnected) return;
+        window.CLUB_FORM = window.CLUB_FORM || { clubs: {} };
+        window.CLUB_FORM.clubs[id] = d;
+        el.innerHTML = historyHTML(id, d);
+      }).catch(() => {});
+    });
     $$("[data-form]").forEach((el) => {
       if (LIVE.on()) return;
       LIVE.form(el.dataset.form).then((d) => {
@@ -830,6 +879,18 @@
 
   /* ---------- eventos delegados ---------- */
   document.addEventListener("click", (e) => {
+    const hf = e.target.closest("[data-hist-filter]");
+    if (hf) {
+      state.histFilter = hf.dataset.histFilter;
+      const box = hf.closest("[data-history]");
+      box.innerHTML = historyHTML(box.dataset.history, window.CLUB_FORM?.clubs?.[box.dataset.history]);
+      return;
+    }
+    if (e.target.closest("[data-hist-next]")) {
+      e.preventDefault();
+      document.querySelector(".hm-row:not(.post)")?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+      return;
+    }
     const fav = e.target.closest("[data-fav]");
     if (fav) {
       e.preventDefault();

@@ -54,9 +54,13 @@
     ev.competitions[0].competitors.forEach((c) => (s[c.homeAway] = c));
     return { s, h: ESPN_CLUB[s.home?.team.id], a: ESPN_CLUB[s.away?.team.id] };
   };
+  // situações do jogo em que o relógio da ESPN fica parado (ex.: "45'+7'" durante o intervalo)
+  const STATUS_PT = { STATUS_HALFTIME: "Intervalo", STATUS_END_OF_REGULATION: "Fim do tempo normal", STATUS_OVERTIME: "Prorrogação", STATUS_HALFTIME_ET: "Intervalo da prorrogação",
+    STATUS_END_OF_EXTRATIME: "Fim da prorrogação", STATUS_SHOOTOUT: "Pênaltis", STATUS_DELAYED: "Paralisado", STATUS_SUSPENDED: "Suspenso", STATUS_ABANDONED: "Abandonado", STATUS_POSTPONED: "Adiado" };
+  const clockOf = (st) => STATUS_PT[st?.type?.name] || st?.displayClock;
   const liveOf = (ev) => {
     const st = ev.competitions[0].status;
-    return { state: st.type.state, clock: st.displayClock, detail: st.type.shortDetail, live: st.type.state === "in" };
+    return { state: st.type.state, clock: clockOf(st), detail: st.type.shortDetail, live: st.type.state === "in" };
   };
   // data e hora de Brasília (UTC-3) a partir do horário da ESPN
   const brt = (iso) => new Date(new Date(iso).getTime() - 3 * 3600e3).toISOString();
@@ -85,7 +89,8 @@
       if (!h || !a || known.has(`${h}|${a}`)) return;
       known.add(`${h}|${a}`);
       const sc = lv.state === "in" || lv.state === "post";
-      games.push([h, a, sc ? +s.home.score : null, sc ? +s.away.score : null, t.slice(0, 10), t.slice(11, 16), ev.competitions[0].venue?.fullName || null, ev.id, lv]);
+      const hora = lv.state === "pre" && ev.competitions[0].timeValid === false ? null : t.slice(11, 16); // null = "A definir"
+      games.push([h, a, sc ? +s.home.score : null, sc ? +s.away.score : null, t.slice(0, 10), hora, ev.competitions[0].venue?.fullName || null, ev.id, lv]);
     }));
     games.sort((x, y) => (x[4] + x[5]).localeCompare(y[4] + y[5]));
     const blocks = [];
@@ -148,7 +153,7 @@
         const before = JSON.stringify(g);
         g[7] = ev.id;
         if (st === "in" || st === "post") { g[2] = +side.home.score; g[3] = +side.away.score; }
-        g[8] = { state: st, clock: comp.status.displayClock, detail: comp.status.type.shortDetail, live: st === "in" };
+        g[8] = { state: st, clock: clockOf(comp.status), detail: comp.status.type.shortDetail, live: st === "in" };
         if (JSON.stringify(g) !== before) changed = true;
       }
     }
@@ -223,7 +228,9 @@
 
   /* ---------------- Retrospecto (últimos 5 e próximos 5) direto da ESPN ----------------
      Sem a API, a página do clube busca a agenda atualizada das 4 competições (mesma regra da API). */
-  const LEAGUES = { "bra.1": "Brasileirão", "bra.copa_do_brazil": "Copa do Brasil", "conmebol.libertadores": "Libertadores", "conmebol.sudamericana": "Sul-Americana" };
+  // também estaduais e supercopas (a ESPN não cobre Paranaense, Baiano, Catarinense nem Paraense)
+  const LEAGUES = { "bra.1": "Brasileirão", "bra.copa_do_brazil": "Copa do Brasil", "conmebol.libertadores": "Libertadores", "conmebol.sudamericana": "Sul-Americana",
+    "conmebol.recopa": "Recopa", "bra.supercopa_do_brazil": "Supercopa", "bra.camp.carioca": "Carioca", "bra.camp.paulista": "Paulistão", "bra.camp.mineiro": "Mineiro", "bra.camp.gaucho": "Gauchão" };
   const STAGE_PT = { Semifinals: "Semifinal", Final: "Final", Finals: "Final", Quarterfinals: "Quartas de final", "Round of 16": "Oitavas de final", "Group Stage": "Fase de grupos", "Knockout Round Playoffs": "Playoffs" };
   const ESPN_ID = Object.fromEntries(Object.entries(ESPN_CLUB).map(([k, v]) => [v, k]));
   const scoreOf = (c) => (c.score && typeof c.score === "object" ? [+c.score.value, c.score.shootoutScore] : [c.score === "" || c.score == null ? null : +c.score, null]);
@@ -240,6 +247,8 @@
         const t = brt(ev.date), st = comp.status.type.state;
         const e = { id: ev.id, date: t.slice(0, 10), time: t.slice(11, 16), comp: LEAGUES[lg], stage: lg === "bra.1" ? "" : STAGE_PT[ev.seasonType?.name] || "",
           home: me.homeAway === "home", opp: op.team.displayName, oppId: ESPN_CLUB[op.team.id] || null, oppLogo: op.team.logos?.[0]?.href, state: st, venue: comp.venue?.fullName };
+        if (st === "pre" && comp.timeValid === false) e.time = null; // horário ainda não definido
+        if (st === "in") Object.assign(e, { gf: scoreOf(me)[0], ga: scoreOf(op)[0], clock: clockOf(comp.status) });
         if (st === "post") {
           const [gf, pf] = scoreOf(me), [ga, pa] = scoreOf(op);
           Object.assign(e, { gf, ga, res: gf > ga ? "V" : gf < ga ? "D" : "E" });
@@ -249,8 +258,9 @@
       }
     }
     const uniq = (xs) => [...new Map(xs.map((x) => [x.id, x])).values()];
-    const key = (x) => x.date + x.time;
-    return { last: uniq(past).sort((a, b) => key(a).localeCompare(key(b))).slice(-5).reverse(), next: uniq(next).sort((a, b) => key(a).localeCompare(key(b))).slice(0, 5) };
+    const key = (x) => x.date + (x.time || "99:99");
+    const P = uniq(past).sort((a, b) => key(a).localeCompare(key(b))), N = uniq(next).sort((a, b) => key(a).localeCompare(key(b)));
+    return { last: P.slice(-5).reverse(), next: N.slice(0, 5), all: [...P, ...N] };
   }
 
   // guarda por 5 min: a página do clube é redesenhada a cada lance ao vivo e não precisa baixar tudo de novo

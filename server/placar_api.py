@@ -50,10 +50,25 @@ CLUBS = CONFIG["clubes"]
 BY_ESPN = {v["espn"]: k for k, v in CLUBS.items()}
 ESPN = "https://site.api.espn.com/apis"
 LEAGUES = ["bra.1", "bra.copa_do_brazil", "conmebol.libertadores", "conmebol.sudamericana"]
-COMP_NAME = {"bra.1": "Brasileirão", "bra.copa_do_brazil": "Copa do Brasil", "conmebol.libertadores": "Libertadores", "conmebol.sudamericana": "Sul-Americana"}
+COMP_NAME = {"bra.1": "Brasileirão", "bra.copa_do_brazil": "Copa do Brasil", "conmebol.libertadores": "Libertadores", "conmebol.sudamericana": "Sul-Americana",
+             "conmebol.recopa": "Recopa", "bra.supercopa_do_brazil": "Supercopa", "bra.camp.carioca": "Carioca", "bra.camp.paulista": "Paulistão",
+             "bra.camp.mineiro": "Mineiro", "bra.camp.gaucho": "Gauchão"}
+# histórico da temporada: também estaduais e supercopas (a ESPN não cobre Paranaense, Baiano, Catarinense nem Paraense)
+FORM_LEAGUES = list(COMP_NAME)
 
 lock = threading.Lock()
 state = {"updated": None, "standings": None, "round": None, "fixtures": None, "squads": None, "last": None, "news": {}, "players": None, "errors": []}
+
+
+# situações do jogo em que o relógio da ESPN fica parado (ex.: "45'+7'" durante o intervalo)
+STATUS_PT = {"STATUS_HALFTIME": "Intervalo", "STATUS_END_OF_REGULATION": "Fim do tempo normal", "STATUS_OVERTIME": "Prorrogação",
+             "STATUS_HALFTIME_ET": "Intervalo da prorrogação", "STATUS_END_OF_EXTRATIME": "Fim da prorrogação", "STATUS_SHOOTOUT": "Pênaltis",
+             "STATUS_DELAYED": "Paralisado", "STATUS_SUSPENDED": "Suspenso", "STATUS_ABANDONED": "Abandonado", "STATUS_POSTPONED": "Adiado"}
+
+
+def clock_label(status):
+    """Texto do relógio para o site: a situação do jogo quando ele está parado, senão o minuto."""
+    return STATUS_PT.get(((status or {}).get("type") or {}).get("name")) or (status or {}).get("displayClock")
 
 
 def log(*a):
@@ -137,9 +152,12 @@ def update_standings_and_fixtures():
                     while len(g) < 9:
                         g.append(None)
                     g[7] = ev["id"]
+                    if st["state"] == "pre":  # a CBF pode marcar ou mudar o horário: acompanha o que a ESPN publica
+                        t = time.gmtime(calendar.timegm(time.strptime(ev["date"][:16], "%Y-%m-%dT%H:%M")) - 3 * 3600)
+                        g[4], g[5] = time.strftime("%Y-%m-%d", t), time.strftime("%H:%M", t) if comp.get("timeValid", True) else None
                     if st["state"] in ("in", "post"):
                         g[2], g[3] = int(teams[g[0]]["score"]), int(teams[g[1]]["score"])
-                    g[8] = {"state": st["state"], "clock": comp["status"].get("displayClock"), "detail": st.get("shortDetail")}
+                    g[8] = {"state": st["state"], "clock": clock_label(comp["status"]), "detail": st.get("shortDetail")}
                     if st["state"] == "in":  # ainda em andamento: placar parcial, não final
                         g[8]["live"] = True
     add_new_cards(table, old, fixtures)
@@ -280,10 +298,10 @@ def add_upcoming_rounds(fixtures):
             # horário de Brasília (UTC-3)
             t = time.gmtime(calendar.timegm(time.strptime(ev["date"][:16], "%Y-%m-%dT%H:%M")) - 3 * 3600)
             st = comp["status"]["type"]["state"]
-            new.append({"home": h, "away": a, "date": time.strftime("%Y-%m-%d", t), "time": time.strftime("%H:%M", t),
+            new.append({"home": h, "away": a, "date": time.strftime("%Y-%m-%d", t), "time": time.strftime("%H:%M", t) if comp.get("timeValid", True) or st != "pre" else None,
                         "venue": (comp.get("venue") or {}).get("fullName"), "espn": ev["id"],
                         "hs": int(side["home"]["score"]) if st in ("in", "post") else None, "as": int(side["away"]["score"]) if st in ("in", "post") else None,
-                        "live": {"state": st, "clock": comp["status"].get("displayClock"), "detail": comp["status"]["type"].get("shortDetail"), "live": st == "in"}})
+                        "live": {"state": st, "clock": clock_label(comp["status"]), "detail": comp["status"]["type"].get("shortDetail"), "live": st == "in"}})
             known.add((h, a))
     for rd, gs in group_rounds(new, last + 1).items():
         fixtures[str(rd)] = [[g["home"], g["away"], g["hs"], g["as"], g["date"], g["time"], g["venue"], g["espn"], g["live"]] + (["adiado"] if g.get("adiado") else []) for g in gs]
@@ -315,6 +333,10 @@ def form_event(ev, espn_id, lg):
            "stage": STAGE_PT.get((ev.get("seasonType") or {}).get("name"), "") if lg != "bra.1" else "",
            "home": me.get("homeAway") == "home", "opp": op["team"].get("displayName"), "oppId": BY_ESPN.get(op["team"]["id"]),
            "oppLogo": ((op["team"].get("logos") or [{}])[0]).get("href"), "state": st.get("state"), "venue": (comp.get("venue") or {}).get("fullName")}
+    if st.get("state") == "pre" and comp.get("timeValid") is False:
+        out["time"] = None  # horário ainda não definido pela CBF/Conmebol: o site mostra "A definir"
+    if st.get("state") == "in":
+        out.update(gf=score_of(me)[0], ga=score_of(op)[0], clock=clock_label(comp["status"]))
     if st.get("state") == "post":
         (gf, pf), (ga, pa) = score_of(me), score_of(op)
         out.update(gf=gf, ga=ga, res="V" if gf > ga else "D" if gf < ga else "E")
@@ -326,7 +348,7 @@ def form_event(ev, espn_id, lg):
 def club_form(cid):
     espn = CLUBS[cid]["espn"]
     past, nxt = [], []
-    for lg in LEAGUES:
+    for lg in FORM_LEAGUES:
         for fx in ("", "&fixture=true"):
             try:
                 d = get_json(f"{ESPN_WEB}/site/v2/sports/soccer/{lg}/teams/{espn}/schedule?season={time.strftime('%Y')}{fx}")
@@ -339,9 +361,10 @@ def club_form(cid):
                     continue
                 (past if e["state"] == "post" else nxt).append(e)
     dedup = lambda xs: list({x["id"]: x for x in xs}.values())
-    past = sorted(dedup(past), key=lambda x: x["date"] + x["time"])[-5:][::-1]
-    nxt = sorted(dedup(nxt), key=lambda x: x["date"] + x["time"])[:5]
-    return {"last": past, "next": nxt}
+    key = lambda x: x["date"] + (x["time"] or "99:99")
+    past, nxt = sorted(dedup(past), key=key), sorted(dedup(nxt), key=key)
+    # "all": a temporada inteira (resultados e jogos por vir), usada na aba Partidas
+    return {"last": past[-5:][::-1], "next": nxt[:5], "all": past + nxt}
 
 
 def update_form():
@@ -393,7 +416,7 @@ def live_loop():
                                 g[7] = ev["id"]
                                 if st in ("in", "post"):
                                     g[2], g[3] = int(side["home"]["score"]), int(side["away"]["score"])
-                                g[8] = {"state": st, "clock": comp["status"].get("displayClock"), "detail": comp["status"]["type"].get("shortDetail"), "live": st == "in"}
+                                g[8] = {"state": st, "clock": clock_label(comp["status"]), "detail": comp["status"]["type"].get("shortDetail"), "live": st == "in"}
                                 ended |= st == "post" and was != "post"
             if ended:
                 log("jogo encerrado: atualizando tabela e estatísticas dos jogadores")
@@ -842,7 +865,7 @@ def narrate(eid):
         h, a = stats.get(home["team"]["id"], {}), stats.get(away["team"]["id"], {})
         lines.append({"id": f"{eid}-panorama-{st.get('displayClock')}", "min": st.get("displayClock", ""), "type": "panorama",
                       "text": f"Panorama: posse {h.get('possessionPct', '–')}% x {a.get('possessionPct', '–')}%, finalizações {h.get('totalShots', '–')} x {a.get('totalShots', '–')}."})
-    return {"event": eid, "state": st["type"]["state"], "clock": st.get("displayClock"), "detail": st["type"].get("shortDetail"),
+    return {"event": eid, "state": st["type"]["state"], "clock": clock_label(st), "detail": st["type"].get("shortDetail"),
             "home": {"id": name(home), "name": home["team"]["displayName"], "score": int(home.get("score") or 0)},
             "away": {"id": name(away), "name": away["team"]["displayName"], "score": int(away.get("score") or 0)},
             "stats": {"home": stats.get(home["team"]["id"], {}), "away": stats.get(away["team"]["id"], {})},
