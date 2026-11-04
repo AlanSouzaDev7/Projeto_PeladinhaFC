@@ -40,8 +40,9 @@ function audit() {
   out.overflow = out.scrollW > vw + 1;
   const vis = (el) => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none" && +s.opacity !== 0; };
   const label = (el) => (el.getAttribute("aria-label") || el.textContent || el.className || el.tagName).trim().replace(/\s+/g, " ").slice(0, 40);
-  // o que passa da borda direita
-  out.wide = [...document.querySelectorAll("body *")].filter((el) => { const r = el.getBoundingClientRect(); return vis(el) && r.right > vw + 2 && !el.closest(".hero, .match-hero, .club-tabs, .curtain, canvas, .tabs, .dates, .chips, .lu-list ul") ; })
+  // o que passa da borda direita (menos o que um pai com overflow escondido já recorta dentro da tela)
+  const clipped = (el) => { for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if ((o === "hidden" || o === "clip") && p.getBoundingClientRect().right <= vw + 2) return true; } return false; };
+  out.wide = [...document.querySelectorAll("body *")].filter((el) => { const r = el.getBoundingClientRect(); return vis(el) && r.right > vw + 2 && !el.closest(".hero, .match-hero, .club-tabs, .curtain, canvas, .tabs, .dates, .chips, .lu-list ul") && !clipped(el); })
     .slice(0, 8).map((el) => `${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]} → ${Math.round(el.getBoundingClientRect().right)}px`);
   // alvos de toque menores que 40px (recomendação: 44px no iOS, 48dp no Android)
   const taps = [...document.querySelectorAll("a, button, select, [data-slot], [data-player]")].filter(vis);

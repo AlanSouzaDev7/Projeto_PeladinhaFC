@@ -43,7 +43,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | Área | Descrição |
 |---|---|
 | **Ao vivo** | Rodada agrupada por dia, navegação entre rodadas, favoritos, próximo jogo e artilharia. **Placar em tempo real** mesmo sem a API (no GitHub Pages também): com jogo perto do horário ou rolando, o navegador consulta o placar da ESPN a cada 20 s. As **próximas rodadas** entram sozinhas pelo calendário da ESPN (agrupadas por data, já que a ESPN não informa o número da rodada; jogos adiados aparecem marcados), e o site passa para a rodada seguinte quando a atual termina. |
-| **Clubes** | 20 páginas no tema de cada clube, com uma **aparição animada do escudo** inspirada no que ele significa. O Cruzeiro tem a versão em tela cheia (canvas): a câmera viaja pela Via Láctea até o Cruzeiro do Sul e as cinco estrelas formam o escudo. |
+| **Clubes** | 20 páginas no tema de cada clube. O topo, de ponta a ponta da tela, abre com o **"GOL!" do clube no placar de transmissão**: o placar 0 · 0, a faixa com a sigla, o escudo saltando e o GOL! com o símbolo do clube no lugar do "O" (a raposa do Cruzeiro, o urubu do Flamengo, a Estrela Solitária do Botafogo, o gorro do Saci do Inter…). Depois o placar vira 1 · 0 e a frase do clube aparece embaixo. Toque no topo para ver o gol de novo. |
 | **Partidas do clube** | A temporada inteira de cada clube, mês a mês: todos os jogos e placares já disputados (com pênaltis) e os jogos por vir com o horário de Brasília; quando a CBF/Conmebol ainda não marcou o horário, aparece **"A definir"**. Filtro por competição (Brasileirão, Copa do Brasil, Libertadores, Sul-Americana, Recopa, Supercopa e estaduais cobertos pela ESPN: Carioca, Paulistão, Mineiro e Gauchão) e resumo de vitórias, empates, derrotas e gols. |
 | **Retrospecto** | Na visão geral de cada clube: **últimos 5 jogos** (V/E/D, placar, pênaltis, casa ou fora) e **próximos 5**, em todas as competições (Brasileirão, Copa do Brasil, Libertadores e Sul-Americana). Sem a API, a página busca a agenda atualizada direto da ESPN. |
 | **Estatísticas do elenco** | Na visão geral de cada clube e na aba "Estatísticas": **pendurados** (2 amarelos, o próximo suspende), **jogos seguidos**, **departamento médico** e **reservas mais usados** por minutagem. Cartões e minutos vêm das súmulas de todos os jogos do Brasileirão; lesões e pendurados são conferidos nas manchetes de ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra e dos setoristas cadastrados, com o número de fontes que confirmam cada caso. |
@@ -86,6 +86,7 @@ python -m http.server 5173 --bind 127.0.0.1
 BASE=http://127.0.0.1:5173 npm run test:mobile     # PC, iPhone e Android: layout, toque, texto, acessibilidade
 node tests/mobile/desempenho.mjs                   # carregamento, peso e saltos de layout
 node tests/mobile/visual.mjs                       # prints do tema escuro e claro
+node tests/mobile/gol.mjs                          # o GOL! dos 20 clubes, quadro a quadro, no PC e no celular
 ```
 
 ## Celular (iPhone e Android)
@@ -111,9 +112,9 @@ js/squads.js          elencos e últimas escalações (base)
 js/live.js            troca a base pelos dados da API e liga minuto a minuto/notícias
 js/app.js             páginas, roteador e transições
 js/lineup.js          campinho interativo e "Bora pro jogo"
-js/scenes.js          aparições dos escudos (SVG, cartões e topo)
+js/scenes.js          aparições dos escudos nos cartões da lista de clubes
+js/goal-bug.js        o "GOL!" de cada clube no placar do topo (símbolos em SVG)
 js/backdrop.js        fundo com brilho nas bordas e pontinhos
-js/hero-scenes.js     motor de cenas em canvas para o topo (Cruzeiro)
 js/graphics.js        escudos, padrões de camisa e cores
 server/               API em Python
 assets/               marca do PLACAR.
@@ -125,5 +126,5 @@ prints/               capturas de tela
 - Tabela e artilharia: **CBF**. Jogos, elencos, escalações e lances: **ESPN**. Resultados: **ge.globo**. Manchetes: **Google Notícias** (só título, fonte e link).
 - Escudos: imagens oficiais via **Wikimedia Commons**, marcas registradas dos respectivos clubes, usadas apenas para identificação em projeto sem fins comerciais.
 - Fotos dos ídolos: imagens livres do **Wikimedia Commons** (as mesmas usadas na Wikipédia em português), com os créditos e licenças de cada autor na página do arquivo.
-- Ilustrações das aparições, marca PLACAR. e narração do minuto a minuto são próprias.
+- Ilustrações das aparições e dos símbolos do GOL!, marca PLACAR. e narração do minuto a minuto são próprias. Os símbolos seguem os mascotes e emblemas que os clubes usam (conferidos no LANCE!, ge e nas páginas oficiais), desenhados do zero; não são os personagens oficiais.
 - Modelo de "tendência do jogo" é uma estimativa simples, não uma previsão oficial.

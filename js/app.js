@@ -540,12 +540,10 @@
     }
 
     return `<div class="club-page">
-      <section class="hero ${HERO_SCENES.has(id) ? "hero--canvas" : ""}" data-short="${c.short}">
-        ${HERO_SCENES.has(id) ? `<canvas class="hero-canvas" data-hero-scene="${id}" aria-hidden="true"></canvas>
-          <div class="hero-scene-cap"><b>${SCENES.motto(id)}</b><span>toque para ver de novo</span></div>` : `<div class="kit-bg" style="background:${kitBg(c)}"></div>`}
+      <section class="hero hero--gb" data-short="${c.short}">
+        <div class="kit-bg" style="background:${kitBg(c)}"></div>
         <div class="hero-inner">
-          <div class="crest-big">${crest(c, 128, true)}</div>
-          <div>
+          <div class="hero-text">
             <div class="eyebrow">${c.nick} · desde ${c.founded}</div>
             <h1>${words.map((w, i) => `<span class="w"><span style="--i:${i}">${w}</span></span>`).join(" ")}</h1>
             <div class="facts">
@@ -556,7 +554,7 @@
             </div>
             <div class="palette">${c.colors.map((col, i) => `<i style="background:${col};--i:${i}" title="${col}"></i>`).join("")}</div>
           </div>
-          ${HERO_SCENES.has(id) ? "" : `<div class="scene-stage">${SCENES.scene(c, "hero")}</div>`}
+          <div class="hero-gb">${GOALBUG.html(c, SCENES.motto(id))}</div>
         </div>
       </section>
       <div class="club-tabs"><div class="tabs" data-tabs>
@@ -899,7 +897,7 @@
   /* ---------- comportamentos após renderizar ---------- */
   function enhance() {
     SCENES.mount(view);
-    HERO_SCENES.mount(view);
+    GOALBUG.mount(view);
     LINEUP.mount(view);
     LIVE.mount(view);
     featSwipe($("[data-feature]", view));
