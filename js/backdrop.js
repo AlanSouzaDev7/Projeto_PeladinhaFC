@@ -25,7 +25,7 @@
   // garante brilho visível no escuro mesmo com cor de clube muito escura (ex.: preto do Botafogo)
   const lift = (c, min) => { const l = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; if (l >= min) return c; const k = (min - l) / (255 - l || 1); return c.map((v) => Math.round(v + (255 - v) * k)); };
 
-  let last = "";
+  let last = "", paints = 0;
   function paint() {
     const w = innerWidth, h = innerHeight, light = root.dataset.theme === "light";
     const c1 = lift(rgb(css("--c1") || "#4f6bff"), light ? 0 : 70), c3 = lift(rgb(css("--c3") || "#8a9bff"), light ? 0 : 70), tx = rgb(css("--text") || "#e8edf6");
@@ -65,8 +65,10 @@
         }
       }
     }
+    // a imagem é gerada em segundo plano: só vale o desenho mais recente (um antigo, de outro tema, não pode chegar depois)
+    const seq = ++paints;
     cv.toBlob((blob) => {
-      if (!blob) return;
+      if (!blob || seq !== paints) return;
       const url = URL.createObjectURL(blob), old = bd.dataset.url;
       bd.style.backgroundImage = `url(${url})`;
       bd.dataset.url = url;

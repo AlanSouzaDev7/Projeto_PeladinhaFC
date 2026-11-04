@@ -239,6 +239,18 @@
     return `<li class="mam-l ${l.type}"><span class="mam-min">${l.min || ""}</span><span class="mam-ico">${ICO[l.type] || "•"}</span><p>${l.text}</p></li>`;
   }
 
+  // resumo do jogo no topo da partida, como nos apps de resultado: quem marcou, em que minuto, e quem foi expulso
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  function paintMarks(n) {
+    const box = document.querySelector(".match-hero [data-marks]");
+    if (!box || !n || !n.marks) return;
+    const ico = { gol: "⚽", pen: "⚽", og: "⚽", red: "🟥" };
+    const tag = { pen: " (pên.)", og: " (contra)" };
+    const col = (s) => n.marks.filter((x) => x.s === s).map((x) => `<li class="${x.k}"><span class="mk-i" aria-hidden="true">${ico[x.k]}</span><span>${esc(x.p || "—")}${tag[x.k] || ""}</span><b>${esc(x.m || "")}</b></li>`).join("");
+    const h = col("h"), a = col("a");
+    box.innerHTML = h || a ? `<ul class="mk h" aria-label="Lances do mandante">${h}</ul><span class="mk-sep" aria-hidden="true"></span><ul class="mk a" aria-label="Lances do visitante">${a}</ul>` : "";
+    box.hidden = !(h || a);
+  }
   function head(n) {
     const live = n.state === "in";
     return `<div class="mam-head"><span class="${live ? "pill" : "pill muted"}">${live ? `Ao vivo · ${n.clock || ""}` : n.state === "post" ? "Encerrado" : "Ainda não começou"}</span>
@@ -260,7 +272,8 @@
     const tname = Object.fromEntries(comp.competitors.map((c) => [c.team.id, c.team.displayName]));
     const score = { [home.team.id]: 0, [away.team.id]: 0 };
     const placar = () => `${tname[home.team.id]} ${score[home.team.id]} x ${score[away.team.id]} ${tname[away.team.id]}`;
-    const lines = [];
+    const lines = [], marks = [];
+    const sideOf = (tid) => (tid === home.team.id ? "h" : tid === away.team.id ? "a" : null);
     (d.keyEvents || []).forEach((k, i) => {
       const typ = k.type?.type || "", clock = k.clock?.displayValue || "", tid = k.team?.id, team = tname[tid] || "";
       const ps = (k.participants || []).map((p) => p.athlete.displayName);
@@ -271,12 +284,13 @@
       else if (["end-regular-time", "full-time", "end-of-game"].includes(typ)) [text, kind] = [`Fim de jogo! ${placar()}.`, "status"];
       else if (k.scoringPlay && tid in score) {
         score[tid]++;
+        marks.push({ s: sideOf(tid), p: ps[0] || "", m: clock, k: typ === "own-goal" ? "og" : typ.includes("penalty") ? "pen" : "gol" });
         if (typ === "own-goal") text = `GOL do ${team}! ${ps[0] || "O adversário"} manda contra o próprio gol. ${placar()}.`;
         else if (typ.includes("penalty")) text = `GOL do ${team}! ${ps[0] || ""} cobra o pênalti e marca. ${placar()}.`;
         else text = `GOL do ${team}! ${ps[0] || ""} marca${typ.includes("header") ? " de cabeça" : ""}${ps[1] ? `, com assistência de ${ps[1]}` : ""}. ${placar()}.`;
         kind = "goal";
       } else if (typ === "yellow-card") text = `Cartão amarelo para ${ps[0] || "jogador"} (${team}).`;
-      else if (typ === "red-card" || typ === "second-yellow-card") [text, kind] = [`Expulso! ${ps[0] || "Jogador"} (${team}) recebe o vermelho e deixa o ${team} com um a menos.`, "red-card"];
+      else if (typ === "red-card" || typ === "second-yellow-card") { [text, kind] = [`Expulso! ${ps[0] || "Jogador"} (${team}) recebe o vermelho e deixa o ${team} com um a menos.`, "red-card"]; marks.push({ s: sideOf(tid), p: ps[0] || "", m: clock, k: "red" }); }
       else if (typ === "substitution" && ps.length >= 2) text = `Substituição no ${team}: entra ${ps[0]}, sai ${ps[1]}.`;
       else if (typ === "start-delay") [text, kind] = ["Jogo paralisado.", "status"];
       else if (typ === "end-delay") [text, kind] = ["Partida reiniciada.", "status"];
@@ -285,7 +299,7 @@
     });
     const st = comp.status;
     return { state: st.type.state, clock: clockOf(st), detail: st.type.shortDetail,
-      home: { name: home.team.displayName, score: +home.score || 0 }, away: { name: away.team.displayName, score: +away.score || 0 }, lines };
+      home: { name: home.team.displayName, score: +home.score || 0 }, away: { name: away.team.displayName, score: +away.score || 0 }, lines, marks };
   }
 
   /* narração própria a partir dos lances da API-Football (já organizados pelo Worker) */
@@ -293,9 +307,13 @@
     const nome = (c) => PD.byId[c]?.name || c;
     const N = { home: nome(p.home), away: nome(p.away) }, sc = { home: 0, away: 0 };
     const placar = () => `${N.home} ${sc.home} x ${sc.away} ${N.away}`;
-    const lines = [];
+    const lines = [], marks = [];
+    const S = { home: "h", away: "a" };
     for (const e of p.events || []) {
       const team = N[e.side] || "";
+      if (["goal", "penalty-goal", "own-goal"].includes(e.kind)) marks.push({ s: S[e.for || e.side], p: e.player || "", m: e.min, k: e.kind === "own-goal" ? "og" : e.kind === "penalty-goal" ? "pen" : "gol", id: `${e.elapsed}-${e.extra}-${e.player}` });
+      if (e.kind === "var-cancel") { const i = marks.map((x) => x.s).lastIndexOf(S[e.side]); if (i >= 0) marks.splice(i, 1); }
+      if (e.kind === "red") marks.push({ s: S[e.side], p: e.player || "", m: e.min, k: "red" });
       let text = null, type = "status";
       if (e.kind === "kickoff") text = "Rola a bola! Começa a partida.";
       else if (e.kind === "halftime") text = `Fim do primeiro tempo. ${placar()}.`;
@@ -318,7 +336,7 @@
       if (text) lines.push({ id: `af-${e.kind}-${e.elapsed}-${e.extra}-${e.side || ""}-${e.player || ""}`, min: e.min, type, text });
     }
     return { state: p.state, clock: p.clock, detail: p.detail, source: "API-Football",
-      home: { name: N.home, score: p.hs ?? 0 }, away: { name: N.away, score: p.as ?? 0 }, lines };
+      home: { name: N.home, score: p.hs ?? 0 }, away: { name: N.away, score: p.as ?? 0 }, lines, marks };
   }
 
   /* sem a API local: API-Football (se configurada e se trouxe o jogo) ou ESPN */
@@ -345,6 +363,7 @@
     let fonte = n.source;
     if (src && fonte) src.textContent = `lances: ${fonte} · narração: PLACAR`;
     top.innerHTML = head(n);
+    paintMarks(n);
     const seen = new Set();
     const add = (lines, fresh) => lines.forEach((l) => {
       if (seen.has(l.id)) return;
@@ -367,6 +386,7 @@
         const p = await loadMam(id, h, a).finally(() => (busy = false));
         if (!p) return;
         top.innerHTML = head(p);
+        paintMarks(p);
         if (p.source !== fonte) {
           // trocou de fonte no meio do jogo (ex.: limite da API-Football): redesenha a lista inteira
           fonte = p.source; seen.clear(); list.innerHTML = "";
@@ -389,6 +409,7 @@
     es.onmessage = (e) => {
       const p = JSON.parse(e.data);
       top.innerHTML = head(p);
+      paintMarks(p);
       const empty = list.querySelector(".mam-empty"); if (empty) empty.remove();
       add(p.lines, true);
       if (p.state === "post") es.close();

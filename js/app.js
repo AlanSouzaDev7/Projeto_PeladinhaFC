@@ -60,14 +60,35 @@
   /* ==========================================================================
      Tema do clube (cores aplicadas no :root)
      ========================================================================== */
+  /* contraste (WCAG): cor de fundo com texto legível e cor de texto legível sobre o fundo do tema */
+  const rgbHex = (h) => { const m = /^#?([\da-f]{6})$/i.exec(String(h).trim()); return m ? [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16)) : null; };
+  const toHex = (c) => "#" + c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+  const lumOf = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lumOf(a), y = lumOf(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const toward = (c, t, k) => c.map((v, i) => v + (t[i] - v) * k);
+  // escurece ou clareia a cor até ter contraste com todas as cores de "contra"
+  function legible(hex, contra, min = 4.6) {
+    const c = rgbHex(hex); if (!c) return hex;
+    const bgs = contra.map(rgbHex), worst = (x) => Math.min(...bgs.map((b) => ratio(x, b)));
+    if (worst(c) >= min) return toHex(c);
+    const dark = lumOf(bgs[0]) > 0.4, t = dark ? [0, 0, 18] : [255, 255, 255];
+    for (let k = 0.04; k <= 1; k += 0.04) { const x = toward(c, t, k); if (worst(x) >= min) return toHex(x); }
+    return dark ? "#111111" : "#ffffff";
+  }
+  const BRAND = "#4b66f3"; // azul do PLACAR. um tom mais firme para botões com texto branco (4,7:1)
   function applyTheme(club) {
-    const c = club ? club.colors : null;
+    const c = club ? club.colors : null, light = root.dataset.theme === "light";
     root.style.setProperty("--c1", c ? c[0] : "var(--brand)");
     root.style.setProperty("--c2", c ? c[1] : "#ffffff");
     root.style.setProperty("--c3", c ? c[2] : "var(--brand-2)");
     root.style.setProperty("--on-c1", c ? onColor(c[0]) : "#ffffff");
-    root.style.setProperty("--accent", club ? display(club) : "var(--brand)");
-    root.style.setProperty("--on-accent", club ? onColor(display(club)) : "#ffffff");
+    // fundo de destaque (abas, botões ativos): ajustado para o texto branco/preto ficar legível
+    const acc0 = club ? display(club) : BRAND, on = onColor(acc0);
+    const acc = legible(acc0, [on], 4.5);
+    root.style.setProperty("--accent", acc);
+    root.style.setProperty("--on-accent", on);
+    // texto de destaque (links, rótulos): legível sobre o fundo e os cartões do tema
+    root.style.setProperty("--ink", legible(club ? display(club) : light ? "#435bdc" : "#8a9bff", light ? ["#eef1f6", "#ffffff"] : ["#141b28", "#0b0f17"], 4.6));
     root.style.setProperty("--logo-spot", c ? c[1] : "var(--live)");
     $('meta[name="theme-color"]').content = c ? c[0] : "#0b0f17";
   }
@@ -142,7 +163,7 @@
     const foot = `<div class="source">Súmulas: ${d.fontes?.sumulas || "ESPN"} · ${d.jogos} jogos do Brasileirão · lesões e pendurados conferidos em ${(d.fontes?.imprensa || []).length ? d.fontes.imprensa.join(", ") : "ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra"} e com os setoristas · atualizado em ${all.updated}</div>`;
     const grid = `<div class="pstats ${full ? "full" : ""}">${blocks.map(([k, t, sub, li]) => `<section class="ps-b ps-${k}"><h4>${t}<small>${sub}</small></h4><ul>${li}</ul></section>`).join("")}</div>`;
     return full ? `<div class="card">${grid}${foot}</div>`
-      : `<div class="card reveal"><div class="card-h">Estatísticas do elenco <small><a href="#/clube/${id}/estatisticas" style="color:var(--accent)">ver tudo ›</a></small></div>${grid}${foot}</div>`;
+      : `<div class="card reveal"><div class="card-h">Estatísticas do elenco <small><a href="#/clube/${id}/estatisticas" style="color:var(--ink)">ver tudo ›</a></small></div>${grid}${foot}</div>`;
   }
 
   /* ---------- retrospecto: últimos 5 e próximos 5 jogos, em todas as competições ---------- */
@@ -409,6 +430,7 @@
       </aside>
 
       <section>
+        <h1 class="sr-only">Placar ao vivo do Brasileirão Série A 2026 — ${round}ª rodada</h1>
         <div class="card">
           <div class="round-nav">
             <button data-round="${ROUNDS[ri - 1] ?? ""}" ${ri > 0 ? "" : "disabled"} aria-label="Rodada anterior">‹</button>
@@ -433,7 +455,7 @@
         ${voteCard(featured)}
         ${scorersCard(5)}
         <div class="card">
-          <div class="card-h">Classificação <small><a href="#/tabela" style="color:var(--accent)">ver completa ›</a></small></div>
+          <div class="card-h">Classificação <small><a href="#/tabela" style="color:var(--ink)">ver completa ›</a></small></div>
           ${standingsTable(state.standings.slice(0, 8), null, true)}${sourceNote}
         </div>
       </aside>
@@ -489,20 +511,20 @@
           </div>
           <div>
             <div class="card reveal">
-              <div class="card-h">Seu time <small><a href="#/clube/${id}/elenco" style="color:var(--accent)">montar ›</a></small></div>
+              <div class="card-h">Seu time <small><a href="#/clube/${id}/elenco" style="color:var(--ink)">montar ›</a></small></div>
               ${(() => {
                 const s = LINEUP.load(id), ps = LINEUP.players(id), map = Object.fromEntries(ps.map((p) => [p.id, p]));
                 const by = (g) => ps.filter((p) => p.pos === g).length;
                 const ages = ps.filter((p) => p.age), avg = ages.reduce((t, p) => t + p.age, 0) / (ages.length || 1);
-                return `<div class="card-b season-grid"><div><b>${ps.length}</b><small>jogadores no elenco</small></div><div><b>${avg.toFixed(1)}</b><small>idade média</small></div><div><b>${s.f}</b><small>sua formação</small></div></div>
+                return `<div class="card-b season-grid"><div><b>${ps.length}</b><small>jogadores no elenco</small></div><div><b>${avg.toFixed(1).replace(".", ",")}</b><small>idade média</small></div><div><b>${s.f}</b><small>sua formação</small></div></div>
                   <ul class="squad-list">${s.xi.slice(0, 11).map((pid) => map[pid]).filter(Boolean).slice(-4).reverse().map((p) => `<li><span class="n">${p.n ?? "–"}</span><b>${p.name}</b><span class="p">${{ G: "GOL", D: "DEF", M: "MEI", F: "ATA" }[p.pos]}</span></li>`).join("")}</ul>`;
               })()}
             </div>
             <div class="card reveal">
               <div class="card-h">Temporada <small>${r.j} jogos · dados reais</small></div>
               <div class="card-b season-grid">
-                <div><b>${(r.gf / r.j).toFixed(2)}</b><small>gols por jogo</small></div>
-                <div><b>${(r.ga / r.j).toFixed(2)}</b><small>sofridos por jogo</small></div>
+                <div><b>${(r.gf / r.j).toFixed(2).replace(".", ",")}</b><small>gols por jogo</small></div>
+                <div><b>${(r.ga / r.j).toFixed(2).replace(".", ",")}</b><small>sofridos por jogo</small></div>
                 <div><b>${r.pos === 1 ? "Líder" : state.standings[0].p - r.p}</b><small>${r.pos === 1 ? `${r.p - state.standings[1].p} pts à frente` : "pts atrás do líder"}</small></div>
                 <div><b>${r.p - state.standings[16].p > 0 ? "+" : ""}${r.p - state.standings[16].p}</b><small>pts sobre o Z4</small></div>
                 <div><b>${r.ca}</b><small>cartões amarelos</small></div>
@@ -512,7 +534,7 @@
             ${byId[nextOf(id)] ? `<div class="card reveal"><div class="card-h">Próximo adversário</div>
               <a class="derby" href="#/clube/${nextOf(id)}">${crest(c, 34)}<span class="vs">VS</span>${crest(byId[nextOf(id)], 34)}<div style="margin-left:6px"><b>${byId[nextOf(id)].name}</b><br/><small style="color:var(--text-3)">${rowOf(nextOf(id)).pos}º · ${rowOf(nextOf(id)).p} pts</small></div></a></div>` : ""}
             ${scorersCard(3, id)}
-            ${c.idol ? `<div class="card idol reveal${c.idolPhoto ? " has-photo" : ""}">${c.idolPhoto ? `<img class="idol-photo" src="${c.idolPhoto}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('has-photo');this.remove()" />` : ""}<div class="eyebrow" style="color:inherit;opacity:.8">Ídolo eterno</div><h4>${c.idol}</h4>${c.idolPhoto ? `<small class="idol-credit">Foto: Wikimedia Commons</small>` : ""}</div>` : ""}
+            ${c.idol ? `<div class="card idol reveal${c.idolPhoto ? " has-photo" : ""}">${c.idolPhoto ? `<img class="idol-photo" src="${c.idolPhoto}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('has-photo');this.remove()" />` : ""}<div class="eyebrow" style="color:inherit;opacity:.92;text-shadow:0 1px 3px rgb(0 0 0 / .5)">Ídolo eterno</div><h4>${c.idol}</h4>${c.idolPhoto ? `<small class="idol-credit">Foto: Wikimedia Commons</small>` : ""}</div>` : ""}
             ${LIVE.hasNews() ? `<div class="card news" data-news="${id}"><div class="card-h">Últimas notícias <small>Google Notícias</small></div><ul><li class="mam-empty">Buscando notícias…</li></ul></div>` : ""}
             <div class="card reveal">
               <div class="card-h">Ficha do clube</div>
@@ -582,9 +604,10 @@
       ["Situação", statusText(m)],
     ];
     const both = state.standings.filter((r) => r.id === m.home || r.id === m.away);
-    return `<section class="match-hero" style="${matchVars(m)}">
+    return `<section class="match-hero" style="${matchVars(m)}"><h1 class="sr-only">${h.name} x ${a.name} — ${statusText(m)}</h1>
         <div style="text-align:center;margin-bottom:18px"><span class="${m.status === "progress" ? "pill" : "pill muted"}">Brasileirão · ${m.round}ª rodada</span></div>
         ${scoreline(m)}
+        <div class="mh-marks" data-marks hidden></div>
         ${m.venue ? `<p style="text-align:center;color:var(--text-2);margin:16px 0 0">${ICON.stadium.replace("<svg", '<svg style="display:inline;vertical-align:-2px;margin-right:4px"')}${m.venue}</p>` : ""}
       </section>
       <div class="grid-2">
@@ -727,7 +750,7 @@
         <small>${RANKINGS[key].kpi}</small><b>${value}</b><em>${c ? `<span style="display:inline-flex;align-items:center;gap:6px">${crest(c, 16)}${sub}</span>` : sub}</em>
         <span class="kpi-more">Ver ranking <svg viewBox="0 0 24 24" width="14" height="14"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>`;
     return `<div class="kpis league-kpis">
-      ${tile(0, "gols", goals, `${(goals / games).toFixed(2)} por jogo · ${games} jogos`)}
+      ${tile(0, "gols", goals, `${(goals / games).toFixed(2).replace(".", ",")} por jogo · ${games} jogos`)}
       ${tile(1, "ataque", att.gf, byId[att.id].abbr, byId[att.id])}
       ${tile(2, "defesa", def.ga, `${byId[def.id].abbr} · gols sofridos`, byId[def.id])}
       ${tile(3, "amarelos", yel.ca, byId[yel.id].abbr, byId[yel.id])}
@@ -826,7 +849,7 @@
     </div>`;
   }
 
-  const pageNotFound = () => `<div class="empty" style="padding:120px 0"><h1 class="display">Impedimento!</h1><p>Essa página não existe. <a href="#/" style="color:var(--accent)">Voltar ao placar</a></p></div>`;
+  const pageNotFound = () => `<div class="empty" style="padding:120px 0"><h1 class="display">Impedimento!</h1><p>Essa página não existe. <a href="#/" style="color:var(--ink)">Voltar ao placar</a></p></div>`;
 
   /* ==========================================================================
      Roteador + transições
@@ -888,12 +911,19 @@
     await sleep(820);
     render();
     window.scrollTo({ top: 0, behavior: "instant" });
+    // a página nova desenha o primeiro quadro (o mais pesado) ainda atrás da cortina; só então a cortina sobe
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     el.className = "curtain out";
     await sleep(760);
     el.className = "curtain";
     el.innerHTML = "";
   }
 
+  // abas com rolagem lateral: marca quando chegou ao fim (some o esmaecido da borda)
+  document.addEventListener("scroll", (e) => {
+    const t = e.target;
+    if (t instanceof Element && t.matches(".club-tabs .tabs, .lu-tabs")) t.classList.toggle("at-end", t.scrollLeft + t.clientWidth >= t.scrollWidth - 4);
+  }, { capture: true, passive: true });
   function placeInk() {
     $$("[data-tabs]").forEach((t) => {
       const ink = $(".tab-ink", t), on = $(".tab.on", t);

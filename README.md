@@ -50,7 +50,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | **Elenco** | Elencos reais, escalação do último jogo de cada clube e campinho interativo: arraste jogadores para trocar ou para qualquer ponto da grama; 8 formações. |
 | **Bora pro jogo** | Prancheta tática comparando dois times com e sem a bola, leitura tática e tendência do jogo (modelo simples). **Arraste os jogadores** (mouse ou dedo) para mudar a posição em tempo real: as setas de ataque acompanham, cada fase guarda as suas posições e "Restaurar posições" desfaz. |
 | **Tabela** | Classificação, números do campeonato e artilharia. Cada número (gols, ataque, defesa, amarelos, vermelhos) abre uma **subpágina de ranking** dos 20 clubes; passar o mouse ou segurar o dedo mostra uma prévia. |
-| **Partida** | Informações, comparação no campeonato e **Minuto a minuto** ao vivo. |
+| **Partida** | Placar com o **resumo dos gols e expulsões** de cada time (jogador e minuto, gol contra e de pênalti marcados), informações, comparação no campeonato e **Minuto a minuto** ao vivo. |
 
 ## API (`server/placar_api.py`)
 
@@ -75,8 +75,12 @@ Fundo escuro com **brilho nas bordas** (canto de cima à direita e de baixo à e
 
 | Item | Resultado |
 |---|---|
-| Rolagem para os lados, alvos de toque, texto ≥ 11 px | sem problemas nas 11 páginas, no iPhone 15 e no Pixel 7 |
-| Contraste dos textos auxiliares | ≥ 4,5:1 no tema escuro e ≥ 4,4:1 no claro |
+| Rolagem para os lados, alvos de toque, texto ≥ 11 px | sem problemas nas 16 páginas testadas, no PC, iPhone 15 e Pixel 7 |
+| Contraste (WCAG AA) | textos ≥ 4,5:1 nos dois temas; a cor de destaque de cada clube é ajustada para ficar legível no claro e no escuro |
+| Links internos | os 66 links do site abrem uma página de verdade; a rota inexistente mostra "Impedimento!" |
+| Teclado e leitor de tela | foco visível em todos os itens; cada página tem um título principal (h1); botões e imagens com nome |
+| Interações | busca, tema, rodadas, filtros, favoritos, carrossel, ficha do artilheiro, abas do clube, prévia do ranking e o "voltar" do navegador |
+| Rolagem | cabeçalho e títulos dos meses grudam no alto; listas longas e a página de clubes sem travadas |
 | Carregamento (4G e processador 4× mais lento) | maior conteúdo em até ~2 s; saltos de layout ≤ 0,014 |
 | Peso da página | ~0,3–0,5 MB (escudos pequenos nas listas; temporada dos clubes só nas páginas de clube) |
 | Funções | rankings, estatísticas, retrospecto, partidas, rodadas, próximo jogo, ficha do artilheiro, site sem servidor, Worker e jogo simulado ao vivo |
@@ -84,6 +88,7 @@ Fundo escuro com **brilho nas bordas** (canto de cima à direita e de baixo à e
 ```bash
 python -m http.server 5173 --bind 127.0.0.1
 BASE=http://127.0.0.1:5173 npm run test:mobile     # PC, iPhone e Android: layout, toque, texto, acessibilidade
+node tests/mobile/qa.mjs                           # QA completo: contraste, links, teclado, interações e fluidez (PC, iPhone, Android)
 node tests/mobile/desempenho.mjs                   # carregamento, peso e saltos de layout
 node tests/mobile/visual.mjs                       # prints do tema escuro e claro
 node tests/mobile/gol.mjs                          # o GOL! dos 20 clubes, quadro a quadro, no PC e no celular

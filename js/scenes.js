@@ -237,9 +237,25 @@
 
   /* cartões: a cena toca quando aparece na tela e de novo ao passar o mouse */
   function mount(root = document) {
+    // entra quando aparece; fora da tela, tudo pausa; depois da entrada (~4 s) os enfeites em laço param
+    // a entrada só toca quando o cartão fica parado na tela (rolando rápido, nenhuma cena começa),
+    // uma de cada vez com um pequeno intervalo: a rolagem fica leve mesmo no celular
+    const fila = [];
+    let tocando = 0;
+    const proxima = () => {
+      if (tocando || !fila.length) return;
+      const el = fila.shift();
+      if (!el.isConnected || !el._vis || el.classList.contains("play")) return proxima();
+      tocando = 1; el.classList.add("play"); settle(el);
+      setTimeout(() => { tocando = 0; proxima(); }, 160);
+    };
     const io = new IntersectionObserver((es) => es.forEach((e) => {
-      if (e.isIntersecting) { e.target.classList.add("play"); io.unobserve(e.target); }
-    }), { threshold: 0.35 });
+      const el = e.target;
+      el._vis = e.isIntersecting;
+      el.classList.toggle("idle", !e.isIntersecting);
+      clearTimeout(el._d);
+      if (e.isIntersecting && !el.classList.contains("play")) el._d = setTimeout(() => { if (el._vis) { fila.push(el); proxima(); } }, 380);
+    }), { threshold: 0.45 });
     root.querySelectorAll(".scene-card").forEach((el) => {
       io.observe(el);
       el.closest(".club-card")?.addEventListener("mouseenter", () => replay(el));
@@ -249,7 +265,8 @@
       el.addEventListener("click", () => replay(el));
     });
   }
-  function replay(el) { el.classList.remove("play"); void el.offsetWidth; el.classList.add("play"); }
+  function settle(el) { clearTimeout(el._s); el.classList.remove("settled"); el._s = setTimeout(() => el.classList.add("settled"), 4200); }
+  function replay(el) { el.classList.remove("play"); void el.offsetWidth; el.classList.add("play"); if (el.classList.contains("scene-card")) settle(el); }
 
   /* bordão de cada clube, mostrado no topo da página do clube */
   const MOTTO = {

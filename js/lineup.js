@@ -9,6 +9,7 @@
   const SQ = new Proxy({}, { get: (_, k) => window.SQUADS[k] });
   const LAST = new Proxy({}, { get: (_, k) => (window.SQUADS_LAST || {})[k] });
   const rowOf = (id) => buildStandings().find((r) => r.id === id);
+  const dec = (v, n = 2) => v.toFixed(n).replace(".", ","); // vírgula decimal
 
   /* ---------- formações ----------
      posição: [função, grupo, lateral 0–100 (esq→dir), profundidade sem bola, com bola, nº Opta da posição]
@@ -288,7 +289,7 @@
       : [`${mA > mB ? ca : cb} manda no meio`, `${Math.max(mA, mB)} x ${Math.min(mA, mB)} homens no meio-campo dão superioridade para circular a bola por dentro.`]);
     const wa = wide(fa), wb = wide(fb);
     notes.push([wa === wb ? "Amplitude parecida" : `${wa > wb ? ca : cb} joga mais aberto`, `${ca} ataca com ${wa} jogador${wa === 1 ? "" : "es"} pelas pontas; ${cb} com ${wb}. ${wa > wb && backs(fb) >= 3 ? `Contra 3 zagueiros, os corredores do ${ca} são a chave.` : wb > wa && backs(fa) >= 3 ? `Contra 3 zagueiros, os corredores do ${cb} são a chave.` : "Quem vencer o duelo pelos lados cria mais cruzamentos."}`]);
-    notes.push([`Ataque x defesa`, `${ca} marca ${(A.gf / A.j).toFixed(2)} gols por jogo e encara uma defesa que sofre ${(B.ga / B.j).toFixed(2)}; ${cb} marca ${(B.gf / B.j).toFixed(2)} contra ${(A.ga / A.j).toFixed(2)} sofridos.`]);
+    notes.push([`Ataque x defesa`, `${ca} marca ${dec(A.gf / A.j)} gols por jogo e encara uma defesa que sofre ${dec(B.ga / B.j)}; ${cb} marca ${dec(B.gf / B.j)} contra ${dec(A.ga / A.j)} sofridos.`]);
     if (fwA !== fwB) notes.push([`${fwA > fwB ? ca : cb} mais agressivo`, `${Math.max(fwA, fwB)} atacantes contra ${Math.min(fwA, fwB)}: mais presença na área, mas mais espaço para o contra-ataque adversário.`]);
     return { xA, xB, win: win / tot, draw: draw / tot, loss: loss / tot, poss, notes };
   }
@@ -341,7 +342,7 @@
     const formChips = (cid) => `<div class="chips">${FORMS.map((f) => `<button class="chip ${f === load(cid).f ? "on" : ""}" data-bp-form="${cid}|${f}">${f}</button>`).join("")}</div>`;
     const xiList = (cid) => {
       const c = byId[cid];
-      return `<div class="card"><div class="card-h"><span style="display:flex;gap:8px;align-items:center">${crest(c, 20)}${c.abbr}</span><small>${load(cid).f} · <a href="#/clube/${cid}/elenco" style="color:var(--accent)">editar</a></small></div>
+      return `<div class="card"><div class="card-h"><span style="display:flex;gap:8px;align-items:center">${crest(c, 20)}${c.abbr}</span><small>${load(cid).f} · <a href="#/clube/${cid}/elenco" style="color:var(--ink)">editar</a></small></div>
         <ul class="squad-list">${shape(cid).map((s) => `<li><span class="n">${s.p ? s.p.n ?? "–" : ""}</span><b>${s.p ? s.p.name : "—"}</b><span class="p">${s.role}</span></li>`).join("")}</ul></div>`;
     };
     const pct = (v) => `${Math.round(v * 100)}%`;
@@ -380,7 +381,7 @@
           <div class="card"><div class="card-h">Tendência do jogo <small>modelo simples, não é previsão oficial</small></div>
             <div class="card-b">
               <div class="bp-prob"><div style="flex:${an.win};background:${ca}"><b>${pct(an.win)}</b>${A.abbr}</div><div style="flex:${an.draw};background:var(--surface-3)"><b>${pct(an.draw)}</b>Empate</div><div style="flex:${an.loss};background:${cb}"><b>${pct(an.loss)}</b>${B.abbr}</div></div>
-              <div class="bp-kpis"><div><small>Gols esperados</small><b>${an.xA.toFixed(1)} x ${an.xB.toFixed(1)}</b></div><div><small>Posse estimada</small><b>${an.poss}% x ${100 - an.poss}%</b></div></div>
+              <div class="bp-kpis"><div><small>Gols esperados</small><b>${dec(an.xA, 1)} x ${dec(an.xB, 1)}</b></div><div><small>Posse estimada</small><b>${an.poss}% x ${100 - an.poss}%</b></div></div>
             </div></div>
         </div>
         <div class="grid-2 even" style="gap:16px">${xiList(a)}${xiList(b)}</div>
