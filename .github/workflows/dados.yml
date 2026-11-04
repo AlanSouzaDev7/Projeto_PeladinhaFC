@@ -8,6 +8,11 @@ on:
   schedule:
     - cron: "*/30 * * * *"   # horário UTC; o GitHub pode atrasar alguns minutos
   workflow_dispatch:          # botão "Run workflow" na aba Actions
+  push:                       # roda na hora quando a API ou este arquivo mudam
+    branches: [main]
+    paths:
+      - "server/**"
+      - ".github/workflows/dados.yml"
 
 permissions:
   contents: write
