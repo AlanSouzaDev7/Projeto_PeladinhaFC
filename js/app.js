@@ -512,9 +512,9 @@
       <div class="grid-2">
         <div>
           <div class="card"><div class="card-h">Informações</div><div class="card-b" style="display:grid;gap:10px">
-            ${info.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--text-2)">${k}</span><b style="text-align:right">${v}</b></div>`).join("")}
+            ${info.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--text-2)">${k}</span><b style="text-align:right"${k === "Situação" ? " data-situacao" : ""}>${v}</b></div>`).join("")}
           </div>${m.status === "pending" ? `<div class="source">O resultado deste jogo ainda não foi lançado no site.</div>` : ""}</div>
-          ${m.espn ? `<div class="card mam" data-mam="${m.espn}"><div class="card-h">Minuto a minuto <small>lances: ESPN · narração: PLACAR</small></div>
+          ${m.espn || (LIVE.proxy() && m.status !== "ft") ? `<div class="card mam" data-mam="${m.espn || ""}" data-h="${m.home}" data-a="${m.away}" data-kick="${m.kick || ""}"><div class="card-h">Minuto a minuto <small class="mam-src">lances: ${LIVE.proxy() ? "API-Football" : "ESPN"} · narração: PLACAR</small></div>
             <div class="mam-top"></div><ul class="mam-list"><li class="mam-empty">Carregando a narração…</li></ul></div>` : ""}
           <div class="card"><div class="card-h">Comparação no campeonato <small>${REAL.source} · ${REAL.updated}</small></div><div class="card-b">${compareHTML(m)}</div></div>
         </div>
@@ -990,6 +990,8 @@
       const m = findMatch(state.route.id), el = $(".match-hero .scoreline");
       if (m && el) {
         el.outerHTML = scoreline(m);
+        const sit = $(".match-hero ~ .grid-2 [data-situacao]") || $("[data-situacao]");
+        if (sit) sit.textContent = statusText(m);
         $(".match-hero .pill")?.classList.toggle("muted", m.status !== "progress");
       }
     }

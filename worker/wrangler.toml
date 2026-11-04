@@ -1,0 +1,17 @@
+# Cloudflare Worker do placar ao vivo (API-Football). Passo a passo em worker/README.md.
+name = "placar-ao-vivo"
+main = "ao-vivo.mjs"
+compatibility_date = "2024-09-23"
+
+[vars]
+# endereço do site que pode ler o Worker ("*" libera qualquer um)
+ORIGEM = "https://alansouzadev7.github.io"
+# placar e lances: consulta a API-Football no máximo a cada N segundos durante os jogos
+# plano grátis (100 consultas/dia): use 240 ou mais; planos pagos: 15
+INTERVALO_SEGUNDOS = "15"
+# lista de jogos do dia: no máximo a cada N segundos
+LISTA_SEGUNDOS = "1800"
+# para de consultar quando restarem N consultas no dia (o site volta para a ESPN)
+RESERVA = "2"
+
+# a chave NÃO fica aqui: rode  npx wrangler secret put API_FOOTBALL_KEY

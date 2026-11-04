@@ -4,7 +4,9 @@
   "description": "PLACAR. — testes automatizados em celular (iPhone/WebKit e Android/Chrome)",
   "scripts": {
     "api": "python -X utf8 server/placar_api.py",
-    "test:mobile": "node tests/mobile/run.mjs"
+    "test:mobile": "node tests/mobile/run.mjs",
+    "test:worker": "node tests/worker.mjs",
+    "test:simulacao": "node tests/mobile/simulacao.mjs"
   },
   "devDependencies": {
     "playwright": "1.48.2"

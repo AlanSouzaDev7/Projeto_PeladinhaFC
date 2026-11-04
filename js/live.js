@@ -80,6 +80,33 @@
   // data e hora de Brasília (UTC-3) a partir do horário da ESPN
   const brt = (iso) => new Date(new Date(iso).getTime() - 3 * 3600e3).toISOString();
 
+  /* ---------------- API-Football (opcional, pelo Worker) ----------------
+     Com o endereço do Worker em js/config.js, placar e lances vêm primeiro da API-Football, que costuma
+     registrar o lance antes. A ESPN continua de reserva: Worker fora do ar, limite do plano esgotado
+     ou jogo que a API-Football não trouxe. */
+  const CFG = window.PLACAR_CONFIG || {};
+  const PROXY = String(CFG.aoVivo || "").replace(/\/+$/, "");
+  const PROXY_MS = Math.max(5, +CFG.intervalo || 15) * 1000;
+  let proxyHit = null;
+  function proxyGames() {
+    if (!PROXY) return Promise.resolve(null);
+    // placar e minuto a minuto pedem juntos: uma consulta serve os dois
+    if (proxyHit && Date.now() - proxyHit.t < 4000) return proxyHit.p;
+    const p = (async () => {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 6000);
+      try {
+        const r = await fetch(`${PROXY}/ao-vivo`, { cache: "no-store", signal: ctl.signal });
+        if (!r.ok) return null;
+        const d = await r.json();
+        if (!d || !Array.isArray(d.games) || d.esgotado) return null;
+        setTimeout(() => window.dispatchEvent(new Event("placar:proxy"))); // o minuto a minuto aproveita a mesma resposta
+        return d;
+      } catch { return null; } finally { clearTimeout(t); }
+    })();
+    proxyHit = { t: Date.now(), p };
+    return p;
+  }
+
   /* rodada em andamento: a primeira que ainda tem jogo por terminar (jogo adiado não segura a rodada) */
   function currentRound() {
     const rounds = Object.keys(PD.FIXTURES).map(Number).sort((a, b) => a - b);
@@ -157,16 +184,30 @@
 
   async function pollScores() {
     const games = allGames(), now = Date.now();
-    const days = [...new Set(games.filter((g) => needsLive(g, now)).map((g) => g[4].replace(/-/g, "")))];
-    if (!days.length) return false;
+    const need = games.filter((g) => needsLive(g, now));
+    if (!need.length) return false;
     let changed = false;
+    // 1) API-Football pelo Worker: os jogos que ela trouxer não são sobrescritos pela ESPN
+    const covered = new Set(), px = await proxyGames();
+    for (const p of px?.games || []) {
+      const g = games.find((x) => x[0] === p.home && x[1] === p.away);
+      if (!g) continue;
+      covered.add(g);
+      while (g.length < 9) g.push(null);
+      const before = JSON.stringify(g);
+      if (p.state === "in" || p.state === "post") { g[2] = p.hs; g[3] = p.as; }
+      g[8] = { state: p.state, clock: p.clock, detail: p.detail, live: p.state === "in", src: "API-Football" };
+      if (JSON.stringify(g) !== before) changed = true;
+    }
+    // 2) ESPN para o que faltou
+    const days = [...new Set(need.filter((g) => !covered.has(g)).map((g) => g[4].replace(/-/g, "")))];
     for (const day of days) {
       const sb = await scoreboard(`?dates=${day}`);
       if (!sb) continue;
       for (const ev of sb.events || []) {
         const comp = ev.competitions[0], { s: side, h, a } = sides(ev);
         const g = games.find((x) => x[0] === h && x[1] === a);
-        if (!g) continue;
+        if (!g || covered.has(g)) continue;
         while (g.length < 9) g.push(null);
         const st = comp.status.type.state;
         const before = JSON.stringify(g);
@@ -180,12 +221,14 @@
       if (!PD.LIVE) PD.ROUND = currentRound(); // rodada terminou: passa para a próxima
       window.dispatchEvent(new Event("placar:data"));
     }
-    return true;
+    return { proxy: covered.size > 0, next: px?.proximo };
   }
+  // com o Worker: consulta logo depois que ele tiver placar novo (entre 2 s e o intervalo configurado)
+  const proxyDelay = (next) => (next == null ? PROXY_MS : Math.min(PROXY_MS, Math.max(2000, next + 700)));
   (async function loop() {
     await window.PD_BOOT;
-    const live = await pollScores().catch(() => false);
-    setTimeout(loop, live ? 20000 : 60000);
+    const r = await pollScores().catch(() => false);
+    setTimeout(loop, !r ? 60000 : r.proxy ? proxyDelay(r.next) : 20000);
   })();
 
   /* ---------------- Minuto a minuto ---------------- */
@@ -245,16 +288,62 @@
       home: { name: home.team.displayName, score: +home.score || 0 }, away: { name: away.team.displayName, score: +away.score || 0 }, lines };
   }
 
+  /* narração própria a partir dos lances da API-Football (já organizados pelo Worker) */
+  function narrateProxy(p) {
+    const nome = (c) => PD.byId[c]?.name || c;
+    const N = { home: nome(p.home), away: nome(p.away) }, sc = { home: 0, away: 0 };
+    const placar = () => `${N.home} ${sc.home} x ${sc.away} ${N.away}`;
+    const lines = [];
+    for (const e of p.events || []) {
+      const team = N[e.side] || "";
+      let text = null, type = "status";
+      if (e.kind === "kickoff") text = "Rola a bola! Começa a partida.";
+      else if (e.kind === "halftime") text = `Fim do primeiro tempo. ${placar()}.`;
+      else if (e.kind === "second-half") text = "Bola rolando para o segundo tempo.";
+      else if (e.kind === "full-time") text = `Fim de jogo! ${placar()}.`;
+      else if (e.kind === "goal" || e.kind === "penalty-goal" || e.kind === "own-goal") {
+        sc[e.for || e.side]++; type = "goal";
+        const quem = N[e.for || e.side];
+        text = e.kind === "own-goal" ? `GOL do ${quem}! ${e.player || "O adversário"} manda contra o próprio gol. ${placar()}.`
+          : e.kind === "penalty-goal" ? `GOL do ${quem}! ${e.player} cobra o pênalti e marca. ${placar()}.`
+          : `GOL do ${quem}! ${e.player} marca${e.assist ? `, com assistência de ${e.assist}` : ""}. ${placar()}.`;
+      } else if (e.kind === "var-cancel") {
+        if (sc[e.side] > 0) sc[e.side]--;
+        text = `O VAR anula o gol do ${team}. ${placar()}.`;
+      } else if (e.kind === "missed-penalty") { type = "missed"; text = `Perdeu! ${e.player || "O batedor"} (${team}) desperdiça o pênalti.`; }
+      else if (e.kind === "yellow") { type = "yellow-card"; text = `Cartão amarelo para ${e.player || "jogador"} (${team}).`; }
+      else if (e.kind === "red") { type = "red-card"; text = `Expulso! ${e.player || "Jogador"} (${team}) recebe o vermelho e deixa o ${team} com um a menos.`; }
+      else if (e.kind === "sub") { type = "substitution"; text = `Substituição no ${team}: entra ${e.assist || "?"}, sai ${e.player || "?"}.`; }
+      // id pelo conteúdo: lance registrado com atraso não duplica os outros
+      if (text) lines.push({ id: `af-${e.kind}-${e.elapsed}-${e.extra}-${e.side || ""}-${e.player || ""}`, min: e.min, type, text });
+    }
+    return { state: p.state, clock: p.clock, detail: p.detail, source: "API-Football",
+      home: { name: N.home, score: p.hs ?? 0 }, away: { name: N.away, score: p.as ?? 0 }, lines };
+  }
+
+  /* sem a API local: API-Football (se configurada e se trouxe o jogo) ou ESPN */
+  async function loadMam(id, h, a) {
+    const px = await proxyGames();
+    const p = px?.games.find((g) => g.home === h && g.away === a && g.events);
+    if (p) return narrateProxy(p);
+    if (!id) return null;
+    const n = await narrate(id).catch(() => null);
+    return n && Object.assign(n, { source: "ESPN" });
+  }
+
   async function mountMam(el) {
-    const id = el.dataset.mam;
-    const list = el.querySelector(".mam-list"), top = el.querySelector(".mam-top");
+    const id = el.dataset.mam, { h, a } = el.dataset;
+    const list = el.querySelector(".mam-list"), top = el.querySelector(".mam-top"), src = el.querySelector(".mam-src");
     let n;
     if (PD.LIVE) {
       try { n = await (await fetch(`${API}/minuto-a-minuto/${id}`, { cache: "no-store" })).json(); } catch { n = null; }
     } else {
-      n = await narrate(id).catch(() => null);
+      n = await loadMam(id, h, a);
     }
+    if (!n && !id) { list.innerHTML = `<li class="mam-empty">A narração começa com a bola rolando.</li>`; return; }
     if (!n || !n.lines) { list.innerHTML = `<li class="mam-empty">Narração indisponível agora.</li>`; return; }
+    let fonte = n.source;
+    if (src && fonte) src.textContent = `lances: ${fonte} · narração: PLACAR`;
     top.innerHTML = head(n);
     const seen = new Set();
     const add = (lines, fresh) => lines.forEach((l) => {
@@ -265,19 +354,33 @@
     });
     list.innerHTML = n.lines.length ? "" : `<li class="mam-empty">${n.state === "pre" ? "A narração começa com a bola rolando." : "Sem lances registrados."}</li>`;
     add(n.lines.filter((l) => l.type !== "panorama"), false);
-    if (n.state !== "in") return;
+    // página aberta antes do apito: sem a API local, já fica esperando a bola rolar (a partir de 15 min antes)
+    const kick = +el.dataset.kick || 0, soon = n.state === "pre" && kick && Date.now() > kick - 15 * 60e3;
+    if (n.state !== "in" && !(soon && !PD.LIVE)) return;
     if (!PD.LIVE) {
-      // sem a API: o navegador consulta a súmula a cada 20 s enquanto o jogo estiver rolando
-      const timer = setInterval(async () => {
-        if (!el.isConnected) return clearInterval(timer);
-        const p = await narrate(id).catch(() => null);
+      // sem a API: com o Worker, atualiza junto com cada resposta dele; com a ESPN, a cada 20 s
+      let busy = false;
+      const tick = async () => {
+        if (!el.isConnected) return stop();
+        if (busy) return;
+        busy = true;
+        const p = await loadMam(id, h, a).finally(() => (busy = false));
         if (!p) return;
         top.innerHTML = head(p);
+        if (p.source !== fonte) {
+          // trocou de fonte no meio do jogo (ex.: limite da API-Football): redesenha a lista inteira
+          fonte = p.source; seen.clear(); list.innerHTML = "";
+          if (src) src.textContent = `lances: ${fonte} · narração: PLACAR`;
+          add(p.lines, false);
+        }
         const empty = list.querySelector(".mam-empty"); if (empty) empty.remove();
         add(p.lines, true);
-        if (p.state === "post") clearInterval(timer);
-      }, 20000);
-      streams.add({ close: () => clearInterval(timer) });
+        if (p.state === "post") stop();
+      };
+      const timer = setInterval(tick, 20000); // reserva: ESPN, ou Worker que parou de responder
+      const stop = () => { clearInterval(timer); window.removeEventListener("placar:proxy", tick); };
+      if (PROXY) window.addEventListener("placar:proxy", tick);
+      streams.add({ close: stop });
       return;
     }
     // ao vivo: cada lance novo chega pelo canal de eventos do servidor
@@ -361,6 +464,8 @@
       root.querySelectorAll("[data-news]").forEach(mountNews);
     },
     on: () => !!PD.LIVE,
+    // Worker da API-Football configurado em js/config.js
+    proxy: () => !!PROXY,
     // notícias: pela API ou pelas manchetes gravadas pelo GitHub Actions
     hasNews: () => !!PD.LIVE || !!window.LIVE_DATA?.news,
   };

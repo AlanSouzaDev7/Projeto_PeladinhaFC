@@ -11,3 +11,7 @@ Thumbs.db
 desktop.ini
 node_modules/
 tests/mobile/out/
+
+# Cloudflare Worker (gerado pelo wrangler)
+worker/.wrangler/
+worker/.dev.vars

@@ -30,6 +30,14 @@ O site publicado no GitHub Pages se mantém atualizado sozinho:
 
 Para atualizar na hora: aba **Actions** do repositório › **Atualizar dados** › **Run workflow**.
 
+### Placar mais rápido com a API-Football (opcional)
+
+Um Worker da Cloudflare ([`worker/`](worker/README.md)) guarda a chave da **API-Football** e entrega placar e lances ao site. Ele é ligado em [`js/config.js`](js/config.js). Com ele ligado, a API-Football vem primeiro e a ESPN fica de reserva (Worker fora do ar ou limite do plano esgotado). Um jogo hipotético simulado testa os três casos:
+
+```bash
+BASE=http://localhost:5173 node tests/mobile/simulacao.mjs
+```
+
 ## O que tem
 
 | Área | Descrição |
