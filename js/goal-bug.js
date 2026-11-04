@@ -172,14 +172,16 @@
 
   const BRAND_P = `<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="9" fill="#fff"/><path d="M14 10 H22.5 C28 10 31 13.2 31 17.8 C31 22.4 28 25.6 22.5 25.6 H19.6 V31 H14 Z M19.6 15 V20.6 H22.2 C24.2 20.6 25.3 19.5 25.3 17.8 C25.3 16.1 24.2 15 22.2 15 Z" fill="#2f47d6"/><circle cx="33" cy="33" r="3.6" fill="#ff3b4f"/></svg>`;
 
-  function html(club, motto) {
+  // opts (gol ao vivo): { de, para, outro, relogio } = placar do clube antes e depois, do adversário e o minuto
+  function html(club, motto, opts = {}) {
+    const de = opts.de ?? 0, para = opts.para ?? 1, outro = opts.outro ?? 0;
     const id = club.id, [band, bink, base, ink] = PAL[id] || [club.colors[0], "#fff", club.colors[0], "#fff"];
     const sym = SYM[id] || star(0, 0, 22, ink);
     const deco = DECO[id] ? DECO[id]() : "";
     const src = club.logo ? club.logo : "";
     return `<div class="gb" data-goalbug="${id}" role="img" aria-label="Animação de gol do ${club.name}: ${club.short}, escudo e GOL!" style="--band:${band};--bink:${bink};--base:${base};--ink:${ink}">
       <div class="gb-bar">
-        <div class="gb-neutral"><b class="gb-d gb-h"><i>0</i><i class="one">1</i></b><span class="gb-p">${BRAND_P}</span><b class="gb-d">0</b></div>
+        <div class="gb-neutral"><b class="gb-d gb-h"><i>${de}</i><i class="one">${para}</i></b><span class="gb-p">${BRAND_P}</span><b class="gb-d">${outro}</b></div>
         <div class="gb-art"><svg viewBox="0 0 360 76" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
           <defs><linearGradient id="gbf-${id}" x1="0" x2="1"><stop offset=".6" stop-color="${base}"/><stop offset=".8" stop-color="${base}" stop-opacity="0"/></linearGradient></defs>
           <rect width="360" height="76" fill="${base}"/>
@@ -190,15 +192,16 @@
         <div class="gb-crest">${src ? `<img src="${src}" alt="" decoding="async"/>` : (window.GFX?.svgCrest ? GFX.svgCrest(club, 96) : "")}</div>
         <div class="gb-wipe-box"><div class="gb-wipe"></div></div>
       </div>
-      <div class="gb-clock" aria-hidden="true"><span>00:00</span></div>
+      <div class="gb-clock" aria-hidden="true"${opts.relogio ? ` data-fixo="${opts.relogio}"` : ""}><span>${opts.relogio || "00:00"}</span></div>
     </div>
-    <p class="gb-motto"><b>${motto}</b><span>toque para ver o gol de novo</span></p>`;
+    ${motto ? `<p class="gb-motto"><b>${motto}</b><span>toque para ver o gol de novo</span></p>` : ""}`;
   }
 
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   function start(el) {
-    const clock = el.querySelector(".gb-clock span");
+    const clock = el.querySelector(".gb-clock span"), fixo = el.querySelector(".gb-clock").dataset.fixo;
     clearInterval(el._t);
+    if (fixo) { if (reduced) el.classList.add("still"); else { el.classList.remove("play"); void el.offsetWidth; el.classList.add("play"); } return; }
     if (reduced) { el.classList.add("still"); clock.textContent = "00:06"; return; }
     el.classList.remove("play"); void el.offsetWidth; el.classList.add("play");
     const t0 = performance.now();
@@ -227,5 +230,31 @@
     </div>`;
   }
 
-  window.GOALBUG = { html, mount, bar, has: (id) => !!SYM[id] };
+  /* ---------- gol ao vivo: o placar do clube que marcou aparece por cima da página ---------- */
+  const fila = [];
+  let tocando = false;
+  // gol = { club, de, para, outro, relogio, texto, link }
+  function alerta(gol) {
+    fila.push(gol);
+    if (!tocando) proximo();
+  }
+  function proximo() {
+    const gol = fila.shift();
+    if (!gol) { tocando = false; return; }
+    tocando = true;
+    const box = document.createElement("a");
+    box.className = "goal-alert";
+    box.href = gol.link || "#/";
+    box.setAttribute("role", "status");
+    box.setAttribute("aria-live", "assertive");
+    box.innerHTML = html(gol.club, "", gol) + `<p class="ga-txt"><b>GOL do ${gol.club.abbr}!</b><span>${gol.texto}</span></p>`;
+    box.querySelector(".gb").setAttribute("aria-label", `Gol do ${gol.club.name}. ${gol.texto}`);
+    document.body.appendChild(box);
+    start(box.querySelector(".gb"));
+    const sai = () => { if (!box.isConnected) return; box.classList.add("bye"); setTimeout(() => { box.remove(); proximo(); }, 420); };
+    box.addEventListener("click", () => setTimeout(sai, 50));
+    setTimeout(sai, reduced ? 5000 : 7400);
+  }
+
+  window.GOALBUG = { html, mount, bar, alerta, has: (id) => !!SYM[id] };
 })();

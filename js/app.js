@@ -1147,7 +1147,9 @@
     ({ ROUND, ROUNDS } = window.PD);
     const sig = () => state.matches.map((m) => `${m.status}${m.hs}${m.as}${m.clock}`).join() + (state.route.page === "tabela" ? JSON.stringify(state.standings) : "");
     const before = sig();
+    const antes = new Map(state.matches.map((m) => [m.id, m]));
     state.matches = realMatches(ROUND);
+    golsAoVivo(antes);
     state.standings = buildStandings();
     // não redesenha a página da partida (o minuto a minuto atualiza sozinho) nem durante a montagem do time
     // na página da partida, troca só o placar do topo (o minuto a minuto continua onde está)
@@ -1163,6 +1165,22 @@
     if (sig() !== before && ["", "clube", "tabela"].includes(state.route.page) && state.route.tab !== "elenco") render();
   };
   window.addEventListener("placar:data", refresh);
+
+  /* gol ao vivo: quando o placar de um jogo em andamento sobe, toca o GOL! do clube que marcou.
+     A primeira atualização só serve de base (não anuncia gols que já tinham saído antes de abrir o site). */
+  let golBase = false;
+  function golsAoVivo(antes) {
+    if (!golBase) { golBase = true; return; }
+    for (const m of state.matches) {
+      const o = antes.get(m.id);
+      if (!o || m.status !== "progress" || o.hs == null || o.as == null || m.hs == null) continue;
+      const h = byId[m.home], a = byId[m.away];
+      const placar = `${h.abbr} ${m.hs} x ${m.as} ${a.abbr}${m.clock ? ` · ${m.clock}` : ""}`;
+      const link = `#/partida/${m.id}`, relogio = m.clock || "AO VIVO";
+      if (m.hs > o.hs) GOALBUG.alerta({ club: h, de: o.hs, para: m.hs, outro: m.as, relogio, texto: placar, link });
+      if (m.as > o.as) GOALBUG.alerta({ club: a, de: o.as, para: m.as, outro: m.hs, relogio, texto: placar, link });
+    }
+  }
   setInterval(() => {
     refresh();
   }, 60000);
