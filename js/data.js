@@ -140,9 +140,12 @@ const REAL = {
 
 const ROUND = REAL.round;
 
+/* com jogo rolando, a classificação ao vivo (js/live.js) soma os placares parciais à tabela oficial */
 function buildStandings() {
-  return REAL.table.map(([id, p, j, w, d, l, gf, ga, ca, cv, next], i) => ({
+  const L = window.PD && window.PD.aoVivoTabela ? window.PD.aoVivoTabela() : null;
+  return (L ? L.rows : REAL.table).map(([id, p, j, w, d, l, gf, ga, ca, cv, next], i) => ({
     id, p, j, w, d, l, gf, ga, ca, cv, next, sg: gf - ga, pos: i + 1, pct: Math.floor((p / (j * 3)) * 100),
+    vivo: L ? L.vivo[id] || null : null, mov: L ? L.mov[id] || 0 : 0,
   }));
 }
 
@@ -184,7 +187,7 @@ function realMatches(round = ROUND, now = Date.now()) {
     // com a API ligada, "live" diz a situação real do jogo; sem ela, a situação sai do relógio
     const status = live ? ({ in: "progress", post: "ft", pre: "ns" }[live.state] || "ns")
       : hs != null ? "ft" : !kick || now < kick ? "ns" : now < kick + 2 * 3600e3 ? "progress" : "pending";
-    return { id: `${home}-x-${away}-r${round}`, round, home, away, hs, as, date, time, venue, kick, status, espn, clock: live && live.state === "in" ? live.clock : null, adiado: flag === "adiado" };
+    return { id: `${home}-x-${away}-r${round}`, round, home, away, hs, as, date, time, venue, kick, status, espn, clock: live && live.state === "in" ? live.clock : null, adiado: flag === "adiado", gols: (live && live.gols) || [] };
   });
 }
 

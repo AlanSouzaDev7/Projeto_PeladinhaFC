@@ -157,7 +157,7 @@ def update_standings_and_fixtures():
                         g[4], g[5] = time.strftime("%Y-%m-%d", t), time.strftime("%H:%M", t) if comp.get("timeValid", True) else None
                     if st["state"] in ("in", "post"):
                         g[2], g[3] = int(teams[g[0]]["score"]), int(teams[g[1]]["score"])
-                    g[8] = {"state": st["state"], "clock": clock_label(comp["status"]), "detail": st.get("shortDetail")}
+                    g[8] = {"state": st["state"], "clock": clock_label(comp["status"]), "detail": st.get("shortDetail"), "gols": goals_of(comp)}
                     if st["state"] == "in":  # ainda em andamento: placar parcial, não final
                         g[8]["live"] = True
     add_new_cards(table, old, fixtures)
@@ -387,6 +387,47 @@ def kickoff(g):
         return None
 
 
+def goals_of(comp):
+    """Gols do jogo pelo placar da ESPN: [id do jogador, nome, clube, gol contra, pênalti]."""
+    out = []
+    for d in comp.get("details") or []:
+        if not d.get("scoringPlay"):
+            continue
+        ath = (d.get("athletesInvolved") or [{}])[0]
+        out.append([ath.get("id"), ath.get("displayName"), BY_ESPN.get((d.get("team") or {}).get("id")), bool(d.get("ownGoal")), bool(d.get("penaltyKick"))])
+    return out
+
+
+j_before = {}  # jogos da tabela de cada clube antes de cada jogo (id ESPN -> {clube: J})
+
+
+def live_table():
+    """Classificação em tempo real: a tabela da ESPN só conta jogos encerrados (e com atraso);
+    soma o placar dos jogos em andamento e dos encerrados que ela ainda não contou."""
+    with lock:
+        table = [list(r) for r in state["standings"] or []]
+        games = [g for gs in (state["fixtures"] or {}).values() for g in gs]
+    by = {r[0]: r for r in table}
+    pos0 = {r[0]: i + 1 for i, r in enumerate(table)}
+    vivo = {}
+    for g in games:
+        st = g[8].get("state") if len(g) > 8 and isinstance(g[8], dict) else None
+        base = j_before.get(g[7] if len(g) > 7 else None)
+        if st not in ("in", "post") or g[2] is None or not base:
+            continue
+        for me, op, gf, ga in ((g[0], g[1], g[2], g[3]), (g[1], g[0], g[3], g[2])):
+            r = by.get(me)
+            if not r or base.get(me) is None or r[2] > base[me]:
+                continue  # a ESPN já contou este jogo
+            r[1] += 3 if gf > ga else 1 if gf == ga else 0
+            r[2] += 1; r[3] += gf > ga; r[4] += gf == ga; r[5] += gf < ga; r[6] += gf; r[7] += ga
+            vivo[me] = {"placar": [gf, ga], "contra": op, "relogio": g[8].get("clock"), "encerrado": st == "post"}
+    if vivo:
+        table.sort(key=lambda r: (-r[1], -r[3], -(r[6] - r[7]), -r[6]))
+    return {"updated": time.strftime("%d/%m/%Y às %H:%M:%S"),
+            "standings": table, "aoVivo": vivo, "variacao": {r[0]: pos0[r[0]] - (i + 1) for i, r in enumerate(table)}}
+
+
 def live_loop():
     """Placar ao vivo: a cada 30 s, enquanto houver jogo da rodada perto do horário ou em andamento.
     Quando um jogo termina, recalcula a tabela e as estatísticas dos jogadores (pendurados etc.)."""
@@ -416,8 +457,12 @@ def live_loop():
                                 g[7] = ev["id"]
                                 if st in ("in", "post"):
                                     g[2], g[3] = int(side["home"]["score"]), int(side["away"]["score"])
-                                g[8] = {"state": st, "clock": clock_label(comp["status"]), "detail": comp["status"]["type"].get("shortDetail"), "live": st == "in"}
+                                g[8] = {"state": st, "clock": clock_label(comp["status"]), "detail": comp["status"]["type"].get("shortDetail"), "live": st == "in",
+                                        "gols": goals_of(comp)}
                                 ended |= st == "post" and was != "post"
+                                if st != "post":  # jogo ainda não encerrado: a tabela de agora ainda não o conta
+                                    j = {r[0]: r[2] for r in state["standings"] or []}
+                                    j_before.setdefault(ev["id"], {h: j.get(h), a: j.get(a)})
             if ended:
                 log("jogo encerrado: atualizando tabela e estatísticas dos jogadores")
                 threading.Thread(target=lambda: (update_standings_and_fixtures(), update_players(), update_form(), persist()), daemon=True).start()
@@ -771,7 +816,16 @@ def scorer_profiles(matches, scorers, squads):
                 rows.append((goals, -q["min"], pid, name, pos))
         rows.sort(reverse=True)
         clubes[cid] = [dict(ficha(pid, name, cid, goals, pos), rank=k) for k, (goals, _, pid, name, pos) in enumerate(rows[:5], 1)]
-    return out, clubes
+    # todos os que marcaram, por clube: [id ESPN, nome, gols pelo clube] (base da artilharia ao vivo do site)
+    gols = {}
+    for pid, q in P.items():
+        for cid, (j, g) in q["clubes"].items():
+            if g:
+                name, goals, _ = oficial.get((pid, cid), (q["name"], g, None))
+                gols.setdefault(cid, []).append([pid, name, goals, q["min"]])
+    gols = {cid: [r[:3] for r in sorted(rows, key=lambda r: (-r[2], r[3]))] for cid, rows in gols.items()}
+    sumulas = sorted(k for k, m in matches.items() if m.get("v", 1) >= MATCH_VERSION)
+    return out, clubes, gols, sumulas
 
 
 def position_profiles(matches):
@@ -829,17 +883,18 @@ def update_players():
         except Exception:
             scorers = []
     try:
-        artilheiros, art_clubes = scorer_profiles(matches, scorers, squads)
+        artilheiros, art_clubes, gols_clubes, sumulas = scorer_profiles(matches, scorers, squads)
     except Exception as ex:
         log("artilheiros", ex)
-        artilheiros, art_clubes = [], {}
+        artilheiros, art_clubes, gols_clubes, sumulas = [], {}, {}, []
     try:
         posicoes = position_profiles(matches)
     except Exception as ex:
         log("posições", ex)
         posicoes = {}
     with lock:
-        state["players"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "clubs": out, "artilheiros": artilheiros, "artilhariaClubes": art_clubes}
+        state["players"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "clubs": out, "artilheiros": artilheiros, "artilhariaClubes": art_clubes,
+                            "golsClubes": gols_clubes, "sumulas": sumulas}
         state["positions"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "players": posicoes}
     log("estatísticas de jogadores atualizadas")
 
@@ -1072,6 +1127,8 @@ class Handler(SimpleHTTPRequestHandler):
                 if not s.get("standings"):
                     return self.send_json({"ok": False, "message": "carregando dados"}, 503)
                 return self.send_json(s)
+            if parts[1:] == ["tabela-ao-vivo"]:
+                return self.send_json(live_table())
             if parts[1:] == ["rankings"]:
                 tipo = (q.get("tipo") or [None])[0]
                 if tipo and tipo not in RANK_ORDER:

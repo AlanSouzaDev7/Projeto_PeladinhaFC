@@ -49,7 +49,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | **Estatísticas do elenco** | Na visão geral de cada clube e na aba "Estatísticas": **pendurados** (2 amarelos, o próximo suspende), **jogos seguidos**, **departamento médico** e **reservas mais usados** por minutagem. Cartões e minutos vêm das súmulas de todos os jogos do Brasileirão; lesões e pendurados são conferidos nas manchetes de ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra e dos setoristas cadastrados, com o número de fontes que confirmam cada caso. |
 | **Elenco** | Elencos reais, escalação do último jogo de cada clube e campinho interativo: arraste jogadores para trocar ou para qualquer ponto da grama; 8 formações. |
 | **Bora pro jogo** | Prancheta tática comparando dois times com e sem a bola, leitura tática e tendência do jogo (modelo simples). **Arraste os jogadores** (mouse ou dedo) para mudar a posição em tempo real: as setas de ataque acompanham, cada fase guarda as suas posições e "Restaurar posições" desfaz. Ao segurar um jogador, aparece o **mapa de calor** de onde ele costuma atuar, com as posições em % e os minutos no Brasileirão. |
-| **Tabela** | Classificação, números do campeonato e artilharia. Cada número (gols, ataque, defesa, amarelos, vermelhos) abre uma **subpágina de ranking** dos 20 clubes; passar o mouse ou segurar o dedo mostra uma prévia. |
+| **Tabela** | Classificação, números do campeonato e artilharia, **em tempo real**: com jogo rolando, os placares parciais entram na conta (pontos, jogos, saldo e posição, com ▲▼ de quem subiu ou caiu e o placar ao lado do clube), e os gols de agora entram na artilharia ("+1 ao vivo"). Funciona também sem a API, direto da ESPN no navegador. Cada número (gols, ataque, defesa, amarelos, vermelhos) abre uma **subpágina de ranking** dos 20 clubes; passar o mouse ou segurar o dedo mostra uma prévia. |
 | **Partida** | Placar com o **resumo dos gols e expulsões** de cada time (jogador e minuto, gol contra e de pênalti marcados), informações, comparação no campeonato, **top 5 artilheiros de cada time lado a lado** (1º contra 1º…, com a ficha de cada um) e **Minuto a minuto** ao vivo. A página de cada clube também mostra o top 5 dele. |
 
 ## API (`server/placar_api.py`)
@@ -57,6 +57,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | Rota | Retorno |
 |---|---|
 | `GET /api/state` | tabela, jogos da rodada (com placar ao vivo), elencos e últimas escalações |
+| `GET /api/tabela-ao-vivo` | classificação em tempo real: a tabela da ESPN (que só conta jogos encerrados) mais o placar dos jogos em andamento e dos encerrados que ela ainda não contou, com quanto cada clube subiu ou caiu |
 | `GET /api/rankings?tipo=gols\|ataque\|defesa\|amarelos\|vermelhos` | rankings do campeonato; os cartões somam a súmula de cada jogo encerrado depois da última tabela da CBF |
 | `GET /api/retrospecto?club=flamengo` | últimos 5 e próximos 5 jogos, em todas as competições; atualiza a cada 30 min e ao fim de cada jogo |
 | `GET /api/jogadores?club=flamengo` | pendurados, jogos seguidos, lesionados (com fontes) e minutagem dos reservas; atualiza a cada hora |
@@ -102,6 +103,7 @@ node tests/mobile/gol-ao-vivo.mjs                  # jogo simulado: o GOL! apare
 node tests/mobile/alinhamento.mjs                  # botões desalinhados em todas as páginas (PC, iPhone, Android)
 node tests/mobile/bora-arrastar.mjs                # arrastar jogadores na prancheta (mouse e dedo)
 node tests/mobile/bora-calor.mjs                   # mapa de calor de quem está sendo arrastado (PC e celular)
+node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! em tempo real (ESPN simulada, aba escondida)
 node tests/mobile/artilheiros.mjs                  # top 5 dos dois times em todas as partidas e nos 20 clubes
 node tests/mobile/elenco.mjs                       # campinho do elenco dos 20 clubes: nomes sem encostar, no PC, notebook e celular
 ```

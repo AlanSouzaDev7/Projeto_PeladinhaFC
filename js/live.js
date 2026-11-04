@@ -170,7 +170,7 @@
   setInterval(async () => {
     if (!PD.LIVE) return;
     const s = await fetchState(8000);
-    if (s) { apply(s); window.dispatchEvent(new Event("placar:data")); }
+    if (s) { lembrar(); apply(s); window.dispatchEvent(new Event("placar:data")); }
   }, 60000);
 
   /* ---------------- Placar em tempo real ----------------
@@ -183,6 +183,7 @@
   };
 
   async function pollScores() {
+    lembrar();
     const games = allGames(), now = Date.now();
     const need = games.filter((g) => needsLive(g, now));
     if (!need.length) return false;
@@ -196,7 +197,7 @@
       while (g.length < 9) g.push(null);
       const before = JSON.stringify(g);
       if (p.state === "in" || p.state === "post") { g[2] = p.hs; g[3] = p.as; }
-      g[8] = { state: p.state, clock: p.clock, detail: p.detail, live: p.state === "in", src: "API-Football" };
+      g[8] = { state: p.state, clock: p.clock, detail: p.detail, live: p.state === "in", src: "API-Football", gols: golsProxy(p) };
       if (JSON.stringify(g) !== before) changed = true;
     }
     // 2) ESPN para o que faltou
@@ -213,7 +214,7 @@
         const before = JSON.stringify(g);
         g[7] = ev.id;
         if (st === "in" || st === "post") { g[2] = +side.home.score; g[3] = +side.away.score; }
-        g[8] = { state: st, clock: clockOf(comp.status), detail: comp.status.type.shortDetail, live: st === "in" };
+        g[8] = { state: st, clock: clockOf(comp.status), detail: comp.status.type.shortDetail, live: st === "in", gols: golsESPN(comp) };
         if (JSON.stringify(g) !== before) changed = true;
       }
     }
@@ -223,12 +224,122 @@
     }
     return { proxy: covered.size > 0, next: px?.proximo };
   }
+  /* ---------------- Tabela e artilharia em tempo real ----------------
+     A tabela da ESPN (e a gravada pelo GitHub Actions) só conta jogos encerrados, e com alguns minutos de atraso.
+     Para cada jogo, guarda quantos jogos cada clube tinha na tabela antes dele (enquanto ele não acabou, a tabela
+     com certeza não o conta). Com a bola rolando, ou encerrado e ainda fora da tabela, o placar entra na conta.
+     A artilharia faz o mesmo com os gols dos jogos que ainda não estão nas súmulas gravadas. */
+  // quem marcou, pelo placar da ESPN: [id ESPN, nome, clube, gol contra, pênalti]
+  function golsESPN(comp) {
+    return (comp.details || []).filter((d) => d.scoringPlay).map((d) => {
+      const a = (d.athletesInvolved || [])[0] || {};
+      return [a.id || null, a.displayName || "", ESPN_CLUB[d.team && d.team.id] || null, !!d.ownGoal, !!d.penaltyKick];
+    });
+  }
+  function golsProxy(p) {
+    const out = [];
+    for (const e of p.events || []) {
+      const lado = e.for || e.side;
+      if (["goal", "penalty-goal", "own-goal"].includes(e.kind)) out.push([null, e.player || "", p[lado] || null, e.kind === "own-goal", e.kind === "penalty-goal"]);
+      if (e.kind === "var-cancel") { const i = out.map((x) => x[2]).lastIndexOf(p[e.side]); if (i >= 0) out.splice(i, 1); }
+    }
+    return out;
+  }
+  const keyOf = (g) => g[7] || `${g[0]}|${g[1]}|${g[4]}`;
+  const antes = {};
+  function lembrar() {
+    const J = Object.fromEntries((PD.REAL.table || []).map((r) => [r[0], r[2]]));
+    for (const g of allGames()) {
+      const k = keyOf(g), st = g[8] && g[8].state;
+      if (antes[k] || st === "post" || (!g[8] && g[2] != null)) continue; // já encerrado: pode já estar na tabela
+      antes[k] = { [g[0]]: J[g[0]], [g[1]]: J[g[1]] };
+    }
+  }
+  function tabelaAoVivo() {
+    const base = PD.REAL.table || [];
+    const rows = base.map((r) => r.slice()), by = Object.fromEntries(rows.map((r) => [r[0], r]));
+    const vivo = {};
+    for (const g of allGames()) {
+      const st = g[8] && g[8].state, a0 = antes[keyOf(g)];
+      if (!(st === "in" || st === "post") || g[2] == null || !a0) continue;
+      for (const [me, op, gf, ga] of [[g[0], g[1], g[2], g[3]], [g[1], g[0], g[3], g[2]]]) {
+        const r = by[me];
+        if (!r || a0[me] == null || r[2] > a0[me]) continue; // a tabela já contou este jogo
+        r[1] += gf > ga ? 3 : gf === ga ? 1 : 0; r[2]++; r[3] += +(gf > ga); r[4] += +(gf === ga); r[5] += +(gf < ga); r[6] += gf; r[7] += ga;
+        vivo[me] = { gf, ga, op, clock: g[8].clock, fim: st === "post", casa: me === g[0] };
+      }
+    }
+    if (!Object.keys(vivo).length) return null;
+    // critérios da CBF: pontos, vitórias, saldo, gols pró (o resto do desempate segue a ordem da tabela oficial)
+    rows.sort((x, y) => y[1] - x[1] || y[3] - x[3] || (y[6] - y[7]) - (x[6] - x[7]) || y[6] - x[6]);
+    const pos0 = Object.fromEntries(base.map((r, i) => [r[0], i]));
+    return { rows, vivo, mov: Object.fromEntries(rows.map((r, i) => [r[0], pos0[r[0]] - i])) };
+  }
+  const palavras = (x) => (x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter(Boolean).join(" ");
+  function artilhariaAoVivo() {
+    const S = window.PLAYER_STATS;
+    if (!S || !S.golsClubes) return null;
+    const contados = new Set(S.sumulas || []), clubs = {};
+    for (const [cid, rows] of Object.entries(S.golsClubes)) clubs[cid] = rows.map(([aid, name, g]) => ({ aid, name, g, vivo: 0, cid }));
+    for (const g of allGames()) {
+      const st = g[8] && g[8].state;
+      if (!(st === "in" || st === "post") || !g[8].gols || contados.has(g[7])) continue;
+      for (const [aid, nome, cid, og] of g[8].gols) {
+        if (og || !cid) continue; // gol contra não entra na artilharia
+        const L = (clubs[cid] = clubs[cid] || []), w = palavras(nome);
+        let p = (aid && L.find((x) => x.aid === aid)) || (w && L.find((x) => { const v = palavras(x.name); return v === w || v.includes(w) || w.includes(v); }));
+        if (!p) L.push((p = { aid: aid || nome, name: nome, g: 0, vivo: 0, cid }));
+        p.g++; p.vivo++;
+        if (st === "in") p.rolando = true;
+      }
+    }
+    for (const L of Object.values(clubs)) L.sort((a, b) => b.g - a.g); // estável: empate mantém a ordem das súmulas
+    // artilharia geral: soma os clubes de cada jogador; ele aparece pelo clube onde mais marcou
+    const tot = {}, of = {};
+    (S.artilheiros || []).forEach((x) => { if (x.id) of[x.id] = x.pos; });
+    for (const L of Object.values(clubs)) for (const p of L) {
+      const t = (tot[p.aid] = tot[p.aid] || { name: p.name, cid: p.cid, g: 0, top: 0, vivo: 0, rolando: false });
+      t.g += p.g; t.vivo += p.vivo; t.rolando = t.rolando || !!p.rolando;
+      if (p.g > t.top) Object.assign(t, { top: p.g, cid: p.cid, name: p.name });
+    }
+    const geral = Object.entries(tot).sort(([ia, a], [ib, b]) => b.g - a.g || (of[ia] || 99) - (of[ib] || 99)).slice(0, 10)
+      .map(([aid, t]) => [t.name, t.cid, t.g, t.vivo, t.rolando, aid]);
+    const posDe = Object.fromEntries(geral.map((x, i) => [x[5], i + 1]));
+    return { geral, clubs, posDe, tot };
+  }
+  /* tabela da ESPN direto do navegador durante a rodada (a gravada pelo GitHub Actions é de até 30 min atrás) */
+  const ESPN_TABLE = "https://site.web.api.espn.com/apis/v2/sports/soccer/bra.1/standings";
+  let tabelaEm = 0;
+  async function tabelaFresca() {
+    const now = Date.now();
+    const rodada = allGames().some((g) => { const k = kickOf(g); return k && now > k - 15 * 60e3 && now < k + 5 * 3600e3; });
+    if (!rodada || now - tabelaEm < 120e3 || !PD.REAL.table) return false;
+    tabelaEm = now;
+    try {
+      const d = await (await fetch(ESPN_TABLE, { cache: "no-store" })).json();
+      const old = Object.fromEntries(PD.REAL.table.map((r) => [r[0], r]));
+      const rows = d.children[0].standings.entries.map((e) => {
+        const cid = ESPN_CLUB[e.team.id], s = Object.fromEntries(e.stats.map((x) => [x.name, x.value])), o = old[cid];
+        return cid && o && [+s.rank || 99, [cid, +s.points, +s.gamesPlayed, +s.wins, +s.ties, +s.losses, +s.pointsFor, +s.pointsAgainst, o[8], o[9], o[10]]];
+      }).filter(Boolean).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+      if (rows.length !== PD.REAL.table.length) return false;
+      const mudou = JSON.stringify(rows) !== JSON.stringify(PD.REAL.table);
+      lembrar(); // o "antes" dos jogos ainda não registrados sai da tabela anterior
+      PD.REAL.table = rows;
+      return mudou;
+    } catch { return false; }
+  }
+  PD.aoVivoTabela = tabelaAoVivo;
+  PD.aoVivoArtilharia = artilhariaAoVivo;
+
   // com o Worker: consulta logo depois que ele tiver placar novo (entre 2 s e o intervalo configurado)
   const proxyDelay = (next) => (next == null ? PROXY_MS : Math.min(PROXY_MS, Math.max(2000, next + 700)));
   (async function loop() {
     await window.PD_BOOT;
+    lembrar();
     const r = await pollScores().catch(() => false);
-    setTimeout(loop, !r ? 60000 : r.proxy ? proxyDelay(r.next) : 20000);
+    if (await tabelaFresca()) window.dispatchEvent(new Event("placar:data"));
+    setTimeout(loop, !r ? 60000 : r.proxy ? proxyDelay(r.next) : 12000);
   })();
 
   /* ---------------- Minuto a minuto ---------------- */

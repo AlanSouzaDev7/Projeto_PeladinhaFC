@@ -247,11 +247,16 @@
   const fila = [];
   let tocando = false;
   // gol = { club, de, para, outro, relogio, texto, link }
+  /* Com a aba em segundo plano (ou a tela do celular apagada) a animação rodaria sem ninguém ver e sumiria em 7 s:
+     o gol espera a pessoa voltar para a página. Gol de mais de 10 min atrás não toca mais (o placar já mostra). */
   function alerta(gol) {
-    fila.push(gol);
+    fila.push({ ...gol, em: Date.now() });
     if (!tocando) proximo();
   }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && !tocando) proximo(); });
   function proximo() {
+    if (document.hidden) { tocando = false; return; }
+    while (fila.length && Date.now() - fila[0].em > 10 * 60e3) fila.shift();
     const gol = fila.shift();
     if (!gol) { tocando = false; return; }
     tocando = true;
