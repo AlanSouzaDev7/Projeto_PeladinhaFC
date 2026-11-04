@@ -46,7 +46,8 @@
   /* ---------------- Placar em tempo real ----------------
      Funciona com ou sem a API (no GitHub Pages também): enquanto houver jogo da rodada perto do horário
      ou em andamento, o navegador consulta o placar da ESPN a cada 20 s e atualiza a página. */
-  const ESPN_SB = "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard";
+  // site.web.api libera o acesso a qualquer navegador; site.api bloqueia (CORS) navegadores de computador
+  const ESPN_SB = ["https://site.web.api.espn.com", "https://site.api.espn.com"].map((h) => `${h}/apis/site/v2/sports/soccer/bra.1/scoreboard`);
   const ESPN_CLUB = { 3458: "athletico-pr", 7632: "atletico-mg", 9967: "bahia", 6086: "botafogo", 6079: "bragantino", 9318: "chapecoense", 874: "corinthians", 3456: "coritiba", 2022: "cruzeiro", 819: "flamengo", 3445: "fluminense", 6273: "gremio", 1936: "internacional", 9169: "mirassol", 2029: "palmeiras", 4936: "remo", 2674: "santos", 2026: "sao-paulo", 3454: "vasco", 3457: "vitoria" };
   const kickOf = (g) => (g[4] && g[5] ? new Date(`${g[4]}T${g[5]}:00-03:00`).getTime() : null);
   // jogo que precisa de placar ao vivo: começa em até 15 min, está rolando ou acabou há pouco sem resultado final
@@ -61,8 +62,11 @@
     if (!days.length) return false;
     let changed = false;
     for (const day of days) {
-      let sb;
-      try { sb = await (await fetch(`${ESPN_SB}?dates=${day}`, { cache: "no-store" })).json(); } catch { continue; }
+      let sb = null;
+      for (const url of ESPN_SB) {
+        try { sb = await (await fetch(`${url}?dates=${day}`, { cache: "no-store" })).json(); break; } catch { /* tenta o próximo endereço */ }
+      }
+      if (!sb) continue;
       for (const ev of sb.events || []) {
         const comp = ev.competitions[0], side = {};
         comp.competitors.forEach((c) => (side[c.homeAway] = c));
