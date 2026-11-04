@@ -696,6 +696,11 @@ def press_news(c):
     return items
 
 
+def strip_accents(x):
+    import unicodedata
+    return "".join(ch for ch in unicodedata.normalize("NFD", x or "") if unicodedata.category(ch) != "Mn")
+
+
 def scorer_profiles(matches, scorers, squads):
     """Ficha de cada artilheiro do campeonato: dados do elenco e, pelas súmulas, jogos, minutos,
     assistências, finalizações, pênaltis e contra quais clubes (e por quais clubes) marcou."""
@@ -718,23 +723,55 @@ def scorer_profiles(matches, scorers, squads):
                     if opp:
                         q["adv"][opp] = q["adv"].get(opp, 0) + g
     squad = {row[4]: (cid, row) for cid, rows in squads.items() for row in rows if row[4]}
-    out = []
+
+    def ficha(pid, name, cid, goals, pos):
+        q = P[pid]
+        sc, row = squad.get(pid, (None, None))
+        return {"pos": pos, "id": pid, "name": name, "club": cid, "gols": goals, "golsSumulas": q["gols"],
+                "golsClube": q["clubes"].get(cid, [0, 0])[1],
+                "camisa": row[0] if row else None, "posicao": row[2] if row else None, "idade": row[3] if row else None,
+                "jogos": q["jogos"], "titular": q["titular"], "min": q["min"], "assist": q["assist"], "chutes": q["chutes"], "noAlvo": q["noAlvo"],
+                "pen": q["pen"], "amarelos": q["amarelos"], "vermelhos": q["vermelhos"], "jogosComGol": q["jogosComGol"], "ultimoGol": q["ultimoGol"],
+                "adversarios": sorted(([k, v] for k, v in q["adv"].items()), key=lambda x: -x[1]),
+                "clubes": sorted(([k, v[0], v[1]] for k, v in q["clubes"].items()), key=lambda x: (-x[2], -x[1]))}
+
+    # A artilharia oficial usa o nome curto ("Calleri", "Rene", "Vinicius") e a súmula o nome da ESPN
+    # ("Jonathan Calleri", "Renê", "Carlos Vinícius"): compara sem acento, por palavra inteira, e só entre
+    # quem jogou pelo clube do artilheiro (há vários "Vinicius" no campeonato).
+    def words(x):
+        return re.sub(r"[^a-z ]", " ", strip_accents(x).lower()).split()
+
+    def match(name, cid):
+        w = words(name)
+        pool = [(pid, q) for pid, q in P.items() if cid in q["clubes"]]
+        for test in (lambda v: v == w, lambda v: " ".join(w) in " ".join(v) or " ".join(v) in " ".join(w), lambda v: set(w) & set(v)):
+            hit = [(pid, q) for pid, q in pool if test(words(q["name"]))]
+            if hit:
+                return max(hit, key=lambda x: (x[1]["clubes"][cid][1], x[1]["min"]))[0]
+        return None
+
+    out, oficial = [], {}
     for pos, (name, cid, goals) in enumerate(scorers, 1):
-        # nomes repetidos (ex.: dois "Pedro"): fica quem jogou pelo clube do artilheiro e fez mais gols
-        cands = [(pid, q) for pid, q in P.items() if q["name"] == name]
-        cands.sort(key=lambda x: (cid in x[1]["clubes"], x[1]["gols"]), reverse=True)
-        if not cands:
+        pid = match(name, cid)
+        if not pid:
             out.append({"pos": pos, "name": name, "club": cid, "gols": goals})
             continue
-        pid, q = cands[0]
-        sc, row = squad.get(pid, (None, None))
-        out.append({"pos": pos, "id": pid, "name": name, "club": cid, "gols": goals, "golsSumulas": q["gols"],
-                    "camisa": row[0] if row else None, "posicao": row[2] if row else None, "idade": row[3] if row else None,
-                    "jogos": q["jogos"], "titular": q["titular"], "min": q["min"], "assist": q["assist"], "chutes": q["chutes"], "noAlvo": q["noAlvo"],
-                    "pen": q["pen"], "amarelos": q["amarelos"], "vermelhos": q["vermelhos"], "jogosComGol": q["jogosComGol"], "ultimoGol": q["ultimoGol"],
-                    "adversarios": sorted(([k, v] for k, v in q["adv"].items()), key=lambda x: -x[1]),
-                    "clubes": [[k, v[0], v[1]] for k, v in q["clubes"].items()]})
-    return out
+        oficial[(pid, cid)] = (name, goals, pos)
+        out.append(ficha(pid, name, cid, goals, pos))
+
+    # Top 5 de cada clube pelos gols marcados com a camisa dele (súmulas); quem está na artilharia
+    # oficial fica com o número oficial. Empate: menos minutos em campo vem antes.
+    clubes = {}
+    for cid in CLUBS:
+        rows = []
+        for pid, q in P.items():
+            g = q["clubes"].get(cid, [0, 0])[1]
+            name, goals, pos = oficial.get((pid, cid), (q["name"], g, None))
+            if goals:
+                rows.append((goals, -q["min"], pid, name, pos))
+        rows.sort(reverse=True)
+        clubes[cid] = [dict(ficha(pid, name, cid, goals, pos), rank=k) for k, (goals, _, pid, name, pos) in enumerate(rows[:5], 1)]
+    return out, clubes
 
 
 def position_profiles(matches):
@@ -792,17 +829,17 @@ def update_players():
         except Exception:
             scorers = []
     try:
-        artilheiros = scorer_profiles(matches, scorers, squads)
+        artilheiros, art_clubes = scorer_profiles(matches, scorers, squads)
     except Exception as ex:
         log("artilheiros", ex)
-        artilheiros = []
+        artilheiros, art_clubes = [], {}
     try:
         posicoes = position_profiles(matches)
     except Exception as ex:
         log("posições", ex)
         posicoes = {}
     with lock:
-        state["players"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "clubs": out, "artilheiros": artilheiros}
+        state["players"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "clubs": out, "artilheiros": artilheiros, "artilhariaClubes": art_clubes}
         state["positions"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "players": posicoes}
     log("estatísticas de jogadores atualizadas")
 

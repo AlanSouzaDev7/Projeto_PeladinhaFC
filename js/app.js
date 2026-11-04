@@ -246,21 +246,54 @@
     return `<div class="card reveal fm" data-form="${id}"><div class="card-h">Retrospecto <small>últimos 5 e próximos 5 jogos</small></div>${formInner(id, d)}</div>`;
   }
 
-  function scorersCard(limit = 10, clubId = null, clubs = null) {
-    const list = REAL.scorers.filter((x) => (!clubId || x[1] === clubId) && (!clubs || clubs.includes(x[1]))).slice(0, limit);
+  /* artilheiros de um clube: top 5 pelas súmulas (quem está na artilharia oficial fica com o número da CBF);
+     sem os dados das súmulas, cai na artilharia oficial filtrada pelo clube */
+  function clubTop(cid, n = 5) {
+    const t = window.PLAYER_STATS?.artilhariaClubes?.[cid];
+    if (t) return t.slice(0, n).map((p) => ({ name: p.name, gols: p.gols, pos: p.pos, rank: p.rank }));
+    return REAL.scorers.map(([name, c, gols], k) => ({ name, c, gols, pos: k + 1 })).filter((x) => x.c === cid).slice(0, n).map((x, k) => ({ ...x, rank: k + 1 }));
+  }
+  const scorerAttrs = (name, cid) => (scorerOf(name, cid) ? ` class="has-ficha" data-scorer="${name}|${cid}" tabindex="0" aria-label="Ficha de ${name}"` : "");
+  function scorersCard(limit = 10, clubId = null) {
+    if (clubId) {
+      const list = clubTop(clubId, limit), c = byId[clubId];
+      if (!list.length) return "";
+      return `<div class="card reveal"><div class="card-h">Artilheiros do ${c.abbr} <small>Brasileirão</small></div>
+        <ul class="squad-list">${list.map((p) => `<li${scorerAttrs(p.name, clubId)}><span class="n">${p.rank}º</span><div style="flex:1;min-width:0"><b>${p.name}</b>${p.pos ? `<small class="sl-sub">${p.pos}º na artilharia</small>` : ""}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(p.gols / list[0].gols) * 100}" style="background:${display(c)}"></i></div></div><b class="goals">${p.gols}</b>${scorerOf(p.name, clubId) ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`).join("")}</ul>
+        ${list.some((p) => scorerOf(p.name, clubId)) ? `<div class="source">Passe o mouse (ou toque) no jogador para ver a ficha</div>` : ""}</div>`;
+    }
+    const list = REAL.scorers.slice(0, limit);
     if (!list.length) return "";
     const max = REAL.scorers[0][2];
     return `<div class="card reveal"><div class="card-h">Artilharia <small>${REAL.source}</small></div>
-      <ul class="squad-list">${list.map(([name, cid, g]) => {
-        const pos = REAL.scorers.findIndex((x) => x[0] === name) + 1;
+      <ul class="squad-list">${list.map(([name, cid, g], k) => {
         const ficha = scorerOf(name, cid);
-        return `<li${ficha ? ` class="has-ficha" data-scorer="${name}|${cid}" tabindex="0" aria-label="Ficha de ${name}"` : ""}><span class="n">${pos}º</span>${crest(byId[cid], 22)}<div style="flex:1;min-width:0"><b>${name}</b><div class="bar" style="height:5px;margin-top:5px"><i data-w="${(g / max) * 100}" style="background:${display(byId[cid])}"></i></div></div><b class="goals">${g}</b>${ficha ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`;
+        return `<li${scorerAttrs(name, cid)}><span class="n">${k + 1}º</span>${crest(byId[cid], 22)}<div style="flex:1;min-width:0"><b>${name}</b><div class="bar" style="height:5px;margin-top:5px"><i data-w="${(g / max) * 100}" style="background:${display(byId[cid])}"></i></div></div><b class="goals">${g}</b>${ficha ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`;
       }).join("")}</ul>${list.some(([n, c]) => scorerOf(n, c)) ? `<div class="source">Passe o mouse (ou toque) no jogador para ver a ficha</div>` : ""}</div>`;
+  }
+
+  /* partida: top 5 de cada time lado a lado (1º contra 1º, 2º contra 2º...), como nos comparativos dos apps */
+  function scorersDuel(m) {
+    const H = clubTop(m.home), A = clubTop(m.away), h = byId[m.home], a = byId[m.away];
+    if (!H.length && !A.length) return "";
+    const max = Math.max(H[0]?.gols || 0, A[0]?.gols || 0, 1);
+    const tot = (L) => L.reduce((t, p) => t + p.gols, 0);
+    const cell = (p, c, side) => p ? `<div class="sd-p sd-${side}${scorerOf(p.name, c.id) ? ` has-ficha" data-scorer="${p.name}|${c.id}" tabindex="0" aria-label="Ficha de ${p.name}` : ""}">
+        <span class="sd-nm"><b>${p.name}</b>${p.pos ? `<small>${p.pos}º geral</small>` : ""}</span>
+        <b class="sd-g">${p.gols}</b>
+        <i class="sd-bar" style="--f:${(p.gols / max).toFixed(3)};--c:${display(c)}"></i></div>` : `<div class="sd-p sd-${side} sd-none">—</div>`;
+    const rows = Array.from({ length: Math.max(H.length, A.length) }, (_, k) => `<li>${cell(H[k], h, "h")}<span class="sd-k">${k + 1}º</span>${cell(A[k], a, "a")}</li>`).join("");
+    return `<div class="card reveal scorers-duel"><div class="card-h">Artilheiros dos dois times <small>top 5 · Brasileirão</small></div>
+      <div class="sd-head"><div class="sd-t">${crest(h, 26)}<b>${h.abbr}</b></div><span class="sd-vs">gols</span><div class="sd-t sd-ta"><b>${a.abbr}</b>${crest(a, 26)}</div></div>
+      <ul class="sd-list">${rows}</ul>
+      <div class="sd-foot"><span><b>${tot(H)}</b> gols do top 5</span><span><b>${tot(A)}</b> gols do top 5</span></div>
+      <div class="source">Súmulas da ESPN; quem está no top 10 da CBF aparece com o número oficial. Gols contra não entram.${H.some((p) => scorerOf(p.name, m.home)) || A.some((p) => scorerOf(p.name, m.away)) ? " Passe o mouse (ou toque) no jogador para ver a ficha." : ""}</div></div>`;
   }
 
   /* ---------- Ficha do artilheiro (cartão flutuante) ----------
      Dados do elenco e das súmulas da ESPN de todos os jogos do Brasileirão (gravados pela API / GitHub Actions). */
-  const scorerOf = (name, cid) => (window.PLAYER_STATS?.artilheiros || []).find((x) => x.name === name && x.club === cid && x.jogos);
+  const scorerOf = (name, cid) => (window.PLAYER_STATS?.artilheiros || []).find((x) => x.name === name && x.club === cid && x.jogos)
+    || (window.PLAYER_STATS?.artilhariaClubes?.[cid] || []).find((x) => x.name === name && x.jogos);
   const POSICAO = { G: "Goleiro", D: "Defensor", M: "Meio-campista", F: "Atacante" };
   const dataBR = (d) => (d ? d.slice(8, 10) + "/" + d.slice(5, 7) : "—");
   function scorerHTML(p) {
@@ -275,12 +308,12 @@
     const maxAdv = p.adversarios[0]?.[1] || 1;
     return `<div class="sc-h" style="--sc:${cor}">
         ${crest(c, 40)}
-        <div><b>${p.name}</b><small>${c.name} · ${p.pos}º na artilharia</small></div>
+        <div><b>${p.name}</b><small>${c.name} · ${p.pos ? `${p.pos}º na artilharia` : `${p.rank}º artilheiro do clube`}</small></div>
         <div class="sc-g"><b>${p.gols}</b><small>gols</small></div>
       </div>
       <div class="sc-sec">Ficha técnica</div>
       <dl class="sc-ficha">${fatos.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
-      ${p.clubes.length > 1 ? `<div class="sc-sec">Gols por clube na temporada</div>
+      ${p.clubes.length ? `<div class="sc-sec">Gols por clube na temporada</div>
         <ul class="sc-clubes">${p.clubes.map(([k, j, g]) => `<li>${crest(byId[k], 18)}<span>${byId[k].abbr}</span><small>${j} jogos</small><b>${g}</b></li>`).join("")}</ul>` : ""}
       <div class="sc-sec">Contra quem marcou <small>${p.adversarios.length} clubes</small></div>
       ${p.adversarios.length ? `<ul class="sc-adv">${p.adversarios.map(([k, g]) => `<li>${crest(byId[k], 18)}<span>${byId[k].abbr}</span><i style="--w:${(g / maxAdv) * 100}%;background:${cor}"></i><b>${g}</b></li>`).join("")}</ul>` : `<p class="sc-none">Nenhum gol nas súmulas.</p>`}
@@ -535,7 +568,7 @@
             </div>
             ${byId[nextOf(id)] ? `<div class="card reveal"><div class="card-h">Próximo adversário</div>
               <a class="derby" href="#/clube/${nextOf(id)}">${crest(c, 34)}<span class="vs">VS</span>${crest(byId[nextOf(id)], 34)}<div style="margin-left:6px"><b>${byId[nextOf(id)].name}</b><br/><small style="color:var(--text-3)">${rowOf(nextOf(id)).pos}º · ${rowOf(nextOf(id)).p} pts</small></div></a></div>` : ""}
-            ${scorersCard(3, id)}
+            ${scorersCard(5, id)}
             ${c.idol ? `<div class="card idol reveal${c.idolPhoto ? " has-photo" : ""}">${c.idolPhoto ? `<img class="idol-photo" src="${c.idolPhoto}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('has-photo');this.remove()" />` : ""}<div class="eyebrow" style="color:inherit;opacity:.92;text-shadow:0 1px 3px rgb(0 0 0 / .5)">Ídolo eterno</div><h4>${c.idol}</h4>${c.idolPhoto ? `<small class="idol-credit">Foto: Wikimedia Commons</small>` : ""}</div>` : ""}
             ${LIVE.hasNews() ? `<div class="card news" data-news="${id}"><div class="card-h">Últimas notícias <small>Google Notícias</small></div><ul><li class="mam-empty">Buscando notícias…</li></ul></div>` : ""}
             <div class="card reveal">
@@ -624,7 +657,7 @@
         <div>
           ${voteCard(m)}
           <div class="card"><div class="card-h">Na tabela</div>${standingsTable(both, null, true)}${sourceNote}</div>
-          ${scorersCard(10, null, [m.home, m.away]).replace("Artilharia", "Artilheiros dos dois times")}
+          ${scorersDuel(m)}
         </div>
       </div>`;
   }
@@ -896,7 +929,8 @@
     if (enteringClub && !reduced) {
       await curtain(byId[next.id]);
     } else if (document.startViewTransition && !reduced) {
-      document.startViewTransition(() => render());
+      const vt = document.startViewTransition(() => render());
+      vt.ready.catch(() => {}); vt.finished.catch(() => {});
     } else {
       render();
     }
@@ -1127,7 +1161,7 @@
   });
   function soft() {
     const y = scrollY;
-    document.startViewTransition && !reduced ? document.startViewTransition(render) : render();
+    if (document.startViewTransition && !reduced) { const vt = document.startViewTransition(render); vt.ready.catch(() => {}); vt.finished.catch(() => {}); } else render();
     requestAnimationFrame(() => scrollTo(0, y));
   }
 
@@ -1139,8 +1173,9 @@
     // transição circular a partir do botão
     const { clientX: x, clientY: y } = e;
     const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
-    document.startViewTransition(go).ready.then(() =>
-      root.animate({ clipPath: [`circle(0 at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] }, { duration: 600, easing: "cubic-bezier(.22,1,.36,1)", pseudoElement: "::view-transition-new(root)" }));
+    const vt = document.startViewTransition(go); vt.finished.catch(() => {});
+    vt.ready.then(() =>
+      root.animate({ clipPath: [`circle(0 at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] }, { duration: 600, easing: "cubic-bezier(.22,1,.36,1)", pseudoElement: "::view-transition-new(root)" })).catch(() => {});
   });
 
   /* ---------- busca ---------- */
