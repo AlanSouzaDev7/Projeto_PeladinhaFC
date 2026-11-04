@@ -1,0 +1,54 @@
+# PLACAR — atualiza os dados do site sem depender de nenhum computador ligado.
+# A cada 30 minutos o GitHub roda a API em modo "snapshot" e grava os arquivos de dados em js/
+# (tabela, jogos, notícias, estatísticas dos jogadores e histórico dos clubes). O GitHub Pages
+# publica o resultado sozinho. Placar ao vivo e minuto a minuto rodam no navegador, direto da ESPN.
+name: Atualizar dados
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # horário UTC; o GitHub pode atrasar alguns minutos
+  workflow_dispatch:          # botão "Run workflow" na aba Actions
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dados
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TZ: America/Sao_Paulo   # "atualizado em ..." no horário de Brasília
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # súmulas dos jogos encerrados não mudam: guardar entre execuções evita baixar ~330 jogos toda vez
+      - name: Súmulas já baixadas
+        uses: actions/cache@v4
+        with:
+          path: server/cache/partidas.json
+          key: partidas-${{ github.run_id }}
+          restore-keys: partidas-
+
+      - name: Gerar dados
+        run: python -X utf8 server/placar_api.py --snapshot
+
+      - name: Publicar se algo mudou
+        run: |
+          git config user.name "placar-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/live-data.js js/player-stats.js js/club-form.js
+          if git diff --cached --quiet; then
+            echo "Nada novo."
+          else
+            git commit -m "Dados atualizados ($(date '+%d/%m %H:%M'))"
+            git pull --rebase origin main
+            git push
+          fi

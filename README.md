@@ -19,6 +19,17 @@ python -X utf8 server/placar_api.py
 Abra <http://localhost:8000>. A API serve o site e mantém os dados atualizados em segundo plano.
 Sem a API (por exemplo, `python -m http.server`), o site funciona com os dados gravados em `js/`.
 
+### Sem depender de um computador ligado
+
+O site publicado no GitHub Pages se mantém atualizado sozinho:
+
+| O quê | Como |
+|---|---|
+| Placar ao vivo, intervalo, próximas rodadas, temporada dos clubes, minuto a minuto | o navegador consulta a ESPN direto (a cada 20 s durante os jogos) |
+| Tabela, cartões, notícias, pendurados, lesões, minutagem, histórico | o **GitHub Actions** ([`.github/workflows/dados.yml`](.github/workflows/dados.yml)) roda `server/placar_api.py --snapshot` a cada 30 min e grava `js/live-data.js`, `js/player-stats.js` e `js/club-form.js` |
+
+Para atualizar na hora: aba **Actions** do repositório › **Atualizar dados** › **Run workflow**.
+
 ## O que tem
 
 | Área | Descrição |

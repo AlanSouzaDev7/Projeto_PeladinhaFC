@@ -25,6 +25,21 @@
     PD.LIVE = true;
   }
 
+  /* sem a API: dados gravados a cada 30 min pelo GitHub Actions (js/live-data.js) */
+  function applySnapshot(d) {
+    if (!d || !d.standings) return;
+    PD.REAL.table = d.standings;
+    if (d.scorers) PD.REAL.scorers = d.scorers;
+    PD.REAL.updated = d.updated;
+    PD.REAL.source = "ESPN";
+    if (d.fixtures) {
+      for (const k of Object.keys(PD.FIXTURES)) delete PD.FIXTURES[k];
+      Object.assign(PD.FIXTURES, d.fixtures);
+    }
+    PD.ROUNDS = Object.keys(PD.FIXTURES).map(Number).sort((a, b) => a - b);
+    PD.ROUND = d.round || PD.ROUND;
+  }
+
   async function fetchState(timeout = 2500) {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), timeout);
@@ -117,7 +132,11 @@
   /* o site espera isto antes de desenhar a primeira tela; sem a API, busca as próximas rodadas na ESPN (no máximo 4 s) */
   const timeout = (p, ms) => Promise.race([p, new Promise((res) => setTimeout(res, ms))]);
   window.PD_BOOT = location.protocol.startsWith("http")
-    ? fetchState().then((s) => (s ? apply(s) : timeout(addUpcoming().catch(() => {}), 4000)))
+    ? fetchState().then((s) => {
+        if (s) return apply(s);
+        applySnapshot(window.LIVE_DATA);
+        return timeout(addUpcoming().then(() => (PD.ROUND = currentRound())).catch(() => {}), 4000);
+      })
     : Promise.resolve();
 
   /* atualização em segundo plano a cada minuto */
@@ -183,11 +202,58 @@
       <b>${n.home.name} ${n.home.score} x ${n.away.score} ${n.away.name}</b></div>`;
   }
 
+  /* narração própria a partir dos lances da súmula da ESPN (a mesma regra da API em Python) */
+  async function narrate(eid) {
+    let d = null;
+    for (const lg of ["bra.1", "bra.copa_do_brazil", "conmebol.libertadores", "conmebol.sudamericana"]) {
+      try {
+        const r = await (await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${lg}/summary?event=${eid}`, { cache: "no-store" })).json();
+        if (r.header) { d = r; break; }
+      } catch { /* tenta a próxima competição */ }
+    }
+    if (!d) return null;
+    const comp = d.header.competitions[0];
+    const home = comp.competitors.find((c) => c.homeAway === "home"), away = comp.competitors.find((c) => c.homeAway === "away");
+    const tname = Object.fromEntries(comp.competitors.map((c) => [c.team.id, c.team.displayName]));
+    const score = { [home.team.id]: 0, [away.team.id]: 0 };
+    const placar = () => `${tname[home.team.id]} ${score[home.team.id]} x ${score[away.team.id]} ${tname[away.team.id]}`;
+    const lines = [];
+    (d.keyEvents || []).forEach((k, i) => {
+      const typ = k.type?.type || "", clock = k.clock?.displayValue || "", tid = k.team?.id, team = tname[tid] || "";
+      const ps = (k.participants || []).map((p) => p.athlete.displayName);
+      let text = null, kind = typ;
+      if (typ === "kickoff") [text, kind] = ["Rola a bola! Começa a partida.", "status"];
+      else if (typ === "halftime") [text, kind] = [`Fim do primeiro tempo. ${placar()}.`, "status"];
+      else if (typ === "start-2nd-half") [text, kind] = ["Bola rolando para o segundo tempo.", "status"];
+      else if (["end-regular-time", "full-time", "end-of-game"].includes(typ)) [text, kind] = [`Fim de jogo! ${placar()}.`, "status"];
+      else if (k.scoringPlay && tid in score) {
+        score[tid]++;
+        if (typ === "own-goal") text = `GOL do ${team}! ${ps[0] || "O adversário"} manda contra o próprio gol. ${placar()}.`;
+        else if (typ.includes("penalty")) text = `GOL do ${team}! ${ps[0] || ""} cobra o pênalti e marca. ${placar()}.`;
+        else text = `GOL do ${team}! ${ps[0] || ""} marca${typ.includes("header") ? " de cabeça" : ""}${ps[1] ? `, com assistência de ${ps[1]}` : ""}. ${placar()}.`;
+        kind = "goal";
+      } else if (typ === "yellow-card") text = `Cartão amarelo para ${ps[0] || "jogador"} (${team}).`;
+      else if (typ === "red-card" || typ === "second-yellow-card") [text, kind] = [`Expulso! ${ps[0] || "Jogador"} (${team}) recebe o vermelho e deixa o ${team} com um a menos.`, "red-card"];
+      else if (typ === "substitution" && ps.length >= 2) text = `Substituição no ${team}: entra ${ps[0]}, sai ${ps[1]}.`;
+      else if (typ === "start-delay") [text, kind] = ["Jogo paralisado.", "status"];
+      else if (typ === "end-delay") [text, kind] = ["Partida reiniciada.", "status"];
+      else if (typ === "penalty---missed" || typ === "penalty-missed") text = `Perdeu! ${ps[0] || "O batedor"} (${team}) desperdiça o pênalti.`;
+      if (text) lines.push({ id: `${eid}-${i}`, min: clock, type: kind, text });
+    });
+    const st = comp.status;
+    return { state: st.type.state, clock: clockOf(st), detail: st.type.shortDetail,
+      home: { name: home.team.displayName, score: +home.score || 0 }, away: { name: away.team.displayName, score: +away.score || 0 }, lines };
+  }
+
   async function mountMam(el) {
     const id = el.dataset.mam;
     const list = el.querySelector(".mam-list"), top = el.querySelector(".mam-top");
     let n;
-    try { n = await (await fetch(`${API}/minuto-a-minuto/${id}`, { cache: "no-store" })).json(); } catch { n = null; }
+    if (PD.LIVE) {
+      try { n = await (await fetch(`${API}/minuto-a-minuto/${id}`, { cache: "no-store" })).json(); } catch { n = null; }
+    } else {
+      n = await narrate(id).catch(() => null);
+    }
     if (!n || !n.lines) { list.innerHTML = `<li class="mam-empty">Narração indisponível agora.</li>`; return; }
     top.innerHTML = head(n);
     const seen = new Set();
@@ -200,6 +266,20 @@
     list.innerHTML = n.lines.length ? "" : `<li class="mam-empty">${n.state === "pre" ? "A narração começa com a bola rolando." : "Sem lances registrados."}</li>`;
     add(n.lines.filter((l) => l.type !== "panorama"), false);
     if (n.state !== "in") return;
+    if (!PD.LIVE) {
+      // sem a API: o navegador consulta a súmula a cada 20 s enquanto o jogo estiver rolando
+      const timer = setInterval(async () => {
+        if (!el.isConnected) return clearInterval(timer);
+        const p = await narrate(id).catch(() => null);
+        if (!p) return;
+        top.innerHTML = head(p);
+        const empty = list.querySelector(".mam-empty"); if (empty) empty.remove();
+        add(p.lines, true);
+        if (p.state === "post") clearInterval(timer);
+      }, 20000);
+      streams.add({ close: () => clearInterval(timer) });
+      return;
+    }
     // ao vivo: cada lance novo chega pelo canal de eventos do servidor
     const es = new EventSource(`${API}/minuto-a-minuto/${id}/stream`);
     streams.add(es);
@@ -216,7 +296,7 @@
   async function mountNews(el) {
     const club = el.dataset.news;
     try {
-      const r = await (await fetch(`${API}/news?club=${club}`, { cache: "no-store" })).json();
+      const r = PD.LIVE ? await (await fetch(`${API}/news?club=${club}`, { cache: "no-store" })).json() : { items: window.LIVE_DATA?.news?.[club] || [] };
       const items = (r.items || []).slice(0, 6);
       if (!items.length) { el.querySelector("ul").innerHTML = `<li class="mam-empty">Nenhuma notícia nas últimas horas.</li>`; return; }
       const ago = (ts) => { const m = Math.round((Date.now() / 1000 - ts) / 60); return m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} d`; };
@@ -277,10 +357,11 @@
     form: cachedForm,
     mount(root) {
       streams.forEach((s) => s.close()); streams.clear();
-      if (!PD.LIVE) return;
       root.querySelectorAll("[data-mam]").forEach(mountMam);
       root.querySelectorAll("[data-news]").forEach(mountNews);
     },
     on: () => !!PD.LIVE,
+    // notícias: pela API ou pelas manchetes gravadas pelo GitHub Actions
+    hasNews: () => !!PD.LIVE || !!window.LIVE_DATA?.news,
   };
 })();

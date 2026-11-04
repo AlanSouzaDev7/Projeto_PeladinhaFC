@@ -433,7 +433,7 @@
               <a class="derby" href="#/clube/${nextOf(id)}">${crest(c, 34)}<span class="vs">VS</span>${crest(byId[nextOf(id)], 34)}<div style="margin-left:6px"><b>${byId[nextOf(id)].name}</b><br/><small style="color:var(--text-3)">${rowOf(nextOf(id)).pos}º · ${rowOf(nextOf(id)).p} pts</small></div></a></div>` : ""}
             ${scorersCard(3, id)}
             ${c.idol ? `<div class="card idol reveal${c.idolPhoto ? " has-photo" : ""}">${c.idolPhoto ? `<img class="idol-photo" src="${c.idolPhoto}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('has-photo');this.remove()" />` : ""}<div class="eyebrow" style="color:inherit;opacity:.8">Ídolo eterno</div><h4>${c.idol}</h4>${c.idolPhoto ? `<small class="idol-credit">Foto: Wikimedia Commons</small>` : ""}</div>` : ""}
-            ${LIVE.on() ? `<div class="card news" data-news="${id}"><div class="card-h">Últimas notícias <small>Google Notícias</small></div><ul><li class="mam-empty">Buscando notícias…</li></ul></div>` : ""}
+            ${LIVE.hasNews() ? `<div class="card news" data-news="${id}"><div class="card-h">Últimas notícias <small>Google Notícias</small></div><ul><li class="mam-empty">Buscando notícias…</li></ul></div>` : ""}
             <div class="card reveal">
               <div class="card-h">Ficha do clube</div>
               <div class="card-b" style="display:grid;gap:10px">
@@ -514,7 +514,7 @@
           <div class="card"><div class="card-h">Informações</div><div class="card-b" style="display:grid;gap:10px">
             ${info.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--text-2)">${k}</span><b style="text-align:right">${v}</b></div>`).join("")}
           </div>${m.status === "pending" ? `<div class="source">O resultado deste jogo ainda não foi lançado no site.</div>` : ""}</div>
-          ${m.espn && LIVE.on() ? `<div class="card mam" data-mam="${m.espn}"><div class="card-h">Minuto a minuto <small>lances: ESPN · narração: PLACAR</small></div>
+          ${m.espn ? `<div class="card mam" data-mam="${m.espn}"><div class="card-h">Minuto a minuto <small>lances: ESPN · narração: PLACAR</small></div>
             <div class="mam-top"></div><ul class="mam-list"><li class="mam-empty">Carregando a narração…</li></ul></div>` : ""}
           <div class="card"><div class="card-h">Comparação no campeonato <small>${REAL.source} · ${REAL.updated}</small></div><div class="card-b">${compareHTML(m)}</div></div>
         </div>

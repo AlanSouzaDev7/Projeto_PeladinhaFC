@@ -703,23 +703,43 @@ def update_players():
     log("estatísticas de jogadores atualizadas")
 
 
+LIVE_DATA_FILE = os.path.join(ROOT, "js", "live-data.js")
+
+
+def write_js(name, var, data, comment):
+    path = os.path.join(ROOT, "js", name)
+    open(path, "w", encoding="utf-8").write(f"/* PLACAR — {comment} (gerado por: python server/placar_api.py --snapshot) */\n"
+                                            f"window.{var} = " + json.dumps(data, ensure_ascii=False) + ";\n")
+    log("gravado", path)
+
+
 def write_snapshot():
-    """Grava js/player-stats.js para o site funcionar sem a API (GitHub Pages)."""
-    update_players()
+    """Grava os dados que o site usa sem a API (GitHub Pages): tabela, jogos, notícias, estatísticas e histórico.
+    Roda sozinho no GitHub Actions (.github/workflows/dados.yml) e pode ser rodado à mão."""
+    # a última gravação é a base: mantém as rodadas já montadas e os placares conhecidos
+    if os.path.exists(LIVE_DATA_FILE):
+        try:
+            src = open(LIVE_DATA_FILE, encoding="utf-8").read()
+            old = json.loads(src[src.index("= ") + 2:].rstrip().rstrip(";"))
+            state.update({k: old[k] for k in ("fixtures", "round") if old.get(k)})
+        except Exception as ex:
+            log("base anterior ignorada", ex)
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("jogadores", update_players), ("histórico", update_form)]
+    for name, fn in steps:  # uma etapa que falhar não impede as outras
+        try:
+            fn()
+        except Exception as ex:
+            log("falha em", name, ex)
     with lock:
-        data = state["players"]
-    path = os.path.join(ROOT, "js", "player-stats.js")
-    head = ("/* PLACAR — estatísticas de jogadores (gerado por: python server/placar_api.py --snapshot)\n"
-            "   Súmulas: ESPN · lesões: manchetes do Google Notícias que citam o jogador. */\n")
-    open(path, "w", encoding="utf-8").write(head + "window.PLAYER_STATS = " + json.dumps(data, ensure_ascii=False) + ";\n")
-    log("gravado", path)
-    update_form()
-    with lock:
-        fm = state["form"]
-    path = os.path.join(ROOT, "js", "club-form.js")
-    open(path, "w", encoding="utf-8").write("/* PLACAR — últimos 5 e próximos 5 jogos de cada clube (gerado por: python server/placar_api.py --snapshot). Fonte: ESPN. */\n"
-                                            "window.CLUB_FORM = " + json.dumps(fm, ensure_ascii=False) + ";\n")
-    log("gravado", path)
+        live = {k: state.get(k) for k in ("updated", "standings", "round", "fixtures", "scorers")}
+        live["news"] = {cid: [{k: x.get(k) for k in ("title", "link", "source", "ts", "tag")} for x in items[:8]] for cid, items in (state.get("news") or {}).items()}
+        players, form = state.get("players"), state.get("form")
+    if live["standings"]:
+        write_js("live-data.js", "LIVE_DATA", live, "tabela, jogos e manchetes (só título, fonte e link). Fontes: ESPN, CBF, Google Notícias")
+    if players:
+        write_js("player-stats.js", "PLAYER_STATS", players, "estatísticas de jogadores. Súmulas: ESPN · lesões: manchetes que citam o jogador")
+    if form:
+        write_js("club-form.js", "CLUB_FORM", form, "temporada de cada clube, últimos 5 e próximos 5 jogos. Fonte: ESPN")
 
 
 def news_query(q):
