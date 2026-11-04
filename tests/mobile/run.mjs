@@ -88,15 +88,16 @@ for (const D of DEVICES) {
         localStorage.removeItem("placar:xi2:flamengo");
         const lu = document.querySelector("[data-lineup]");
         const from = lu.querySelector('[data-slot="bench"][data-i="0"]'), to = [...lu.querySelectorAll('[data-slot="xi"]')].pop();
-        const name = from.querySelector(".nm").textContent, before = to.querySelector(".nm").innerText;
+        const full = (el) => (el.getAttribute("title") || "").split(" · ")[0]; // nome inteiro (no campo aparece abreviado)
+        const name = full(from), before = full(to);
         const p = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + 12]; };
         const ev = (type, el, [x, y]) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 7, pointerType: "touch", isPrimary: true }));
         const a = p(from), b = p(to);
         ev("pointerdown", from, a);
         for (let k = 1; k <= 8; k++) { await new Promise((r) => setTimeout(r, 16)); ev("pointermove", document, [a[0] + (b[0] - a[0]) * k / 8, a[1] + (b[1] - a[1]) * k / 8]); }
         ev("pointerup", document, b);
-        const after = [...document.querySelector("[data-lineup]").querySelectorAll('[data-slot="xi"]')].pop().querySelector(".nm").innerText.replace(/\n/g, " ");
-        return { moved: name, before: before.replace(/\n/g, " "), after, ok: after === name };
+        const after = full([...document.querySelector("[data-lineup]").querySelectorAll('[data-slot="xi"]')].pop());
+        return { moved: name, before, after, ok: after === name };
       });
     }
     res.errors = errors;

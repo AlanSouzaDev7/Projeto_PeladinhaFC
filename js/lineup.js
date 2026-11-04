@@ -17,15 +17,15 @@
   const BACK4 = [["LE", "D", 14, 22, 54, 3], ["ZAG", "D", 37, 17, 30, 6], ["ZAG", "D", 63, 17, 30, 5], ["LD", "D", 86, 22, 54, 2]];
   const BACK3 = [["ZAG", "D", 28, 18, 32, 6], ["ZAG", "D", 50, 15, 28, 5], ["ZAG", "D", 72, 18, 32, 4]];
   const F = {
-    "4-2-3-1": [GK, ...BACK4, ["VOL", "M", 40, 28, 44, 8], ["VOL", "M", 60, 28, 44, 4], ["PE", "F", 14, 40, 76, 11], ["MEI", "M", 50, 40, 72, 10], ["PD", "F", 86, 40, 76, 7], ["CA", "F", 50, 46, 88, 9]],
+    "4-2-3-1": [GK, ...BACK4, ["VOL", "M", 35, 28, 44, 8], ["VOL", "M", 65, 28, 44, 4], ["PE", "F", 14, 40, 76, 11], ["MEI", "M", 50, 40, 72, 10], ["PD", "F", 86, 40, 76, 7], ["CA", "F", 50, 46, 88, 9]],
     "4-3-3": [GK, ...BACK4, ["MC", "M", 31, 36, 60, 8], ["VOL", "M", 50, 30, 46, 4], ["MC", "M", 69, 36, 60, 7], ["PE", "F", 14, 44, 82, 11], ["CA", "F", 50, 46, 88, 9], ["PD", "F", 86, 44, 82, 10]],
-    "4-4-2": [GK, ...BACK4, ["ME", "M", 14, 34, 66, 11], ["VOL", "M", 40, 30, 50, 8], ["VOL", "M", 60, 30, 50, 4], ["MD", "M", 86, 34, 66, 7], ["CA", "F", 40, 44, 84, 10], ["CA", "F", 60, 44, 84, 9]],
+    "4-4-2": [GK, ...BACK4, ["ME", "M", 14, 34, 66, 11], ["VOL", "M", 37, 30, 50, 8], ["VOL", "M", 63, 30, 50, 4], ["MD", "M", 86, 34, 66, 7], ["CA", "F", 35, 44, 84, 10], ["CA", "F", 65, 44, 84, 9]],
     "4-1-4-1": [GK, ...BACK4, ["VOL", "M", 50, 28, 44, 4], ["ME", "M", 14, 36, 70, 11], ["MC", "M", 38, 36, 62, 10], ["MC", "M", 62, 36, 62, 8], ["MD", "M", 86, 36, 70, 7], ["CA", "F", 50, 46, 88, 9]],
-    "3-4-2-1": [GK, ...BACK3, ["ALE", "D", 8, 30, 70, 3], ["MC", "M", 40, 32, 52, 8], ["MC", "M", 60, 32, 52, 7], ["ALD", "D", 92, 30, 70, 2], ["MEI", "M", 36, 42, 78, 11], ["MEI", "M", 64, 42, 78, 10], ["CA", "F", 50, 46, 88, 9]],
-    "3-5-2": [GK, ...BACK3, ["ALE", "D", 8, 30, 70, 3], ["MC", "M", 33, 36, 60, 11], ["VOL", "M", 50, 30, 46, 8], ["MC", "M", 67, 36, 60, 7], ["ALD", "D", 92, 30, 70, 2], ["CA", "F", 40, 44, 84, 10], ["CA", "F", 60, 44, 84, 9]],
+    "3-4-2-1": [GK, ...BACK3, ["ALE", "D", 8, 30, 70, 3], ["MC", "M", 36, 32, 52, 8], ["MC", "M", 64, 32, 52, 7], ["ALD", "D", 92, 30, 70, 2], ["MEI", "M", 30, 42, 78, 11], ["MEI", "M", 70, 42, 78, 10], ["CA", "F", 50, 46, 88, 9]],
+    "3-5-2": [GK, ...BACK3, ["ALE", "D", 8, 30, 70, 3], ["MC", "M", 33, 36, 60, 11], ["VOL", "M", 50, 30, 46, 8], ["MC", "M", 67, 36, 60, 7], ["ALD", "D", 92, 30, 70, 2], ["CA", "F", 35, 44, 84, 10], ["CA", "F", 65, 44, 84, 9]],
     "5-3-2": [GK, ["ALE", "D", 8, 22, 60, 3], ["ZAG", "D", 30, 15, 28, 6], ["ZAG", "D", 50, 13, 26, 5], ["ZAG", "D", 70, 15, 28, 4], ["ALD", "D", 92, 22, 60, 2],
-      ["MC", "M", 32, 32, 54, 11], ["VOL", "M", 50, 28, 46, 8], ["MC", "M", 68, 32, 54, 7], ["CA", "F", 40, 42, 80, 10], ["CA", "F", 60, 42, 80, 9]],
-    "3-4-3": [GK, ...BACK3, ["ME", "M", 10, 32, 66, 3], ["MC", "M", 40, 30, 52, 8], ["MC", "M", 60, 30, 52, 7], ["MD", "M", 90, 32, 66, 2], ["PE", "F", 18, 44, 80, 11], ["CA", "F", 50, 46, 88, 9], ["PD", "F", 82, 44, 80, 10]],
+      ["MC", "M", 32, 32, 54, 11], ["VOL", "M", 50, 28, 46, 8], ["MC", "M", 68, 32, 54, 7], ["CA", "F", 35, 42, 80, 10], ["CA", "F", 65, 42, 80, 9]],
+    "3-4-3": [GK, ...BACK3, ["ME", "M", 10, 32, 66, 3], ["MC", "M", 36, 30, 52, 8], ["MC", "M", 64, 30, 52, 7], ["MD", "M", 90, 32, 66, 2], ["PE", "F", 18, 44, 80, 11], ["CA", "F", 50, 46, 88, 9], ["PD", "F", 82, 44, 80, 10]],
   };
   const FORMS = Object.keys(F);
   const GROUP = { G: "Goleiro", D: "Defensor", M: "Meio-campo", F: "Atacante" };
@@ -33,8 +33,8 @@
   const PREF = { GOL: [1], LD: [2, 13], ZAG: [3, 4, 14, 15], LE: [6, 16], ALD: [2, 13], ALE: [6, 16], VOL: [5, 15], MC: [8, 10, 18], MEI: [10, 20], ME: [11, 7], MD: [7, 11], PE: [11, 17], PD: [7, 17], CA: [9, 19, 99] };
 
   const players = (cid) => (SQ[cid] || []).map(([n, name, pos, age, id]) => ({ n, name, pos, age, id: String(id) }));
-  /* nome em duas linhas no campinho: primeiro nome em cima, sobrenome embaixo */
-  const twoLines = (name) => { const p = name.split(" "); return p.length < 2 ? [name, ""] : [p[0], p.slice(1).join(" ")]; };
+  /* nome numa linha só no campinho: até 12 letras inteiro; mais que isso, inicial + último sobrenome ("L. Rodriguez") */
+  const shortName = (name, max = 12) => { if (name.length <= max) return name; const p = name.split(" "); return p.length > 1 ? `${p[0][0]}. ${p.at(-1)}` : name; };
 
   /* ---------- escalação inicial ---------- */
   function fromLastMatch(cid) {
@@ -99,7 +99,7 @@
   function builder(cid, first = true) {
     const c = byId[cid], s = load(cid), ps = players(cid), map = Object.fromEntries(ps.map((p) => [p.id, p]));
     const inXI = new Set(s.xi), inBench = new Set(s.bench);
-    const base = (d) => 94 - d * 1.08;
+    const base = (d) => 96 - d * 1.14; // usa mais o comprimento do campo: linhas mais separadas
     const just = (a, i) => (ui.last && ui.last.some((x) => x.area === a && x.i === i) ? "just" : "");
     const list = ps.filter((p) => ui.filter === "all" || p.pos === ui.filter);
     const L = LAST[cid];
@@ -121,18 +121,23 @@
               <rect x="2" y="2" width="64" height="96"/><line x1="2" y1="50" x2="66" y2="50"/><circle cx="34" cy="50" r="9"/>
               <rect x="14" y="2" width="40" height="16"/><rect x="24" y="2" width="20" height="6"/><rect x="14" y="82" width="40" height="16"/><rect x="24" y="92" width="20" height="6"/>
             </svg>
-            ${F[s.f].map(([role, , l, dd, da], i) => {
-              const p = map[s.xi[i]], [a, b] = p ? twoLines(p.name) : [role, ""];
-              const [x, y] = (s.pos && s.pos[i]) || [l, base((dd + da) / 2)];
-              return `<div class="slot ${just("xi", i)}" data-slot="xi" data-i="${i}" style="left:${x}%;top:${y}%;--i:${i}">
-                ${tok(p, c)}<span class="nm">${a}${b ? `<br/>${b}` : ""}</span><small>${role}</small></div>`;
-            }).join("")}
+            ${(() => {
+              const pts = F[s.f].map(([, , l, dd, da], i) => (s.pos && s.pos[i]) || [l, base((dd + da) / 2)]);
+              // largura da etiqueta: até o vizinho mais perto na mesma linha (os nomes nunca se encostam)
+              const room = pts.map(([x, y], i) => Math.min(26, ...pts.filter(([, y2], j) => j !== i && Math.abs(y2 - y) < 9).map(([x2]) => Math.abs(x2 - x) - 1.5)));
+              return F[s.f].map(([role], i) => {
+                const p = map[s.xi[i]], [x, y] = pts[i], mw = Math.max(15, room[i]);
+                const nm = p ? (mw < 23 ? shortName(p.name, 9) : shortName(p.name)) : "vaga";
+                return `<div class="slot ${just("xi", i)}" data-slot="xi" data-i="${i}" style="left:${x}%;top:${y}%;--i:${i};--mw:${mw.toFixed(1)}cqw" title="${p ? `${p.name} · ${role}` : role}">
+                  <span class="tkw">${tok(p, c)}<i class="rl">${role}</i></span><span class="nm">${nm}</span></div>`;
+              }).join("");
+            })()}
           </div>
           <div class="lu-bench">
-            <div class="lu-h">Reservas <small>arraste para o campo para trocar</small></div>
+            <div class="lu-h"><span>Reservas</span><small>arraste para o campo para trocar</small></div>
             <div class="bench-row">${Array.from({ length: 12 }, (_, i) => {
               const p = map[s.bench[i]];
-              return `<div class="slot b ${just("bench", i)}" data-slot="bench" data-i="${i}">${tok(p, c)}<span class="nm">${p ? p.name : "vaga"}</span></div>`;
+              return `<div class="slot b ${just("bench", i)}" data-slot="bench" data-i="${i}" title="${p ? p.name : "vaga"}">${tok(p, c)}<span class="bn"><b>${p ? p.name : "Vaga"}</b><small>${p ? GROUP[p.pos] || "" : "arraste alguém"}</small></span></div>`;
             }).join("")}</div>
           </div>
         </div>

@@ -735,8 +735,12 @@ img.crest { object-fit: contain; }
 @keyframes swapIn { 0% { transform: scale(0.4); } 60% { transform: scale(1.18); } 100% { transform: none; } }
 .slot:hover { background: rgb(255 255 255 / 0.08); }
 .slot.sel, .slot.over { background: rgb(255 255 255 / 0.2); box-shadow: 0 0 0 2px #fff inset; }
-.slot .nm { font-size: 11px; font-weight: 800; line-height: 1.15; text-align: center; color: #fff; text-shadow: 0 1px 3px rgb(0 0 0 / 0.8); max-width: 92px; overflow-wrap: anywhere; }
-.slot small { font-size: 9px; font-weight: 800; color: rgb(255 255 255 / 0.65); letter-spacing: 0.06em; }
+/* ficha no campo: bolinha com a posição no canto e o nome numa etiqueta de uma linha */
+.slot .tkw { position: relative; display: grid; }
+.slot .rl { position: absolute; left: calc(100% - 9px); top: -5px; font: 800 11px/1 var(--font-display); font-stretch: 80%; font-style: normal; letter-spacing: 0.03em;
+  padding: 2px 4px; border-radius: 5px; background: #fff; color: #0b1020; box-shadow: 0 2px 5px rgb(0 0 0 / 0.35); }
+.slot .nm { font: 700 12.5px/1.2 var(--font-display); font-stretch: 85%; text-align: center; color: #fff; padding: 2px 8px; border-radius: 999px;
+  background: rgb(6 10 22 / 0.66); box-shadow: 0 2px 6px rgb(0 0 0 / 0.25); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .tk {
   width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font: 900 14px var(--font);
   background: var(--tc); color: var(--to); border: 2px solid var(--tb); box-shadow: 0 6px 12px rgb(0 0 0 / 0.35);
@@ -744,13 +748,18 @@ img.crest { object-fit: contain; }
 .tk.off { box-shadow: 0 0 0 3px #ff9f1c, 0 6px 12px rgb(0 0 0 / 0.35); }
 .tk.empty { background: rgb(0 0 0 / 0.25); border: 2px dashed rgb(255 255 255 / 0.6); color: #fff; }
 .lu-bench { margin-top: 12px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line-soft); }
-.lu-h { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; display: flex; justify-content: space-between; margin-bottom: 8px; }
-.lu-h small { color: var(--text-3); }
-.bench-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-.slot.b { position: static; transform: none; width: auto; animation: none; }
-.slot.b .nm { font-size: 10px; font-weight: 700; max-width: 100%; }
-.slot.b .nm { color: var(--text-2); text-shadow: none; }
-.slot.b .tk { width: 32px; height: 32px; font-size: 12px; }
+.lu-h { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; margin-bottom: 8px; }
+.lu-h span { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+.lu-h small { color: var(--text-3); font-size: 12px; }
+/* reservas: linhas com bolinha, nome inteiro e setor (2 colunas no campinho estreito, 3 ou mais no largo) */
+.bench-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 6px; }
+.slot.b { position: static; transform: none; width: auto; animation: none; display: flex; align-items: center; gap: 8px; padding: 5px 8px 5px 5px;
+  border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line-soft); justify-items: initial; }
+.slot.b:hover { background: var(--surface-3); }
+.slot.b .tk { width: 30px; height: 30px; font-size: 12px; flex: none; box-shadow: none; }
+.slot.b .bn { display: grid; min-width: 0; line-height: 1.15; }
+.slot.b .bn b { font-size: 12.5px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot.b .bn small { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lu-list ul { list-style: none; margin: 0; padding: 0; max-height: 640px; overflow: auto; }
 .lu-list li { display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border-top: 1px solid var(--line-soft); cursor: grab; user-select: none; transition: background 0.2s, opacity 0.2s; }
 .lu-list li .grip { color: var(--text-3); font-size: 16px; width: 14px; text-align: center; }
@@ -770,20 +779,19 @@ img.crest { object-fit: contain; }
 .lineup { --lu-h: calc(100vh - var(--header-h) - 64px - 128px); gap: 10px; }
 @supports (height: 100dvh) { .lineup { --lu-h: calc(100dvh - var(--header-h) - 64px - 128px); } }
 .lu-grid { grid-template-columns: auto minmax(0, 1fr); gap: 16px; }
-.lu-pitch { height: calc(var(--lu-h) - 104px); min-height: 380px; width: auto; aspect-ratio: 68 / 100; margin: 0; }
-.lu-bench { margin-top: 8px; padding: 8px 10px; width: calc((max(var(--lu-h) - 104px, 380px)) * 0.68); box-sizing: border-box; }
+.lu-pitch { height: calc(var(--lu-h) - 104px); min-height: 500px; width: auto; aspect-ratio: 68 / 100; margin: 0; }
+.lu-bench { margin-top: 8px; padding: 8px 10px; width: calc((max(var(--lu-h) - 104px, 500px)) * 0.68); box-sizing: border-box; }
 .lu-bench .lu-h { margin-bottom: 4px; }
-.bench-row { gap: 4px; }
-.slot.b { padding: 2px 0; }
-.slot.b .tk { width: 26px; height: 26px; font-size: 11px; }
-.slot.b .nm { font-size: 9px; line-height: 1.1; }
+.bench-row { gap: 5px; }
 .lu-list { display: flex; flex-direction: column; height: var(--lu-h); min-height: 484px; }
 .lu-list ul { flex: 1; max-height: none; }
 .lu-source, .lu-hint { font-size: 12px; }
 .lu-source { padding: 6px 12px; }
-.lu-pitch .tk { width: 34px; height: 34px; font-size: 13px; }
-.lu-pitch .slot { width: 84px; }
-.lu-pitch .slot .nm { font-size: 11px; max-width: 84px; }
+/* fichas do campo do tamanho do campo (cqw = % da largura do campinho) */
+.lu-pitch { container-type: inline-size; }
+.lu-pitch .tk { width: clamp(28px, 9cqw, 38px); height: clamp(28px, 9cqw, 38px); font-size: clamp(12px, 3.4cqw, 14px); }
+.lu-pitch .slot { width: var(--mw, 26cqw); max-width: 112px; gap: 3px; padding: 3px 0; }
+.lu-pitch .slot .nm { font-size: clamp(11px, min(3.35cqw, calc(var(--mw, 26cqw) * 0.165)), 13.5px); padding: 2px 6px; }
 
 /* minuto a minuto e notícias */
 .mam-top { padding: 12px 16px 0; }
@@ -863,7 +871,7 @@ img.crest { object-fit: contain; }
   .bp-head { grid-template-columns: 1fr; }
   .bp-side.r { justify-items: start; }
   .bp-side.r .chips { justify-content: flex-start; }
-  .bench-row { grid-template-columns: repeat(4, 1fr); }
+  .bench-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ==========================================================================
@@ -1535,9 +1543,8 @@ img.crest { object-fit: contain; }
 
   /* texto legível */
   .card-h small, .source, .league-h small, .legend, .lu-source, .lu-hint { font-size: 12px; }
-  .lu-pitch .slot .nm { font-size: 11px; }
   .lu-pitch .slot small { display: none; }
-  .slot.b .nm { font-size: 11px; }
+  .slot.b .bn b { font-size: 13px; }
   .lu-h small { font-size: 11px; }
   .source a { display: inline-block; padding: 12px 6px; margin: -12px -6px; }
 
