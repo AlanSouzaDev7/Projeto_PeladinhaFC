@@ -179,7 +179,7 @@
     const sym = SYM[id] || star(0, 0, 22, ink);
     const deco = DECO[id] ? DECO[id]() : "";
     const src = club.logo ? club.logo : "";
-    return `<div class="gb" data-goalbug="${id}" role="img" aria-label="Animação de gol do ${club.name}: ${club.short}, escudo e GOL!" style="--band:${band};--bink:${bink};--base:${base};--ink:${ink}">
+    return `<div class="gb" data-goalbug="${id}"${opts.atraso > 0 ? ` data-atraso="${opts.atraso}"` : ""} role="img" aria-label="Animação de gol do ${club.name}: ${club.short}, escudo e GOL!" style="--band:${band};--bink:${bink};--base:${base};--ink:${ink}">
       <div class="gb-bar">
         <div class="gb-neutral"><b class="gb-d gb-h"><i>${de}</i><i class="one">${para}</i></b><span class="gb-p">${BRAND_P}</span><b class="gb-d">${outro}</b></div>
         <div class="gb-art"><svg viewBox="0 0 360 76" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
@@ -198,7 +198,20 @@
   }
 
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  function start(el) {
+  // com cena no fundo, o placar espera a cena chegar no escudo ("?cena=8" adianta junto)
+  const pulo = +new URLSearchParams(location.search).get("cena") || 0;
+  function start(el, primeira) {
+    const atraso = Math.max(0, (+el.dataset.atraso || 0) - (primeira ? pulo : 0));
+    clearTimeout(el._w);
+    if (atraso && !reduced) {
+      el.classList.remove("play"); el.classList.add("wait");
+      el._w = setTimeout(() => { el.classList.remove("wait"); run(el); }, atraso * 1000);
+      return;
+    }
+    el.classList.remove("wait");
+    run(el);
+  }
+  function run(el) {
     const clock = el.querySelector(".gb-clock span"), fixo = el.querySelector(".gb-clock").dataset.fixo;
     clearInterval(el._t);
     if (fixo) { if (reduced) el.classList.add("still"); else { el.classList.remove("play"); void el.offsetWidth; el.classList.add("play"); } return; }
@@ -215,7 +228,7 @@
   function mount(root) {
     root.querySelectorAll(".gb:not([data-on])").forEach((el) => {
       el.dataset.on = "1";
-      start(el);
+      start(el, true);
       el.closest(".hero")?.addEventListener("click", (e) => { if (!e.target.closest("a,button,input")) start(el); });
     });
   }

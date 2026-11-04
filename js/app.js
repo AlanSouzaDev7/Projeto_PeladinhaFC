@@ -540,8 +540,8 @@
     }
 
     return `<div class="club-page">
-      <section class="hero hero--gb" data-short="${c.short}">
-        <div class="kit-bg" style="background:${kitBg(c)}"></div>
+      <section class="hero hero--gb ${HERO_SCENES.has(id) ? "hero--canvas" : ""}" data-short="${c.short}">
+        ${HERO_SCENES.has(id) ? `<canvas class="hero-canvas" data-hero-scene="${id}" aria-hidden="true"></canvas>` : `<div class="kit-bg" style="background:${kitBg(c)}"></div>`}
         <div class="hero-inner">
           <div class="hero-text">
             <div class="eyebrow">${c.nick} · desde ${c.founded}</div>
@@ -554,7 +554,7 @@
             </div>
             <div class="palette">${c.colors.map((col, i) => `<i style="background:${col};--i:${i}" title="${col}"></i>`).join("")}</div>
           </div>
-          <div class="hero-gb">${GOALBUG.html(c, SCENES.motto(id))}</div>
+          <div class="hero-gb">${GOALBUG.html(c, SCENES.motto(id), { atraso: HERO_SCENES.has(id) ? HERO_SCENES.crestTime(id) - 0.75 : 0 })}</div>
         </div>
       </section>
       <div class="club-tabs"><div class="tabs" data-tabs>
@@ -894,21 +894,28 @@
     el.innerHTML = "";
   }
 
-  /* ---------- comportamentos após renderizar ---------- */
-  function enhance() {
-    SCENES.mount(view);
-    GOALBUG.mount(view);
-    LINEUP.mount(view);
-    LIVE.mount(view);
-    featSwipe($("[data-feature]", view));
-    scorerCards(view);
-    // tinta deslizante das abas
+  function placeInk() {
     $$("[data-tabs]").forEach((t) => {
       const ink = $(".tab-ink", t), on = $(".tab.on", t);
       if (!ink || !on) return;
       ink.style.width = on.offsetWidth + "px";
       ink.style.transform = `translateX(${on.offsetLeft}px)`;
     });
+  }
+  new ResizeObserver(() => requestAnimationFrame(placeInk)).observe(document.documentElement);
+
+  /* ---------- comportamentos após renderizar ---------- */
+  function enhance() {
+    SCENES.mount(view);
+    HERO_SCENES.mount(view);
+    GOALBUG.mount(view);
+    LINEUP.mount(view);
+    LIVE.mount(view);
+    featSwipe($("[data-feature]", view));
+    scorerCards(view);
+    // tinta deslizante das abas (de novo quando a fonte terminar de carregar ou a tela mudar de tamanho)
+    placeInk();
+    document.fonts?.ready.then(placeInk);
     // contadores
     $$("[data-count]").forEach((el) => {
       const to = +el.dataset.count, sign = el.hasAttribute("data-sign");

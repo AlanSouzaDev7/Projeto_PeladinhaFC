@@ -43,12 +43,12 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | Área | Descrição |
 |---|---|
 | **Ao vivo** | Rodada agrupada por dia, navegação entre rodadas, favoritos, próximo jogo e artilharia. **Placar em tempo real** mesmo sem a API (no GitHub Pages também): com jogo perto do horário ou rolando, o navegador consulta o placar da ESPN a cada 20 s. As **próximas rodadas** entram sozinhas pelo calendário da ESPN (agrupadas por data, já que a ESPN não informa o número da rodada; jogos adiados aparecem marcados), e o site passa para a rodada seguinte quando a atual termina. |
-| **Clubes** | 20 páginas no tema de cada clube. O topo, de ponta a ponta da tela, abre com o **"GOL!" do clube no placar de transmissão**: o placar 0 · 0, a faixa com a sigla, o escudo saltando e o GOL! com o símbolo do clube no lugar do "O" (a raposa do Cruzeiro, o urubu do Flamengo, a Estrela Solitária do Botafogo, o gorro do Saci do Inter…). Depois o placar vira 1 · 0 e a frase do clube aparece embaixo. Toque no topo para ver o gol de novo. **Nos jogos ao vivo**, quando um clube marca, o GOL! dele aparece por cima de qualquer página, com o placar e o minuto do jogo (toque para abrir a partida). |
+| **Clubes** | 20 páginas no tema de cada clube. O topo, de ponta a ponta da tela, junta a **cena animada do clube** (o urubu voando sobre o Rio, a Via Láctea até o Cruzeiro do Sul, o galo cantando em BH…) com o **"GOL!" do clube no placar de transmissão**: a cena termina exatamente onde o escudo salta no placar, e então vêm o placar 0 · 0, a faixa com a sigla, o escudo saltando e o GOL! com o símbolo do clube no lugar do "O" (a raposa do Cruzeiro, o urubu do Flamengo, a Estrela Solitária do Botafogo, o gorro do Saci do Inter…). Depois o placar vira 1 · 0 e a frase do clube aparece embaixo. Toque no topo para ver o gol de novo. **Nos jogos ao vivo**, quando um clube marca, o GOL! dele aparece por cima de qualquer página, com o placar e o minuto do jogo (toque para abrir a partida). |
 | **Partidas do clube** | A temporada inteira de cada clube, mês a mês: todos os jogos e placares já disputados (com pênaltis) e os jogos por vir com o horário de Brasília; quando a CBF/Conmebol ainda não marcou o horário, aparece **"A definir"**. Filtro por competição (Brasileirão, Copa do Brasil, Libertadores, Sul-Americana, Recopa, Supercopa e estaduais cobertos pela ESPN: Carioca, Paulistão, Mineiro e Gauchão) e resumo de vitórias, empates, derrotas e gols. |
 | **Retrospecto** | Na visão geral de cada clube: **últimos 5 jogos** (V/E/D, placar, pênaltis, casa ou fora) e **próximos 5**, em todas as competições (Brasileirão, Copa do Brasil, Libertadores e Sul-Americana). Sem a API, a página busca a agenda atualizada direto da ESPN. |
 | **Estatísticas do elenco** | Na visão geral de cada clube e na aba "Estatísticas": **pendurados** (2 amarelos, o próximo suspende), **jogos seguidos**, **departamento médico** e **reservas mais usados** por minutagem. Cartões e minutos vêm das súmulas de todos os jogos do Brasileirão; lesões e pendurados são conferidos nas manchetes de ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra e dos setoristas cadastrados, com o número de fontes que confirmam cada caso. |
 | **Elenco** | Elencos reais, escalação do último jogo de cada clube e campinho interativo: arraste jogadores para trocar ou para qualquer ponto da grama; 8 formações. |
-| **Bora pro jogo** | Prancheta tática comparando dois times com e sem a bola, leitura tática e tendência do jogo (modelo simples). |
+| **Bora pro jogo** | Prancheta tática comparando dois times com e sem a bola, leitura tática e tendência do jogo (modelo simples). **Arraste os jogadores** (mouse ou dedo) para mudar a posição em tempo real: as setas de ataque acompanham, cada fase guarda as suas posições e "Restaurar posições" desfaz. |
 | **Tabela** | Classificação, números do campeonato e artilharia. Cada número (gols, ataque, defesa, amarelos, vermelhos) abre uma **subpágina de ranking** dos 20 clubes; passar o mouse ou segurar o dedo mostra uma prévia. |
 | **Partida** | Informações, comparação no campeonato e **Minuto a minuto** ao vivo. |
 
@@ -88,6 +88,8 @@ node tests/mobile/desempenho.mjs                   # carregamento, peso e saltos
 node tests/mobile/visual.mjs                       # prints do tema escuro e claro
 node tests/mobile/gol.mjs                          # o GOL! dos 20 clubes, quadro a quadro, no PC e no celular
 node tests/mobile/gol-ao-vivo.mjs                  # jogo simulado: o GOL! aparece em cada gol, com placar e minuto
+node tests/mobile/alinhamento.mjs                  # botões desalinhados em todas as páginas (PC, iPhone, Android)
+node tests/mobile/bora-arrastar.mjs                # arrastar jogadores na prancheta (mouse e dedo)
 ```
 
 ## Celular (iPhone e Android)
@@ -116,6 +118,8 @@ js/lineup.js          campinho interativo e "Bora pro jogo"
 js/scenes.js          aparições dos escudos nos cartões da lista de clubes
 js/goal-bug.js        o "GOL!" de cada clube no placar do topo (símbolos em SVG)
 js/backdrop.js        fundo com brilho nas bordas e pontinhos
+js/hero-scenes.js     motor das cenas em canvas do topo (e a do Cruzeiro)
+js/hero-scenes-clubes.js  cenas dos outros 19 clubes
 js/graphics.js        escudos, padrões de camisa e cores
 server/               API em Python
 assets/               marca do PLACAR.

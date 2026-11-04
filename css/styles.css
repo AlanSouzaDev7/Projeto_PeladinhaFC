@@ -416,6 +416,7 @@ img, svg { display: block; }
   position: absolute;
   z-index: 0;
   top: 10px;
+  left: 0; /* sem isso a tinta parte da posição do primeiro botão e ficava deslocada 12 px */
   height: calc(100% - 20px);
   border-radius: 999px;
   background: var(--accent);
@@ -827,7 +828,17 @@ img.crest { object-fit: contain; }
 .bt {
   position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 1px;
   transition: left 0.9s var(--ease), top 0.9s var(--ease); z-index: 1;
+  cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
+/* área de toque maior que a bolinha (dedo) */
+.bt::before { content: ""; position: absolute; left: 50%; top: 0; width: 44px; height: 44px; transform: translate(-50%, calc(clamp(22px, 3vw, 34px) / 2 - 22px)); border-radius: 50%; }
+.bt.grab { transition: none; z-index: 5; cursor: grabbing; }
+.bt.grab span { transform: scale(1.18); box-shadow: 0 0 0 4px rgb(255 255 255 / 0.35), 0 10px 22px rgb(0 0 0 / 0.5); }
+.bt span { transition: transform 0.15s var(--ease), box-shadow 0.15s; }
+.bt.moved span { outline: 2px dashed rgb(255 255 255 / 0.7); outline-offset: 2px; }
+.board-card.dragging .board-arrows .arw { animation: none; }
+.board-tip { margin-left: auto; align-self: center; font-size: 12px; color: var(--text-3); }
+.bt em { max-width: 9.5em; overflow: hidden; text-overflow: ellipsis; }
 .bt span {
   width: clamp(22px, 3vw, 34px); height: clamp(22px, 3vw, 34px); border-radius: 50%; display: grid; place-items: center;
   font: 900 clamp(10px, 1.1vw, 13px) var(--font); background: var(--tc); color: var(--to); border: 2px solid var(--tb); box-shadow: 0 4px 10px rgb(0 0 0 / 0.4);
@@ -874,6 +885,11 @@ img.crest { object-fit: contain; }
 
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1.2;
   padding: 7px 14px;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -1857,6 +1873,14 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
    Medidas em em: o placar inteiro cresce ou encolhe com o font-size.
    ========================================================================== */
 .hero--gb { min-height: 440px; padding-bottom: 56px; }
+/* cena em canvas no fundo (o urubu sobre o Rio, a Via Láctea do Cruzeiro…), terminando no escudo do placar */
+.hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -3; display: block; cursor: pointer; }
+.hero--canvas { background: #020a24; min-height: 480px; }
+.hero--canvas::before { background: linear-gradient(to top, var(--bg) 0%, transparent 22%); }
+.hero--canvas::after { display: none; }
+.gb.wait { opacity: 0; }
+.gb.wait + .gb-motto { opacity: 0; animation: none; }
+.gb { transition: opacity 0.2s; }
 .hero--gb .hero-inner { grid-template-columns: minmax(0, 1fr) auto; gap: 40px; min-height: 340px; }
 .hero-gb { font-size: clamp(12px, 1.1vw, 16px); justify-self: end; cursor: pointer; }
 .gb { position: relative; width: 37.5em; padding-bottom: 2.1em; }
@@ -1964,3 +1988,4 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
   .hero--gb { min-height: 0; padding-top: 26px; padding-bottom: 30px; }
   .gb-motto b { font-size: 18px; }
 }
+@media (max-width: 700px) { .board-tip { margin-left: 0; width: 100%; } }

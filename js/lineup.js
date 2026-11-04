@@ -251,6 +251,12 @@
      Bora pro jogo — prancheta tática comparando duas escalações
      ========================================================================== */
   const bp = { phase: "def", timer: null };
+  // posições que o usuário arrastou: { "a|b": { def: { "a3": [x, y] }, a: {...}, b: {...} } } (x, y em % do campo)
+  const BKEY = "placar:bora";
+  const custom = (() => { try { return JSON.parse(localStorage.getItem(BKEY)) || {}; } catch { return {}; } })();
+  const saveCustom = () => { try { localStorage.setItem(BKEY, JSON.stringify(custom)); } catch { /* sem armazenamento */ } };
+  const pairOf = (root) => root.dataset.board;
+  const moved = (root, phase) => custom[pairOf(root)]?.[phase] || {};
 
   function shape(cid) {
     const s = load(cid), map = Object.fromEntries(players(cid).map((p) => [p.id, p]));
@@ -291,18 +297,22 @@
   function layoutBoard(root, a, b) {
     const phase = bp.phase;
     const arrows = [];
+    const mine = moved(root, phase), base = moved(root, "def");
     const put = (cid, side) => {
       const sh = shape(cid), attacking = phase === side;
       root.querySelectorAll(`.bt[data-side="${side}"]`).forEach((el) => {
-        const s = sh[+el.dataset.i];
+        const s = sh[+el.dataset.i], k = side + el.dataset.i;
         const d = attacking ? s.da : phase === "def" ? s.dd : Math.max(4, s.dd - (s.g === "G" ? 0 : 6));
         // quem defende fecha o bloco para o meio
         const lat = phase !== "def" && !attacking ? 50 + (s.l - 50) * 0.78 : s.l;
-        const x = side === "a" ? d : 100 - d, y = side === "a" ? lat : 100 - lat;
+        let x = side === "a" ? d : 100 - d, y = side === "a" ? lat : 100 - lat;
+        if (mine[k]) [x, y] = mine[k];
         el.style.left = `${x}%`; el.style.top = `${y}%`;
-        if (attacking && s.da - s.dd >= 18) {
-          const x0 = side === "a" ? s.dd : 100 - s.dd;
-          arrows.push(`<line x1="${x0}" y1="${y}" x2="${x}" y2="${y}" class="arw ${side}" marker-end="url(#ah-${side})"/>`);
+        el.classList.toggle("moved", !!mine[k]);
+        // seta: da posição sem a bola até a posição com a bola (as duas podem ter sido arrastadas)
+        if (attacking) {
+          const [x0, y0] = base[k] || [side === "a" ? s.dd : 100 - s.dd, side === "a" ? s.l : 100 - s.l];
+          if (Math.hypot(x - x0, (y - y0) * 0.65) >= 12) arrows.push(`<line x1="${x0}" y1="${y0}" x2="${x}" y2="${y}" class="arw ${side}" marker-end="url(#ah-${side})"/>`);
         }
       });
     };
@@ -310,6 +320,8 @@
     const svg = root.querySelector(".board-arrows g");
     if (svg) svg.innerHTML = arrows.join("");
     root.querySelectorAll("[data-phase]").forEach((x) => x.classList.toggle("on", x.dataset.phase === phase));
+    const reset = root.querySelector("[data-board-reset]");
+    if (reset) reset.hidden = !Object.keys(mine).length;
     const cap = root.querySelector(".board-cap");
     if (cap) cap.textContent = phase === "def" ? "Os dois times organizados sem a bola: linhas, blocos e encaixes." : `${byId[phase === "a" ? a : b].abbr} com a bola: as setas mostram quem avança e por onde o time ataca; o rival recua e fecha o bloco.`;
   }
@@ -341,6 +353,8 @@
           <button class="chip" data-phase="a">${A.abbr} ataca</button>
           <button class="chip" data-phase="b">${B.abbr} ataca</button>
           <button class="chip" data-phase-play>▶ Simular</button>
+          <button class="chip" data-board-reset hidden>↺ Restaurar posições</button>
+          <span class="board-tip">Arraste os jogadores para mudar a posição</span>
         </div>
         <div class="board">
           <svg class="board-lines" viewBox="0 0 105 68" preserveAspectRatio="none" fill="none" stroke="rgba(255,255,255,.5)" stroke-width=".35">
@@ -385,6 +399,7 @@
       const [a, b] = board.dataset.board.split("|");
       const ph = e.target.closest("[data-phase]");
       if (ph) { stopSim(); bp.phase = ph.dataset.phase; layoutBoard(board, a, b); }
+      if (e.target.closest("[data-board-reset]")) { stopSim(); if (custom[pairOf(board)]) delete custom[pairOf(board)][bp.phase]; saveCustom(); layoutBoard(board, a, b); }
       if (e.target.closest("[data-phase-play]")) {
         if (bp.timer) return stopSim();
         const seq = ["def", "a", "def", "b"]; let k = 0;
@@ -406,6 +421,44 @@
     const [, , a = "flamengo", b = "palmeiras"] = location.hash.split("/");
     location.hash = pk.dataset.bpPick === "a" ? `#/bora-pro-jogo/${pk.value}/${b}` : `#/bora-pro-jogo/${a}/${pk.value}`;
   });
+
+  /* ---------- prancheta: arrastar jogadores em tempo real ---------- */
+  let grab = null;
+  document.addEventListener("pointerdown", (e) => {
+    const bt = e.target.closest(".board .bt");
+    if (!bt || e.button > 0) return;
+    const root = bt.closest(".board-card"), field = bt.closest(".board");
+    stopSim();
+    e.preventDefault();
+    bt.setPointerCapture?.(e.pointerId);
+    const r = field.getBoundingClientRect();
+    // guarda a distância entre o dedo e o ponto do jogador no campo (o jogador não "pula" para baixo do dedo)
+    const ax = r.left + (parseFloat(bt.style.left) / 100) * r.width, ay = r.top + (parseFloat(bt.style.top) / 100) * r.height;
+    grab = { bt, root, field, r, id: e.pointerId, dx: e.clientX - ax, dy: e.clientY - ay, moved: false };
+    bt.classList.add("grab");
+    root.classList.add("dragging");
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (!grab || e.pointerId !== grab.id) return;
+    const { r, bt, root } = grab;
+    const x = Math.max(1.5, Math.min(98.5, ((e.clientX - grab.dx - r.left) / r.width) * 100));
+    const y = Math.max(3, Math.min(97, ((e.clientY - grab.dy - r.top) / r.height) * 100));
+    bt.style.left = `${x}%`; bt.style.top = `${y}%`;
+    grab.moved = true;
+    const pair = pairOf(root), k = bt.dataset.side + bt.dataset.i;
+    ((custom[pair] ||= {})[bp.phase] ||= {})[k] = [+x.toFixed(1), +y.toFixed(1)];
+    // setas e marcações acompanham em tempo real
+    if (!grab.raf) grab.raf = requestAnimationFrame(() => { if (!grab) return; grab.raf = 0; const [a, b] = root.dataset.board.split("|"); layoutBoard(root, a, b); });
+  });
+  const drop = (e) => {
+    if (!grab || (e && e.pointerId !== grab.id)) return;
+    grab.bt.classList.remove("grab");
+    grab.root.classList.remove("dragging");
+    if (grab.moved) { saveCustom(); const [a, b] = grab.root.dataset.board.split("|"); layoutBoard(grab.root, a, b); }
+    grab = null;
+  };
+  document.addEventListener("pointerup", drop);
+  document.addEventListener("pointercancel", drop);
 
   /* chamado depois de renderizar a página */
   function mount(root) {
