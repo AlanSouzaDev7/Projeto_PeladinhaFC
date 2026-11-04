@@ -42,7 +42,7 @@ node tests/worker.mjs
 Testa o Worker com a API-Football simulada: nomes dos clubes, placar, intervalo, gol contra, filtro de times, memória entre visitantes e limite do dia.
 
 ```bash
-python -m http.server 5173
-BASE=http://localhost:5173 node tests/mobile/simulacao.mjs
+python -m http.server 5173 --bind 127.0.0.1
+BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 ```
 Roda um jogo hipotético ao vivo (Cruzeiro x Flamengo, ~3 min) em três cenários: só ESPN, com o Worker, e com o Worker fora do ar. Mede quantos segundos cada lance leva para aparecer no site.

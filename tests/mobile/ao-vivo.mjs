@@ -1,7 +1,7 @@
 /* Placar ao vivo sem a API (como no GitHub Pages): o navegador consulta a ESPN direto.
-   Uso: python -m http.server 5173  e depois  BASE=http://localhost:5173 node tests/mobile/ao-vivo.mjs */
+   Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  BASE=http://127.0.0.1:5173 node tests/mobile/ao-vivo.mjs */
 import { chromium, devices } from "playwright";
-const BASE = process.env.BASE || "http://localhost:5173";
+const BASE = process.env.BASE || "http://127.0.0.1:5173";
 const OUT = new URL("./out/", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
 const browser = await chromium.launch({ channel: "chrome" });
 const page = await (await browser.newContext({ ...devices["Pixel 7"], locale: "pt-BR" })).newPage();

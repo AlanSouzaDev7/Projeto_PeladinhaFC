@@ -1,7 +1,7 @@
 /* Retrospecto (últimos 5 e próximos 5) nos 20 clubes, no computador e no celular.
-   Uso: servidor rodando (API ou python -m http.server 5173) e  BASE=... node tests/mobile/retrospecto.mjs */
+   Uso: servidor rodando (API ou python -m http.server 5173 --bind 127.0.0.1) e  BASE=... node tests/mobile/retrospecto.mjs */
 import { chromium, devices } from "playwright";
-const BASE = process.env.BASE || "http://localhost:5173";
+const BASE = process.env.BASE || "http://127.0.0.1:5173";
 const OUT = new URL("./out/", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
 const browser = await chromium.launch({ channel: "chrome" });
 for (const [dev, opts] of [["pc", { viewport: { width: 1440, height: 900 } }], ["pixel7", devices["Pixel 7"]]]) {

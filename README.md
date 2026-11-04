@@ -35,7 +35,7 @@ Para atualizar na hora: aba **Actions** do repositório › **Atualizar dados** 
 Um Worker da Cloudflare ([`worker/`](worker/README.md)) guarda a chave da **API-Football** e entrega placar e lances ao site. Ele é ligado em [`js/config.js`](js/config.js). Com ele ligado, a API-Football vem primeiro e a ESPN fica de reserva (Worker fora do ar ou limite do plano esgotado). Um jogo hipotético simulado testa os três casos:
 
 ```bash
-BASE=http://localhost:5173 node tests/mobile/simulacao.mjs
+BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 ```
 
 ## O que tem
@@ -67,6 +67,27 @@ BASE=http://localhost:5173 node tests/mobile/simulacao.mjs
 
 Intervalos de atualização, portais monitorados e **setoristas** de cada clube ficam em [`server/config.json`](server/config.json).
 
+## Identidade visual
+
+Fundo escuro com **brilho nas bordas** (canto de cima à direita e de baixo à esquerda) e uma **grade de pontinhos** que acende, na cor do site ou do clube aberto, perto dos brilhos e em volta do mouse. Os cartões são levemente translúcidos, então o brilho passa por eles. O fundo é desenhado uma vez numa imagem ([`js/backdrop.js`](js/backdrop.js)) e só é redesenhado quando mudam a tela, o tema ou o clube, para não pesar na animação do topo.
+
+## Qualidade (QA) em PC e celular
+
+| Item | Resultado |
+|---|---|
+| Rolagem para os lados, alvos de toque, texto ≥ 11 px | sem problemas nas 11 páginas, no iPhone 15 e no Pixel 7 |
+| Contraste dos textos auxiliares | ≥ 4,5:1 no tema escuro e ≥ 4,4:1 no claro |
+| Carregamento (4G e processador 4× mais lento) | maior conteúdo em até ~2 s; saltos de layout ≤ 0,014 |
+| Peso da página | ~0,3–0,5 MB (escudos pequenos nas listas; temporada dos clubes só nas páginas de clube) |
+| Funções | rankings, estatísticas, retrospecto, partidas, rodadas, próximo jogo, ficha do artilheiro, site sem servidor, Worker e jogo simulado ao vivo |
+
+```bash
+python -m http.server 5173 --bind 127.0.0.1
+BASE=http://127.0.0.1:5173 npm run test:mobile     # PC, iPhone e Android: layout, toque, texto, acessibilidade
+node tests/mobile/desempenho.mjs                   # carregamento, peso e saltos de layout
+node tests/mobile/visual.mjs                       # prints do tema escuro e claro
+```
+
 ## Celular (iPhone e Android)
 
 O site é testado automaticamente num **iPhone 15** (motor WebKit, o mesmo do Safari) e num **Pixel 7** (Chrome Android), com [Playwright](https://playwright.dev):
@@ -91,6 +112,7 @@ js/live.js            troca a base pelos dados da API e liga minuto a minuto/not
 js/app.js             páginas, roteador e transições
 js/lineup.js          campinho interativo e "Bora pro jogo"
 js/scenes.js          aparições dos escudos (SVG, cartões e topo)
+js/backdrop.js        fundo com brilho nas bordas e pontinhos
 js/hero-scenes.js     motor de cenas em canvas para o topo (Cruzeiro)
 js/graphics.js        escudos, padrões de camisa e cores
 server/               API em Python

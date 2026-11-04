@@ -5,13 +5,13 @@
      API-Football  com o Worker (o código real de worker/ao-vivo.mjs, com a API-Football simulada)
      Worker caiu   Worker configurado, mas fora do ar: o site precisa voltar para a ESPN sozinho
    Mede, para cada lance, quantos segundos o site leva para mostrar (placar do topo e minuto a minuto).
-   Uso: python -m http.server 5173  e depois  BASE=http://localhost:5173 node tests/mobile/simulacao.mjs */
+   Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs */
 import { chromium, devices } from "playwright";
 import { readFileSync, writeFileSync } from "node:fs";
 import worker from "../../worker/ao-vivo.mjs";
 import { ROTEIRO, DURACAO, ESPN_ID, espnScoreboard, espnSummary, apiFootballFixture } from "../sim/jogo.mjs";
 
-const BASE = process.env.BASE || "http://localhost:5173";
+const BASE = process.env.BASE || "http://127.0.0.1:5173";
 const OUT = new URL("./out/", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
 const ROOT = new URL("../../", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
 const PROXY = "https://placar-ao-vivo.sim";

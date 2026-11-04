@@ -23,8 +23,12 @@ const PAGES = [
   ["bora", "#/bora-pro-jogo/flamengo/palmeiras"],
   ["partida", "#/partida/bragantino-x-santos-r34"],
   ["sobre", "#/sobre"],
+  ["ranking", "#/tabela/gols"],
+  ["partidas", "#/clube/cruzeiro/partidas"],
+  ["estatist", "#/clube/palmeiras/estatisticas"],
 ];
 const DEVICES = [
+  { name: "pc", engine: chromium, device: { viewport: { width: 1440, height: 900 } }, launch: { channel: "chrome" } },
   { name: "iphone15", engine: webkit, device: devices["iPhone 15"] },
   { name: "pixel7", engine: chromium, device: devices["Pixel 7"], launch: { channel: "chrome" } },
 ];
@@ -48,6 +52,13 @@ function audit() {
   const texts = [...document.querySelectorAll("body *")].filter((el) => vis(el) && [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()));
   const tiny = texts.filter((el) => parseFloat(getComputedStyle(el).fontSize) < 11);
   out.tinyText = tiny.length; out.tinySamples = [...new Set(tiny.map((el) => `${label(el)} (${getComputedStyle(el).fontSize})`))].slice(0, 6);
+  // acessibilidade básica: botões e links sem nome, imagens sem descrição, ids repetidos
+  const named = (el) => (el.getAttribute("aria-label") || el.textContent || el.title || el.querySelector("img[alt]")?.alt || "").trim();
+  out.unnamed = [...document.querySelectorAll("a[href], button")].filter((el) => vis(el) && !named(el)).map((el) => el.outerHTML.slice(0, 70)).slice(0, 5);
+  out.noAlt = [...document.querySelectorAll("img:not([alt])")].length;
+  const ids = [...document.querySelectorAll("[id]")].map((e) => e.id);
+  out.dupIds = [...new Set(ids.filter((x, i) => ids.indexOf(x) !== i))];
+  out.title = document.title;
   return out;
 }
 
@@ -101,11 +112,12 @@ writeFileSync(`${OUT}relatorio.json`, JSON.stringify(report, null, 2));
 for (const [dev, pages] of Object.entries(report)) {
   console.log(`\n=== ${dev} ===`);
   for (const [p, r] of Object.entries(pages)) {
-    const flags = [r.touchDrag && `arrastar com o dedo: ${r.touchDrag.ok ? "ok" : "FALHOU"} (${r.touchDrag.moved} no lugar de ${r.touchDrag.before})`, r.overflow && `ROLA PARA O LADO (${r.scrollW}px > ${r.vw}px)`, r.smallTaps && `${r.smallTaps}/${r.taps} alvos pequenos`, r.tinyText && `${r.tinyText} textos < 11px`, r.errors.length && `${r.errors.length} erros`, r.fps && `${r.fps} fps`].filter(Boolean);
+    const flags = [r.touchDrag && `arrastar com o dedo: ${r.touchDrag.ok ? "ok" : "FALHOU"} (${r.touchDrag.moved} no lugar de ${r.touchDrag.before})`, r.overflow && `ROLA PARA O LADO (${r.scrollW}px > ${r.vw}px)`, r.smallTaps && `${r.smallTaps}/${r.taps} alvos pequenos`, r.tinyText && `${r.tinyText} textos < 11px`, r.errors.length && `${r.errors.length} erros`, r.fps && `${r.fps} fps`, r.unnamed.length && `${r.unnamed.length} sem nome`, r.noAlt && `${r.noAlt} img sem alt`, r.dupIds.length && `ids repetidos: ${r.dupIds.join(",")}`].filter(Boolean);
     console.log(`${p.padEnd(8)} ${r.loadMs}ms  ${flags.join(" · ") || "ok"}`);
     if (r.wide.length) console.log("   largos:", r.wide.join(" | "));
     if (r.smallTapSamples.length) console.log("   toque:", r.smallTapSamples.join(" | "));
     if (r.tinySamples.length) console.log("   texto:", r.tinySamples.join(" | "));
     if (r.errors.length) console.log("   erros:", r.errors.slice(0, 3).join(" | "));
+    if (r.unnamed.length) console.log("   sem nome:", r.unnamed.join(" | "));
   }
 }

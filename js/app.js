@@ -147,7 +147,8 @@
 
   /* ---------- retrospecto: últimos 5 e próximos 5 jogos, em todas as competições ---------- */
   function formInner(id, d) {
-    if (!d || (!d.last?.length && !d.next?.length)) return `<div class="empty" style="padding:28px">Retrospecto ainda não disponível.</div>`;
+    if (!d) return `<div class="empty" style="padding:28px">Carregando o retrospecto…</div>`;
+    if (!d.last?.length && !d.next?.length) return `<div class="empty" style="padding:28px">Retrospecto ainda não disponível.</div>`;
     const c = byId[id];
     const oppCrest = (e) => (e.oppId && byId[e.oppId] ? crest(byId[e.oppId], 26) : e.oppLogo ? `<img class="crest" src="${e.oppLogo}" width="26" height="26" alt="" loading="lazy" />` : `<i class="fm-nocrest"></i>`);
     const dm = (iso) => iso.split("-").reverse().slice(0, 2).join("/");
@@ -417,8 +418,8 @@
           <div class="tabs" data-tabs>
             <span class="tab-ink"></span>
             <button class="tab ${state.filter === "all" ? "on" : ""}" data-filter="all">Todos</button>
-            <button class="tab ${state.filter === "ft" ? "on" : ""}" data-filter="ft">Encerrados (${counts.ft})</button>
-            <button class="tab ${state.filter === "ns" ? "on" : ""}" data-filter="ns">A disputar (${counts.ns})</button>
+            <button class="tab ${state.filter === "ft" ? "on" : ""}" data-filter="ft"><span class="l-long">Encerrados</span><span class="l-short">Fim</span> (${counts.ft})</button>
+            <button class="tab ${state.filter === "ns" ? "on" : ""}" data-filter="ns"><span class="l-long">A disputar</span><span class="l-short">A jogar</span> (${counts.ns})</button>
             <button class="tab ${state.filter === "fav" ? "on" : ""}" data-filter="fav">★ Favoritos</button>
           </div>
           <div class="league-h">${flagBR}<span>BRASIL: Série A <small>· ${round}ª rodada</small></span><a href="#/tabela">Tabela ›</a></div>
@@ -944,26 +945,42 @@
       el.addEventListener("pointerleave", () => { el.style.setProperty("--tilt-x", "0deg"); el.style.setProperty("--tilt-y", "0deg"); });
     });
     rankPreviews();
-    // sem a API (GitHub Pages), o retrospecto é atualizado direto da ESPN ao abrir o clube
-    $$("[data-history]").forEach((el) => {
-      const id = el.dataset.history;
+    // sem a API (GitHub Pages), o retrospecto é atualizado direto da ESPN ao abrir o clube;
+    // enquanto isso, mostra a temporada gravada (js/club-form.js, baixado só nas páginas de clube)
+    const paintForm = (el, d) => {
+      if (el.dataset.history) el.innerHTML = historyHTML(el.dataset.history, d);
+      else el.innerHTML = el.querySelector(".card-h").outerHTML + formInner(el.dataset.form, d);
+    };
+    $$("[data-history], [data-form]").forEach((el) => {
       if (LIVE.on()) return;
+      const id = el.dataset.history || el.dataset.form;
+      if (!window.CLUB_FORM?.clubs?.[id]) loadClubForm().then(() => { const d = window.CLUB_FORM?.clubs?.[id]; if (d && el.isConnected && !el.dataset.fresh) paintForm(el, d); });
       LIVE.form(id).then((d) => {
         if (!d || !el.isConnected) return;
         window.CLUB_FORM = window.CLUB_FORM || { clubs: {} };
         window.CLUB_FORM.clubs[id] = d;
-        el.innerHTML = historyHTML(id, d);
+        el.dataset.fresh = "1";
+        paintForm(el, d);
       }).catch(() => {});
     });
-    $$("[data-form]").forEach((el) => {
-      if (LIVE.on()) return;
-      LIVE.form(el.dataset.form).then((d) => {
-        if (!d || !el.isConnected) return;
-        window.CLUB_FORM = window.CLUB_FORM || { clubs: {} };
-        window.CLUB_FORM.clubs[el.dataset.form] = d;
-        el.innerHTML = el.querySelector(".card-h").outerHTML + formInner(el.dataset.form, d);
-      }).catch(() => {});
+  }
+
+  let formScript = null;
+  function loadClubForm() {
+    if (formScript) return formScript;
+    const before = window.CLUB_FORM;
+    formScript = new Promise((res) => {
+      const sc = document.createElement("script");
+      sc.src = "js/club-form.js";
+      sc.onload = sc.onerror = () => {
+        // o que já veio da ESPN nesta visita vale mais que o arquivo gravado
+        if (before?.clubs && window.CLUB_FORM?.clubs && before !== window.CLUB_FORM) Object.assign(window.CLUB_FORM.clubs, before.clubs);
+        else if (before && !window.CLUB_FORM) window.CLUB_FORM = before;
+        res();
+      };
+      document.head.appendChild(sc);
     });
+    return formScript;
   }
 
   /* prévia dos rankings: com o mouse, aparece ao passar por cima; no toque, segurar o dedo mostra,

@@ -1,7 +1,7 @@
 /* Site sem a API (como no GitHub Pages): tabela gravada, notícias e minuto a minuto direto da ESPN.
-   Uso: python -m http.server 5173  e depois  BASE=http://localhost:5173 node tests/mobile/sem-servidor.mjs */
+   Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  BASE=http://127.0.0.1:5173 node tests/mobile/sem-servidor.mjs */
 import { chromium, webkit, devices } from "playwright";
-const BASE = process.env.BASE || "http://localhost:5173";
+const BASE = process.env.BASE || "http://127.0.0.1:5173";
 const OUT = new URL("./out/", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
 for (const [name, eng, opts, launch] of [["pc", chromium, { viewport: { width: 1440, height: 900 } }, { channel: "chrome" }], ["pixel7", chromium, devices["Pixel 7"], { channel: "chrome" }], ["iphone15", webkit, devices["iPhone 15"], {}]]) {
   const b = await eng.launch(launch);

@@ -13,7 +13,7 @@
   --line-soft: #1c2638;
   --text: #e8edf6;
   --text-2: #9aa6bb;
-  --text-3: #66738a;
+  --text-3: #7f8ca3; /* contraste ≥ 4,5:1 sobre os cartões */
   --brand: #4f6bff;
   --brand-2: #8a9bff;
   --live: #ff3b5c;
@@ -50,7 +50,7 @@
   --line-soft: #e8ecf2;
   --text: #121826;
   --text-2: #4e5a6e;
-  --text-3: #8591a5;
+  --text-3: #647084; /* contraste ≥ 4,4:1 sobre o fundo claro */
   --shadow: 0 10px 30px -14px rgb(20 30 60 / 0.25);
   color-scheme: light;
 }
@@ -60,6 +60,8 @@
 *::after { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
+/* textos auxiliares (<small>) com no mínimo 11 px */
+small { font-size: max(11px, 0.8333em); }
 
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
@@ -84,25 +86,40 @@ img, svg { display: block; }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 
-/* ---------- fundo vivo ---------- */
+/* ---------- fundo vivo ----------
+   Desenhado em js/backdrop.js: brilho nas bordas nas cores do site/clube e grade de pontinhos que
+   acende perto dos brilhos e em volta do mouse. Antes do desenho, um degradê simples (sem custo). */
 .backdrop {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  overflow: hidden;
   background:
-    radial-gradient(900px 500px at 85% -10%, color-mix(in srgb, var(--c1) 22%, transparent), transparent 70%),
-    radial-gradient(700px 500px at -10% 110%, color-mix(in srgb, var(--c3) 14%, transparent), transparent 70%);
-  transition: background 0.8s var(--ease);
+    radial-gradient(70vmax 46vmax at 104% -6%, color-mix(in srgb, var(--c1) 28%, transparent), transparent 62%),
+    radial-gradient(60vmax 42vmax at -6% 106%, color-mix(in srgb, var(--c3) 18%, transparent), transparent 64%);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
 }
-.backdrop::after {
-  content: "";
+.backdrop.painted { background-color: transparent; }
+.backdrop-spot {
+  --step: 22px;
   position: absolute;
-  inset: 0;
-  background-image: radial-gradient(color-mix(in srgb, var(--text) 7%, transparent) 1px, transparent 1px);
-  background-size: 22px 22px;
-  mask-image: linear-gradient(to bottom, black, transparent 60%);
+  left: 0;
+  top: 0;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--accent) 80%, var(--text)) 1.3px, transparent 1.8px);
+  background-size: var(--step) var(--step);
+  -webkit-mask-image: radial-gradient(closest-side, black, transparent);
+  mask-image: radial-gradient(closest-side, black, transparent);
+  opacity: 0;
+  transition: opacity 0.4s;
+  will-change: transform;
 }
+.backdrop-spot.on { opacity: 0.85; }
+:root[data-theme="light"] .backdrop-spot.on { opacity: 0.6; }
 
 /* ==========================================================================
    Cabeçalho
@@ -282,7 +299,8 @@ img, svg { display: block; }
 .sticky { position: sticky; top: calc(var(--header-h) + 20px); }
 
 .card {
-  background: var(--surface);
+  /* um pouco translúcido: o brilho do fundo passa de leve pelos cartões */
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
   overflow: hidden;
@@ -764,7 +782,7 @@ img.crest { object-fit: contain; }
 .lu-source { padding: 6px 12px; }
 .lu-pitch .tk { width: 34px; height: 34px; font-size: 13px; }
 .lu-pitch .slot { width: 84px; }
-.lu-pitch .slot .nm { font-size: 10.5px; max-width: 84px; }
+.lu-pitch .slot .nm { font-size: 11px; max-width: 84px; }
 
 /* minuto a minuto e notícias */
 .mam-top { padding: 12px 16px 0; }
@@ -1145,7 +1163,7 @@ img.crest { object-fit: contain; }
 .chart .line { fill: none; stroke: var(--c1); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: draw 1.8s var(--ease) forwards 0.2s; }
 .chart .area { fill: url(#areaGrad); opacity: 0; animation: fade 1s ease forwards 1s; }
 .chart .grid line { stroke: var(--line-soft); }
-.chart text { fill: var(--text-3); font: 600 10px var(--font); }
+.chart text { fill: var(--text-3); font: 600 11px var(--font); }
 .chart .zone { opacity: 0.08; }
 .chart .dot { fill: var(--surface); stroke: var(--c1); stroke-width: 3; opacity: 0; animation: pop 0.4s var(--ease-bounce) forwards 1.9s; }
 :root[data-theme="light"] .chart .line { stroke: color-mix(in srgb, var(--c1) 85%, #000); }
@@ -1491,8 +1509,9 @@ img.crest { object-fit: contain; }
   .logo-mark { width: 40px; height: 40px; }
   .table td.club a { min-height: 40px; }
   .league-h a, .card-h small a, .card-h a { display: inline-block; padding: 12px 8px; margin: -12px -8px; }
+  .league-h a { margin-left: auto; }
   .chip { min-height: 38px; }
-  .tab { padding: 10px 14px; }
+  .tab { padding: 10px 12px; }
   .icon-btn { width: 44px; height: 44px; }
   .bottom-nav a { min-width: 56px; min-height: 44px; justify-content: center; }
 
@@ -1664,7 +1683,7 @@ img.crest { object-fit: contain; }
 .ps-b li.ps-note { display: block; margin: 2px 0 6px; padding: 10px 12px; border: 0; border-radius: 10px; border-left: 4px solid #f5c518;
   background: color-mix(in srgb, #f5c518 16%, var(--surface)); font-size: 12px; line-height: 1.4; color: var(--text-2); }
 .ps-b li.ps-note b { display: block; color: var(--text); font-size: 12.5px; white-space: normal; margin-bottom: 2px; }
-.ps-v small { font: 700 10px/1 var(--font); color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; margin-left: 2px; }
+.ps-v small { font: 700 11px/1 var(--font); color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; margin-left: 2px; }
 
 /* jogo adiado de rodada anterior, disputado junto com esta */
 .match .time .adiado { display: block; margin-top: 2px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #c99a00; }
@@ -1699,8 +1718,8 @@ img.crest { object-fit: contain; }
 .fm-comp { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fm-score { text-align: right; min-width: 0; }
 .fm-score b { font: 900 18px/1 var(--font-display); font-stretch: 75%; font-variant-numeric: tabular-nums; }
-.fm-score small { display: block; font-size: 10.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
-.fm-where { justify-self: end; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; padding: 3px 6px; border-radius: 6px; background: var(--line-soft); color: var(--text-2); }
+.fm-score small { display: block; font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+.fm-where { justify-self: end; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; padding: 3px 6px; border-radius: 6px; background: var(--line-soft); color: var(--text-2); }
 .fm-where.casa { background: color-mix(in srgb, var(--c1) 20%, var(--line-soft)); color: var(--text); }
 .fm .source { padding: 10px 16px 14px; }
 @media (max-width: 900px) { .fm-grid { grid-template-columns: minmax(0, 1fr); } }
@@ -1739,7 +1758,7 @@ img.crest { object-fit: contain; }
 .hm-score { font: 900 22px/1 var(--font-display); font-stretch: 75%; font-variant-numeric: tabular-nums; padding: 4px 10px; border-radius: 8px; background: var(--line-soft); white-space: nowrap; }
 .hm-score i { font-style: normal; opacity: .45; margin: 0 4px; font-size: 16px; }
 .hm-score.live { background: color-mix(in srgb, var(--loss, #e5383b) 20%, transparent); }
-.hm-mid small { font-size: 10.5px; color: var(--text-3); margin-top: 3px; white-space: nowrap; }
+.hm-mid small { font-size: 11px; color: var(--text-3); margin-top: 3px; white-space: nowrap; }
 .hm-mid small.live { color: var(--loss, #e5383b); font-weight: 800; }
 .hm-time { font-size: 14px; font-weight: 900; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line-soft); white-space: nowrap; }
 .hm-time.tbd { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #c99a00; border-color: color-mix(in srgb, #f5c518 50%, transparent); background: color-mix(in srgb, #f5c518 12%, transparent); }
@@ -1800,3 +1819,30 @@ img.crest { object-fit: contain; }
 .sc-clubes small { color: var(--text-3); }
 .sc-none { color: var(--text-3); margin: 0; font-size: 13px; }
 .sc-src { margin-top: 12px; font-size: 11px; color: var(--text-3); }
+
+/* rótulos curtos nas abas em telas estreitas */
+.l-short { display: none; }
+@media (max-width: 480px) { .l-long { display: none; } .l-short { display: inline; } }
+:root[data-theme="light"] .card { background: color-mix(in srgb, var(--surface) 94%, transparent); }
+
+/* ---------- QA: celular ---------- */
+@media (max-width: 720px) {
+  /* texto legível (mínimo 11 px) */
+  .chart text { font-size: 11px; }
+  .ps-v small, .match .time .adiado, .sc-ficha dt { font-size: 11px; }
+  .fm-score small, .fm-where, .hm-mid small { font-size: 11px; }
+  /* alvos de toque do "Próximo jogo" */
+  .feat-nav button { width: 42px; height: 42px; }
+  .feat-dots { gap: 0; }
+  .feat-dots button { width: 40px; height: 34px; }
+  .feat-dots button::after { inset: 14px 17px; }
+}
+/* cartões flutuantes fechados não ocupam espaço (evita rolagem lateral no iPhone) */
+.scorer-card { left: 0; top: 0; width: min(340px, calc(100vw - 24px)); visibility: hidden; transition: opacity 0.18s, transform 0.22s var(--ease), visibility 0s 0.22s; }
+.scorer-card.open { visibility: visible; transition: opacity 0.18s, transform 0.22s var(--ease), visibility 0s; }
+.rank-preview { left: 0; top: 0; max-width: calc(100vw - 24px); }
+.rank-preview:not(.open) { visibility: hidden; }
+/* nada de rolagem para os lados: efeitos de profundidade e sombras que passam da borda são recortados */
+main.view { overflow-x: clip; }
+/* reserva a altura da página enquanto ela carrega: o rodapé não aparece no alto e depois "pula" */
+main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh - var(--header-h)); }

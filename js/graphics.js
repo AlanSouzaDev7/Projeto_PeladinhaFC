@@ -64,7 +64,9 @@
   function crest(club, size = 28, vt = false) {
     if (!club.logo) return svgCrest(club, size, vt);
     const style = vt ? ` style="view-transition-name: crest-${club.id}"` : "";
-    return `<img class="crest" src="${club.logo}" alt="Escudo do ${club.name}" width="${size}" height="${size}" loading="lazy" decoding="async" data-club="${club.id}" data-size="${size}"${vt ? " data-vt" : ""}${style}/>`;
+    // escudos pequenos (listas) usam a miniatura de 120 px da Wikimedia: ~5 KB em vez de ~50 KB
+    const src = size <= 56 ? club.logo.replace("/330px-", "/120px-") : club.logo;
+    return `<img class="crest" src="${src}" alt="Escudo do ${club.name}" width="${size}" height="${size}" loading="lazy" decoding="async" data-club="${club.id}" data-size="${size}"${vt ? " data-vt" : ""}${style}/>`;
   }
   // se a imagem não carregar (sem internet, link quebrado), troca pelo escudo desenhado
   document.addEventListener("error", (e) => {
