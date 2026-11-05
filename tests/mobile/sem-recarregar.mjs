@@ -22,6 +22,12 @@ for (const [dev, opts] of [["pc", { viewport: { width: 1440, height: 900 } }], [
     details: cap ? [gol("268476", "Kevin Viveros", "3458")] : [], status: { displayClock: `${40 + n}'`, type: { state: "in", name: "STATUS_SECOND_HALF", shortDetail: `${40 + n}'` } },
     competitors: [{ homeAway: "home", score: String(cap), team: { id: "3458" } }, { homeAway: "away", score: "0", team: { id: "3454" } }] }] }] } }); });
   await p.route(/espn\.com.*standings/, (r) => r.fulfill({ json: TABELA }));
+  // os dados gravados também ficam como na noite do jogo (Athletico x Vasco rolando), qualquer que seja o dia do teste
+  await p.route(/js\/live-data\.js/, async (r) => {
+    const s = await (await r.fetch()).text(), d = JSON.parse(s.slice(s.indexOf("{"), s.lastIndexOf("}") + 1));
+    for (const gs of Object.values(d.fixtures)) for (const g of gs) if (g[0] === "athletico-pr" && g[1] === "vasco") { g[2] = 0; g[3] = 0; g[7] = "401841306"; g[8] = { state: "in", clock: "40'", detail: "40'", live: true, gols: [] }; }
+    r.fulfill({ body: `window.LIVE_DATA = ${JSON.stringify(d)};`, contentType: "application/javascript" });
+  });
   await p.route(/espn\.com.*summary/, (r) => r.fulfill({ json: {} }));
   await p.clock.resume();
 

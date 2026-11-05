@@ -42,6 +42,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 
 | Área | Descrição |
 |---|---|
+| **Faixa de notícias** | Logo abaixo do menu, em todas as páginas, como a tarja dos telejornais: o bloco do PLACAR. com a hora, a **manchete principal** em cima (troca a cada 8 s) e a **fita** com as outras passando embaixo (para com o mouse em cima; cada notícia abre a matéria). As principais notícias do futebol das últimas 24 h nos portais configurados (ge, UOL, ESPN, Lance!, Gazeta Esportiva e Terra), sem repetir o mesmo fato e no máximo 3 por portal, com o escudo dos clubes citados. **Atualiza a cada 30 min**, sozinha, sem recarregar a página. |
 | **Ao vivo** | Rodada agrupada por dia, navegação entre rodadas, favoritos, próximo jogo e artilharia. **Placar em tempo real** mesmo sem a API (no GitHub Pages também): com jogo perto do horário ou rolando, o navegador consulta o placar da ESPN a cada 12 s. **A página não se redesenha**: só o que mudou (placar, minuto, tabela, artilharia) é trocado no lugar, com um pulo discreto no número; a animação do topo, a rolagem e a ficha aberta continuam como estão. As **próximas rodadas** entram sozinhas pelo calendário da ESPN (agrupadas por data, já que a ESPN não informa o número da rodada; jogos adiados aparecem marcados), e o site passa para a rodada seguinte quando a atual termina. |
 | **Clubes** | 20 páginas no tema de cada clube. O topo, de ponta a ponta da tela, junta a **cena animada do clube** (o urubu voando sobre o Rio, a Via Láctea até o Cruzeiro do Sul, o galo cantando em BH…) com o **"GOL!" do clube no placar de transmissão**: a cena termina exatamente onde o escudo salta no placar, e então vêm o placar 0 · 0, a faixa com a sigla, o escudo saltando e o GOL! com o símbolo do clube no lugar do "O" (a raposa do Cruzeiro, o urubu do Flamengo, a Estrela Solitária do Botafogo, o gorro do Saci do Inter…). Depois o placar vira 1 · 0 e a frase do clube aparece embaixo. Toque no topo para ver o gol de novo. **Nos jogos ao vivo**, quando um clube marca, o GOL! dele aparece por cima de qualquer página, com quem marcou, o placar e o minuto do jogo (toque para abrir a partida). Com a aba em segundo plano ou a tela do celular apagada, o gol espera você voltar (até 10 min). **Últimas notícias** do clube: só manchetes que falam dele (nome ou apelido no título, sem "ex-Clube"). |
 | **Partidas do clube** | A temporada inteira de cada clube, mês a mês: todos os jogos e placares já disputados (com pênaltis) e os jogos por vir com o horário de Brasília; quando a CBF/Conmebol ainda não marcou o horário, aparece **"A definir"**. Filtro por competição (Brasileirão, Copa do Brasil, Libertadores, Sul-Americana, Recopa, Supercopa e estaduais cobertos pela ESPN: Carioca, Paulistão, Mineiro e Gauchão) e resumo de vitórias, empates, derrotas e gols. |
@@ -63,6 +64,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | `GET /api/rankings?tipo=gols\|ataque\|defesa\|amarelos\|vermelhos` | rankings do campeonato; os cartões somam a súmula de cada jogo encerrado depois da última tabela da CBF |
 | `GET /api/retrospecto?club=flamengo` | últimos 5 e próximos 5 jogos, em todas as competições; atualiza a cada 30 min e ao fim de cada jogo |
 | `GET /api/jogadores?club=flamengo` | pendurados, jogos seguidos, lesionados (com fontes) e minutagem dos reservas; atualiza a cada hora |
+| `GET /api/manchetes` | principais notícias do futebol para a faixa embaixo do menu (título, fonte, hora, link e clubes citados); atualiza a cada 30 min |
 | `GET /api/news?club=flamengo` | manchetes recentes do clube (título, fonte, data e link), só as que citam o clube no título pelo nome ou por um apelido (`apelidos` em `server/config.json`) |
 | `GET /api/minuto-a-minuto/<id>` | narração do jogo até o momento |
 | `GET /api/minuto-a-minuto/<id>/stream` | narração ao vivo via Server-Sent Events |
@@ -110,6 +112,7 @@ node tests/mobile/alinhamento.mjs                  # botões desalinhados em tod
 node tests/mobile/bora-arrastar.mjs                # arrastar jogadores na prancheta (mouse e dedo)
 node tests/mobile/bora-calor.mjs                   # mapa de calor de quem está sendo arrastado (PC e celular)
 node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! em tempo real (ESPN simulada, aba escondida)
+node tests/mobile/faixa.mjs                        # faixa de notícias: troca da manchete, fita, links, atualização sozinha a cada 30 min, reduzir movimento
 node tests/mobile/noticias.mjs                     # "Últimas notícias" do clube: só manchetes que falam dele (20 clubes, PC e celular)
 node tests/mobile/sem-recarregar.mjs                # com jogo rolando, a página não se redesenha sozinha (só o que mudou é trocado)
 node tests/mobile/fotos.mjs [prefixo]               # fotos das páginas principais (PC escuro, celular claro) para revisão visual
@@ -145,6 +148,7 @@ css/styles.css        estilos, temas por clube, animações
 js/data.js            clubes, tabela e jogos (base)
 js/squads.js          elencos e últimas escalações (base)
 js/live.js            troca a base pelos dados da API e liga minuto a minuto/notícias
+js/ticker.js          faixa de notícias embaixo do menu (manchete + fita)
 js/app.js             páginas, roteador e transições
 js/lineup.js          campinho interativo e "Bora pro jogo"
 js/heatmap.js         mapa de calor estimado (desenho e leitura das posições da ESPN)

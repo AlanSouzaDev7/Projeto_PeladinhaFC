@@ -22,6 +22,7 @@ Rotas
 
 Gera também o arquivo do site sem a API (GitHub Pages):  python server/placar_api.py --snapshot
   GET /api/news            [?club=id]     manchetes (título, fonte, data e link)
+  GET /api/manchetes                      principais notícias do futebol (faixa embaixo do menu), a cada 30 min
   GET /api/minuto-a-minuto/<id_espn>      narração completa do jogo até agora
   GET /api/minuto-a-minuto/<id_espn>/stream   o mesmo, ao vivo (Server-Sent Events)
 
@@ -57,7 +58,7 @@ COMP_NAME = {"bra.1": "Brasileirão", "bra.copa_do_brazil": "Copa do Brasil", "c
 FORM_LEAGUES = list(COMP_NAME)
 
 lock = threading.Lock()
-state = {"updated": None, "standings": None, "round": None, "fixtures": None, "squads": None, "last": None, "news": {}, "players": None, "errors": []}
+state = {"updated": None, "standings": None, "round": None, "fixtures": None, "squads": None, "last": None, "news": {}, "manchetes": None, "players": None, "errors": []}
 
 
 # situações do jogo em que o relógio da ESPN fica parado (ex.: "45'+7'" durante o intervalo)
@@ -962,7 +963,7 @@ def write_snapshot():
             state.update({k: old[k] for k in ("fixtures", "round") if old.get(k)})
         except Exception as ex:
             log("base anterior ignorada", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("jogadores", update_players), ("histórico", update_form)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("jogadores", update_players), ("histórico", update_form)]
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
             fn()
@@ -970,6 +971,7 @@ def write_snapshot():
             log("falha em", name, ex)
     with lock:
         live = {k: state.get(k) for k in ("updated", "standings", "round", "fixtures", "scorers")}
+        live["manchetes"] = state.get("manchetes")
         live["news"] = {cid: [{k: x.get(k) for k in ("title", "link", "source", "ts", "tag")} for x in items[:8]] for cid, items in (state.get("news") or {}).items()}
         players, form, positions = state.get("players"), state.get("form"), state.get("positions")
     if live["standings"]:
@@ -1033,6 +1035,9 @@ def about_club(cid, title):
             return False
     for n in names:
         for m in re.finditer(rf"(?<![\wÀ-ÿ]){re.escape(n)}(?![\wÀ-ÿ])", t):
+            # "Botafogo-SP", "Botafogo-PB": outro clube com o mesmo nome
+            if re.match(r"-[A-Z]{2}\b", t[m.end():]) and not re.search(r"-[A-Z]{2}$", n):
+                continue
             # "ex-Flamengo" e também "ex-Flamengo e Atlético-MG" (o "ex" vale para os dois)
             if re.search(r"ex-(?:[\wÀ-ÿ-]+(?:,| e) )*$", t[:m.start()], re.I):
                 continue
@@ -1064,6 +1069,59 @@ def update_news():
             state["news"][cid] = list(uniq.values())[:20]
         time.sleep(1)  # educado com o servidor de notícias
     log("notícias atualizadas")
+
+
+# ---------------------------------------------------------------------------
+# Manchetes do futebol (a faixa de notícias embaixo do menu)
+# ---------------------------------------------------------------------------
+HEADLINE_QUERIES = [
+    "Brasileirão OR \"Série A\" OR \"Série B\"",
+    "\"Copa do Brasil\" OR Libertadores OR \"Sul-Americana\"",
+    "\"Seleção Brasileira\" OR Ancelotti OR \"Copa do Mundo\"",
+    "futebol OR técnico OR contratação OR reforço",
+]
+
+
+def headline_key(title):
+    """Duas manchetes sobre o mesmo fato costumam repetir as primeiras palavras: compara as 6 primeiras, sem acento."""
+    w = re.sub(r"[^a-z0-9 ]", " ", strip_accents(title).lower()).split()
+    return " ".join(x for x in w if len(x) > 2)[:48]
+
+
+def update_headlines():
+    """As principais notícias do futebol nas últimas 24 h, dos portais configurados: as mais recentes primeiro,
+    sem repetir o mesmo fato, no máximo 3 por portal (para a faixa não ficar só com um site) e só de futebol."""
+    sites = " OR ".join(f"site:{x}" for x in CONFIG["fontes"])
+    items = []
+    for q in HEADLINE_QUERIES:
+        try:
+            items += news_query(f"({q}) ({sites}) when:1d")
+        except Exception as ex:
+            log("manchetes", q, ex)
+        time.sleep(1)
+    names = [n for c in CLUBS.values() for n in (c.get("apelidos") or [c["busca"]])]
+    clubs_re = r"\b(" + "|".join(re.escape(n) for n in names) + r")\b"
+    seen, per_site, out = set(), {}, []
+    for x in sorted(items, key=lambda x: -x["ts"]):
+        t = x["title"]
+        # só os portais configurados (o Google às vezes inclui outros sites na busca)
+        if CONFIG.get("fontes_nomes") and x["source"] not in CONFIG["fontes_nomes"]:
+            continue
+        if not t or not (re.search(FOOTBALL, t, re.I) or re.search(clubs_re, t)):
+            continue
+        k = headline_key(t)
+        if k in seen or per_site.get(x["source"], 0) >= 3:
+            continue
+        seen.add(k)
+        per_site[x["source"]] = per_site.get(x["source"], 0) + 1
+        clubs = sorted({cid for cid in CLUBS if about_club(cid, t)})
+        out.append({**{k2: x[k2] for k2 in ("title", "link", "source", "ts")}, "clubes": clubs})
+        if len(out) >= 14:
+            break
+    if out:
+        with lock:
+            state["manchetes"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "items": out}
+    log("manchetes atualizadas:", len(out))
 
 
 def persist():
@@ -1246,6 +1304,10 @@ class Handler(SimpleHTTPRequestHandler):
                 if club:
                     return self.send_json({"updated": pl["updated"], "club": club, **pl["clubs"].get(club, {})})
                 return self.send_json(pl)
+            if parts[1:] == ["manchetes"]:
+                with lock:
+                    m = state.get("manchetes")
+                return self.send_json(m) if m else self.send_json({"ok": False, "message": "carregando manchetes"}, 503)
             if parts[1:] == ["news"]:
                 with lock:
                     club = (q.get("club") or [None])[0]
@@ -1299,6 +1361,7 @@ def main():
     every(iv["tabela_e_jogos"], update_standings_and_fixtures)
     every(iv["elencos"], update_squads)
     every(iv["noticias"], update_news)
+    every(iv.get("manchetes", 30), update_headlines)
     every(iv.get("jogadores", 60), update_players)
     every(iv.get("retrospecto", 30), update_form)
     threading.Thread(target=live_loop, daemon=True).start()

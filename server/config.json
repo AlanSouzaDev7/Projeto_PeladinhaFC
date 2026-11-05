@@ -5,7 +5,8 @@
     "noticias": 15,
     "elencos": 360,
     "jogadores": 60,
-    "retrospecto": 30
+    "retrospecto": 30,
+    "manchetes": 30
   },
   "fontes": [
     "ge.globo.com",
@@ -208,5 +209,18 @@
         "Rubro-Negro Baiano"
       ]
     }
-  }
+  },
+  "fontes_nomes": [
+    "ge",
+    "ge.globo",
+    "Globo Esporte",
+    "UOL",
+    "UOL Esporte",
+    "ESPN",
+    "ESPN Brasil",
+    "LANCE!",
+    "Lance!",
+    "Gazeta Esportiva",
+    "Terra"
+  ]
 }

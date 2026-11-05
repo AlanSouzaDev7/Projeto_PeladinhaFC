@@ -2222,3 +2222,71 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .club-card p span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .club-card p span:last-child { flex-shrink: 0; }
 .club-card .crest-wrap { top: 16px; left: 16px; filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.35)) drop-shadow(0 0 1px rgb(255 255 255 / 0.5)); }
+
+/* ==========================================================================
+   Faixa de notícias embaixo do menu (tarja de telejornal)
+   Bloco do PLACAR. com a hora à esquerda; em cima, a manchete principal; embaixo, a fita passando.
+   Fica escura nos dois temas, como a tarja da TV.
+   ========================================================================== */
+.ticker { --tk-red: #d3121f; --tk-red2: #9f0a14; position: relative; z-index: 4; display: grid; grid-template-columns: auto 1fr;
+  margin: 12px 24px 0; border-radius: 12px; overflow: hidden; color: #fff; background: #0a1020;
+  box-shadow: 0 10px 26px -16px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.06) inset; animation: tkIn 0.6s var(--ease) both; }
+.ticker[hidden] { display: none; }
+@keyframes tkIn { from { opacity: 0; transform: translateY(-6px); } }
+.tk-tag { position: relative; display: grid; align-content: center; justify-items: start; gap: 1px; padding: 8px 22px 8px 16px;
+  background: linear-gradient(135deg, var(--tk-red), var(--tk-red2)); clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); }
+.tk-tag b { font: 900 21px/1 var(--font-display); font-stretch: 72%; letter-spacing: 0.05em; display: inline-flex; align-items: baseline; gap: 2px; }
+.tk-tag b i { width: 6px; height: 6px; border-radius: 1px; background: #fff; }
+.tk-tag span { font: 700 11px/1.1 var(--font-label); letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.92; }
+.tk-clock { font: 700 13px/1 var(--font-label); letter-spacing: 0.04em; margin-top: 3px; padding: 2px 6px; border-radius: 4px; background: rgb(0 0 0 / 0.28); font-variant-numeric: tabular-nums; }
+.tk-body { min-width: 0; display: grid; grid-template-rows: auto auto; }
+/* manchete principal */
+.tk-head { position: relative; height: 40px; overflow: hidden; background: linear-gradient(90deg, #0d1630, #0a1020 70%); }
+.tk-h { position: absolute; inset: 0; display: flex; align-items: center; gap: 12px; padding: 0 16px; color: #fff; text-decoration: none;
+  opacity: 0; transform: translateY(100%); transition: transform 0.6s var(--ease), opacity 0.45s; }
+.tk-h.on { opacity: 1; transform: none; }
+.tk-h.out { opacity: 0; transform: translateY(-100%); }
+.tk-h b { min-width: 0; font: 700 20px/1.1 var(--font-label); letter-spacing: 0.01em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tk-h small { flex-shrink: 0; font: 600 12px var(--font-label); letter-spacing: 0.04em; color: rgb(255 255 255 / 0.62); }
+.tk-h:hover b, .tk-h:focus-visible b { text-decoration: underline; text-decoration-color: var(--tk-red); text-underline-offset: 4px; }
+.tk-h:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+/* fita */
+.tk-run { position: relative; height: 30px; overflow: hidden; background: #eef1f7; color: #121826;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); }
+.tk-track { display: flex; width: max-content; height: 100%; animation: tkRun var(--tk-dur, 90s) linear infinite; }
+.ticker:hover .tk-track, .ticker:focus-within .tk-track { animation-play-state: paused; }
+@keyframes tkRun { to { transform: translateX(-50%); } }
+.tk-copy { display: flex; align-items: center; height: 100%; }
+.tk-item { display: inline-flex; align-items: center; gap: 7px; padding: 0 4px; white-space: nowrap; color: inherit; text-decoration: none; }
+.tk-item b { font: 600 14.5px var(--font-label); letter-spacing: 0.01em; }
+.tk-item small { font: 500 12px var(--font-label); color: #5b6679; }
+.tk-item .crest { width: 16px; height: 16px; }
+.tk-item:hover b, .tk-item:focus-visible b { color: var(--tk-red2); text-decoration: underline; text-underline-offset: 3px; }
+.tk-sep { width: 7px; height: 7px; margin: 0 16px; border-radius: 1px; background: var(--tk-red); transform: rotate(45deg); flex-shrink: 0; }
+@media (max-width: 700px) {
+  .ticker { margin: 8px 12px 0; border-radius: 10px; }
+  .tk-tag { padding: 6px 16px 6px 10px; }
+  .tk-tag b { font-size: 16px; }
+  .tk-tag span { display: none; }
+  .tk-clock { font-size: 12px; }
+  .tk-head { height: 36px; }
+  .tk-h { padding: 0 10px; }
+  .tk-h b { font-size: 16px; }
+  .tk-h small { display: none; }
+  .tk-run { height: 28px; }
+  .tk-item b { font-size: 13.5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker { animation: none; }
+  .tk-track { animation: none; }
+  .tk-run { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
+  .tk-h { transition: none; }
+}
+/* a faixa acompanha a largura do conteúdo da página */
+.ticker { width: min(1312px, calc(100% - 48px)); margin: 12px auto 0; }
+@media (max-width: 700px) { .ticker { width: calc(100% - 24px); margin: 8px auto 0; } }
+@media (max-width: 700px) {
+  /* celular: a manchete usa até duas linhas em vez de cortar */
+  .tk-head { height: 46px; }
+  .tk-h b { font-size: 15px; line-height: 1.12; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+}
