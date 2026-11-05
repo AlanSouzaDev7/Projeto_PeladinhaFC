@@ -191,8 +191,8 @@
         ? d.sequencia.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-sub">${p.titular} como titular</span><span class="ps-v">${p.jogos}</span></li>`).join("")
         : empty("Ninguém com 2 ou mais jogos seguidos.")],
       dmBlock(id, full, n, num, fmt, empty, d, src),
-      ["res", "Reservas mais usados", "minutos de quem foi titular em menos da metade dos jogos", d.reservas.length
-        ? (() => { const max = d.reservas[0].minutos || 1; return d.reservas.slice(0, full ? 99 : 5).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-sub">${p.jogos} jogos · ${p.titular} titular</span><span class="ps-v">${p.minutos}'</span><span class="ps-bar"><i data-w="${((p.minutos / max) * 100).toFixed(1)}"></i></span></li>`).join(""); })()
+      ["res", "Reservas mais usados", "minutos de quem mais entra saindo do banco", d.reservas.length
+        ? (() => { const max = d.reservas[0].minutos || 1; return d.reservas.slice(0, full ? 99 : 5).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-sub">${p.jogos} jogos · ${p.banco ?? p.jogos - p.titular} saindo do banco · ${p.titular} titular</span><span class="ps-v">${p.minutos}'</span><span class="ps-bar"><i data-w="${((p.minutos / max) * 100).toFixed(1)}"></i></span></li>`).join(""); })()
         : empty("Sem reservas com minutos.")],
     ];
     if (full && window.DM?.clubs?.[id]) blocks.push(dmHistBlock(window.DM.clubs[id], num, fmt, empty));
@@ -291,11 +291,13 @@
     return L ? L.geral : REAL.scorers.map(([n, c, g]) => [n, c, g, 0, false, null]);
   }
   const golHoje = (vivo, rolando) => (vivo ? `<span class="gol-hoje${rolando ? " on" : ""}" title="${vivo} ${vivo > 1 ? "gols" : "gol"} ${rolando ? "no jogo de agora" : "ainda fora das súmulas gravadas"}">+${vivo}${rolando ? " ao vivo" : ""}</span>` : "");
+  // artilheiro que já saiu do clube: os gols pelo clube continuam na lista, com o aviso
+  const saiuDo = (name, cid) => (window.PLAYER_STATS?.artilhariaClubes?.[cid] || []).some((x) => x.name === name && x.noClube === false);
   function clubTop(cid, n = 5) {
     const L = ART();
-    if (L && L.clubs[cid]) return L.clubs[cid].slice(0, n).map((p, k) => ({ name: p.name, gols: p.g, pos: L.posDe[p.aid], rank: k + 1, vivo: p.vivo, rolando: !!p.rolando }));
+    if (L && L.clubs[cid]) return L.clubs[cid].slice(0, n).map((p, k) => ({ name: p.name, gols: p.g, pos: L.posDe[p.aid], rank: k + 1, vivo: p.vivo, rolando: !!p.rolando, saiu: saiuDo(p.name, cid) }));
     const t = window.PLAYER_STATS?.artilhariaClubes?.[cid];
-    if (t) return t.slice(0, n).map((p) => ({ name: p.name, gols: p.gols, pos: p.pos, rank: p.rank }));
+    if (t) return t.slice(0, n).map((p) => ({ name: p.name, gols: p.gols, pos: p.pos, rank: p.rank, saiu: p.noClube === false }));
     return REAL.scorers.map(([name, c, gols], k) => ({ name, c, gols, pos: k + 1 })).filter((x) => x.c === cid).slice(0, n).map((x, k) => ({ ...x, rank: k + 1 }));
   }
   const scorerAttrs = (name, cid) => (scorerOf(name, cid) ? ` class="has-ficha" data-scorer="${name}|${cid}" tabindex="0" aria-label="Ficha de ${name}"` : "");
@@ -304,7 +306,7 @@
       const list = clubTop(clubId, limit), c = byId[clubId];
       if (!list.length) return "";
       return `<div class="card reveal" data-live="art-clube"><div class="card-h">Artilheiros do ${c.abbr} <small>Brasileirão</small></div>
-        <ul class="squad-list">${list.map((p) => `<li${scorerAttrs(p.name, clubId)}><span class="n">${p.rank}º</span><div style="flex:1;min-width:0"><b>${p.name}</b>${golHoje(p.vivo, p.rolando)}${p.pos ? `<small class="sl-sub">${p.pos}º na artilharia</small>` : ""}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(p.gols / list[0].gols) * 100}" style="background:${display(c)}"></i></div></div><b class="goals">${p.gols}</b>${scorerOf(p.name, clubId) ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`).join("")}</ul>
+        <ul class="squad-list">${list.map((p) => `<li${scorerAttrs(p.name, clubId)}><span class="n">${p.rank}º</span><div style="flex:1;min-width:0"><b>${p.name}</b>${golHoje(p.vivo, p.rolando)}${p.pos || p.saiu ? `<small class="sl-sub">${[p.pos ? `${p.pos}º na artilharia` : "", p.saiu ? "saiu do clube" : ""].filter(Boolean).join(" · ")}</small>` : ""}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(p.gols / list[0].gols) * 100}" style="background:${display(c)}"></i></div></div><b class="goals">${p.gols}</b>${scorerOf(p.name, clubId) ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`).join("")}</ul>
         ${list.some((p) => scorerOf(p.name, clubId)) ? `<div class="source">Clique (ou toque) no jogador para ver a ficha; clique de novo para fechar</div>` : ""}</div>`;
     }
     const geral = artilhariaGeral(), list = geral.slice(0, limit);
@@ -324,7 +326,7 @@
     const max = Math.max(H[0]?.gols || 0, A[0]?.gols || 0, 1);
     const tot = (L) => L.reduce((t, p) => t + p.gols, 0);
     const cell = (p, c, side) => p ? `<div class="sd-p sd-${side}${scorerOf(p.name, c.id) ? ` has-ficha" data-scorer="${p.name}|${c.id}" tabindex="0" aria-label="Ficha de ${p.name}` : ""}">
-        <span class="sd-nm"><b>${p.name}</b>${p.pos || p.vivo ? `<small>${p.pos ? `${p.pos}º geral` : ""}${golHoje(p.vivo, p.rolando)}</small>` : ""}</span>
+        <span class="sd-nm"><b>${p.name}</b>${p.pos || p.vivo || p.saiu ? `<small>${[p.pos ? `${p.pos}º geral` : "", p.saiu ? "saiu do clube" : ""].filter(Boolean).join(" · ")}${golHoje(p.vivo, p.rolando)}</small>` : ""}</span>
         <b class="sd-g">${p.gols}</b>
         <i class="sd-bar" style="--f:${(p.gols / max).toFixed(3)};--c:${display(c)}"></i></div>` : `<div class="sd-p sd-${side} sd-none">—</div>`;
     const rows = Array.from({ length: Math.max(H.length, A.length) }, (_, k) => `<li>${cell(H[k], h, "h")}<span class="sd-k">${k + 1}º</span>${cell(A[k], a, "a")}</li>`).join("");

@@ -64,7 +64,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | `GET /api/tabela-ao-vivo` | classificação em tempo real: a tabela da ESPN (que só conta jogos encerrados) mais o placar dos jogos em andamento e dos encerrados que ela ainda não contou, com quanto cada clube subiu ou caiu |
 | `GET /api/rankings?tipo=gols\|ataque\|defesa\|amarelos\|vermelhos` | rankings do campeonato; os cartões somam a súmula de cada jogo encerrado depois da última tabela da CBF |
 | `GET /api/retrospecto?club=flamengo` | últimos 5 e próximos 5 jogos, em todas as competições; atualiza a cada 30 min e ao fim de cada jogo |
-| `GET /api/jogadores?club=flamengo` | pendurados, jogos seguidos, lesionados (com fontes) e minutagem dos reservas; atualiza a cada hora |
+| `GET /api/jogadores?club=flamengo` | pendurados, jogos seguidos, lesionados (com fontes) e reservas mais usados: quem mais entra saindo do banco (pelo menos tantas vezes quanto começa jogando). Só entra quem está no elenco atual ou jogou um dos 3 últimos jogos; quem foi vendido sai das listas. Atualiza a cada hora |
 | `GET /api/departamento-medico[?club=cruzeiro]` | quem está no DM (situação, parte do corpo, desde quando, último jogo, veículos que confirmam e manchetes) e quem saiu na temporada, com o motivo; atualiza a cada hora (a cada 30 min pelo robô) |
 | `GET /api/arbitragem` | árbitro dos jogos dos próximos 8 dias segundo as manchetes dos veículos, quantas manchetes confirmam e os links; atualiza a cada 30 min |
 | `GET /api/manchetes` | principais notícias do futebol para a faixa embaixo do menu (título, fonte, hora, link e clubes citados); atualiza a cada 30 min |
@@ -173,6 +173,7 @@ node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! 
 node tests/mobile/arbitragem.mjs                   # árbitro nos títulos das manchetes e quadro de arbitragem na página do jogo
 node tests/seguranca/site.mjs                      # testes de invasão no navegador: dados maliciosos nas fontes, endereços forjados, moldura de outro site
 node tests/seguranca/api.mjs                       # testes de invasão da API: arquivos fora do site, travessia de pastas, métodos, parâmetros, limites
+python -X utf8 tests/auditoria.py                  # coerência dos dados: tabela, rodadas e placares, só jogadores que estão no clube, reservas de verdade, DM, artilharia, retrospecto
 python -X utf8 tests/dm_casos.py                   # regras do departamento médico com manchetes reais (nome certo, liberado x desfalque, suspensão não conta)
 node tests/mobile/departamento-medico.mjs          # departamento médico na página do clube: situação, desde quando, confirmação, manchetes e quem voltou
 node tests/mobile/faixa.mjs                        # faixa de notícias: troca da manchete, fita, links, atualização sozinha a cada 30 min, reduzir movimento

@@ -740,15 +740,22 @@ def club_player_stats(cid, matches, squad_names, news):
         return k
 
     pend, seq, res = [], [], []
+    # só quem ainda está no clube: no elenco atual da ESPN ou em campo num dos 3 últimos jogos
+    # (quem foi vendido no meio da temporada sai das listas; garoto da base que já joga e ainda não está no cadastro fica)
+    recentes = set(range(max(0, n - 3), n))
     for q in P.values():
+        if q["id"] not in squad_names and not (q["played"] & recentes):
+            continue
         if q["yc"] and q["yc"] % SUSPENSAO_AMARELOS == SUSPENSAO_AMARELOS - 1:
             pend.append({"id": q["id"], "name": q["name"], "amarelos": q["yc"], "ultimo": q["last_yc"]})
         sp, ss = streak(q["played"]), streak(q["started"])
         if sp >= 2:
             seq.append({"id": q["id"], "name": q["name"], "jogos": sp, "titular": ss})
-        # reserva: entrou em campo, mas foi titular em menos da metade dos jogos do clube
-        if q["apps"] and q["starts"] * 2 < n:
-            res.append({"id": q["id"], "name": q["name"], "minutos": q["min"], "jogos": q["apps"], "titular": q["starts"], "media": round(q["min"] / q["apps"])})
+        # reserva: entrou saindo do banco pelo menos tantas vezes quanto foi titular
+        # (titular que perdeu jogos por lesão ou que chegou no meio do ano não é reserva)
+        banco = q["apps"] - q["starts"]
+        if banco >= 2 and banco >= q["starts"]:
+            res.append({"id": q["id"], "name": q["name"], "minutos": q["min"], "jogos": q["apps"], "titular": q["starts"], "banco": banco, "media": round(q["min"] / q["apps"])})
     pend.sort(key=lambda x: (x["ultimo"] or ""), reverse=True)
     seq.sort(key=lambda x: (-x["jogos"], -x["titular"]))
     res.sort(key=lambda x: -x["minutos"])
@@ -864,11 +871,17 @@ def scorer_profiles(matches, scorers, squads):
                     if opp:
                         q["adv"][opp] = q["adv"].get(opp, 0) + g
     squad = {row[4]: (cid, row) for cid, rows in squads.items() for row in rows if row[4]}
+    # quem jogou um dos 3 últimos jogos do clube ainda está lá (mesmo fora do cadastro da ESPN)
+    recentes = {}
+    for tid in {t for m in matches.values() for t in m.get("teams", {})}:
+        jogos = sorted((m for m in matches.values() if tid in m.get("teams", {})), key=lambda m: m["date"])[-3:]
+        recentes[club_of.get(tid)] = {r[0] for m in jogos for r in m["teams"][tid]}
 
     def ficha(pid, name, cid, goals, pos):
         q = P[pid]
         sc, row = squad.get(pid, (None, None))
         return {"pos": pos, "id": pid, "name": name, "club": cid, "gols": goals, "golsSumulas": q["gols"],
+                "noClube": sc == cid or pid in recentes.get(cid, ()),   # False: saiu do clube (os gols pelo clube continuam valendo)
                 "golsClube": q["clubes"].get(cid, [0, 0])[1],
                 "camisa": row[0] if row else None, "posicao": row[2] if row else None, "idade": row[3] if row else None,
                 "jogos": q["jogos"], "titular": q["titular"], "min": q["min"], "assist": q["assist"], "chutes": q["chutes"], "noAlvo": q["noAlvo"],
