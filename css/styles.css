@@ -2358,3 +2358,17 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .tk-run::before { left: 0; width: 60px; background: linear-gradient(90deg, var(--tk-tape) 30%, rgb(242 244 249 / 0)); }
 .tk-run::after { right: 0; background: linear-gradient(270deg, var(--tk-tape), rgb(242 244 249 / 0)); }
 @media (prefers-reduced-motion: reduce) { .tk-run::before, .tk-run::after { display: none; } }
+
+/* ---------- relógio do placar: a goleada mais simbólica do clube ----------
+   o relógio para no placar (06:01 = 6 x 1) e, ao lado, a legenda diz qual foi */
+.gb-feito { position: absolute; left: 20.9em; top: 4.75em; height: 2em; display: flex; align-items: center; gap: 0.5em; padding: 0 0.85em 0 0.75em;
+  border-radius: 0 0 0.6em 0; background: rgb(8 12 28 / 0.86); color: #fff; white-space: nowrap; box-shadow: 0 0.6em 1em -0.4em rgb(0 0 0 / 0.35);
+  opacity: 0; transform: translateY(-0.6em); clip-path: inset(0 100% 0 0); transition: opacity 0.35s, transform 0.45s var(--ease), clip-path 0.6s var(--ease); pointer-events: none; }
+.gb-feito b { font: 800 1.05em/1 var(--font-label); letter-spacing: 0.03em; color: var(--band, #fff); filter: brightness(1.25) saturate(1.1); }
+.gb-feito span { font: 600 0.82em/1 var(--font-label); letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.88; }
+.gb.feito .gb-feito { opacity: 1; transform: none; clip-path: inset(0 0 0 0); }
+.gb.feito .gb-clock span { animation: feitoPulse 0.6s var(--ease); }
+@keyframes feitoPulse { 40% { transform: scale(1.18); } }
+@media (prefers-reduced-motion: reduce) { .gb-feito { transition: none; } .gb.feito .gb-clock span { animation: none; } }
+.gb-feito b { color: #fff; filter: none; }
+.gb-feito::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 0.28em; background: linear-gradient(var(--band), var(--base)); }

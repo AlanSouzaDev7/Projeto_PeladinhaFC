@@ -170,6 +170,33 @@
     vasco: ["#fff", "#111", "#111", "#fff"], vitoria: ["#111", "#fff", "#e30613", "#fff"],
   };
 
+  /* A goleada mais simbólica de cada torcida (de preferência sobre o maior rival): o relógio do placar para nela,
+     com os gols do clube no lugar das horas e os do adversário no dos minutos (Cruzeiro 6 x 1 Atlético-MG = 06:01).
+     Fontes: Wikipédia (páginas de cada clássico), sites oficiais dos clubes, ge, Lance!, Terra e Gazeta Esportiva. */
+  const FEITO = {
+    "athletico-pr": [6, 2, "Coritiba", 1938, "maior goleada do Athletico no Atletiba"],
+    "atletico-mg": [9, 2, "Cruzeiro", 1927, "maior goleada do clássico mineiro (o rival ainda era o Palestra Itália)"],
+    bahia: [10, 1, "Vitória", 1939, "maior goleada do Ba-Vi"],
+    botafogo: [6, 0, "Flamengo", 1972, "o 6 a 0 eternizado pelo rádio, maior goleada do Botafogo no Brasileirão"],
+    bragantino: [5, 1, "Flamengo", 1993, "maior goleada do confronto, no Brasileirão de 1993"],
+    chapecoense: [5, 1, "Palmeiras", 2015, "show na Arena Condá pelo Brasileirão"],
+    corinthians: [11, 0, "Santos", 1920, "maior goleada do Clássico Alvinegro e da história do Corinthians"],
+    coritiba: [6, 0, "Athletico", 1959, "maior goleada do Atletiba"],
+    cruzeiro: [6, 1, "Atlético-MG", 2011, "a última rodada do Brasileirão de 2011"],
+    flamengo: [6, 1, "Vasco", 2024, "maior goleada do Flamengo no Clássico dos Milhões, em São Januário"],
+    fluminense: [4, 0, "Flamengo", 2018, "a maior goleada tricolor no Fla-Flu (Carioca de 2018)"],
+    gremio: [10, 0, "Internacional", 1909, "o primeiro Gre-Nal da história"],
+    internacional: [7, 0, "Grêmio", 1948, "maior goleada colorada no Gre-Nal"],
+    mirassol: [6, 2, "Palmeiras", 2013, "seis gols no primeiro tempo, pelo Paulistão"],
+    palmeiras: [8, 0, "Corinthians", 1933, "maior goleada da história do Derby"],
+    remo: [7, 2, "Paysandu", 1939, "maior goleada azulina no Re-Pa"],
+    santos: [7, 4, "Corinthians", 1964, "quatro gols de Pelé no Pacaembu"],
+    "sao-paulo": [6, 1, "Corinthians", 1933, "maior goleada tricolor no Majestoso"],
+    vasco: [7, 0, "Flamengo", 1931, "maior goleada do Clássico dos Milhões"],
+    vitoria: [7, 1, "Bahia", 1948, "maior goleada rubro-negra no Ba-Vi"],
+  };
+  const dois = (n) => String(n).padStart(2, "0");
+
   const BRAND_P = `<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="9" fill="#fff"/><path d="M14 10 H22.5 C28 10 31 13.2 31 17.8 C31 22.4 28 25.6 22.5 25.6 H19.6 V31 H14 Z M19.6 15 V20.6 H22.2 C24.2 20.6 25.3 19.5 25.3 17.8 C25.3 16.1 24.2 15 22.2 15 Z" fill="#2f47d6"/><circle cx="33" cy="33" r="3.6" fill="#ff3b4f"/></svg>`;
 
   // opts (gol ao vivo): { de, para, outro, relogio } = placar do clube antes e depois, do adversário e o minuto
@@ -179,7 +206,8 @@
     const sym = SYM[id] || star(0, 0, 22, ink);
     const deco = DECO[id] ? DECO[id]() : "";
     const src = club.logo ? club.logo : "";
-    return `<div class="gb" data-goalbug="${id}"${opts.atraso > 0 ? ` data-atraso="${opts.atraso}"` : ""} role="img" aria-label="Animação de gol do ${club.name}: ${club.short}, escudo e GOL!" style="--band:${band};--bink:${bink};--base:${base};--ink:${ink}">
+    const f = !opts.relogio && FEITO[id];
+    return `<div class="gb" data-goalbug="${id}"${opts.atraso > 0 ? ` data-atraso="${opts.atraso}"` : ""}${f ? ` data-feito="${f[0]}:${f[1]}"` : ""} role="img" aria-label="Animação de gol do ${club.name}: ${club.short}, escudo e GOL!${f ? ` O relógio para em ${dois(f[0])}:${dois(f[1])}, o ${f[0]} a ${f[1]} sobre o ${f[2]} em ${f[3]}.` : ""}" style="--band:${band};--bink:${bink};--base:${base};--ink:${ink}">
       <div class="gb-bar">
         <div class="gb-neutral"><b class="gb-d gb-h"><i>${de}</i><i class="one">${para}</i></b><span class="gb-p">${BRAND_P}</span><b class="gb-d">${outro}</b></div>
         <div class="gb-art"><svg viewBox="0 0 360 76" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
@@ -193,6 +221,7 @@
         <div class="gb-wipe-box"><div class="gb-wipe"></div></div>
       </div>
       <div class="gb-clock" aria-hidden="true"${opts.relogio ? ` data-fixo="${opts.relogio}"` : ""}><span>${opts.relogio || "00:00"}</span></div>
+      ${f ? `<div class="gb-feito" aria-hidden="true" title="${f[4]}"><b>${f[0]} × ${f[1]}</b><span>no ${f[2]} · ${f[3]}</span></div>` : ""}
     </div>
     ${motto ? `<p class="gb-motto"><b>${motto}</b><span>toque para ver o gol de novo</span></p>` : ""}`;
   }
@@ -215,15 +244,20 @@
     const clock = el.querySelector(".gb-clock span"), fixo = el.querySelector(".gb-clock").dataset.fixo;
     clearInterval(el._t);
     if (fixo) { if (reduced) el.classList.add("still"); else { el.classList.remove("play"); void el.offsetWidth; el.classList.add("play"); } return; }
-    if (reduced) { el.classList.add("still"); clock.textContent = "00:06"; return; }
+    // sem goleada cadastrada, o relógio só conta os 6 segundos da jogada
+    const [g, o] = (el.dataset.feito || "0:6").split(":").map(Number);
+    const fim = `${dois(g)}:${dois(o)}`;
+    el.classList.remove("feito");
+    if (reduced) { el.classList.add("still", "feito"); clock.textContent = fim; return; }
     el.classList.remove("play"); void el.offsetWidth; el.classList.add("play");
-    const t0 = performance.now();
+    // o placar da goleada vai subindo como num relógio de jogo e para nele, junto com o fim da jogada (6 s)
+    const t0 = performance.now(), dur = 6000;
     clock.textContent = "00:00";
     el._t = setInterval(() => {
-      const s = Math.min(6, Math.floor((performance.now() - t0) / 1000));
-      clock.textContent = `00:0${s}`;
-      if (s >= 6 || !el.isConnected) clearInterval(el._t);
-    }, 250);
+      const k = Math.min(1, (performance.now() - t0) / dur), e = 1 - (1 - k) ** 2;
+      clock.textContent = `${dois(Math.floor(g * e + (k >= 1 ? 0.5 : 0)))}:${dois(Math.floor(o * e + (k >= 1 ? 0.5 : 0)))}`;
+      if (k >= 1 || !el.isConnected) { clearInterval(el._t); clock.textContent = fim; el.classList.add("feito"); }
+    }, 120);
   }
   function mount(root) {
     root.querySelectorAll(".gb:not([data-on])").forEach((el) => {
