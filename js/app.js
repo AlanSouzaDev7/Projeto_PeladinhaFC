@@ -312,7 +312,19 @@
   // a ficha soma os gols de agora (que ainda não estão nas súmulas gravadas)
   function scorerOf(name, cid) {
     const f = fichaDe(name, cid), t = f && ART()?.tot[f.id];
-    return f && t && t.vivo ? { ...f, gols: t.g, aoVivo: t.vivo, pos: ART().posDe[f.id] || null } : f;
+    if (!f || !t || !t.vivo) return f;
+    // contra quem marcou e por qual clube: súmulas gravadas + gols dos jogos de agora
+    const adv = Object.fromEntries(f.adversarios.map(([k, g]) => [k, g]));
+    for (const [k, g] of Object.entries(t.adv)) adv[k] = (adv[k] || 0) + g;
+    const clubes = f.clubes.map(([k, j, g]) => [k, j, g]);
+    for (const [k, x] of Object.entries(t.porClube)) {
+      const c = clubes.find((r) => r[0] === k);
+      if (c) { c[1] += x.jogos; c[2] += x.gols; } else clubes.push([k, x.jogos, x.gols]);
+    }
+    return { ...f, gols: t.g, aoVivo: t.vivo, pos: ART().posDe[f.id] || null, golsSumulas: (f.golsSumulas || 0) + t.vivo,
+      jogosComGol: (f.jogosComGol || 0) + t.jogosGol, ultimoGol: t.ultimo && t.ultimo > (f.ultimoGol || "") ? t.ultimo : f.ultimoGol,
+      adversarios: Object.entries(adv).sort((a, b) => b[1] - a[1]), adversariosVivo: t.adv,
+      clubes: clubes.sort((a, b) => b[2] - a[2] || b[1] - a[1]) };
   }
   const POSICAO = { G: "Goleiro", D: "Defensor", M: "Meio-campista", F: "Atacante" };
   const dataBR = (d) => (d ? d.slice(8, 10) + "/" + d.slice(5, 7) : "—");
@@ -336,7 +348,7 @@
       ${p.clubes.length ? `<div class="sc-sec">Gols por clube na temporada</div>
         <ul class="sc-clubes">${p.clubes.map(([k, j, g]) => `<li>${crest(byId[k], 18)}<span>${byId[k].abbr}</span><small>${j} jogos</small><b>${g}</b></li>`).join("")}</ul>` : ""}
       <div class="sc-sec">Contra quem marcou <small>${p.adversarios.length} clubes</small></div>
-      ${p.adversarios.length ? `<ul class="sc-adv">${p.adversarios.map(([k, g]) => `<li>${crest(byId[k], 18)}<span>${byId[k].abbr}</span><i style="--w:${(g / maxAdv) * 100}%;background:${cor}"></i><b>${g}</b></li>`).join("")}</ul>` : `<p class="sc-none">Nenhum gol nas súmulas.</p>`}
+      ${p.adversarios.length ? `<ul class="sc-adv">${p.adversarios.map(([k, g]) => `<li>${crest(byId[k], 18)}<span>${byId[k].abbr}</span><i style="--w:${(g / maxAdv) * 100}%;background:${cor}"></i><b>${g}${p.adversariosVivo?.[k] ? `<small class="sc-hoje">+${p.adversariosVivo[k]} hoje</small>` : ""}</b></li>`).join("")}</ul>` : `<p class="sc-none">Nenhum gol nas súmulas.</p>`}
       <div class="sc-src">Súmulas: ESPN${p.golsSumulas !== p.gols ? ` · ${p.golsSumulas} gols nas súmulas do Brasileirão` : ""}</div>`;
   }
   let scTip = null;

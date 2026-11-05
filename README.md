@@ -57,6 +57,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | Rota | Retorno |
 |---|---|
 | `GET /api/state` | tabela, jogos da rodada (com placar ao vivo), elencos e últimas escalações |
+| `GET /api/artilharia-ao-vivo[?jogador=ID]` | artilharia em tempo real: súmulas gravadas + gols dos jogos de agora, com contra quem e por qual clube cada jogador marcou |
 | `GET /api/tabela-ao-vivo` | classificação em tempo real: a tabela da ESPN (que só conta jogos encerrados) mais o placar dos jogos em andamento e dos encerrados que ela ainda não contou, com quanto cada clube subiu ou caiu |
 | `GET /api/rankings?tipo=gols\|ataque\|defesa\|amarelos\|vermelhos` | rankings do campeonato; os cartões somam a súmula de cada jogo encerrado depois da última tabela da CBF |
 | `GET /api/retrospecto?club=flamengo` | últimos 5 e próximos 5 jogos, em todas as competições; atualiza a cada 30 min e ao fim de cada jogo |

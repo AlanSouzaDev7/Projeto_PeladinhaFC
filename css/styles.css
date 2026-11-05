@@ -2146,3 +2146,7 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .sd-nm small .gol-hoje:not(:first-child) { margin-left: 6px; }
 @media (prefers-reduced-motion: reduce) { .live-chip i { animation: none; } }
 @media (max-width: 560px) { .table .live-chip { margin-left: 6px; padding: 1px 6px; font-size: 10px; } }
+/* ficha: gols de agora contra cada adversário */
+.sc-adv li { grid-template-columns: 18px 96px 1fr auto; }
+.sc-adv b { min-width: 22px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.sc-hoje { padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 800; line-height: 1.6; background: var(--loss); color: #fff; white-space: nowrap; }

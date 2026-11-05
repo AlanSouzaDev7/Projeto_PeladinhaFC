@@ -291,6 +291,11 @@
         if (!p) L.push((p = { aid: aid || nome, name: nome, g: 0, vivo: 0, cid }));
         p.g++; p.vivo++;
         if (st === "in") p.rolando = true;
+        // contra quem marcou e em que jogos (a ficha soma isso às súmulas gravadas)
+        const op = cid === g[0] ? g[1] : g[0];
+        (p.adv = p.adv || {})[op] = (p.adv[op] || 0) + 1;
+        (p.jogos = p.jogos || new Set()).add(keyOf(g));
+        if (g[4] && (!p.ultimo || g[4] > p.ultimo)) p.ultimo = g[4];
       }
     }
     for (const L of Object.values(clubs)) L.sort((a, b) => b.g - a.g); // estável: empate mantém a ordem das súmulas
@@ -298,8 +303,14 @@
     const tot = {}, of = {};
     (S.artilheiros || []).forEach((x) => { if (x.id) of[x.id] = x.pos; });
     for (const L of Object.values(clubs)) for (const p of L) {
-      const t = (tot[p.aid] = tot[p.aid] || { name: p.name, cid: p.cid, g: 0, top: 0, vivo: 0, rolando: false });
+      const t = (tot[p.aid] = tot[p.aid] || { name: p.name, cid: p.cid, g: 0, top: 0, vivo: 0, rolando: false, adv: {}, porClube: {}, jogosGol: 0, ultimo: null });
       t.g += p.g; t.vivo += p.vivo; t.rolando = t.rolando || !!p.rolando;
+      if (p.vivo) {
+        for (const [op, n] of Object.entries(p.adv || {})) t.adv[op] = (t.adv[op] || 0) + n;
+        t.porClube[p.cid] = { gols: p.vivo, jogos: p.jogos ? p.jogos.size : 0 };
+        t.jogosGol += p.jogos ? p.jogos.size : 0;
+        if (p.ultimo && (!t.ultimo || p.ultimo > t.ultimo)) t.ultimo = p.ultimo;
+      }
       if (p.g > t.top) Object.assign(t, { top: p.g, cid: p.cid, name: p.name });
     }
     const geral = Object.entries(tot).sort(([ia, a], [ib, b]) => b.g - a.g || (of[ia] || 99) - (of[ib] || 99)).slice(0, 10)

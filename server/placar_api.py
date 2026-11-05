@@ -428,6 +428,48 @@ def live_table():
             "standings": table, "aoVivo": vivo, "variacao": {r[0]: pos0[r[0]] - (i + 1) for i, r in enumerate(table)}}
 
 
+def live_scorers():
+    """Artilharia em tempo real: gols das súmulas gravadas + gols dos jogos em andamento (ou encerrados e
+    ainda fora das súmulas), com contra quem e por qual clube cada jogador marcou. Gol contra não conta."""
+    with lock:
+        pl = state.get("players") or {}
+        games = [g for gs in (state["fixtures"] or {}).values() for g in gs]
+    contados, base = set(pl.get("sumulas") or []), {}
+    for cid, rows in (pl.get("golsClubes") or {}).items():
+        for aid, name, g in rows:
+            base.setdefault(aid, {"id": aid, "name": name, "club": cid, "gols": 0, "aoVivo": 0, "clubes": {}, "adversarios": {}})
+            base[aid]["gols"] += g
+            base[aid]["clubes"][cid] = base[aid]["clubes"].get(cid, 0) + g
+    fichas = {f["id"]: f for f in pl.get("artilheiros") or [] if f.get("id")}
+    for rows in (pl.get("artilhariaClubes") or {}).values():
+        for f in rows:
+            fichas.setdefault(f["id"], f)
+    for aid, f in fichas.items():
+        if aid in base:
+            base[aid]["adversarios"] = dict(f.get("adversarios") or [])
+    for g in games:
+        st = g[8].get("state") if len(g) > 8 and isinstance(g[8], dict) else None
+        if st not in ("in", "post") or (len(g) > 7 and g[7] in contados):
+            continue
+        for aid, name, cid, og, _pen in g[8].get("gols") or []:
+            if og or not cid:
+                continue
+            key = aid or name
+            q = base.setdefault(key, {"id": aid, "name": name, "club": cid, "gols": 0, "aoVivo": 0, "clubes": {}, "adversarios": {}})
+            op = g[1] if cid == g[0] else g[0]
+            q["gols"] += 1; q["aoVivo"] += 1
+            q["clubes"][cid] = q["clubes"].get(cid, 0) + 1
+            q["adversarios"][op] = q["adversarios"].get(op, 0) + 1
+            q.setdefault("jogosAoVivo", {})[g[7] or f"{g[0]}|{g[1]}"] = st
+    rows = sorted(base.values(), key=lambda q: -q["gols"])
+    for q in rows:
+        q["club"] = max(q["clubes"].items(), key=lambda x: x[1])[0] if q["clubes"] else q["club"]
+        q["adversarios"] = sorted(([k, v] for k, v in q["adversarios"].items()), key=lambda x: -x[1])
+        q["clubes"] = sorted(([k, v] for k, v in q["clubes"].items()), key=lambda x: -x[1])
+    return {"updated": time.strftime("%d/%m/%Y às %H:%M:%S"), "artilharia": rows[:10],
+            "aoVivo": [q for q in rows if q["aoVivo"]], "jogadores": {q["id"] or q["name"]: q for q in rows}}
+
+
 def live_loop():
     """Placar ao vivo: a cada 30 s, enquanto houver jogo da rodada perto do horário ou em andamento.
     Quando um jogo termina, recalcula a tabela e as estatísticas dos jogadores (pendurados etc.)."""
@@ -1127,6 +1169,10 @@ class Handler(SimpleHTTPRequestHandler):
                 if not s.get("standings"):
                     return self.send_json({"ok": False, "message": "carregando dados"}, 503)
                 return self.send_json(s)
+            if parts[1:] == ["artilharia-ao-vivo"]:
+                r = live_scorers()
+                jog = urllib.parse.parse_qs(u.query).get("jogador", [None])[0]
+                return self.send_json(r["jogadores"].get(jog) or {"ok": False, "message": "jogador sem gols"} if jog else {k: r[k] for k in ("updated", "artilharia", "aoVivo")})
             if parts[1:] == ["tabela-ao-vivo"]:
                 return self.send_json(live_table())
             if parts[1:] == ["rankings"]:
