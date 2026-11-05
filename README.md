@@ -42,14 +42,15 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 
 | Área | Descrição |
 |---|---|
-| **Ao vivo** | Rodada agrupada por dia, navegação entre rodadas, favoritos, próximo jogo e artilharia. **Placar em tempo real** mesmo sem a API (no GitHub Pages também): com jogo perto do horário ou rolando, o navegador consulta o placar da ESPN a cada 20 s. As **próximas rodadas** entram sozinhas pelo calendário da ESPN (agrupadas por data, já que a ESPN não informa o número da rodada; jogos adiados aparecem marcados), e o site passa para a rodada seguinte quando a atual termina. |
-| **Clubes** | 20 páginas no tema de cada clube. O topo, de ponta a ponta da tela, junta a **cena animada do clube** (o urubu voando sobre o Rio, a Via Láctea até o Cruzeiro do Sul, o galo cantando em BH…) com o **"GOL!" do clube no placar de transmissão**: a cena termina exatamente onde o escudo salta no placar, e então vêm o placar 0 · 0, a faixa com a sigla, o escudo saltando e o GOL! com o símbolo do clube no lugar do "O" (a raposa do Cruzeiro, o urubu do Flamengo, a Estrela Solitária do Botafogo, o gorro do Saci do Inter…). Depois o placar vira 1 · 0 e a frase do clube aparece embaixo. Toque no topo para ver o gol de novo. **Nos jogos ao vivo**, quando um clube marca, o GOL! dele aparece por cima de qualquer página, com o placar e o minuto do jogo (toque para abrir a partida). |
+| **Ao vivo** | Rodada agrupada por dia, navegação entre rodadas, favoritos, próximo jogo e artilharia. **Placar em tempo real** mesmo sem a API (no GitHub Pages também): com jogo perto do horário ou rolando, o navegador consulta o placar da ESPN a cada 12 s. **A página não se redesenha**: só o que mudou (placar, minuto, tabela, artilharia) é trocado no lugar, com um pulo discreto no número; a animação do topo, a rolagem e a ficha aberta continuam como estão. As **próximas rodadas** entram sozinhas pelo calendário da ESPN (agrupadas por data, já que a ESPN não informa o número da rodada; jogos adiados aparecem marcados), e o site passa para a rodada seguinte quando a atual termina. |
+| **Clubes** | 20 páginas no tema de cada clube. O topo, de ponta a ponta da tela, junta a **cena animada do clube** (o urubu voando sobre o Rio, a Via Láctea até o Cruzeiro do Sul, o galo cantando em BH…) com o **"GOL!" do clube no placar de transmissão**: a cena termina exatamente onde o escudo salta no placar, e então vêm o placar 0 · 0, a faixa com a sigla, o escudo saltando e o GOL! com o símbolo do clube no lugar do "O" (a raposa do Cruzeiro, o urubu do Flamengo, a Estrela Solitária do Botafogo, o gorro do Saci do Inter…). Depois o placar vira 1 · 0 e a frase do clube aparece embaixo. Toque no topo para ver o gol de novo. **Nos jogos ao vivo**, quando um clube marca, o GOL! dele aparece por cima de qualquer página, com quem marcou, o placar e o minuto do jogo (toque para abrir a partida). Com a aba em segundo plano ou a tela do celular apagada, o gol espera você voltar (até 10 min). **Últimas notícias** do clube: só manchetes que falam dele (nome ou apelido no título, sem "ex-Clube"). |
 | **Partidas do clube** | A temporada inteira de cada clube, mês a mês: todos os jogos e placares já disputados (com pênaltis) e os jogos por vir com o horário de Brasília; quando a CBF/Conmebol ainda não marcou o horário, aparece **"A definir"**. Filtro por competição (Brasileirão, Copa do Brasil, Libertadores, Sul-Americana, Recopa, Supercopa e estaduais cobertos pela ESPN: Carioca, Paulistão, Mineiro e Gauchão) e resumo de vitórias, empates, derrotas e gols. |
 | **Retrospecto** | Na visão geral de cada clube: **últimos 5 jogos** (V/E/D, placar, pênaltis, casa ou fora) e **próximos 5**, em todas as competições (Brasileirão, Copa do Brasil, Libertadores e Sul-Americana). Sem a API, a página busca a agenda atualizada direto da ESPN. |
 | **Estatísticas do elenco** | Na visão geral de cada clube e na aba "Estatísticas": **pendurados** (2 amarelos, o próximo suspende), **jogos seguidos**, **departamento médico** e **reservas mais usados** por minutagem. Cartões e minutos vêm das súmulas de todos os jogos do Brasileirão; lesões e pendurados são conferidos nas manchetes de ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra e dos setoristas cadastrados, com o número de fontes que confirmam cada caso. |
 | **Elenco** | Elencos reais, escalação do último jogo de cada clube e campinho interativo: arraste jogadores para trocar ou para qualquer ponto da grama; 8 formações. |
 | **Bora pro jogo** | Prancheta tática comparando dois times com e sem a bola, leitura tática e tendência do jogo (modelo simples). **Arraste os jogadores** (mouse ou dedo) para mudar a posição em tempo real: as setas de ataque acompanham, cada fase guarda as suas posições e "Restaurar posições" desfaz. Ao segurar um jogador, aparece o **mapa de calor** de onde ele costuma atuar, com as posições em % e os minutos no Brasileirão. |
 | **Tabela** | Classificação, números do campeonato e artilharia, **em tempo real**: com jogo rolando, os placares parciais entram na conta (pontos, jogos, saldo e posição, com ▲▼ de quem subiu ou caiu e o placar ao lado do clube), e os gols de agora entram na artilharia ("+1 ao vivo"). Funciona também sem a API, direto da ESPN no navegador. Cada número (gols, ataque, defesa, amarelos, vermelhos) abre uma **subpágina de ranking** dos 20 clubes; passar o mouse ou segurar o dedo mostra uma prévia. |
+| **Artilharia e ficha do jogador** | Artilharia geral, do clube e da partida **em tempo real** ("+1 ao vivo"), montada pelas súmulas da ESPN de todos os jogos (quem está no top 10 da CBF fica com o número oficial; gol contra não conta). A ficha abre e fecha no **clique** (ou toque), rola por dentro em telas baixas e mostra jogos, minutos, gols por clube e **contra quem marcou**, já com os gols de hoje ("+2 hoje"). |
 | **Partida** | Placar com o **resumo dos gols e expulsões** de cada time (jogador e minuto, gol contra e de pênalti marcados), informações, comparação no campeonato, **top 5 artilheiros de cada time lado a lado** (1º contra 1º…, com a ficha de cada um) e **Minuto a minuto** ao vivo. A página de cada clube também mostra o top 5 dele. |
 
 ## API (`server/placar_api.py`)
@@ -62,12 +63,12 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | `GET /api/rankings?tipo=gols\|ataque\|defesa\|amarelos\|vermelhos` | rankings do campeonato; os cartões somam a súmula de cada jogo encerrado depois da última tabela da CBF |
 | `GET /api/retrospecto?club=flamengo` | últimos 5 e próximos 5 jogos, em todas as competições; atualiza a cada 30 min e ao fim de cada jogo |
 | `GET /api/jogadores?club=flamengo` | pendurados, jogos seguidos, lesionados (com fontes) e minutagem dos reservas; atualiza a cada hora |
-| `GET /api/news?club=flamengo` | manchetes recentes do clube (título, fonte, data e link) |
+| `GET /api/news?club=flamengo` | manchetes recentes do clube (título, fonte, data e link), só as que citam o clube no título pelo nome ou por um apelido (`apelidos` em `server/config.json`) |
 | `GET /api/minuto-a-minuto/<id>` | narração do jogo até o momento |
 | `GET /api/minuto-a-minuto/<id>/stream` | narração ao vivo via Server-Sent Events |
 | `GET /api/health` | situação das atualizações |
 
-Intervalos de atualização, portais monitorados e **setoristas** de cada clube ficam em [`server/config.json`](server/config.json).
+Intervalos de atualização, portais monitorados, **setoristas** e **apelidos** de cada clube (usados para filtrar as notícias) ficam em [`server/config.json`](server/config.json).
 
 ## Mapa de calor dos jogadores (estimado)
 
@@ -76,6 +77,8 @@ Nenhum site oficial publica o mapa de calor de cada jogador do Brasileirão: os 
 ## Identidade visual
 
 Fundo escuro com **brilho nas bordas** (canto de cima à direita e de baixo à esquerda) e uma **grade de pontinhos** que acende, na cor do site ou do clube aberto, perto dos brilhos e em volta do mouse. Os cartões são levemente translúcidos, então o brilho passa por eles. O fundo é desenhado uma vez numa imagem ([`js/backdrop.js`](js/backdrop.js)) e só é redesenhado quando mudam a tela, o tema ou o clube, para não pesar na animação do topo.
+
+**Tipografia em três vozes:** [Archivo](https://fonts.google.com/specimen/Archivo) Black condensada para a identidade (nome do clube, títulos, placar grande e o GOL!), [Barlow Condensed](https://fonts.google.com/specimen/Barlow+Condensed) como letra de placar de transmissão (cabeçalhos dos cards, rótulos, dias da rodada e números das listas) e Archivo normal para tudo o que se lê (nomes, frases, notícias e narração).
 
 ## Qualidade (QA) em PC e celular
 
@@ -89,6 +92,8 @@ Fundo escuro com **brilho nas bordas** (canto de cima à direita e de baixo à e
 | Rolagem | cabeçalho e títulos dos meses grudam no alto; listas longas e a página de clubes sem travadas |
 | Carregamento (4G e processador 4× mais lento) | maior conteúdo em até ~2 s; saltos de layout ≤ 0,014 |
 | Peso da página | ~0,3–0,5 MB (escudos pequenos nas listas; temporada dos clubes só nas páginas de clube) |
+| Dados ao vivo | página sem redesenhar durante os jogos (só o que mudou é trocado); tabela e artilharia somam os jogos em andamento sem contar duas vezes; GOL! com a aba escondida espera a volta |
+| Notícias | as 20 páginas de clube só com manchetes do próprio clube |
 | Funções | rankings, estatísticas, retrospecto, partidas, rodadas, próximo jogo, ficha do artilheiro, site sem servidor, Worker e jogo simulado ao vivo |
 
 ```bash
@@ -111,6 +116,12 @@ node tests/mobile/fotos.mjs [prefixo]               # fotos das páginas princip
 node tests/mobile/ficha-clique.mjs                  # ficha do artilheiro abre e fecha no clique, rola por dentro (PC baixo, PC, iPhone SE, Pixel)
 node tests/mobile/artilheiros.mjs                  # top 5 dos dois times em todas as partidas e nos 20 clubes
 node tests/mobile/elenco.mjs                       # campinho do elenco dos 20 clubes: nomes sem encostar, no PC, notebook e celular
+node tests/mobile/proximo-artilheiros.mjs          # próximo jogo (carrossel, palpite) e ficha do artilheiro
+node tests/mobile/estatisticas.mjs                 # pendurados, sequência, departamento médico e reservas dos 20 clubes
+node tests/mobile/partidas.mjs                     # temporada de cada clube (todas as competições)
+node tests/mobile/rodadas.mjs                      # próximas rodadas e jogos adiados
+node tests/mobile/retrospecto.mjs                  # últimos 5 e próximos 5 de cada clube
+node tests/mobile/sem-servidor.mjs                 # site funcionando só com os arquivos (GitHub Pages)
 ```
 
 ## Celular (iPhone e Android)
@@ -144,7 +155,8 @@ js/backdrop.js        fundo com brilho nas bordas e pontinhos
 js/hero-scenes.js     motor das cenas em canvas do topo (e a do Cruzeiro)
 js/hero-scenes-clubes.js  cenas dos outros 19 clubes
 js/graphics.js        escudos, padrões de camisa e cores
-server/               API em Python
+server/               API em Python (server/config.json: intervalos, portais, setoristas e apelidos)
+tests/mobile/         testes automáticos em PC, iPhone e Android (Playwright)
 assets/               marca do PLACAR.
 prints/               capturas de tela
 ```
@@ -155,4 +167,5 @@ prints/               capturas de tela
 - Escudos: imagens oficiais via **Wikimedia Commons**, marcas registradas dos respectivos clubes, usadas apenas para identificação em projeto sem fins comerciais.
 - Fotos dos ídolos: imagens livres do **Wikimedia Commons** (as mesmas usadas na Wikipédia em português), com os créditos e licenças de cada autor na página do arquivo.
 - Ilustrações das aparições e dos símbolos do GOL!, marca PLACAR. e narração do minuto a minuto são próprias. Os símbolos seguem os mascotes e emblemas que os clubes usam (conferidos no LANCE!, ge e nas páginas oficiais), desenhados do zero; não são os personagens oficiais.
+- Fontes: Archivo e Barlow Condensed, do **Google Fonts** (licença SIL Open Font License).
 - Modelo de "tendência do jogo" é uma estimativa simples, não uma previsão oficial.
