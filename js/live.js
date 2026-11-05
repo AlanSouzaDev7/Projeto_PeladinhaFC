@@ -417,7 +417,9 @@
       else if (typ === "start-delay") [text, kind] = ["Jogo paralisado.", "status"];
       else if (typ === "end-delay") [text, kind] = ["Partida reiniciada.", "status"];
       else if (typ === "penalty---missed" || typ === "penalty-missed") text = `Perdeu! ${ps[0] || "O batedor"} (${team}) desperdiça o pênalti.`;
-      if (text) lines.push({ id: `${eid}-${i}`, min: clock, type: kind, text });
+      // a ESPN às vezes repete o mesmo lance (ex.: "Jogo paralisado" duas vezes no mesmo minuto)
+      const last = lines[lines.length - 1];
+      if (text && !(last && last.text === text && last.min === clock)) lines.push({ id: `${eid}-${i}`, min: clock, type: kind, text });
     });
     const st = comp.status;
     return { state: st.type.state, clock: clockOf(st), detail: st.type.shortDetail,

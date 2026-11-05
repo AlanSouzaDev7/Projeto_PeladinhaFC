@@ -28,6 +28,8 @@
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   --font: "Archivo", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: "Archivo", "Arial Narrow", -apple-system, Roboto, sans-serif;
+  /* letra de placar de transmissão: cabeçalhos dos cards, chamadas, rótulos e números das listas */
+  --font-label: "Barlow Condensed", "Archivo", "Arial Narrow", sans-serif;
   --header-h: 64px;
 
   /* cores do clube ativo (sobrescritas via JS nas páginas de clube) */
@@ -2163,3 +2165,60 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .sc-more { transition: transform 0.2s var(--ease), color 0.2s; }
 /* o selo "+1 ao vivo" não aumenta a altura da linha do jogador */
 .squad-list .gol-hoje { vertical-align: 1px; line-height: 15px; }
+
+/* atualização ao vivo: pedaço trocado não repete a entrada; número que mudou dá um pulo discreto */
+.patched, .patched * { animation-delay: 0s !important; }
+.patched.match, .patched .match, .patched tr, .patched .kpi, .patched.kpi, .patched li { animation: none !important; }
+.bump { animation: numBump 0.9s var(--ease); }
+@keyframes numBump { 0% { transform: scale(1); } 18% { transform: scale(1.22); color: var(--ink); } 100% { transform: scale(1); } }
+.status.bump, .time.bump, .live-chip.bump { animation: none; }
+@media (prefers-reduced-motion: reduce) { .bump { animation: none; } }
+.goals.bump, .sd-g.bump, .live-chip.bump { display: inline-block; }
+
+/* ==========================================================================
+   Tipografia em três vozes
+   1) Archivo Black condensada: o nome do clube, os títulos das páginas, o placar grande e o GOL! (a identidade)
+   2) Barlow Condensed: a "letra de transmissão" (cabeçalhos dos cards, chamadas, rótulos, números de lista)
+   3) Archivo normal: tudo o que se lê (nomes, frases, notícias, narração)
+   ========================================================================== */
+.card-h { font: 700 15px/1.1 var(--font-label); letter-spacing: 0.07em; }
+.card-h small { font: 500 13px var(--font-label); letter-spacing: 0.02em; }
+.eyebrow { font: 600 13px/1.2 var(--font-label); letter-spacing: 0.16em; }
+.table th { font: 600 12px var(--font-label); letter-spacing: 0.08em; }
+.table td.pts { font: 800 16px var(--font-label); font-variant-numeric: tabular-nums; }
+.kpi small { font: 600 12.5px var(--font-label); letter-spacing: 0.1em; }
+.goals, .sd-g { font: 800 23px/1 var(--font-label); font-variant-numeric: tabular-nums; }
+.squad-list .n, .sd-k { font: 700 13px var(--font-label); letter-spacing: 0.02em; }
+.match .score { font: 800 17px/1.15 var(--font-label); font-variant-numeric: tabular-nums; }
+.match .time { font-family: var(--font-label); font-weight: 600; font-size: 13.5px; letter-spacing: 0.02em; }
+.day-h, .comp-h { font-family: var(--font-label); letter-spacing: 0.06em; }
+.pill { font-family: var(--font-label); font-weight: 700; letter-spacing: 0.1em; }
+.scoreline .status, .mam-min, .sc-sec, .live-chip, .gol-hoje, .sc-hoje, .mov { font-family: var(--font-label); }
+.live-chip { font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em; }
+.gol-hoje, .sc-hoje { font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em; }
+.mov { font-size: 12px; font-weight: 700; }
+.sc-sec { font-size: 13px; font-weight: 700; letter-spacing: 0.1em; }
+.sd-nm small, .squad-list .sl-sub { font-family: var(--font-label); font-size: 12.5px; font-weight: 500; letter-spacing: 0.02em; }
+.mam-min { font-size: 14px; font-weight: 700; }
+/* tabela: nome curto do clube no celular; o nome nunca quebra em duas linhas */
+.table td.club a > span { white-space: nowrap; }
+.table .nm-s { display: none; }
+@media (max-width: 560px) { .table .nm-l { display: none; } .table .nm-s { display: inline; } }
+@media (max-width: 700px) {
+  /* 5 números do campeonato em duas colunas: o último ocupa a linha inteira */
+  .league-kpis > .kpi:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* subiu/caiu fica embaixo da posição, sem empurrar a coluna */
+  .table td:first-child { position: relative; }
+  .table .mov { display: block; margin: 2px 0 0; font-size: 10.5px; line-height: 1; }
+}
+
+/* grade de clubes: texto de baixo legível em qualquer camisa (inclusive as brancas), numa linha só;
+   escudo do canto um pouco maior e destacado do fundo listrado */
+.club-card::after { background:
+    radial-gradient(400px 200px at var(--mx, 50%) var(--my, 0%), rgb(255 255 255 / 0.2), transparent 60%),
+    linear-gradient(to top, rgb(0 0 0 / 0.86), rgb(0 0 0 / 0.5) 26%, rgb(0 0 0 / 0.08) 62%); }
+.club-card h3 { text-shadow: 0 2px 12px rgb(0 0 0 / 0.45); }
+.club-card p { gap: 10px; opacity: 0.92; white-space: nowrap; text-shadow: 0 1px 6px rgb(0 0 0 / 0.5); }
+.club-card p span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.club-card p span:last-child { flex-shrink: 0; }
+.club-card .crest-wrap { top: 16px; left: 16px; filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.35)) drop-shadow(0 0 1px rgb(255 255 255 / 0.5)); }

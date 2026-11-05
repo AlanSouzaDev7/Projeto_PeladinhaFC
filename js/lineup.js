@@ -294,10 +294,16 @@
     return { xA, xB, win: win / tot, draw: draw / tot, loss: loss / tot, poss, notes };
   }
 
+  // na prancheta cabem só nomes curtos (os atacantes dos dois times se encontram no meio): nome longo vira o sobrenome
+  const boardName = (name) => {
+    if (name.length <= 12) return name;
+    const p = name.split(" ").filter(Boolean), last = p.at(-1);
+    return last.length <= 3 && p.length > 1 ? `${p.at(-2)} ${last}` : last;
+  };
   function boardTokens(cid, side) {
     const c = byId[cid];
     return shape(cid).map((s, i) => `<div class="bt ${side}" data-side="${side}" data-i="${i}" title="${s.p ? `${s.p.n ?? "–"} · ${s.p.name}` : s.role}" style="--tc:${display(c)};--to:${onColor(display(c))};--tb:${c.colors[1]}">
-        <span>${s.p ? s.p.n ?? "–" : ""}</span><em>${s.p ? s.p.name : s.role}</em></div>`).join("");
+        <span>${s.p ? s.p.n ?? "–" : ""}</span><em>${s.p ? boardName(s.p.name) : s.role}</em></div>`).join("");
   }
 
   function layoutBoard(root, a, b) {

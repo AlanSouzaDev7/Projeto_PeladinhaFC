@@ -1115,7 +1115,8 @@ def narrate(eid):
             text, kind = "Partida reiniciada.", "status"
         elif typ == "penalty---missed" or typ == "penalty-missed":
             text = f"Perdeu! {ps[0] if ps else 'O batedor'} ({team}) desperdiça o pênalti."
-        if text:
+        # a ESPN às vezes repete o mesmo lance no mesmo minuto
+        if text and not (lines and lines[-1]["text"] == text and lines[-1]["min"] == clock):
             lines.append({"id": f"{eid}-{i}", "min": clock, "type": kind, "text": text})
     st = comp["status"]
     stats = {}
