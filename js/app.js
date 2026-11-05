@@ -34,6 +34,7 @@
 
   /* ---------- utilidades ---------- */
   const ICON = {
+    whistle: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 9.5H21v3.2a5 5 0 0 1-5 5h-1.2A6.3 6.3 0 1 1 8.5 9.5Z"/><circle cx="8.5" cy="15.8" r="2.2"/><path d="M14 9.5V7M3 6l2.5 2M8 3.5l.8 3"/></svg>`,
     star: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z"/></svg>`,
     arrow: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>`,
     pin: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21s7-6 7-12a7 7 0 1 0-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>`,
@@ -698,6 +699,9 @@
       ["Estádio", m.venue || "—"],
       ["Situação", statusText(m)],
     ];
+    // arbitragem pelas manchetes (a escala oficial é da CBF, que não permite reutilizar os dados do site)
+    const arb = m.status !== "ft" ? arbitragemDe(m) : null;
+    if (arb) info.push(["Árbitro", arb.arbitro ? `${arb.arbitro}<small class="arb-src">segundo ${arb.confirmacoes > 1 ? `${arb.confirmacoes} manchetes` : "a imprensa"}</small>` : `<span class="arb-pend">Ainda não noticiado</span>`]);
     const both = state.standings.filter((r) => r.id === m.home || r.id === m.away);
     return `<section class="match-hero" style="${matchVars(m)}"><h1 class="sr-only">${h.name} x ${a.name} — ${statusText(m)}</h1>
         <div style="text-align:center;margin-bottom:18px" data-live="pill"><span class="${m.status === "progress" ? "pill" : "pill muted"}">Brasileirão · ${m.round}ª rodada</span></div>
@@ -709,7 +713,7 @@
         <div>
           <div class="card"><div class="card-h">Informações</div><div class="card-b" style="display:grid;gap:10px">
             ${info.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--text-2)">${k}</span><b style="text-align:right"${k === "Situação" ? " data-situacao" : ""}>${v}</b></div>`).join("")}
-          </div>${m.status === "pending" ? `<div class="source">O resultado deste jogo ainda não foi lançado no site.</div>` : ""}</div>
+          </div>${arb ? arbitragemHTML(arb) : ""}${m.status === "pending" ? `<div class="source">O resultado deste jogo ainda não foi lançado no site.</div>` : ""}</div>
           ${m.espn || (LIVE.proxy() && m.status !== "ft") ? `<div class="card mam" data-mam="${m.espn || ""}" data-h="${m.home}" data-a="${m.away}" data-kick="${m.kick || ""}"><div class="card-h">Minuto a minuto <small class="mam-src">lances: ${LIVE.proxy() ? "API-Football" : "ESPN"} · narração: PLACAR</small></div>
             <div class="mam-top"></div><ul class="mam-list"><li class="mam-empty">Carregando a narração…</li></ul></div>` : ""}
           <div class="card"><div class="card-h">Comparação no campeonato <small>${REAL.source} · ${REAL.updated}</small></div><div class="card-b">${compareHTML(m)}</div></div>
@@ -720,6 +724,23 @@
           ${scorersDuel(m)}
         </div>
       </div>`;
+  }
+
+  /* ---------- arbitragem do jogo pelas manchetes (GET /api/arbitragem ou js/live-data.js, a cada 30 min) ---------- */
+  function arbitragemDe(m) {
+    const j = window.ARBITRAGEM?.jogos;
+    if (!j) return null;
+    const a = j[m.espn] || j[`${m.home}|${m.away}`];
+    return a && (a.arbitro || a.manchetes?.length) ? a : null;
+  }
+  const haTempo = (ts) => { const min = Math.max(1, Math.round((Date.now() / 1000 - ts) / 60)); return min < 60 ? `há ${min} min` : min < 1440 ? `há ${Math.round(min / 60)} h` : `há ${Math.round(min / 1440)} d`; };
+  function arbitragemHTML(a) {
+    const esc = (x) => String(x || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    return `<div class="arb" data-live="arb">
+      <div class="arb-h">${ICON.whistle || ""}<b>Arbitragem nas manchetes</b><small>atualiza a cada 30 min</small></div>
+      ${a.manchetes?.length ? `<ul class="arb-list">${a.manchetes.slice(0, 3).map((x) => `<li><a href="${esc(x.link)}" target="_blank" rel="noopener"><b>${esc(x.title)}</b><small>${esc(x.source)} · ${haTempo(x.ts)} ↗</small></a></li>`).join("")}</ul>` : `<p class="arb-none">Os veículos ainda não publicaram a escala deste jogo.</p>`}
+      <p class="arb-aviso">A escala completa (assistentes, quarto árbitro e VAR) é divulgada pela CBF; aqui aparece o que a imprensa já noticiou, com link para cada matéria. <a href="https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/${new Date().getFullYear()}" target="_blank" rel="noopener">Escala oficial na CBF ↗</a></p>
+    </div>`;
   }
 
   /* palpite de quem está vendo (guardado só neste navegador) */

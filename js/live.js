@@ -22,6 +22,7 @@
     if (s.last) window.SQUADS_LAST = s.last;
     if (s.players) window.PLAYER_STATS = s.players;
     if (s.form) window.CLUB_FORM = s.form;
+    if (s.arbitragem) window.ARBITRAGEM = s.arbitragem;
     PD.LIVE = true;
   }
 
@@ -38,6 +39,7 @@
     }
     PD.ROUNDS = Object.keys(PD.FIXTURES).map(Number).sort((a, b) => a - b);
     PD.ROUND = d.round || PD.ROUND;
+    if (d.arbitragem) window.ARBITRAGEM = d.arbitragem;
   }
 
   async function fetchState(timeout = 2500) {

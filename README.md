@@ -52,7 +52,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | **Bora pro jogo** | Prancheta tática comparando dois times com e sem a bola, leitura tática e tendência do jogo (modelo simples). **Arraste os jogadores** (mouse ou dedo) para mudar a posição em tempo real: as setas de ataque acompanham, cada fase guarda as suas posições e "Restaurar posições" desfaz. Ao segurar um jogador, aparece o **mapa de calor** de onde ele costuma atuar, com as posições em % e os minutos no Brasileirão. |
 | **Tabela** | Classificação, números do campeonato e artilharia, **em tempo real**: com jogo rolando, os placares parciais entram na conta (pontos, jogos, saldo e posição, com ▲▼ de quem subiu ou caiu e o placar ao lado do clube), e os gols de agora entram na artilharia ("+1 ao vivo"). Funciona também sem a API, direto da ESPN no navegador. Cada número (gols, ataque, defesa, amarelos, vermelhos) abre uma **subpágina de ranking** dos 20 clubes; passar o mouse ou segurar o dedo mostra uma prévia. |
 | **Artilharia e ficha do jogador** | Artilharia geral, do clube e da partida **em tempo real** ("+1 ao vivo"), montada pelas súmulas da ESPN de todos os jogos (quem está no top 10 da CBF fica com o número oficial; gol contra não conta). A ficha abre e fecha no **clique** (ou toque), rola por dentro em telas baixas e mostra jogos, minutos, gols por clube e **contra quem marcou**, já com os gols de hoje ("+2 hoje"). |
-| **Partida** | Placar com o **resumo dos gols e expulsões** de cada time (jogador e minuto, gol contra e de pênalti marcados), informações, comparação no campeonato, **top 5 artilheiros de cada time lado a lado** (1º contra 1º…, com a ficha de cada um) e **Minuto a minuto** ao vivo. A página de cada clube também mostra o top 5 dele. |
+| **Partida** | Placar com o **resumo dos gols e expulsões** de cada time (jogador e minuto, gol contra e de pênalti marcados), informações, comparação no campeonato, **top 5 artilheiros de cada time lado a lado** (1º contra 1º…, com a ficha de cada um) e **Minuto a minuto** ao vivo. Nos jogos por vir, **Árbitro** nas informações e as **manchetes da arbitragem** com link (veja abaixo). A página de cada clube também mostra o top 5 dele. |
 
 ## API (`server/placar_api.py`)
 
@@ -64,6 +64,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | `GET /api/rankings?tipo=gols\|ataque\|defesa\|amarelos\|vermelhos` | rankings do campeonato; os cartões somam a súmula de cada jogo encerrado depois da última tabela da CBF |
 | `GET /api/retrospecto?club=flamengo` | últimos 5 e próximos 5 jogos, em todas as competições; atualiza a cada 30 min e ao fim de cada jogo |
 | `GET /api/jogadores?club=flamengo` | pendurados, jogos seguidos, lesionados (com fontes) e minutagem dos reservas; atualiza a cada hora |
+| `GET /api/arbitragem` | árbitro dos jogos dos próximos 8 dias segundo as manchetes dos veículos, quantas manchetes confirmam e os links; atualiza a cada 30 min |
 | `GET /api/manchetes` | principais notícias do futebol para a faixa embaixo do menu (título, fonte, hora, link e clubes citados); atualiza a cada 30 min |
 | `GET /api/news?club=flamengo` | manchetes recentes do clube (título, fonte, data e link), só as que citam o clube no título pelo nome ou por um apelido (`apelidos` em `server/config.json`) |
 | `GET /api/minuto-a-minuto/<id>` | narração do jogo até o momento |
@@ -71,6 +72,10 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | `GET /api/health` | situação das atualizações |
 
 Intervalos de atualização, portais monitorados, **setoristas** e **apelidos** de cada clube (usados para filtrar as notícias) ficam em [`server/config.json`](server/config.json).
+
+## Arbitragem dos próximos jogos (pelas manchetes)
+
+A escala oficial (árbitro, assistentes, quarto árbitro e VAR) é publicada pela CBF, mas os termos de uso do site da CBF não permitem reutilizar os dados sem autorização. Por isso a API **monitora os veículos de comunicação**: a cada 30 min, para cada jogo dos próximos 8 dias, busca no Google Notícias as manchetes sobre a arbitragem daquele confronto (só título, fonte, data e link) publicadas depois do último jogo dos dois clubes. Quando o título traz o nome do árbitro ("Fulano apita…", "CBF escala Fulano…", "com Fulano no apito"), o nome aparece na página do jogo com quantas manchetes confirmam. Um nome só vale se estiver na **lista de árbitros** que a própria API aprende com esse tipo de manchete, para não confundir com jogador, técnico ou dirigente. Enquanto nenhum veículo publicou o nome no título, a página mostra "Ainda não noticiado" e as manchetes da arbitragem, com o link para a escala oficial na CBF.
 
 ## Mapa de calor dos jogadores (estimado)
 
@@ -112,6 +117,7 @@ node tests/mobile/alinhamento.mjs                  # botões desalinhados em tod
 node tests/mobile/bora-arrastar.mjs                # arrastar jogadores na prancheta (mouse e dedo)
 node tests/mobile/bora-calor.mjs                   # mapa de calor de quem está sendo arrastado (PC e celular)
 node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! em tempo real (ESPN simulada, aba escondida)
+node tests/mobile/arbitragem.mjs                   # árbitro nos títulos das manchetes e quadro de arbitragem na página do jogo
 node tests/mobile/faixa.mjs                        # faixa de notícias: troca da manchete, fita, links, atualização sozinha a cada 30 min, reduzir movimento
 node tests/mobile/noticias.mjs                     # "Últimas notícias" do clube: só manchetes que falam dele (20 clubes, PC e celular)
 node tests/mobile/sem-recarregar.mjs                # com jogo rolando, a página não se redesenha sozinha (só o que mudou é trocado)

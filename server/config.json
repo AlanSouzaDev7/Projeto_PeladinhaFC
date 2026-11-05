@@ -6,7 +6,8 @@
     "elencos": 360,
     "jogadores": 60,
     "retrospecto": 30,
-    "manchetes": 30
+    "manchetes": 30,
+    "arbitragem": 30
   },
   "fontes": [
     "ge.globo.com",

@@ -23,6 +23,7 @@ Rotas
 Gera também o arquivo do site sem a API (GitHub Pages):  python server/placar_api.py --snapshot
   GET /api/news            [?club=id]     manchetes (título, fonte, data e link)
   GET /api/manchetes                      principais notícias do futebol (faixa embaixo do menu), a cada 30 min
+  GET /api/arbitragem                     árbitro dos próximos jogos pelas manchetes dos veículos, a cada 30 min
   GET /api/minuto-a-minuto/<id_espn>      narração completa do jogo até agora
   GET /api/minuto-a-minuto/<id_espn>/stream   o mesmo, ao vivo (Server-Sent Events)
 
@@ -58,7 +59,7 @@ COMP_NAME = {"bra.1": "Brasileirão", "bra.copa_do_brazil": "Copa do Brasil", "c
 FORM_LEAGUES = list(COMP_NAME)
 
 lock = threading.Lock()
-state = {"updated": None, "standings": None, "round": None, "fixtures": None, "squads": None, "last": None, "news": {}, "manchetes": None, "players": None, "errors": []}
+state = {"updated": None, "standings": None, "round": None, "fixtures": None, "squads": None, "last": None, "news": {}, "manchetes": None, "arbitragem": None, "players": None, "errors": []}
 
 
 # situações do jogo em que o relógio da ESPN fica parado (ex.: "45'+7'" durante o intervalo)
@@ -963,7 +964,7 @@ def write_snapshot():
             state.update({k: old[k] for k in ("fixtures", "round") if old.get(k)})
         except Exception as ex:
             log("base anterior ignorada", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("jogadores", update_players), ("histórico", update_form)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("histórico", update_form)]
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
             fn()
@@ -972,6 +973,7 @@ def write_snapshot():
     with lock:
         live = {k: state.get(k) for k in ("updated", "standings", "round", "fixtures", "scorers")}
         live["manchetes"] = state.get("manchetes")
+        live["arbitragem"] = state.get("arbitragem")
         live["news"] = {cid: [{k: x.get(k) for k in ("title", "link", "source", "ts", "tag")} for x in items[:8]] for cid, items in (state.get("news") or {}).items()}
         players, form, positions = state.get("players"), state.get("form"), state.get("positions")
     if live["standings"]:
@@ -1124,6 +1126,125 @@ def update_headlines():
     log("manchetes atualizadas:", len(out))
 
 
+# ---------------------------------------------------------------------------
+# Arbitragem dos próximos jogos (pelas manchetes)
+# A escala oficial é da CBF, cujos termos de uso proíbem reutilizar os dados do site. Por isso a API acompanha
+# as manchetes dos veículos (só título, fonte, data e link) e, quando o título traz o nome do árbitro,
+# mostra o nome. Um nome só vale se estiver na lista de árbitros aprendida com manchetes do tipo
+# "Fulano apita...", "CBF escala Fulano..." ou "com Fulano no apito" (não confunde com jogador ou técnico).
+# ---------------------------------------------------------------------------
+UP = "A-ZÁÉÍÓÚÂÊÔÃÕÇ"
+LOW = "a-záéíóúâêôãõçü"
+NAME = rf"([{UP}][{LOW}]+(?:\s+(?:d[aeo]s?\s+)?[{UP}][{LOW}]+){{1,4}})"
+REF_PATTERNS = [
+    rf"{NAME}\s+(?:vai\s+)?apita(?:rá|r)?\b",
+    rf"{NAME}\s+(?:é|foi|está)\s+escalad[oa]\b",
+    rf"{NAME}\s+será\s+o\s+árbitro\b",
+    rf"{NAME}\s+(?:comanda|comandará|vai comandar|volta a comandar|volta a apitar)\b",
+    rf"(?:CBF\s+)?(?:escala|define|confirma|sorteia)\s+{NAME}\s+(?:para|no|na|em|como)\b",
+    rf"\b(?:árbitro|árbitra|arbitragem de|apito de)\s+{NAME}",
+    rf"\b[Cc]om\s+{NAME}\s+no\s+apito\b",
+    rf"\bterá\s+{NAME}\s+(?:no\s+apito|no\s+comando|como\s+árbitro)\b",
+    rf"\breencontra\s+(?:o\s+árbitro\s+)?{NAME}",
+]
+NOT_REF = {"CBF", "VAR", "Brasileirão", "Série", "Copa", "Campeonato", "Onde", "Veja", "Saiba", "Confira", "Comissão", "Arbitragem",
+           "Ao", "Rodada", "Libertadores", "Brasil", "Seleção", "Árbitro", "Árbitra", "Técnico", "Presidente", "Torcida", "Clássico", "Jogo", "Santa", "Estádio", "Arena"}
+REF_WORDS = r"\b(apit\w*|árbitr[oa]s?|arbitragem|escala(?!ç)\w*|comandar?\w*|reencontra|apito|VAR|juiz|juíza)\b"
+REF_QUERIES = ["(apita OR \"vai apitar\" OR \"no apito\") (Brasileirão OR \"Série A\")",
+               "(\"escala de arbitragem\" OR \"define arbitragem\" OR \"árbitro escalado\") Brasileirão"]
+
+
+def ref_names(title):
+    """Nomes de árbitro que o título apresenta como árbitro ("Fulano apita...", "com Fulano no apito")."""
+    out = []
+    for pat in REF_PATTERNS:
+        for m in re.finditer(pat, title):
+            n = m.group(1).strip()
+            alias = [x for c in CLUBS.values() for x in (c.get("apelidos") or [c["busca"]])]
+            if n.split()[0] in NOT_REF or any(x in n for x in alias) or len(n) < 8:
+                continue
+            out.append(n)
+    return out
+
+
+def known_refs():
+    """Lista de árbitros aprendida com as manchetes (guardada entre as atualizações)."""
+    refs = set(state.get("arbitros") or [])
+    if refs and time.time() - state.get("arbitros_em", 0) < 6 * 3600:
+        return refs
+    if not refs and os.path.exists(LIVE_DATA_FILE):  # sem cache: a última lista gravada no site
+        try:
+            src = open(LIVE_DATA_FILE, encoding="utf-8").read()
+            refs = set((json.loads(src[src.index("{"):src.rindex("}") + 1]).get("arbitragem") or {}).get("arbitros") or [])
+        except Exception:
+            pass
+    # busca geral e uma por clube ("Fulano apita o Flamengo..."): a lista cresce a cada atualização
+    qs = [f"{q} when:120d" for q in REF_QUERIES] + [f'"{(c.get("apelidos") or [c["busca"]])[0]}" (apita OR "no apito" OR "árbitro escalado" OR "escala de arbitragem") when:90d' for c in CLUBS.values()]
+    refs = {r for r in refs if r.split()[0] not in NOT_REF}
+    for q in qs:
+        try:
+            for x in news_query(q):
+                refs.update(ref_names(x["title"]))
+        except Exception as ex:
+            log("árbitros", ex)
+        time.sleep(1)
+    state["arbitros"] = sorted(refs)
+    state["arbitros_em"] = time.time()
+    return refs
+
+
+def update_referees():
+    """Para cada jogo dos próximos 8 dias, as manchetes sobre a arbitragem dele e, se o título trouxer, o árbitro."""
+    with lock:
+        fixtures = state["fixtures"] or {}
+    refs = known_refs()
+    games = [g for gs in fixtures.values() for g in gs]
+    now = time.time()
+    # último jogo de cada clube antes deste: manchete mais antiga que ele fala de outro jogo
+    played = {}
+    for g in games:
+        k = kickoff(g)
+        if k and k < now:
+            for c in g[:2]:
+                played[c] = max(played.get(c, 0), k)
+    out = {}
+    for g in games:
+        k = kickoff(g)
+        if not k or k < now - 3 * 3600 or k > now + 8 * 86400:
+            continue
+        h, a = g[0], g[1]
+        H, A = CLUBS[h], CLUBS[a]
+        nh, na = (H.get("apelidos") or [H["busca"]])[0], (A.get("apelidos") or [A["busca"]])[0]
+        try:
+            items = news_query(f'"{nh}" "{na}" (arbitragem OR árbitro OR apita OR apito OR "escala de arbitragem") when:10d')
+        except Exception as ex:
+            log("arbitragem", h, a, ex)
+            continue
+        since = max(played.get(h, 0), played.get(a, 0)) - 6 * 3600
+        found, names = [], {}
+        for x in sorted(items, key=lambda x: -x["ts"]):
+            t = x["title"]
+            if x["ts"] < since or not re.search(REF_WORDS, t, re.I):
+                continue
+            both, one = about_club(h, t) and about_club(a, t), about_club(h, t) or about_club(a, t)
+            who = [n for n in refs if n in t]
+            if not (both or (one and who)):
+                continue
+            for n in who:
+                names[n] = names.get(n, 0) + (2 if both else 1)
+            found.append({"title": t, "link": x["link"], "source": x["source"], "ts": x["ts"], "nome": bool(who)})
+        uniq = {}
+        found.sort(key=lambda f: (not f["nome"], -f["ts"]))  # a manchete que traz o nome do árbitro vem primeiro
+        for f in found:
+            uniq.setdefault(headline_key(f["title"]), f)
+        ref = max(names.items(), key=lambda x: x[1])[0] if names else None
+        out[g[7] or f"{h}|{a}"] = {"arbitro": ref, "confirmacoes": names.get(ref, 0) if ref else 0, "manchetes": list(uniq.values())[:4]}
+        time.sleep(1)
+    with lock:
+        state["arbitragem"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "jogos": out, "arbitros": state.get("arbitros", [])}
+    log("arbitragem:", sum(1 for v in out.values() if v["arbitro"]), "árbitros em", len(out), "jogos")
+
+
 def persist():
     os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
     with lock:
@@ -1272,7 +1393,7 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json({"ok": True, "updated": state["updated"], "errors": state["errors"]})
             if parts[1:] == ["state"]:
                 with lock:
-                    s = {k: state[k] for k in ("updated", "standings", "round", "fixtures", "squads", "last", "scorers", "players", "form") if k in state}
+                    s = {k: state[k] for k in ("updated", "standings", "round", "fixtures", "squads", "last", "scorers", "players", "form", "arbitragem") if k in state}
                 if not s.get("standings"):
                     return self.send_json({"ok": False, "message": "carregando dados"}, 503)
                 return self.send_json(s)
@@ -1304,6 +1425,10 @@ class Handler(SimpleHTTPRequestHandler):
                 if club:
                     return self.send_json({"updated": pl["updated"], "club": club, **pl["clubs"].get(club, {})})
                 return self.send_json(pl)
+            if parts[1:] == ["arbitragem"]:
+                with lock:
+                    m = state.get("arbitragem")
+                return self.send_json(m) if m else self.send_json({"ok": False, "message": "carregando arbitragem"}, 503)
             if parts[1:] == ["manchetes"]:
                 with lock:
                     m = state.get("manchetes")
@@ -1362,6 +1487,7 @@ def main():
     every(iv["elencos"], update_squads)
     every(iv["noticias"], update_news)
     every(iv.get("manchetes", 30), update_headlines)
+    every(iv.get("arbitragem", 30), update_referees)
     every(iv.get("jogadores", 60), update_players)
     every(iv.get("retrospecto", 30), update_form)
     threading.Thread(target=live_loop, daemon=True).start()
