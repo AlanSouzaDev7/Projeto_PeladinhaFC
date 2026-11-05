@@ -23,7 +23,7 @@
       <div class="tk-tag" aria-hidden="true"><b>PLACAR<i></i></b><span>Futebol agora</span><time class="tk-clock"></time></div>
       <div class="tk-body">
         <div class="tk-head" aria-live="polite">${top.map((x, i) => `<a class="tk-h${i === cur % top.length ? " on" : ""}" href="${esc(x.link)}" target="_blank" rel="noopener" ${i === cur % top.length ? "" : 'tabindex="-1" aria-hidden="true"'}>
-            <b>${esc(x.title)}</b><small>${esc(x.source)} · ${ha(x.ts)}</small></a>`).join("")}</div>
+            <b>${esc(x.title)}</b><small>${esc(x.source)} · ${ha(x.ts)}</small></a>`).join("")}${top.length > 1 && !reduced ? '<i class="tk-prog" aria-hidden="true"></i>' : ""}</div>
         <div class="tk-run"><div class="tk-track">
           <div class="tk-copy">${fita}<i class="tk-sep" aria-hidden="true"></i></div>
           ${reduced ? "" : `<div class="tk-copy" aria-hidden="true">${fita.replace(/<a /g, '<a tabindex="-1" ')}<i class="tk-sep" aria-hidden="true"></i></div>`}
@@ -31,6 +31,13 @@
       </div>`;
     clock();
     speed();
+    prog();
+  }
+  // barrinha embaixo da manchete: o tempo até a próxima
+  function prog() {
+    const p = el.querySelector(".tk-prog");
+    if (!p) return;
+    p.classList.remove("run"); void p.offsetWidth; p.classList.add("run");
   }
   // a fita anda sempre na mesma velocidade, qualquer que seja o tamanho do texto
   function speed() {
@@ -52,6 +59,7 @@
     b.classList.remove("out"); b.classList.add("on"); b.removeAttribute("aria-hidden"); b.removeAttribute("tabindex");
     setTimeout(() => a.classList.remove("out"), 700);
     clock();
+    prog();
   }
 
   async function load() {
@@ -70,7 +78,15 @@
 
   items = (window.LIVE_DATA && window.LIVE_DATA.manchetes && window.LIVE_DATA.manchetes.items) || [];
   (window.PD_BOOT || Promise.resolve()).then(() => { paint(); if (window.PD?.LIVE) load(); });
-  if (!reduced) timer = setInterval(next, 8000);
+  // troca a cada 8 s; com o mouse (ou o foco) em cima, espera
+  let parado = false, falta = 8000, t0 = Date.now();
+  el.addEventListener("pointerenter", () => { parado = true; falta -= Date.now() - t0; });
+  el.addEventListener("pointerleave", () => { parado = false; t0 = Date.now(); });
+  if (!reduced) timer = setInterval(() => {
+    if (parado || document.hidden) return;
+    falta -= Date.now() - t0; t0 = Date.now();
+    if (falta <= 50) { next(); falta = 8000; }
+  }, 250);
   setInterval(clock, 30000);
   setInterval(load, 30 * 60e3);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { clock(); if (Date.now() - (window.__tkLoad || 0) > 30 * 60e3) { window.__tkLoad = Date.now(); load(); } } });
