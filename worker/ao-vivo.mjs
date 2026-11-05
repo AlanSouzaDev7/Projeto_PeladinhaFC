@@ -177,18 +177,25 @@ export async function aoVivo(env, now = Date.now()) {
 /* ---------------- Worker ---------------- */
 export default {
   async fetch(req, env) {
-    const cors = { "access-control-allow-origin": env.ORIGEM || "*", "access-control-allow-methods": "GET, OPTIONS", "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
-    if (req.method === "OPTIONS") return new Response(null, { headers: cors });
-    const path = new URL(req.url).pathname.replace(/\/+$/, "");
+    const cors = { "access-control-allow-origin": env.ORIGEM || "*", "access-control-allow-methods": "GET, OPTIONS", "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
+      "vary": "Origin", "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "no-referrer",
+      "content-security-policy": "default-src 'none'; frame-ancestors 'none'", "cross-origin-resource-policy": "cross-origin" };
+    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     const json = (d, status = 200) => new Response(JSON.stringify(d), { status, headers: cors });
+    // só leitura: qualquer outro método é recusado; endereço comprido demais também
+    if (req.method !== "GET" && req.method !== "HEAD") return new Response(null, { status: 405, headers: { ...cors, allow: "GET, HEAD, OPTIONS" } });
+    if (req.url.length > 512) return json({ erro: "endereço longo demais" }, 414);
+    const path = new URL(req.url).pathname.replace(/\/+$/, "");
     if (path === "/saude") return json({ ok: !!env.API_FOOTBALL_KEY, restantes, esgotado: Date.now() < bloqueadoAte });
-    if (path !== "/ao-vivo") return json({ erro: "rota desconhecida", rotas: ["/ao-vivo", "/saude"] }, 404);
+    if (path !== "/ao-vivo") return json({ erro: "rota desconhecida" }, 404);
     if (!env.API_FOOTBALL_KEY) return json({ erro: "chave API_FOOTBALL_KEY não configurada", games: [] }, 503);
     if (Date.now() < bloqueadoAte) return json({ esgotado: true, games: [] }, 503);
     try {
       return json(await aoVivo(env));
     } catch (e) {
-      return json({ erro: String(e.message || e), esgotado: Date.now() < bloqueadoAte, games: [] }, 503);
+      // o detalhe fica no registro do Worker; quem acessa recebe uma mensagem genérica
+      console.error("ao-vivo:", e && e.message);
+      return json({ erro: "fonte indisponível", esgotado: Date.now() < bloqueadoAte, games: [] }, 503);
     }
   },
 };

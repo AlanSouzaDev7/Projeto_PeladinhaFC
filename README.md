@@ -119,6 +119,8 @@ node tests/mobile/bora-arrastar.mjs                # arrastar jogadores na pranc
 node tests/mobile/bora-calor.mjs                   # mapa de calor de quem está sendo arrastado (PC e celular)
 node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! em tempo real (ESPN simulada, aba escondida)
 node tests/mobile/arbitragem.mjs                   # árbitro nos títulos das manchetes e quadro de arbitragem na página do jogo
+node tests/seguranca/site.mjs                      # testes de invasão no navegador: dados maliciosos nas fontes, endereços forjados, moldura de outro site
+node tests/seguranca/api.mjs                       # testes de invasão da API: arquivos fora do site, travessia de pastas, métodos, parâmetros, limites
 node tests/mobile/faixa.mjs                        # faixa de notícias: troca da manchete, fita, links, atualização sozinha a cada 30 min, reduzir movimento
 node tests/mobile/noticias.mjs                     # "Últimas notícias" do clube: só manchetes que falam dele (20 clubes, PC e celular)
 node tests/mobile/sem-recarregar.mjs                # com jogo rolando, a página não se redesenha sozinha (só o que mudou é trocado)
@@ -133,6 +135,12 @@ node tests/mobile/rodadas.mjs                      # próximas rodadas e jogos a
 node tests/mobile/retrospecto.mjs                  # últimos 5 e próximos 5 de cada clube
 node tests/mobile/sem-servidor.mjs                 # site funcionando só com os arquivos (GitHub Pages)
 ```
+
+## Segurança
+
+O site segue requisitos de segurança de nível empresarial, descritos em [SECURITY.md](SECURITY.md) (sem detalhes de implementação, de propósito). Em resumo: só o código do próprio site roda na página, todo dado que vem de fora é tratado como não confiável, a API é só de leitura e tem limites de uso, nenhuma chave fica no repositório e o código passa por análise automática toda semana. Os testes de invasão (`tests/seguranca/`) rodam no PC, no iPhone e no Android.
+
+Encontrou uma falha? Use o [relato privado de vulnerabilidade](https://github.com/AlanSouzaDev7/Projeto_PeladinhaFC/security/advisories/new), não uma issue pública.
 
 ## Celular (iPhone e Android)
 
@@ -151,6 +159,7 @@ O teste abre as 8 páginas principais e confere rolagem lateral, tamanho dos alv
 
 ```
 index.html            página única (rotas por hash)
+js/seguranca.js       camada de segurança: roda antes de tudo e limpa todo dado que vem de fora
 css/styles.css        estilos, temas por clube, animações
 js/data.js            clubes, tabela e jogos (base)
 js/squads.js          elencos e últimas escalações (base)
@@ -168,6 +177,8 @@ js/hero-scenes-clubes.js  cenas dos outros 19 clubes
 js/graphics.js        escudos, padrões de camisa e cores
 server/               API em Python (server/config.json: intervalos, portais, setoristas e apelidos)
 tests/mobile/         testes automáticos em PC, iPhone e Android (Playwright)
+tests/seguranca/      testes de invasão (site e API)
+SECURITY.md           política e requisitos de segurança
 assets/               marca do PLACAR.
 prints/               capturas de tela
 ```

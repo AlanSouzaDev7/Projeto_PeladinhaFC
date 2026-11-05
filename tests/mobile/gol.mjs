@@ -38,7 +38,8 @@ for (const [nome, opts] of [["pc", { viewport: { width: 1440, height: 900 } }], 
   for (const id of ids) {
     await page.goto(`${BASE}/?estatico#/clube/${id}`, { waitUntil: "load" });
     await page.waitForSelector(".gb");
-    await page.waitForFunction(() => [...document.querySelectorAll(".gb img")].every((i) => i.complete));
+    // espera as imagens (laço com evaluate: o waitForFunction do Playwright usa eval, que a política de segurança do site bloqueia)
+    for (let t = 0; t < 100 && !(await page.evaluate(() => [...document.querySelectorAll(".gb img")].every((i) => i.complete))); t++) await page.waitForTimeout(100);
     await page.waitForTimeout(250);
     const info = await page.evaluate(() => {
       const gb = document.querySelector(".gb").getBoundingClientRect(), hero = document.querySelector(".hero").getBoundingClientRect();

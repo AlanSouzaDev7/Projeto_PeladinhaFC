@@ -78,7 +78,7 @@ CLUBS.forEach((c) => {
   if (f) c.idolPhoto = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(f)}?width=640`;
 });
 
-const byId = Object.fromEntries(CLUBS.map((c) => [c.id, c]));
+const byId = Object.assign(Object.create(null), Object.fromEntries(CLUBS.map((c) => [c.id, c])));
 
 /* ---------- gerador pseudoaleatório com semente (mulberry32) ---------- */
 function rng(seed) {

@@ -38,9 +38,12 @@ import re
 import sys
 import threading
 import time
+import traceback
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+import zlib
+from collections import OrderedDict, deque
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -77,13 +80,60 @@ def log(*a):
     print(time.strftime("[%H:%M:%S]"), *a, flush=True)
 
 
+MAX_BYTES = 15 * 1024 * 1024   # nenhuma resposta de fonte de dados passa disso
+
+
 def get(url, timeout=20):
+    if not str(url).startswith("https://"):
+        raise ValueError("só endereços https")
     req = urllib.request.Request(url, headers={"User-Agent": "placar-portfolio/1.0", "Accept-Encoding": "gzip"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        data = r.read()
+        if not r.geturl().startswith("https://"):
+            raise ValueError("redirecionado para endereço sem https")
+        data = r.read(MAX_BYTES + 1)
+        if len(data) > MAX_BYTES:
+            raise ValueError("resposta grande demais")
         if r.headers.get("Content-Encoding") == "gzip":
-            data = gzip.decompress(data)
+            z = zlib.decompressobj(16 + zlib.MAX_WBITS)
+            data = z.decompress(data, MAX_BYTES * 4)
+            if z.unconsumed_tail:
+                raise ValueError("resposta compactada grande demais")
         return data
+
+
+# ---------------------------------------------------------------------------
+# Limpeza do que vem de fora (manchetes, nomes, links): nada vira código no site
+# ---------------------------------------------------------------------------
+CONTROL = re.compile("[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]")
+
+
+def clean_text(t, limit=600):
+    t = CONTROL.sub("", str(t or ""))[:limit]
+    return t.replace("<", "‹").replace(">", "›").strip()
+
+
+def clean_link(u):
+    u = CONTROL.sub("", str(u or "")).strip()
+    try:
+        x = urllib.parse.urlsplit(u)
+    except ValueError:
+        return None
+    if x.scheme != "https" or not x.netloc or "@" in x.netloc or any(c in u for c in '"<>`\\ '):
+        return None
+    return u[:2000]
+
+
+def clean_deep(d, depth=0):
+    """Antes de gravar os arquivos de dados do site: tira marcação e caracteres de controle de todo texto."""
+    if isinstance(d, str):
+        return CONTROL.sub("", d).replace("<", "‹").replace(">", "›")
+    if depth > 40:
+        return d
+    if isinstance(d, list):
+        return [clean_deep(x, depth + 1) for x in d]
+    if isinstance(d, dict):
+        return {clean_deep(k, depth + 1) if isinstance(k, str) else k: clean_deep(v, depth + 1) for k, v in d.items() if k not in ("__proto__", "constructor", "prototype")}
+    return d
 
 
 def get_json(url):
@@ -949,7 +999,7 @@ LIVE_DATA_FILE = os.path.join(ROOT, "js", "live-data.js")
 def write_js(name, var, data, comment):
     path = os.path.join(ROOT, "js", name)
     open(path, "w", encoding="utf-8").write(f"/* PLACAR — {comment} (gerado por: python server/placar_api.py --snapshot) */\n"
-                                            f"window.{var} = " + json.dumps(data, ensure_ascii=False) + ";\n")
+                                            f"window.{var} = " + json.dumps(clean_deep(data), ensure_ascii=False) + ";\n")
     log("gravado", path)
 
 
@@ -988,7 +1038,10 @@ def write_snapshot():
 
 def news_query(q):
     url = "https://news.google.com/rss/search?" + urllib.parse.urlencode({"q": q, "hl": "pt-BR", "gl": "BR", "ceid": "BR:pt-419"})
-    root = ET.fromstring(get(url))
+    raw = get(url)
+    if re.search(rb"<!(DOCTYPE|ENTITY)", raw, re.I):
+        raise ValueError("RSS com declarações não permitidas")
+    root = ET.fromstring(raw)
     out = []
     for it in root.iter("item"):
         src = it.find("source")
@@ -997,8 +1050,11 @@ def news_query(q):
             ts = email.utils.parsedate_to_datetime(pub).timestamp()
         except Exception:
             ts = 0
-        out.append({"title": (it.findtext("title") or "").rsplit(" - ", 1)[0], "link": it.findtext("link"),
-                    "source": src.text if src is not None else "", "ts": ts})
+        link = clean_link(it.findtext("link"))
+        if not link:
+            continue
+        out.append({"title": clean_text((it.findtext("title") or "").rsplit(" - ", 1)[0], 300), "link": link,
+                    "source": clean_text(src.text if src is not None else "", 80), "ts": ts})
     return out
 
 
@@ -1268,7 +1324,8 @@ def every(minutes, fn):
 # ---------------------------------------------------------------------------
 # Minuto a minuto: narração própria a partir dos lances
 # ---------------------------------------------------------------------------
-summary_cache = {}
+summary_cache = OrderedDict()
+SUMMARY_MAX = 300
 
 
 def summary(eid):
@@ -1285,6 +1342,9 @@ def summary(eid):
         except Exception:
             continue
     summary_cache[eid] = (time.time(), data)
+    summary_cache.move_to_end(eid)
+    while len(summary_cache) > SUMMARY_MAX:
+        summary_cache.popitem(last=False)
     return data
 
 
@@ -1363,34 +1423,155 @@ def narrate(eid):
 # ---------------------------------------------------------------------------
 # Servidor
 # ---------------------------------------------------------------------------
+# endereço em que o servidor escuta: só este computador, a não ser que HOST diga outro (ex.: HOST=0.0.0.0 num servidor)
+HOST = os.environ.get("HOST", "127.0.0.1")
+# sites que podem ler a API de outro endereço (a própria página do servidor sempre pode)
+ORIGENS = {o.strip().rstrip("/") for o in os.environ.get(
+    "ORIGENS", "https://alansouzadev7.github.io,http://localhost:8000,http://127.0.0.1:8000").split(",") if o.strip()}
+CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
+       "img-src 'self' data: blob: https://a.espncdn.com https://*.wikimedia.org https://*.wikipedia.org; "
+       "connect-src 'self' https://site.web.api.espn.com https://site.api.espn.com https://*.workers.dev; media-src 'self' blob:; manifest-src 'self'; "
+       "worker-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+SEC_HEADERS = {
+    "Content-Security-Policy": CSP,
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "X-Permitted-Cross-Domain-Policies": "none",
+}
+# só isto é servido como arquivo; o resto da pasta (código do servidor, cache, .git, testes, chaves locais) nunca sai
+STATIC_OK = re.compile(r"^/(?:|index\.html|manifest\.webmanifest|(?:css|js|assets|prints)/[A-Za-z0-9._\-/%]+)$")
+MAX_URL = 2048
+EVENT_OK = re.compile(r"^\d{4,12}$")
+# limites por endereço de quem acessa (janela de 60 s)
+LIMITE_API, LIMITE_ARQUIVOS = 120, 900
+STREAMS_MAX, STREAMS_POR_IP, STREAM_HORAS = 40, 3, 4
+_hits, _hits_lock = {}, threading.Lock()
+_streams, _streams_ip = threading.BoundedSemaphore(STREAMS_MAX), {}
+
+
+def allow(ip, kind, limit):
+    """Janela deslizante de 60 s por endereço: True se ainda cabe."""
+    now = time.monotonic()
+    with _hits_lock:
+        q = _hits.setdefault((ip, kind), deque())
+        while q and now - q[0] > 60:
+            q.popleft()
+        if len(q) >= limit:
+            return False
+        q.append(now)
+        if len(_hits) > 20000:   # memória limitada: esquece quem não acessa há mais de 1 min
+            for k in [k for k, v in _hits.items() if not v or now - v[-1] > 60]:
+                _hits.pop(k, None)
+        return True
+
+
 class Handler(SimpleHTTPRequestHandler):
+    server_version = "PLACAR"
+    sys_version = ""
+    timeout = 20                      # conexão parada (ataque de conexão lenta) cai em 20 s
+    error_content_type = "text/plain; charset=utf-8"
+    error_message_format = "%(code)d %(message)s\n"
+
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=ROOT, **kw)
 
     def log_message(self, fmt, *args):
-        if "/api/" in (args[0] if args else ""):
-            log(fmt % args)
+        line = CONTROL.sub("", fmt % args)[:500]
+        if "/api/" in line or '" 4' in line or '" 5' in line:
+            log(self.client_address[0], line)
+
+    # ---- cabeçalhos de segurança em toda resposta
+    def end_headers(self):
+        for k, v in SEC_HEADERS.items():
+            self.send_header(k, v)
+        if self.headers and self.headers.get("X-Forwarded-Proto", "") == "https":
+            self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        origin = ((self.headers.get("Origin") if self.headers else "") or "").rstrip("/")
+        if origin and origin in ORIGENS:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+        super().end_headers()
 
     def send_json(self, obj, code=200):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def list_directory(self, path):   # sem listagem de pastas
+        self.send_error(404)
+        return None
+
+    def static_ok(self, path):
+        dec = urllib.parse.unquote(path)
+        if any(c in dec for c in ("\\", "\x00", ":")) or "/." in dec or ".." in dec:
+            return False
+        return bool(STATIC_OK.match(path))
+
+    def guard(self):
+        """Comum a toda requisição: tamanho do endereço e limite de acessos. False = já respondeu."""
+        if len(self.path) > MAX_URL:
+            self.send_error(414)
+            return False
+        api = self.path.startswith("/api/") or self.path == "/api"
+        if not allow(self.client_address[0], "api" if api else "arq", LIMITE_API if api else LIMITE_ARQUIVOS):
+            self.send_response(429)
+            self.send_header("Retry-After", "60")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return False
+        return True
+
+    def do_HEAD(self):
+        self.do_GET()
+
+    def do_OPTIONS(self):
+        if not self.guard():
+            return
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
+        self.send_header("Access-Control-Max-Age", "600")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def refuse(self):
+        self.send_response(405)
+        self.send_header("Allow", "GET, HEAD, OPTIONS")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    do_POST = do_PUT = do_DELETE = do_PATCH = do_TRACE = do_CONNECT = refuse
 
     def do_GET(self):
+        if not self.guard():
+            return
         u = urllib.parse.urlparse(self.path)
-        q = urllib.parse.parse_qs(u.query)
+        try:
+            q = urllib.parse.parse_qs(u.query, max_num_fields=10)
+        except ValueError:
+            return self.send_json({"ok": False, "message": "consulta inválida"}, 400)
         parts = [p for p in u.path.split("/") if p]
         if not parts or parts[0] != "api":
+            if not self.static_ok(u.path):
+                return self.send_error(404)
+            if self.command == "HEAD":
+                return super().do_HEAD()
             return super().do_GET()
+        one = lambda k: (q.get(k) or [None])[0]
+        club = one("club")
+        if club is not None and club not in CLUBS:
+            return self.send_json({"ok": False, "message": "clube desconhecido"}, 400)
         try:
             if parts[1:] == ["health"]:
                 with lock:
-                    return self.send_json({"ok": True, "updated": state["updated"], "errors": state["errors"]})
+                    return self.send_json({"ok": True, "updated": state["updated"], "erros": len(state["errors"])})
             if parts[1:] == ["state"]:
                 with lock:
                     s = {k: state[k] for k in ("updated", "standings", "round", "fixtures", "squads", "last", "scorers", "players", "form", "arbitragem") if k in state}
@@ -1398,13 +1579,15 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json({"ok": False, "message": "carregando dados"}, 503)
                 return self.send_json(s)
             if parts[1:] == ["artilharia-ao-vivo"]:
+                jog = one("jogador")
+                if jog is not None and not re.fullmatch(r"\d{1,12}", jog):
+                    return self.send_json({"ok": False, "message": "jogador inválido"}, 400)
                 r = live_scorers()
-                jog = urllib.parse.parse_qs(u.query).get("jogador", [None])[0]
                 return self.send_json(r["jogadores"].get(jog) or {"ok": False, "message": "jogador sem gols"} if jog else {k: r[k] for k in ("updated", "artilharia", "aoVivo")})
             if parts[1:] == ["tabela-ao-vivo"]:
                 return self.send_json(live_table())
             if parts[1:] == ["rankings"]:
-                tipo = (q.get("tipo") or [None])[0]
+                tipo = one("tipo")
                 if tipo and tipo not in RANK_ORDER:
                     return self.send_json({"ok": False, "message": f"tipo deve ser um de: {', '.join(RANK_ORDER)}"}, 400)
                 r = rankings(tipo)
@@ -1414,14 +1597,12 @@ class Handler(SimpleHTTPRequestHandler):
                     fm = state.get("form")
                 if not fm:
                     return self.send_json({"ok": False, "message": "carregando dados"}, 503)
-                club = (q.get("club") or [None])[0]
                 return self.send_json({"updated": fm["updated"], "club": club, **fm["clubs"].get(club, {})} if club else fm)
             if parts[1:] == ["jogadores"]:
                 with lock:
                     pl = state.get("players")
                 if not pl:
                     return self.send_json({"ok": False, "message": "carregando dados"}, 503)
-                club = (q.get("club") or [None])[0]
                 if club:
                     return self.send_json({"updated": pl["updated"], "club": club, **pl["clubs"].get(club, {})})
                 return self.send_json(pl)
@@ -1435,43 +1616,59 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json(m) if m else self.send_json({"ok": False, "message": "carregando manchetes"}, 503)
             if parts[1:] == ["news"]:
                 with lock:
-                    club = (q.get("club") or [None])[0]
                     return self.send_json({"club": club, "items": state["news"].get(club, []) if club else state["news"]})
-            if len(parts) >= 3 and parts[1] == "minuto-a-minuto":
-                eid = re.sub(r"\D", "", parts[2])
-                if len(parts) == 4 and parts[3] == "stream":
+            if len(parts) in (3, 4) and parts[1] == "minuto-a-minuto":
+                eid = parts[2]
+                if not EVENT_OK.match(eid):
+                    return self.send_json({"ok": False, "message": "jogo inválido"}, 400)
+                if len(parts) == 4:
+                    if parts[3] != "stream":
+                        return self.send_json({"ok": False, "message": "rota não encontrada"}, 404)
                     return self.stream(eid)
                 n = narrate(eid)
                 return self.send_json(n) if n else self.send_json({"ok": False, "message": "jogo não encontrado"}, 404)
             self.send_json({"ok": False, "message": "rota não encontrada"}, 404)
-        except Exception as ex:
-            self.send_json({"ok": False, "message": str(ex)}, 500)
+        except Exception:
+            # o detalhe do erro fica só no registro do servidor; quem acessa recebe uma mensagem genérica
+            log("erro em", CONTROL.sub("", self.path)[:200], traceback.format_exc(limit=3))
+            self.send_json({"ok": False, "message": "erro interno"}, 500)
 
     def stream(self, eid):
-        """Server-Sent Events: manda cada lance novo assim que aparece."""
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        sent = set()
+        """Server-Sent Events: manda cada lance novo assim que aparece (com limite de conexões e de duração)."""
+        ip = self.client_address[0]
+        with _hits_lock:
+            if _streams_ip.get(ip, 0) >= STREAMS_POR_IP:
+                return self.send_json({"ok": False, "message": "conexões demais"}, 429)
+            if not _streams.acquire(blocking=False):
+                return self.send_json({"ok": False, "message": "servidor ocupado"}, 503)
+            _streams_ip[ip] = _streams_ip.get(ip, 0) + 1
         try:
-            while True:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            sent, fim = set(), time.monotonic() + STREAM_HORAS * 3600
+            while time.monotonic() < fim:
                 n = narrate(eid)
-                if n:
-                    new = [l for l in n["lines"] if l["id"] not in sent and l["type"] != "panorama"]
-                    pan = [l for l in n["lines"] if l["type"] == "panorama" and l["id"] not in sent]
-                    for l in new + pan[-1:]:
-                        sent.add(l["id"])
-                    payload = {k: n[k] for k in ("state", "clock", "detail", "home", "away", "stats")}
-                    payload["lines"] = new + pan[-1:]
-                    self.wfile.write(f"data: {json.dumps(payload, ensure_ascii=False)}\n\n".encode("utf-8"))
-                    self.wfile.flush()
-                    if n["state"] == "post":
-                        break
+                if not n:
+                    break
+                new = [l for l in n["lines"] if l["id"] not in sent and l["type"] != "panorama"]
+                pan = [l for l in n["lines"] if l["type"] == "panorama" and l["id"] not in sent]
+                for l in new + pan[-1:]:
+                    sent.add(l["id"])
+                payload = {k: n[k] for k in ("state", "clock", "detail", "home", "away", "stats")}
+                payload["lines"] = new + pan[-1:]
+                self.wfile.write(f"data: {json.dumps(payload, ensure_ascii=False)}\n\n".encode("utf-8"))
+                self.wfile.flush()
+                if n["state"] == "post":
+                    break
                 time.sleep(20)
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, TimeoutError, OSError):
             pass
+        finally:
+            with _hits_lock:
+                _streams_ip[ip] = max(0, _streams_ip.get(ip, 1) - 1)
+            _streams.release()
 
 
 def main():
@@ -1491,8 +1688,11 @@ def main():
     every(iv.get("jogadores", 60), update_players)
     every(iv.get("retrospecto", 30), update_form)
     threading.Thread(target=live_loop, daemon=True).start()
-    log(f"PLACAR no ar: http://localhost:{port}")
-    ThreadingHTTPServer(("", port), Handler).serve_forever()
+    log(f"PLACAR no ar: http://{'localhost' if HOST in ('127.0.0.1', 'localhost') else HOST}:{port}")
+    srv = ThreadingHTTPServer((HOST, port), Handler)
+    srv.daemon_threads = True
+    srv.request_queue_size = 64
+    srv.serve_forever()
 
 
 if __name__ == "__main__":

@@ -137,7 +137,7 @@
     return `<span class="live-chip ${res}${v.fim ? " fim" : ""}" title="${v.fim ? "Encerrado, ainda fora da tabela oficial" : "Jogo em andamento"}: ${v.gf} x ${v.ga} contra o ${byId[v.op].name}">${v.fim ? "" : `<i aria-hidden="true"></i>`}${v.gf}-${v.ga}${curto ? "" : ` ${byId[v.op].short}`}${v.fim ? " · fim" : v.clock ? ` · ${v.clock}` : ""}</span>`;
   }
   const temAoVivo = () => state.standings.some((r) => r.vivo);
-  const sourceNote = `<div class="source">Fonte: <a href="${REAL.url}" target="_blank" rel="noopener">${REAL.source}</a> · atualizado em ${REAL.updated}</div>`;
+  const sourceNote = `<div class="source">Fonte: <a href="${REAL.url}" target="_blank" rel="noopener noreferrer">${REAL.source}</a> · atualizado em ${REAL.updated}</div>`;
 
   /* artilharia oficial */
   /* ---------- estatísticas do elenco: pendurados, sequência, departamento médico e minutagem dos reservas ----------
@@ -150,7 +150,7 @@
     const fmt = (iso) => (iso ? iso.split("-").reverse().slice(0, 2).join("/") : "");
     const num = (pid) => `<span class="ps-n">${nums[pid] ?? "–"}</span>`;
     const empty = (t) => `<li class="ps-empty">${t}</li>`;
-    const src = (x) => x ? `<a class="ps-src" href="${x.link}" target="_blank" rel="noopener" title="${(x.manchete || "").replace(/"/g, "&quot;")}">${x.fonte}${x.setorista ? " · setorista" : ""} · ${fmt(x.data)} ↗</a>` : "";
+    const src = (x) => x ? `<a class="ps-src" href="${x.link}" target="_blank" rel="noopener noreferrer" title="${(x.manchete || "").replace(/"/g, "&quot;")}">${x.fonte}${x.setorista ? " · setorista" : ""} · ${fmt(x.data)} ↗</a>` : "";
     const blocks = [
       ["pend", "Pendurados", "a um amarelo da suspensão", `<li class="ps-note"><b>O número ao lado do nome é o total de amarelos na temporada.</b>
           <span>No Brasileirão, o 3º, o 6º, o 9º… amarelo suspendem. Quem tem 2, 5 ou 8 está pendurado: mais um cartão e fica fora do próximo jogo.</span></li>` +
@@ -630,7 +630,7 @@
             ${byId[nextOf(id)] ? `<div class="card reveal"><div class="card-h">Próximo adversário</div>
               <a class="derby" href="#/clube/${nextOf(id)}">${crest(c, 34)}<span class="vs">VS</span>${crest(byId[nextOf(id)], 34)}<div style="margin-left:6px"><b>${byId[nextOf(id)].name}</b><br/><small style="color:var(--text-3)">${rowOf(nextOf(id)).pos}º · ${rowOf(nextOf(id)).p} pts</small></div></a></div>` : ""}
             ${scorersCard(5, id)}
-            ${c.idol ? `<div class="card idol reveal${c.idolPhoto ? " has-photo" : ""}">${c.idolPhoto ? `<img class="idol-photo" src="${c.idolPhoto}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('has-photo');this.remove()" />` : ""}<div class="eyebrow" style="color:inherit;opacity:.92;text-shadow:0 1px 3px rgb(0 0 0 / .5)">Ídolo eterno</div><h4>${c.idol}</h4>${c.idolPhoto ? `<small class="idol-credit">Foto: Wikimedia Commons</small>` : ""}</div>` : ""}
+            ${c.idol ? `<div class="card idol reveal${c.idolPhoto ? " has-photo" : ""}">${c.idolPhoto ? `<img class="idol-photo" src="${c.idolPhoto}" alt="" loading="lazy" referrerpolicy="no-referrer" data-sem-foto />` : ""}<div class="eyebrow" style="color:inherit;opacity:.92;text-shadow:0 1px 3px rgb(0 0 0 / .5)">Ídolo eterno</div><h4>${c.idol}</h4>${c.idolPhoto ? `<small class="idol-credit">Foto: Wikimedia Commons</small>` : ""}</div>` : ""}
             ${LIVE.hasNews() ? `<div class="card news" data-news="${id}"><div class="card-h">Últimas notícias <small>Google Notícias</small></div><ul><li class="mam-empty">Buscando notícias…</li></ul></div>` : ""}
             <div class="card reveal">
               <div class="card-h">Ficha do clube</div>
@@ -738,8 +738,8 @@
     const esc = (x) => String(x || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
     return `<div class="arb" data-live="arb">
       <div class="arb-h">${ICON.whistle || ""}<b>Arbitragem nas manchetes</b><small>atualiza a cada 30 min</small></div>
-      ${a.manchetes?.length ? `<ul class="arb-list">${a.manchetes.slice(0, 3).map((x) => `<li><a href="${esc(x.link)}" target="_blank" rel="noopener"><b>${esc(x.title)}</b><small>${esc(x.source)} · ${haTempo(x.ts)} ↗</small></a></li>`).join("")}</ul>` : `<p class="arb-none">Os veículos ainda não publicaram a escala deste jogo.</p>`}
-      <p class="arb-aviso">A escala completa (assistentes, quarto árbitro e VAR) é divulgada pela CBF; aqui aparece o que a imprensa já noticiou, com link para cada matéria. <a href="https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/${new Date().getFullYear()}" target="_blank" rel="noopener">Escala oficial na CBF ↗</a></p>
+      ${a.manchetes?.length ? `<ul class="arb-list">${a.manchetes.slice(0, 3).map((x) => `<li><a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer"><b>${esc(x.title)}</b><small>${esc(x.source)} · ${haTempo(x.ts)} ↗</small></a></li>`).join("")}</ul>` : `<p class="arb-none">Os veículos ainda não publicaram a escala deste jogo.</p>`}
+      <p class="arb-aviso">A escala completa (assistentes, quarto árbitro e VAR) é divulgada pela CBF; aqui aparece o que a imprensa já noticiou, com link para cada matéria. <a href="https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/${new Date().getFullYear()}" target="_blank" rel="noopener noreferrer">Escala oficial na CBF ↗</a></p>
     </div>`;
   }
 
@@ -973,7 +973,7 @@
       [(S.sumulas || []).length || 336, "súmulas lidas", "cada jogo do Brasileirão, gol a gol"],
       [Object.values(sq).flat().length || 945, "jogadores", "elencos e escalações reais"],
       [12, "rotas de API", "servidor em Python, sem dependências"],
-      [30, "testes automáticos", "PC, iPhone e Android"],
+      [32, "testes automáticos", "PC, iPhone e Android, com testes de invasão"],
       [0, "frameworks", "HTML, CSS e JavaScript puros"],
     ];
     // fluxo: de onde vem cada dado até a tela
@@ -998,7 +998,7 @@
       ["Jogo", "top 5 de artilheiros lado a lado e arbitragem pelas manchetes"],
     ];
     // testes por área
-    const testes = [["Telas e alinhamento", 7], ["Ao vivo e dados", 9], ["Animações e escudos", 5], ["Bora pro jogo e elenco", 4], ["Notícias e arbitragem", 3], ["Desempenho e acesso", 2]];
+    const testes = [["Telas e alinhamento", 7], ["Ao vivo e dados", 9], ["Animações e escudos", 5], ["Bora pro jogo e elenco", 4], ["Notícias e arbitragem", 3], ["Desempenho e acesso", 2], ["Segurança e invasão", 2]];
     const tMax = Math.max(...testes.map((t) => t[1]));
     // de que é feito o código (linhas)
     const codigo = [["Interface (JS)", 3200, "var(--accent)"], ["Cenas e GOL! (JS)", 1570, "#e0182a"], ["Estilos (CSS)", 2370, "#13a37a"], ["Servidor (Python)", 1500, "#f0a020"]];
@@ -1032,6 +1032,7 @@
             <li>Sem copiar conteúdo de site que proíbe (por isso a arbitragem vem das manchetes)</li>
             <li>Símbolos e cenas desenhados do zero; escudos oficiais só para identificar</li>
             <li>Legível (contraste AA), navegável por teclado e sem animação para quem pede menos movimento</li>
+            <li>Seguro por padrão: todo dado de fora é tratado como não confiável e o site só roda o próprio código</li>
           </ul></div></div>
       </div>
     </section>`;
@@ -1043,7 +1044,9 @@
      Roteador + transições
      ========================================================================== */
   function parse() {
-    const [, page = "", id, tab] = location.hash.replace(/^#/, "").split("/");
+    // só letras, números e hífen: qualquer outra coisa no endereço vira "página não existe"
+    const ok = (x) => (x == null || (/^[\w-]{0,60}$/.test(x) && !(x in Object.prototype)) ? x : "-invalido-");
+    const [, page = "", id, tab] = location.hash.replace(/^#/, "").split("/").map(ok);
     return { page, id, tab };
   }
 
@@ -1403,7 +1406,7 @@
   }
 
   /* ---------- tema claro/escuro ---------- */
-  root.dataset.theme = store.get("theme", matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  root.dataset.theme = ((t) => (t === "light" || t === "dark" ? t : matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"))(store.get("theme"));
   $("#theme").addEventListener("click", (e) => {
     const go = () => { root.dataset.theme = root.dataset.theme === "light" ? "dark" : "light"; store.set("theme", root.dataset.theme); render(); };
     if (!document.startViewTransition || reduced) return go();
@@ -1465,6 +1468,11 @@
     // troca só o que mudou (o minuto a minuto, o topo do clube e a montagem do time continuam onde estão)
     if (sig() !== before && ["", "clube", "tabela", "partida"].includes(state.route.page) && state.route.tab !== "elenco") patchView();
   };
+  // foto do ídolo que não carregou: o card volta ao visual sem foto (sem script embutido no HTML)
+  document.addEventListener("error", (e) => {
+    const img = e.target;
+    if (img && img.matches && img.matches("img[data-sem-foto]")) { img.parentNode?.classList.remove("has-photo"); img.remove(); }
+  }, true);
   window.addEventListener("placar:data", refresh);
 
   /* gol ao vivo: quando o placar de um jogo em andamento sobe, toca o GOL! do clube que marcou.

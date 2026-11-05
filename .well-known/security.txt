@@ -1,0 +1,5 @@
+Contact: https://github.com/AlanSouzaDev7/Projeto_PeladinhaFC/security/advisories/new
+Policy: https://github.com/AlanSouzaDev7/Projeto_PeladinhaFC/blob/main/SECURITY.md
+Preferred-Languages: pt, en
+Canonical: https://alansouzadev7.github.io/Projeto_PeladinhaFC/.well-known/security.txt
+Expires: 2027-11-05T00:00:00.000Z

@@ -8,6 +8,8 @@
 (() => {
   const API = "/api";
   const PD = window.PD;
+  // arquivos de dados (gravados pelo robô a partir de fontes externas): limpos antes de qualquer uso
+  ["LIVE_DATA", "PLAYER_STATS", "SQUADS", "SQUADS_LAST", "CLUB_FORM", "HEATMAPS", "ARBITRAGEM"].forEach((k) => { if (window[k] && window.SEG) window.SEG.limpa(window[k]); });
 
   function apply(s) {
     PD.REAL.table = s.standings;
@@ -550,7 +552,7 @@
       const items = (r.items || []).slice(0, 6);
       if (!items.length) { el.querySelector("ul").innerHTML = `<li class="mam-empty">Nenhuma notícia nas últimas horas.</li>`; return; }
       const ago = (ts) => { const m = Math.round((Date.now() / 1000 - ts) / 60); return m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} d`; };
-      el.querySelector("ul").innerHTML = items.map((x) => `<li><a href="${x.link}" target="_blank" rel="noopener"><b>${x.title.replace(/</g, "&lt;")}</b><small>${x.source} · ${ago(x.ts)}${x.tag && x.tag !== "clube" ? ` · ${x.tag}` : ""}</small></a></li>`).join("");
+      el.querySelector("ul").innerHTML = items.map((x) => `<li><a href="${SEG.esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer"><b>${SEG.esc(x.title)}</b><small>${SEG.esc(x.source)} · ${ago(x.ts)}${x.tag && x.tag !== "clube" ? ` · ${SEG.esc(x.tag)}` : ""}</small></a></li>`).join("");
     } catch {
       el.remove();
     }
