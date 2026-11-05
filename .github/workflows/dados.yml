@@ -51,7 +51,7 @@ jobs:
         run: |
           git config user.name "placar-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add js/live-data.js js/player-stats.js js/club-form.js js/heatmaps.js
+          git add js/live-data.js js/player-stats.js js/club-form.js js/heatmaps.js js/departamento-medico.js
           if git diff --cached --quiet; then
             echo "Nada novo."
           else

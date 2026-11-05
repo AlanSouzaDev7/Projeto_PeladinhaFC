@@ -141,6 +141,34 @@
   const sourceNote = `<div class="source">Fonte: <a href="${REAL.url}" target="_blank" rel="noopener noreferrer">${REAL.source}</a> · atualizado em ${REAL.updated}</div>`;
 
   /* artilharia oficial */
+  /* ---------- departamento médico (js/departamento-medico.js ou /api/departamento-medico) ----------
+     Quem está no DM, com a situação, desde quando, a parte do corpo, quantos veículos confirmam e as manchetes.
+     Sai sozinho quando entra em campo, é relacionado ou uma manchete diz que foi liberado. */
+  const DM_ST = { "fora da temporada": "bad", "longo prazo": "bad", lesionado: "bad", "em transição": "mid", "dúvida": "warn" };
+  const dmSrc = (x, fmt) => `<a class="ps-src" href="${SEG.esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer" title="${SEG.esc(x.manchete)}">${SEG.esc(x.fonte)} · ${fmt(x.data)} · ${SEG.esc(x.manchete)}</a>`;
+  function dmBlock(id, full, n, num, fmt, empty, d, src) {
+    const c = window.DM?.clubs?.[id];
+    if (!c) { // sem o monitor: as lesões das manchetes (versão antiga)
+      return ["dm", "Departamento médico", "lesões noticiadas pela imprensa", d.lesionados.length
+        ? d.lesionados.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-tag ${p.confirmado ? "ok" : "warn"}">${p.confirmado ? `${p.fontes.length} fonte${p.fontes.length > 1 ? "s" : ""}` : "1 fonte"}</span>${full ? p.noticias.map(src).join("") : src(p.noticias[0])}</li>`).join("")
+        : empty("Nenhuma lesão noticiada nos últimos 21 dias.")];
+    }
+    const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+    const li = (p) => `<li class="dm-li">${num(p.id)}<b>${SEG.esc(p.name)}</b><span class="ps-v dm-st ${DM_ST[p.status] || ""}">${SEG.esc(p.status)}</span>
+      <span class="ps-sub">${[p.parte ? cap(SEG.esc(p.parte)) : null, `desde ${fmt(p.desde)}`, p.jogosFora ? `fora de ${p.jogosFora} jogo${p.jogosFora > 1 ? "s" : ""}` : null, p.ultimoJogo ? `último jogo em ${fmt(p.ultimoJogo)}` : "sem jogos no Brasileirão"].filter(Boolean).join(" · ")}</span>
+      <span class="ps-tag ${p.confirmado ? "ok" : "warn"}">${p.oficial ? "site oficial · " : ""}${p.confirmado ? `confirmado · ${p.fontes.length} veículo${p.fontes.length > 1 ? "s" : ""}` : "1 fonte · sem confirmação"}</span>
+      ${(full ? p.noticias.slice(0, 4) : p.noticias.slice(0, 1)).map((x) => dmSrc(x, fmt)).join("")}</li>`;
+    const vistos = c.historico.length;
+    return ["dm", "Departamento médico", `${c.ativos.length ? `${c.ativos.length} fora` : "elenco à disposição"} · ${vistos} saída${vistos === 1 ? "" : "s"} do DM na temporada`, c.ativos.length
+      ? c.ativos.slice(0, full ? 99 : Math.max(n, 5)).map(li).join("")
+      : empty("Ninguém no departamento médico: todos jogaram, foram relacionados ou não há notícia de lesão.")];
+  }
+  function dmHistBlock(c, num, fmt, empty) {
+    return ["dmh", "Voltaram ao time", "saíram do departamento médico nesta temporada", c.historico.length
+      ? c.historico.slice(0, 20).map((p) => `<li>${num(p.id)}<b>${SEG.esc(p.name)}</b><span class="ps-v">${fmt(p.desde)}–${fmt(p.ate)}</span><span class="ps-sub">${[p.parte ? SEG.esc(p.parte) : null, SEG.esc(p.motivo || "")].filter(Boolean).join(" · ")}</span></li>`).join("")
+      : empty("Ninguém saiu do DM ainda nesta temporada.")];
+  }
+
   /* ---------- estatísticas do elenco: pendurados, sequência, departamento médico e minutagem dos reservas ----------
      full = false: resumo de 4 blocos na visão geral; full = true: aba "Estatísticas" com tudo */
   function playerStatsHTML(id, full = false) {
@@ -161,14 +189,13 @@
       ["seq", "Jogos seguidos", "partidas em sequência, sem desfalcar", d.sequencia.length
         ? d.sequencia.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-sub">${p.titular} como titular</span><span class="ps-v">${p.jogos}</span></li>`).join("")
         : empty("Ninguém com 2 ou mais jogos seguidos.")],
-      ["dm", "Departamento médico", "lesões noticiadas pela imprensa", d.lesionados.length
-        ? d.lesionados.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-tag ${p.confirmado ? "ok" : "warn"}">${p.confirmado ? `${p.fontes.length} fonte${p.fontes.length > 1 ? "s" : ""}` : "1 fonte"}</span>${full ? p.noticias.map(src).join("") : src(p.noticias[0])}</li>`).join("")
-        : empty("Nenhuma lesão noticiada nos últimos 21 dias.")],
+      dmBlock(id, full, n, num, fmt, empty, d, src),
       ["res", "Reservas mais usados", "minutos de quem foi titular em menos da metade dos jogos", d.reservas.length
         ? (() => { const max = d.reservas[0].minutos || 1; return d.reservas.slice(0, full ? 99 : 5).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-sub">${p.jogos} jogos · ${p.titular} titular</span><span class="ps-v">${p.minutos}'</span><span class="ps-bar"><i data-w="${((p.minutos / max) * 100).toFixed(1)}"></i></span></li>`).join(""); })()
         : empty("Sem reservas com minutos.")],
     ];
-    const foot = `<div class="source">Súmulas: ${d.fontes?.sumulas || "ESPN"} · ${d.jogos} jogos do Brasileirão · lesões e pendurados conferidos em ${(d.fontes?.imprensa || []).length ? d.fontes.imprensa.join(", ") : "ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra"} e com os setoristas · atualizado em ${all.updated}</div>`;
+    if (full && window.DM?.clubs?.[id]) blocks.push(dmHistBlock(window.DM.clubs[id], num, fmt, empty));
+    const foot = `<div class="source">Súmulas: ${d.fontes?.sumulas || "ESPN"} · ${d.jogos} jogos do Brasileirão · ${window.DM ? `departamento médico: imprensa nacional e local, site oficial, setoristas e relacionados da ESPN (atualizado em ${SEG.esc(window.DM.updated)}) · ` : ""}pendurados conferidos em ${(d.fontes?.imprensa || []).length ? d.fontes.imprensa.join(", ") : "ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra"} e com os setoristas · atualizado em ${all.updated}</div>`;
     const grid = `<div class="pstats ${full ? "full" : ""}">${blocks.map(([k, t, sub, li]) => `<section class="ps-b ps-${k}"><h4>${t}<small>${sub}</small></h4><ul>${li}</ul></section>`).join("")}</div>`;
     return full ? `<div class="card">${grid}${foot}</div>`
       : `<div class="card reveal"><div class="card-h">Estatísticas do elenco <small><a href="#/clube/${id}/estatisticas" style="color:var(--ink)">ver tudo ›</a></small></div>${grid}${foot}</div>`;
@@ -973,8 +1000,8 @@
       [CLUBS.length, "clubes com identidade própria", "cores, cena animada, GOL! e goleada no relógio"],
       [(S.sumulas || []).length || 336, "súmulas lidas", "cada jogo do Brasileirão, gol a gol"],
       [Object.values(sq).flat().length || 945, "jogadores", "elencos e escalações reais"],
-      [12, "rotas de API", "servidor em Python, sem dependências"],
-      [32, "testes automáticos", "PC, iPhone e Android, com testes de invasão"],
+      [13, "rotas de API", "servidor em Python, sem dependências"],
+      [34, "testes automáticos", "PC, iPhone e Android, com testes de invasão"],
       [0, "frameworks", "HTML, CSS e JavaScript puros"],
     ];
     // fluxo: de onde vem cada dado até a tela
@@ -985,7 +1012,7 @@
       ["Navegador", "js/live.js · ticker.js · app.js", ["placar ao vivo a cada 12 s", "tabela e artilharia ao vivo", "troca só o que mudou"]],
     ];
     // de quanto em quanto tempo cada coisa se atualiza (escala logarítmica: de segundos a horas)
-    const ritmo = [["Faixa: troca a manchete", 8], ["Placar e minuto ao vivo", 12], ["Tabela da ESPN (rodada)", 120], ["Manchetes do futebol", 1800], ["Arbitragem nas manchetes", 1800], ["Notícias de cada clube", 1800], ["Tabela, artilharia e súmulas", 1800], ["Elencos", 21600]];
+    const ritmo = [["Faixa: troca a manchete", 8], ["Placar e minuto ao vivo", 12], ["Tabela da ESPN (rodada)", 120], ["Manchetes do futebol", 1800], ["Arbitragem nas manchetes", 1800], ["Departamento médico", 1800], ["Notícias de cada clube", 1800], ["Tabela, artilharia e súmulas", 1800], ["Elencos", 21600]];
     const fmt = (s) => (s < 60 ? `${s} s` : s < 3600 ? `${s / 60} min` : `${s / 3600} h`);
     const lmin = Math.log(5), lmax = Math.log(30000), pos = (s) => ((Math.log(s) - lmin) / (lmax - lmin)) * 100;
     // o que foi construído, na ordem
@@ -997,9 +1024,11 @@
       ["Ao vivo", "tabela, artilharia, fichas e GOL! em tempo real; a página não se redesenha sozinha"],
       ["Notícias", "faixa de manchetes embaixo do menu e notícias filtradas por clube"],
       ["Jogo", "top 5 de artilheiros lado a lado e arbitragem pelas manchetes"],
+      ["Segurança", "política de conteúdo, dados de fora sempre limpos, API endurecida e testes de invasão"],
+      ["Departamento médico", "temporada inteira: imprensa nacional e local, setoristas, sites oficiais e relacionados de cada jogo"],
     ];
     // testes por área
-    const testes = [["Telas e alinhamento", 7], ["Ao vivo e dados", 9], ["Animações e escudos", 5], ["Bora pro jogo e elenco", 4], ["Notícias e arbitragem", 3], ["Desempenho e acesso", 2], ["Segurança e invasão", 2]];
+    const testes = [["Telas e alinhamento", 7], ["Ao vivo e dados", 9], ["Animações e escudos", 5], ["Bora pro jogo e elenco", 4], ["Notícias, arbitragem e DM", 5], ["Desempenho e acesso", 2], ["Segurança e invasão", 2]];
     const tMax = Math.max(...testes.map((t) => t[1]));
     // de que é feito o código (linhas)
     const codigo = [["Interface (JS)", 3200, "var(--accent)"], ["Cenas e GOL! (JS)", 1570, "#e0182a"], ["Estilos (CSS)", 2370, "#13a37a"], ["Servidor (Python)", 1500, "#f0a020"]];

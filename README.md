@@ -65,6 +65,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | `GET /api/rankings?tipo=gols\|ataque\|defesa\|amarelos\|vermelhos` | rankings do campeonato; os cartões somam a súmula de cada jogo encerrado depois da última tabela da CBF |
 | `GET /api/retrospecto?club=flamengo` | últimos 5 e próximos 5 jogos, em todas as competições; atualiza a cada 30 min e ao fim de cada jogo |
 | `GET /api/jogadores?club=flamengo` | pendurados, jogos seguidos, lesionados (com fontes) e minutagem dos reservas; atualiza a cada hora |
+| `GET /api/departamento-medico[?club=cruzeiro]` | quem está no DM (situação, parte do corpo, desde quando, último jogo, veículos que confirmam e manchetes) e quem saiu na temporada, com o motivo; atualiza a cada hora (a cada 30 min pelo robô) |
 | `GET /api/arbitragem` | árbitro dos jogos dos próximos 8 dias segundo as manchetes dos veículos, quantas manchetes confirmam e os links; atualiza a cada 30 min |
 | `GET /api/manchetes` | principais notícias do futebol para a faixa embaixo do menu (título, fonte, hora, link e clubes citados); atualiza a cada 30 min |
 | `GET /api/news?club=flamengo` | manchetes recentes do clube (título, fonte, data e link), só as que citam o clube no título pelo nome ou por um apelido (`apelidos` em `server/config.json`) |
@@ -73,6 +74,24 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 | `GET /api/health` | situação das atualizações |
 
 Intervalos de atualização, portais monitorados, **setoristas** e **apelidos** de cada clube (usados para filtrar as notícias) ficam em [`server/config.json`](server/config.json).
+
+## Departamento médico (temporada inteira)
+
+Para cada clube, o monitor olha quem pode estar machucado:
+- quem costuma jogar (2 ou mais dos últimos 10 jogos) e não entrou em campo nem foi relacionado no último jogo;
+- quem já está no DM;
+- quem aparece numa manchete de lesão do clube.
+
+Para cada um desses jogadores, busca no Google Notícias o nome dele com o clube e termos médicos (lesão, desconforto, cirurgia, transição, liberado…). O índice do Google lê o texto das matérias; o site só guarda título, veículo, data e link. As buscas cobrem a imprensa nacional, a imprensa local (onde estão os setoristas), o site oficial do clube e os setoristas configurados.
+
+- **Nome certo:** compara sem acento e com as grafias que variam (Morais/Moraes, Souza/Sousa…). Um nome só conta se estiver inteiro na manchete: "Lucas" não é "Lucas Paquetá", e "Santos" não é o estádio "Nilton Santos".
+- **O que a manchete diz de cada jogador:** vale a palavra mais próxima do nome, dentro da mesma oração. Em "Atlético libera Ruan, mas perde Victor", Ruan foi liberado e Victor é desfalque. Suspensão, julgamento, convocação e negociação não contam como lesão.
+- **Confirmação:** dois veículos diferentes, ou um da lista de `fontes_dm` em `server/config.json`, ou o site oficial do clube.
+- **Situação:** lesionado, dúvida, em transição, longo prazo ou fora da temporada, com a parte do corpo quando a manchete diz.
+- **Saída do DM:** acontece sozinha quando o jogador entra em campo ou é **relacionado** (fica no banco), pela súmula da ESPN, ou quando uma manchete diz que foi liberado, voltou a treinar com o grupo ou joga no sacrifício. Lesão leve sem notícia nova por 30 dias também sai.
+- **Histórico:** fica gravado em `js/departamento-medico.js`, com quem esteve no DM, de quando a quando e por que saiu, e o robô continua dele na execução seguinte.
+
+As regras de leitura têm casos reais de teste em `tests/dm_casos.py`.
 
 ## Arbitragem dos próximos jogos (pelas manchetes)
 
@@ -121,6 +140,8 @@ node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! 
 node tests/mobile/arbitragem.mjs                   # árbitro nos títulos das manchetes e quadro de arbitragem na página do jogo
 node tests/seguranca/site.mjs                      # testes de invasão no navegador: dados maliciosos nas fontes, endereços forjados, moldura de outro site
 node tests/seguranca/api.mjs                       # testes de invasão da API: arquivos fora do site, travessia de pastas, métodos, parâmetros, limites
+python -X utf8 tests/dm_casos.py                   # regras do departamento médico com manchetes reais (nome certo, liberado x desfalque, suspensão não conta)
+node tests/mobile/departamento-medico.mjs          # departamento médico na página do clube: situação, desde quando, confirmação, manchetes e quem voltou
 node tests/mobile/faixa.mjs                        # faixa de notícias: troca da manchete, fita, links, atualização sozinha a cada 30 min, reduzir movimento
 node tests/mobile/noticias.mjs                     # "Últimas notícias" do clube: só manchetes que falam dele (20 clubes, PC e celular)
 node tests/mobile/sem-recarregar.mjs                # com jogo rolando, a página não se redesenha sozinha (só o que mudou é trocado)

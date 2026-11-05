@@ -24,6 +24,7 @@ Rotas
 Gera também o arquivo do site sem a API (GitHub Pages):  python server/placar_api.py --snapshot
   GET /api/news            [?club=id]     manchetes (título, fonte, data e link)
   GET /api/manchetes                      principais notícias do futebol (faixa embaixo do menu), a cada 30 min
+  GET /api/departamento-medico [?club=id]  quem está no DM (com fontes) e quem já passou na temporada
   GET /api/arbitragem                     árbitro dos próximos jogos pelas manchetes dos veículos, a cada 30 min
   GET /api/minuto-a-minuto/<id_espn>      narração completa do jogo até agora
   GET /api/minuto-a-minuto/<id_espn>/stream   o mesmo, ao vivo (Server-Sent Events)
@@ -63,7 +64,7 @@ COMP_NAME = {"bra.1": "Brasileirão", "bra.copa_do_brazil": "Copa do Brasil", "c
 FORM_LEAGUES = list(COMP_NAME)
 
 lock = threading.Lock()
-state = {"updated": None, "standings": None, "round": None, "fixtures": None, "squads": None, "last": None, "news": {}, "manchetes": None, "arbitragem": None, "players": None, "errors": []}
+state = {"updated": None, "standings": None, "round": None, "fixtures": None, "squads": None, "last": None, "news": {}, "manchetes": None, "arbitragem": None, "dm": None, "players": None, "errors": []}
 
 
 # situações do jogo em que o relógio da ESPN fica parado (ex.: "45'+7'" durante o intervalo)
@@ -946,6 +947,359 @@ def position_profiles(matches):
     return P
 
 
+# ---------------------------------------------------------------------------
+# Departamento médico: monitor da temporada inteira
+#   Quem pode estar no DM: titular/reserva frequente que não jogou nem foi relacionado no último jogo,
+#   quem já está no DM e quem foi citado numa manchete de lesão do clube.
+#   Para cada um, busca no Google Notícias o nome do jogador + clube + termos médicos (o índice do Google
+#   lê o texto das matérias; o site só guarda título, veículo, data e link). Fontes: imprensa nacional,
+#   imprensa local (onde estão os setoristas), site oficial do clube e os setoristas configurados.
+#   Sai do DM: entrou em campo ou foi relacionado depois da última notícia de lesão, ou uma manchete
+#   diz que foi liberado/voltou a treinar com o grupo. O histórico da temporada fica gravado.
+# ---------------------------------------------------------------------------
+DM_FILE = os.path.join(ROOT, "js", "departamento-medico.js")
+DM_MED = re.compile(r"les[ãa]o|lesion|departamento m[ée]dico|\bDM\b|cirurgi|contus|estiramento|entorse|fratur|ruptur|ligamento|menisco|edema|h[ée]rnia|"
+                    r"desconforto|\bdor(es)?\b|problema (f[íi]sico|muscular)|machuc|inc[ôo]modo|trauma|pancada|virose|concuss|"
+                    r"deixa (o )?campo|sai (de campo )?machucado|tratamento|fisioterap|transi[çc][ãa]o|recupera[çc][ãa]o|boletim m[ée]dico", re.I)
+DM_OUT = re.compile(r"desfalc|desfalque|\bfora\b|vetad|n[ãa]o (joga|enfrenta|viaja|treina|atua)|poupad|\bperde\b|aus[êe]n|d[úu]vida|preocupa", re.I)
+DM_NAO = re.compile(r"stjd|julga|puni[çc]|gancho|tribunal|denunci|suspens|suspenso|cart[ãa]o|amarel|expuls|vermelho|convoca|sele[çc][ãa]o|negocia|proposta|vend[ae]|transfer|empr[ée]st|contrato|"
+                    r"renova|multa|europa|interesse|sondad|indisciplina|por op[çc][ãa]o|luto|nascimento|casamento|f[ée]rias", re.I)
+DM_EVOL = re.compile(r"treina no campo|corrida no campo|primeira corrida|reta final de recupera|transi[çc][ãa]o|avan[çc]a|evolu|em recupera[çc][ãa]o|segue (em )?recupera|treina (em campo|separad|à parte|a parte)|"
+                     r"volta a treinar em campo|trabalho (f[íi]sico|espec[íi]fico)|fisioterap|academia", re.I)
+DM_VOLTA = re.compile(r"\blibera\b|volta de\b|(?<!n[ãa]o )\bjoga\b(?! mais)|vem jogando|jogando no|atua com|no sacrif[íi]cio|operar[áa] (ap[óo]s|depois)|liberad|recuperad[oa]\b|treina com o grupo|com o elenco|treina normal|volta aos treinos com|retorna|retorno|de volta|reaparece|"
+                      r"alta m[ée]dica|relacionad|[àa] disposi|reintegrad|est[áa] pronto|refor[çc]o (para|contra)|ganha refor[çc]o|volta ao time|volta a jogar", re.I)
+DM_GRAVE = re.compile(r"cirurgi|operad|ruptur|ligamento|fratur|meses|longo prazo|grave|fora da temporada|n[ãa]o joga mais|s[óo] volta em 20", re.I)
+DM_FORA_TEMP = re.compile(r"(fora|n[ãa]o (joga|volta|atua)( mais)?|perde|encerra|restante|resto)\b[^.;]*\b(temporada|em 20[2-9]\d)|s[óo] volta em 20[2-9]\d|fora da temporada", re.I)
+DM_HOSPITAL = re.compile(r"alta hospitalar|libera(do|da)? (do )?hospital|deixa o hospital|sai do hospital", re.I)
+DM_DUV = re.compile(r"d[úu]vida|desconforto|preocupa|inc[ôo]modo|poupad", re.I)
+DM_PARTES = [(r"joelho", "joelho"), (r"posterior", "posterior da coxa"), (r"coxa", "coxa"), (r"panturrilha", "panturrilha"), (r"tornozelo", "tornozelo"),
+             (r"adutor|virilha|pubalgia", "adutor"), (r"ombro", "ombro"), (r"quadril", "quadril"), (r"lombar|coluna|costas", "coluna"), (r"costela", "costela"),
+             (r"t[íi]bia|f[íi]bula|perna", "perna"), (r"\bp[ée]\b|metatarso", "pé"), (r"menisco", "menisco"), (r"m[ãa]o|punho|dedo", "mão"),
+             (r"cabe[çc]a|concuss|rosto|nariz|olho", "cabeça"), (r"virose|febre|gripe|doen[çc]a|infec", "doença"), (r"muscul|m[úu]scul|estiramento", "muscular")]
+DM_TERMS = ('(lesão OR lesionado OR "departamento médico" OR DM OR desconforto OR dores OR cirurgia OR estiramento OR fratura OR entorse OR edema '
+            'OR desfalque OR vetado OR dúvida OR recuperação OR transição OR liberado OR "volta a treinar" OR relacionado)')
+DM_JANELA = 35          # dias de notícia buscados a cada passada (o histórico mais antigo fica gravado)
+DM_ESQUECE = 30         # lesão leve sem notícia nova e sem jogo há mais disso sai da lista ("sem notícias")
+DM_GRAVE_DIAS = 200     # lesão grave (cirurgia, fora da temporada) fica até o jogador voltar a jogar
+DM_MAX_BUSCAS = 14      # jogadores pesquisados por clube em cada passada
+
+
+def fold(t):
+    """Nome para comparação: sem acento, minúsculo e com as grafias que variam juntas (Morais/Moraes, Souza/Sousa...)."""
+    t = strip_accents(t or "").lower()
+    for a, b in (("moraes", "morais"), ("souza", "sousa"), ("luiz", "luis"), ("thiago", "tiago"), ("matheus", "mateus"),
+                 ("kaique", "kaiki"), ("walace", "wallace"), ("y", "i"), ("w", "v"), ("ph", "f")):
+        t = t.replace(a, b)
+    return re.sub(r"([a-z])\1", r"\1", t)
+
+
+DM_LIGA = {"o", "a", "os", "as", "e", "de", "do", "da", "dos", "das", "com", "sem", "para", "pra", "por", "no", "na", "nos", "nas", "em", "ao",
+           "x", "vs", "que", "se", "mas", "apos", "sobre", "contra", "diz", "ve", "tem", "um", "uma", "volta", "vira", "sente", "segue"}
+_TOK = re.compile(r"[0-9A-Za-zÀ-ÿ'’-]+")
+
+
+def has_name(title, ftoks):
+    """O nome (já em fold) aparece inteiro na manchete, sem outro nome próprio colado antes ou depois
+    ("Lucas" não é "Lucas Paquetá"; "Santos" não é "Nilton Santos"; "Marcelo" não é "João Marcelo")."""
+    toks = [(m.start(), m.end(), m.group(0)) for m in _TOK.finditer(title or "")]
+    f = [fold(t[2]) for t in toks]
+    n = len(ftoks)
+    for i in range(len(toks) - n + 1):
+        if f[i:i + n] != ftoks:
+            continue
+        if i > 0 and title[toks[i - 1][1]:toks[i][0]].strip() == "" and toks[i - 1][2][:1].isupper() and f[i - 1] not in DM_LIGA:
+            continue
+        j = i + n
+        if j < len(toks) and title[toks[j - 1][1]:toks[j][0]].strip() == "" and toks[j][2][:1].isupper() and f[j] not in DM_LIGA:
+            continue
+        return (toks[i][0], toks[j - 1][1])
+    return None
+
+
+def name_variants(nm):
+    out = [nm]
+    for a, b in (("Morais", "Moraes"), ("Souza", "Sousa"), ("Luiz", "Luis"), ("Matheus", "Mateus"), ("Thiago", "Tiago")):
+        for x, y in ((a, b), (b, a)):
+            if re.search(rf"\b{x}\b", nm):
+                out.append(re.sub(rf"\b{x}\b", y, nm))
+    return list(dict.fromkeys(out))[:3]
+
+
+DM_CONFIAVEIS = None
+
+
+def dm_fonte(src, cid):
+    """(oficial, confiável): site do clube ou veículo da lista que confirma sozinho."""
+    global DM_CONFIAVEIS
+    if DM_CONFIAVEIS is None:
+        DM_CONFIAVEIS = {fold(x) for x in CONFIG.get("fontes_dm", []) + CONFIG.get("fontes_nomes", [])}
+    s = fold(src).strip()
+    c = CLUBS[cid]
+    dom = fold((c.get("oficial") or "").split(".")[0])
+    oficial = bool(dom) and dom in s.replace(" ", "") or (fold(c["busca"]) in s and re.search(r"\b(site|clube|esporte|regatas|sport|club|futebol|oficial|fc|ec)\b", s) is not None
+                                                            and not re.search(r"noticias|torcida|blog|fala|mais|portal|central|coluna", s))
+    return oficial, oficial or s in DM_CONFIAVEIS
+
+
+def dm_load():
+    try:
+        src = open(DM_FILE, encoding="utf-8").read()
+        d = json.loads(src[src.index("{"):src.rindex("}") + 1])
+        return d if d.get("temporada") == int(time.strftime("%Y")) else None
+    except Exception:
+        return None
+
+
+def club_games(espn_id, matches):
+    """Jogos do clube nas súmulas, do mais antigo ao mais novo: (data, id do jogo, quem jogou)."""
+    g = [(m["date"], eid, {r[0] for r in m["teams"].get(str(espn_id), [])}) for eid, m in matches.items() if str(espn_id) in m.get("teams", {})]
+    return sorted(g)
+
+
+_roster_cache = {}
+
+
+def relacionados(eid, espn_id):
+    """Todos os relacionados do clube num jogo (titulares, quem entrou e o banco), pela súmula da ESPN."""
+    key = (eid, str(espn_id))
+    if key not in _roster_cache:
+        ids = set()
+        try:
+            d = get_json(f"{ESPN}/site/v2/sports/soccer/bra.1/summary?event={eid}")
+            for r in d.get("rosters", []):
+                if str(r["team"]["id"]) == str(espn_id):
+                    ids = {x["athlete"]["id"] for x in r.get("roster", [])}
+        except Exception as ex:
+            log("relacionados", eid, ex)
+        _roster_cache[key] = ids
+    return _roster_cache[key]
+
+
+DM_CLASSES = None
+
+
+def dm_classify(t, span):
+    """Tipo de notícia para um jogador: lesao, duvida, evol(ução), ausencia, volta, citado — ou None.
+    Com o nome na manchete, vale a palavra mais próxima dele ("libera Ruan, mas perde Victor":
+    Ruan foi liberado, Victor é desfalque)."""
+    global DM_CLASSES
+    if DM_CLASSES is None:
+        DM_CLASSES = [("volta", DM_VOLTA), ("evol", DM_EVOL), ("med", DM_MED), ("out", DM_OUT)]
+    t = DM_HOSPITAL.sub(lambda m: " " * len(m.group(0)), t)   # alta do hospital não é alta médica
+    med = DM_MED.search(t)
+    if DM_NAO.search(t) and not med:
+        return None
+    if not span:
+        return "citado" if (med or DM_OUT.search(t)) and not DM_VOLTA.search(t) else None
+    a, b = span
+    # a oração do nome (entre vírgulas, ponto e vírgula, dois-pontos ou "mas"): o que está fora dela pesa menos
+    cuts = [0] + [m.end() for m in re.finditer(r"[,;:|]|\smas\s|\senquanto\s", t)] + [len(t)]
+    ini = max(c for c in cuts if c <= a)
+    fim = min([c for c in cuts if c >= b] or [len(t)])
+    if re.search(r"sacrif[íi]cio|vem jogando|jogando com|atua com|operar[áa] (ap[óo]s|depois)", t[ini:fim], re.I):
+        return "volta"   # joga mesmo com o problema: está à disposição
+    best = None
+    for lab, rx in DM_CLASSES:
+        for m in rx.finditer(t):
+            fora = 0 if ini <= m.start() and m.end() <= fim + 1 else 100
+            if m.start() >= b:
+                d = m.start() - b            # depois do nome (sujeito + verbo): preferido
+            elif m.end() <= a:
+                d = (a - m.end()) * 1.3
+            else:
+                d = 0
+            d += fora
+            if best is None or d < best[0]:
+                best = (d, lab)
+    if not best:
+        return None
+    lab = best[1]
+    if lab in ("volta", "evol"):
+        return lab
+    if lab == "med":
+        return "duvida" if DM_DUV.search(t) and not re.search(r"les[ãa]o|lesion|cirurgi|fratur|ruptur|estiramento|edema|entorse", t, re.I) else "lesao"
+    return "duvida" if DM_DUV.search(t) else "ausencia"
+
+
+def club_dm(cid, matches, squad, old, news_extra):
+    c = CLUBS[cid]
+    espn = c["espn"]
+    hoje = time.strftime("%Y-%m-%d")
+    names = {pid: nm for pid, nm in squad.items()}
+    folded = {pid: fold(nm) for pid, nm in names.items()}
+    lastw = {}
+    for pid, f in folded.items():
+        parts = [w for w in f.split() if len(w) >= 5]
+        if len(f.split()) >= 2 and parts:
+            lastw.setdefault(parts[-1], set()).add(pid)
+    club_words = [fold(w) for w in (c["busca"], *HEADLINE_NAMES.get(cid, []), *c.get("apelidos", []))]
+
+    def named(t, pid):
+        sp = has_name(t, folded[pid].split())
+        if sp:
+            return sp
+        # sobrenome sozinho ("Arroyo"): só se ninguém mais do elenco tem esse sobrenome e a manchete cita o clube
+        parts = [w for w in folded[pid].split() if len(w) >= 5]
+        ft = fold(t)
+        if (bool(parts) and len(folded[pid].split()) >= 2 and len(lastw.get(parts[-1], ())) == 1
+                and any(re.search(rf"(?<![a-z]){re.escape(w)}(?![a-z])", ft) for w in club_words)):
+            return has_name(t, [parts[-1]])
+        return None
+
+    games = club_games(espn, matches)
+    jogou = {}
+    for d, eid, ps in games:
+        for p in ps:
+            jogou[p] = d
+    # relacionados (com o banco) nos dois últimos jogos
+    lista = {}
+    for d, eid, _ in games[-2:]:
+        for p in relacionados(eid, espn):
+            lista[p] = max(lista.get(p, ""), d)
+    ultimo = games[-1][0] if games else None
+    ult_ps = (games[-1][2] | {p for p, d in lista.items() if d == ultimo}) if games else set()
+    disp = {p: max(jogou.get(p, ""), lista.get(p, "")) for p in names}   # última vez à disposição do treinador
+
+    ativos_old = {a["id"]: a for a in (old or {}).get("ativos", [])}
+    hist = list((old or {}).get("historico", []))
+
+    # 1) manchetes do clube (imprensa geral, site oficial e setoristas): quem é citado com lesão vira candidato
+    itens = list(news_extra)
+    consultas = [f'"{c["busca"]}" (lesão OR lesionado OR "departamento médico" OR desconforto OR dores OR cirurgia OR desfalque OR vetado OR "boletim médico") when:14d']
+    if c.get("oficial"):
+        consultas.append(f'site:{c["oficial"]} (lesão OR "departamento médico" OR "boletim médico" OR cirurgia OR recuperação OR transição OR atualização) when:60d')
+    for rep in c.get("setoristas", []):
+        consultas.append(f'"{rep}" "{c["busca"]}" (lesão OR "departamento médico" OR desfalque OR desconforto) when:21d')
+    for q in consultas:
+        try:
+            itens += [dict(x, oficial=q.startswith("site:")) for x in news_query(q)]
+        except Exception as ex:
+            log("DM", cid, ex)
+        time.sleep(0.25)
+    itens = [x for x in itens if (x.get("ts") or 0) >= time.time() - (DM_JANELA + 5) * 86400]
+    citados = {pid for it in itens for pid in names if named(it["title"], pid) and DM_MED.search(it["title"]) and not DM_NAO.search(it["title"])}
+
+    # 2) candidatos: frequentes que não estavam no último jogo, quem já está no DM e quem foi citado
+    recentes = games[-10:]
+    freq = {p for p in names if sum(p in ps for _, _, ps in recentes) >= 2}
+    cand = (freq - ult_ps) | (set(ativos_old) & set(names)) | citados
+    ordem = sorted(cand, key=lambda p: (p not in ativos_old, p not in citados, disp.get(p, "")), reverse=False)[:DM_MAX_BUSCAS]
+
+    ativos, saidas = [], []
+    for pid in ordem:
+        nm = names[pid]
+        q = " OR ".join(f'"{v}"' for v in name_variants(nm))
+        try:
+            res = news_query(f'({q}) "{c["busca"]}" {DM_TERMS} when:{DM_JANELA}d')
+        except Exception as ex:
+            log("DM", nm, ex)
+            res = []
+        time.sleep(0.25)
+        ev, vistos = [], set()
+        for it in res + [x for x in itens if named(x["title"], pid)]:
+            k = headline_key(it["title"])
+            if k in vistos or not it.get("link"):
+                continue
+            vistos.add(k)
+            nmd = named(it["title"], pid)
+            tipo = dm_classify(it["title"], nmd)
+            if not tipo or (it.get("ts") or 0) < time.time() - (DM_JANELA + 5) * 86400:
+                continue
+            of, conf = dm_fonte(it.get("source", ""), cid)
+            ev.append({"data": time.strftime("%Y-%m-%d", time.localtime(it.get("ts") or 0)), "tipo": tipo, "nomeado": bool(nmd),
+                       "manchete": it["title"], "fonte": it.get("source", ""), "link": it["link"], "oficial": of or bool(it.get("oficial")), "confiavel": conf or bool(it.get("oficial"))})
+        prev = ativos_old.get(pid)
+        if prev:  # o que já foi apurado antes continua valendo (a busca só olha as últimas semanas)
+            ev += [x for x in prev.get("noticias", []) if headline_key(x["manchete"]) not in vistos]
+        base = disp.get(pid, "")   # última vez em campo ou no banco
+        dmy = lambda d: f"{d[8:10]}/{d[5:7]}"
+        # já estava no DM e depois entrou em campo ou foi relacionado: está à disposição, sai
+        if prev and base and base > prev["desde"]:
+            saidas.append(dict(prev, ate=base, motivo=f"voltou a jogar em {dmy(base)}" if jogou.get(pid) == base else f"relacionado para o jogo de {dmy(base)}"))
+            prev = None
+        # notícias depois da última vez à disposição (a do próprio dia do jogo conta se citar o jogador: lesão na partida)
+        les = [x for x in ev if x["tipo"] != "volta" and (x["data"] >= base if x["nomeado"] and x["tipo"] == "lesao" else x["data"] > base)]
+        fortes = [x for x in les if x["nomeado"] and x["tipo"] in ("lesao", "duvida", "evol")]
+        medias = [x for x in les if x not in fortes]
+        dentro = bool(fortes) or len({fold(x["fonte"]) for x in medias}) >= 2 or (bool(prev) and bool(les))
+        if not les:
+            if prev:   # sem notícia nova e sem jogo: continua como estava
+                ativos.append(prev)
+            continue
+        ult = max(x["data"] for x in les)
+        # a liberação com o nome só é desmentida por notícia nova que também cite o jogador
+        ult_nome = max(x["data"] for x in fortes) if fortes else min(x["data"] for x in les)
+        volta = sorted((x for x in ev if x["tipo"] == "volta" and x["data"] >= ult_nome), key=lambda x: x["data"])
+        grave = any(DM_GRAVE.search(x["manchete"]) for x in fortes)
+        idade = (time.mktime(time.strptime(hoje, "%Y-%m-%d")) - time.mktime(time.strptime(ult, "%Y-%m-%d"))) / 86400
+        fim = None
+        if volta:
+            fim = (volta[0]["data"], f"liberado · {volta[0]['fonte']}: {volta[0]['manchete']}")
+        elif idade > (DM_GRAVE_DIAS if grave else DM_ESQUECE):
+            fim = (hoje, f"sem notícias desde {dmy(ult)}")
+        if fim or not dentro:
+            if prev:
+                saidas.append(dict(prev, ate=fim[0] if fim else hoje, motivo=fim[1] if fim else "sem confirmação"))
+            continue
+        les.sort(key=lambda x: x["data"])
+        top = sorted(fortes or medias, key=lambda x: x["data"])[-1]
+        txt = " ".join(x["manchete"] for x in fortes)
+        parte = next((nome for rx, nome in DM_PARTES if re.search(rx, txt, re.I)), None)
+        status = ("fora da temporada" if DM_FORA_TEMP.search(txt) else "longo prazo" if DM_GRAVE.search(txt)
+                  else "em transição" if top["tipo"] == "evol" else "lesionado" if any(x["tipo"] == "lesao" for x in fortes) or top["tipo"] != "duvida" else "dúvida")
+        desde = (prev or {}).get("desde") or les[0]["data"]
+        fora = sum(1 for d, _, ps in games if d >= desde and pid not in ps)   # jogos do Brasileirão perdidos desde a lesão
+        if status == "dúvida" and fora >= 2:
+            status = "lesionado"   # "dúvida" que já perdeu dois jogos não é mais dúvida
+        noticias = sorted(les, key=lambda x: (x["nomeado"], x["data"]), reverse=True)[:8]
+        ativos.append({"id": pid, "name": nm, "status": status, "parte": parte, "desde": desde, "jogosFora": fora,
+                       "ultimoJogo": base or None, "atualizado": max(x["data"] for x in les),
+                       "fontes": sorted({x["fonte"] for x in les}), "confirmado": bool(fortes) and (len({fold(x["fonte"]) for x in les}) >= 2 or any(x["confiavel"] for x in les)),
+                       "oficial": any(x["oficial"] for x in les), "noticias": noticias})
+    # quem estava no DM e não foi pesquisado desta vez continua (a fila de buscas tem limite)
+    feitos = set(ordem)
+    for pid, a in ativos_old.items():
+        if pid not in feitos and pid in names:
+            base = disp.get(pid, "")
+            if base and base >= a["desde"]:
+                saidas.append(dict(a, ate=base, motivo=f"voltou a jogar em {base[8:10]}/{base[5:7]}" if jogou.get(pid) == base else f"relacionado para o jogo de {base[8:10]}/{base[5:7]}"))
+            else:
+                ativos.append(a)
+    for s in saidas:
+        hist.insert(0, {k: s.get(k) for k in ("id", "name", "status", "parte", "desde", "ate", "motivo", "fontes")})
+    ordem_st = {"fora da temporada": 0, "longo prazo": 1, "lesionado": 2, "em transição": 3, "dúvida": 4}
+    ativos.sort(key=lambda a: (ordem_st.get(a["status"], 9), not a["confirmado"], a["desde"]))
+    return {"ativos": ativos, "historico": hist[:80], "monitorados": len(ordem), "ultimoJogo": ultimo}
+
+
+def update_dm():
+    """Departamento médico de todos os clubes (temporada inteira, com histórico)."""
+    with lock:
+        squads = state["squads"] or {}
+        club_news = dict(state["news"])
+        old = state.get("dm") or dm_load() or {}
+    if not squads:
+        src = open(os.path.join(ROOT, "js", "squads.js"), encoding="utf-8").read()
+        squads = json.loads(src[src.index("window.SQUADS = ") + 16:src.index("window.SQUADS_LAST")].strip().rstrip(";"))
+    matches = load_matches()
+    out = {}
+    for cid in CLUBS:
+        squad = {row[4]: row[1] for row in squads.get(cid, []) if row[4]}
+        try:
+            extra = [dict(x, source=x.get("source", "")) for x in club_news.get(cid, [])]
+            out[cid] = club_dm(cid, matches, squad, (old.get("clubs") or {}).get(cid), extra)
+        except Exception as ex:
+            log("DM", cid, ex)
+            if (old.get("clubs") or {}).get(cid):
+                out[cid] = old["clubs"][cid]
+    dm = {"updated": time.strftime("%d/%m %H:%M"), "temporada": int(time.strftime("%Y")), "clubs": out,
+          "fontes": "imprensa nacional e local, sites oficiais dos clubes, setoristas e súmulas da ESPN (relacionados e quem entrou em campo)"}
+    with lock:
+        state["dm"] = dm
+    log("departamento médico:", sum(len(v["ativos"]) for v in out.values()), "jogadores no DM")
+    return dm
+
+
 def update_players():
     with lock:
         squads = state["squads"] or {}
@@ -1015,7 +1369,7 @@ def write_snapshot():
             state.update({k: old[k] for k in ("fixtures", "round") if old.get(k)})
         except Exception as ex:
             log("base anterior ignorada", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("histórico", update_form)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("departamento médico", update_dm), ("histórico", update_form)]
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
             fn()
@@ -1026,11 +1380,13 @@ def write_snapshot():
         live["manchetes"] = state.get("manchetes")
         live["arbitragem"] = state.get("arbitragem")
         live["news"] = {cid: [{k: x.get(k) for k in ("title", "link", "source", "ts", "tag")} for x in items[:8]] for cid, items in (state.get("news") or {}).items()}
-        players, form, positions = state.get("players"), state.get("form"), state.get("positions")
+        players, form, positions, dm = state.get("players"), state.get("form"), state.get("positions"), state.get("dm")
     if live["standings"]:
         write_js("live-data.js", "LIVE_DATA", live, "tabela, jogos e manchetes (só título, fonte e link). Fontes: ESPN, CBF, Google Notícias")
     if players:
         write_js("player-stats.js", "PLAYER_STATS", players, "estatísticas de jogadores. Súmulas: ESPN · lesões: manchetes que citam o jogador")
+    if dm and dm.get("clubs"):
+        write_js("departamento-medico.js", "DM", dm, "departamento médico da temporada (quem está e quem já passou). Fontes: imprensa nacional e local, sites oficiais, setoristas e súmulas da ESPN")
     if form:
         write_js("club-form.js", "CLUB_FORM", form, "temporada de cada clube, últimos 5 e próximos 5 jogos. Fonte: ESPN")
     if positions and positions.get("players"):
@@ -1575,7 +1931,7 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json({"ok": True, "updated": state["updated"], "erros": len(state["errors"])})
             if parts[1:] == ["state"]:
                 with lock:
-                    s = {k: state[k] for k in ("updated", "standings", "round", "fixtures", "squads", "last", "scorers", "players", "form", "arbitragem") if k in state}
+                    s = {k: state[k] for k in ("updated", "standings", "round", "fixtures", "squads", "last", "scorers", "players", "form", "arbitragem", "dm") if k in state}
                 if not s.get("standings"):
                     return self.send_json({"ok": False, "message": "carregando dados"}, 503)
                 return self.send_json(s)
@@ -1611,6 +1967,12 @@ class Handler(SimpleHTTPRequestHandler):
                 with lock:
                     m = state.get("arbitragem")
                 return self.send_json(m) if m else self.send_json({"ok": False, "message": "carregando arbitragem"}, 503)
+            if parts[1:] == ["departamento-medico"]:
+                with lock:
+                    m = state.get("dm") or dm_load()
+                if not m:
+                    return self.send_json({"ok": False, "message": "carregando departamento médico"}, 503)
+                return self.send_json({"updated": m["updated"], "club": club, **m["clubs"].get(club, {})} if club else m)
             if parts[1:] == ["manchetes"]:
                 with lock:
                     m = state.get("manchetes")
@@ -1687,6 +2049,7 @@ def main():
     every(iv.get("manchetes", 30), update_headlines)
     every(iv.get("arbitragem", 30), update_referees)
     every(iv.get("jogadores", 60), update_players)
+    every(iv.get("departamento_medico", 60), update_dm)
     every(iv.get("retrospecto", 30), update_form)
     threading.Thread(target=live_loop, daemon=True).start()
     log(f"PLACAR no ar: http://{'localhost' if HOST in ('127.0.0.1', 'localhost') else HOST}:{port}")

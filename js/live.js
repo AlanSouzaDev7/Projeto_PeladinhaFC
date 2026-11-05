@@ -10,7 +10,7 @@
   const API = "/api";
   const PD = window.PD;
   // arquivos de dados (gravados pelo robô a partir de fontes externas): limpos antes de qualquer uso
-  ["LIVE_DATA", "PLAYER_STATS", "SQUADS", "SQUADS_LAST", "CLUB_FORM", "HEATMAPS", "ARBITRAGEM"].forEach((k) => { if (window[k] && window.SEG) window.SEG.limpa(window[k]); });
+  ["LIVE_DATA", "PLAYER_STATS", "SQUADS", "SQUADS_LAST", "CLUB_FORM", "HEATMAPS", "ARBITRAGEM", "DM"].forEach((k) => { if (window[k] && window.SEG) window.SEG.limpa(window[k]); });
 
   function apply(s) {
     PD.REAL.table = s.standings;
@@ -26,6 +26,7 @@
     if (s.players) window.PLAYER_STATS = s.players;
     if (s.form) window.CLUB_FORM = s.form;
     if (s.arbitragem) window.ARBITRAGEM = s.arbitragem;
+    if (s.dm) window.DM = s.dm;
     PD.LIVE = true;
   }
 

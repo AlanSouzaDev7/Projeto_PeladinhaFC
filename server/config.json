@@ -1,5 +1,5 @@
 {
-  "_leia_me": "Configuração da API do PLACAR. 'setoristas' recebe nomes de jornalistas que cobrem o clube: a API busca as notícias publicadas com o nome de cada um no Google Notícias. 'fontes' limita a busca a portais (domínios).",
+  "_leia_me": "Configuração da API do PLACAR. 'setoristas' recebe nomes de jornalistas que cobrem o clube: a API busca as notícias publicadas com o nome de cada um no Google Notícias. 'fontes' limita a busca a portais (domínios). 'oficial' é o site oficial do clube (consultado no departamento médico). 'fontes_dm' são os veículos (nacionais e locais, onde estão os setoristas) que confirmam uma lesão sozinhos; os demais precisam de uma segunda fonte.",
   "intervalos_minutos": {
     "tabela_e_jogos": 5,
     "noticias": 15,
@@ -7,7 +7,8 @@
     "jogadores": 60,
     "retrospecto": 30,
     "manchetes": 30,
-    "arbitragem": 30
+    "arbitragem": 30,
+    "departamento_medico": 60
   },
   "fontes": [
     "ge.globo.com",
@@ -27,7 +28,8 @@
         "Athletico-PR",
         "Furacão",
         "CAP"
-      ]
+      ],
+      "oficial": "athletico.com.br"
     },
     "atletico-mg": {
       "espn": "7632",
@@ -37,7 +39,8 @@
         "Atlético-MG",
         "Atlético Mineiro",
         "Galo"
-      ]
+      ],
+      "oficial": "atletico.com.br"
     },
     "bahia": {
       "espn": "9967",
@@ -47,7 +50,8 @@
         "Bahia",
         "Esquadrão de Aço",
         "Tricolor de Aço"
-      ]
+      ],
+      "oficial": "esporteclubebahia.com.br"
     },
     "botafogo": {
       "espn": "6086",
@@ -57,7 +61,8 @@
         "Botafogo",
         "Fogão",
         "Glorioso"
-      ]
+      ],
+      "oficial": "botafogo.com.br"
     },
     "bragantino": {
       "espn": "6079",
@@ -66,7 +71,8 @@
       "apelidos": [
         "Bragantino",
         "Massa Bruta"
-      ]
+      ],
+      "oficial": "redbullbragantino.com.br"
     },
     "chapecoense": {
       "espn": "9318",
@@ -76,7 +82,8 @@
         "Chapecoense",
         "Chape",
         "Verdão do Oeste"
-      ]
+      ],
+      "oficial": "chapecoense.com"
     },
     "corinthians": {
       "espn": "874",
@@ -85,7 +92,8 @@
       "apelidos": [
         "Corinthians",
         "Timão"
-      ]
+      ],
+      "oficial": "corinthians.com.br"
     },
     "coritiba": {
       "espn": "3456",
@@ -94,7 +102,8 @@
       "apelidos": [
         "Coritiba",
         "Coxa"
-      ]
+      ],
+      "oficial": "coritiba.com.br"
     },
     "cruzeiro": {
       "espn": "2022",
@@ -103,7 +112,8 @@
       "apelidos": [
         "Cruzeiro",
         "Raposa"
-      ]
+      ],
+      "oficial": "cruzeiro.com.br"
     },
     "flamengo": {
       "espn": "819",
@@ -113,7 +123,8 @@
         "Flamengo",
         "Mengão",
         "Fla"
-      ]
+      ],
+      "oficial": "flamengo.com.br"
     },
     "fluminense": {
       "espn": "3445",
@@ -122,7 +133,8 @@
       "apelidos": [
         "Fluminense",
         "Flu"
-      ]
+      ],
+      "oficial": "fluminense.com.br"
     },
     "gremio": {
       "espn": "6273",
@@ -131,7 +143,8 @@
       "apelidos": [
         "Grêmio",
         "Imortal Tricolor"
-      ]
+      ],
+      "oficial": "gremio.net"
     },
     "internacional": {
       "espn": "1936",
@@ -141,7 +154,8 @@
         "Internacional",
         "Inter",
         "Colorado"
-      ]
+      ],
+      "oficial": "internacional.com.br"
     },
     "mirassol": {
       "espn": "9169",
@@ -149,7 +163,8 @@
       "setoristas": [],
       "apelidos": [
         "Mirassol"
-      ]
+      ],
+      "oficial": "mirassolfc.com.br"
     },
     "palmeiras": {
       "espn": "2029",
@@ -159,7 +174,8 @@
         "Palmeiras",
         "Verdão",
         "Alviverde"
-      ]
+      ],
+      "oficial": "palmeiras.com.br"
     },
     "remo": {
       "espn": "4936",
@@ -168,7 +184,8 @@
       "apelidos": [
         "Remo",
         "Leão Azul"
-      ]
+      ],
+      "oficial": "clubedoremo.com.br"
     },
     "santos": {
       "espn": "2674",
@@ -178,7 +195,8 @@
         "Santos",
         "Peixe",
         "Alvinegro Praiano"
-      ]
+      ],
+      "oficial": "santosfc.com.br"
     },
     "sao-paulo": {
       "espn": "2026",
@@ -188,7 +206,8 @@
         "São Paulo",
         "SPFC",
         "Tricolor Paulista"
-      ]
+      ],
+      "oficial": "saopaulofc.net"
     },
     "vasco": {
       "espn": "3454",
@@ -198,7 +217,8 @@
         "Vasco",
         "Cruz-Maltino",
         "Gigante da Colina"
-      ]
+      ],
+      "oficial": "vasco.com.br"
     },
     "vitoria": {
       "espn": "3457",
@@ -208,7 +228,8 @@
         "Vitória",
         "Leão da Barra",
         "Rubro-Negro Baiano"
-      ]
+      ],
+      "oficial": "ecvitoria.com.br"
     }
   },
   "fontes_nomes": [
@@ -223,5 +244,52 @@
     "Lance!",
     "Gazeta Esportiva",
     "Terra"
+  ],
+  "fontes_dm": [
+    "ge",
+    "Globo Esporte",
+    "O Globo",
+    "Extra",
+    "LANCE!",
+    "ESPN",
+    "ESPN Brasil",
+    "UOL",
+    "UOL Esporte",
+    "Terra",
+    "Gazeta Esportiva",
+    "CNN Brasil",
+    "Band",
+    "Jovem Pan",
+    "Estadão",
+    "Folha de S.Paulo",
+    "Revista PLACAR",
+    "Trivela",
+    "Rádio Itatiaia",
+    "O TEMPO",
+    "Hoje em Dia",
+    "Estado de Minas",
+    "Super FC",
+    "GZH",
+    "Correio do Povo",
+    "Gazeta do Povo",
+    "Banda B",
+    "Bem Paraná",
+    "Correio",
+    "A Tarde",
+    "Bahia Notícias",
+    "O Liberal",
+    "DOL",
+    "Diário do Pará",
+    "NSC Total",
+    "O Dia",
+    "Diário de S. Paulo",
+    "Meu Timão",
+    "Rede 98",
+    "Central da Toca",
+    "Coluna do Fla",
+    "Netflu",
+    "NOSSO PALESTRA",
+    "Diário do Nordeste",
+    "GE Globo"
   ]
 }
