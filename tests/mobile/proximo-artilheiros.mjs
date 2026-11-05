@@ -35,7 +35,7 @@ for (const [name, eng, opts, launch] of [["pc", chromium, { viewport: { width: 1
   const li = p.locator("aside [data-scorer]").first();
   await li.scrollIntoViewIfNeeded();
   await p.waitForTimeout(900); // rolagem suave terminar
-  if (name === "pc") await li.hover(); else await li.tap();
+  if (name === "pc") await li.click(); else await li.tap();
   await p.waitForTimeout(400);
   const ficha = await p.evaluate(() => {
     const t = document.querySelector(".scorer-card.open");
@@ -45,7 +45,7 @@ for (const [name, eng, opts, launch] of [["pc", chromium, { viewport: { width: 1
       primeiro: t.querySelector(".sc-adv li")?.innerText.replace(/\s+/g, " "), naTela: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight + 1, larg: Math.round(r.width) };
   });
   await p.screenshot({ path: `${OUT}${name}-artilheiro-ficha.png` });
-  if (name === "pc") await p.mouse.move(5, 5); else await p.touchscreen.tap(5, 300);
+  if (name === "pc") await p.mouse.click(5, 300); else await p.touchscreen.tap(5, 300);
   await p.waitForTimeout(350);
   const fechou = !(await p.locator(".scorer-card.open").count());
   const rolagem = await p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);

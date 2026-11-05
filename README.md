@@ -85,7 +85,7 @@ Fundo escuro com **brilho nas bordas** (canto de cima à direita e de baixo à e
 | Contraste (WCAG AA) | textos ≥ 4,5:1 nos dois temas; a cor de destaque de cada clube é ajustada para ficar legível no claro e no escuro |
 | Links internos | os 66 links do site abrem uma página de verdade; a rota inexistente mostra "Impedimento!" |
 | Teclado e leitor de tela | foco visível em todos os itens; cada página tem um título principal (h1); botões e imagens com nome |
-| Interações | busca, tema, rodadas, filtros, favoritos, carrossel, ficha do artilheiro, abas do clube, prévia do ranking e o "voltar" do navegador |
+| Interações | busca, tema, rodadas, filtros, favoritos, carrossel, ficha do artilheiro (abre e fecha no clique), abas do clube, prévia do ranking e o "voltar" do navegador |
 | Rolagem | cabeçalho e títulos dos meses grudam no alto; listas longas e a página de clubes sem travadas |
 | Carregamento (4G e processador 4× mais lento) | maior conteúdo em até ~2 s; saltos de layout ≤ 0,014 |
 | Peso da página | ~0,3–0,5 MB (escudos pequenos nas listas; temporada dos clubes só nas páginas de clube) |
@@ -105,6 +105,7 @@ node tests/mobile/alinhamento.mjs                  # botões desalinhados em tod
 node tests/mobile/bora-arrastar.mjs                # arrastar jogadores na prancheta (mouse e dedo)
 node tests/mobile/bora-calor.mjs                   # mapa de calor de quem está sendo arrastado (PC e celular)
 node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! em tempo real (ESPN simulada, aba escondida)
+node tests/mobile/ficha-clique.mjs                  # ficha do artilheiro abre e fecha no clique, rola por dentro (PC baixo, PC, iPhone SE, Pixel)
 node tests/mobile/artilheiros.mjs                  # top 5 dos dois times em todas as partidas e nos 20 clubes
 node tests/mobile/elenco.mjs                       # campinho do elenco dos 20 clubes: nomes sem encostar, no PC, notebook e celular
 ```

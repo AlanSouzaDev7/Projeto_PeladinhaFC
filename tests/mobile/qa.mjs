@@ -171,7 +171,7 @@ for (const D of DEVICES) {
   });
   await T("ficha do artilheiro", async () => {
     const sc = page.locator("[data-scorer]").first(); await sc.scrollIntoViewIfNeeded();
-    if (D.name === "pc") await sc.hover(); else await sc.tap();
+    if (D.name === "pc") await sc.click(); else await sc.tap();
     await page.waitForTimeout(500);
     if (!(await page.locator(".scorer-card.open").count())) throw new Error("ficha não abriu"); return "abre";
   });

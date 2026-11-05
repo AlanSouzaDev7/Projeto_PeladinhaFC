@@ -36,7 +36,7 @@ for (const [dev, opts] of [["pc", { viewport: { width: 1440, height: 900 } }], [
   await p.waitForSelector(".scorers-duel .has-ficha");
   const el = p.locator(".scorers-duel .sd-a.has-ficha").first();
   await el.scrollIntoViewIfNeeded();
-  if (dev === "pc") await el.hover(); else await el.tap();
+  if (dev === "pc") await el.click(); else await el.tap();
   await p.waitForTimeout(400);
   const f = await p.evaluate(() => { const t = document.querySelector(".scorer-card.open"); return t && { nome: t.querySelector(".sc-h b").textContent, clubes: t.querySelectorAll(".sc-clubes li").length, r: t.getBoundingClientRect().toJSON() }; });
   if (!f || !f.clubes) erros.push(`${dev}: ficha não abriu ou sem gols por clube`); else console.log(`${dev}: ficha de ${f.nome} ok (${f.clubes} clube)`);

@@ -59,7 +59,7 @@ for (const [dev, opts] of [["pc", { viewport: { width: 1440, height: 900 } }], [
   // ficha do Pedro: "contra quem marcou" já com o Grêmio, e os gols pelo Flamengo somados
   const pedro = p.locator('.squad-list li[data-scorer^="Pedro|"]').first();
   await pedro.scrollIntoViewIfNeeded();
-  if (dev === "pc") await pedro.hover(); else await pedro.tap();
+  if (dev === "pc") await pedro.click(); else await pedro.tap();
   await p.waitForTimeout(500);
   const ficha = await p.evaluate(() => {
     const t = document.querySelector(".scorer-card.open"); if (!t) return null;
@@ -70,7 +70,7 @@ for (const [dev, opts] of [["pc", { viewport: { width: 1440, height: 900 } }], [
   console.log(dev, "ficha do Pedro:", JSON.stringify(ficha));
   ok(ficha && ficha.adv.some((x) => /^Grêmio 1\s*\+1 hoje$/.test(x)) && /19/.test(ficha.gols) && ficha.cl.some((x) => /Flamengo.*34 jogos.*19/.test(x)), `${dev}: ficha do Pedro com o gol no Grêmio em "contra quem marcou"`);
   if (dev === "pc") await p.screenshot({ path: "tests/mobile/out/ficha-ao-vivo-pc.png" });
-  await p.mouse.move(5, 5); await p.waitForTimeout(300);
+  await p.keyboard.press("Escape"); await p.waitForTimeout(300);
 
   // 2º gol do Athletico
   cap = 2;

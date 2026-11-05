@@ -2150,3 +2150,16 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .sc-adv li { grid-template-columns: 18px 96px 1fr auto; }
 .sc-adv b { min-width: 22px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
 .sc-hoje { padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 800; line-height: 1.6; background: var(--loss); color: #fff; white-space: nowrap; }
+
+/* ficha do artilheiro: abre no clique, rola por dentro e tem botão de fechar */
+.scorer-card { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.sc-close { position: sticky; top: 0; float: right; z-index: 2; width: 30px; height: 30px; margin: -6px -6px -24px 0; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--text-2); font-size: 13px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.sc-close:hover, .sc-close:focus-visible { background: var(--surface-2); color: var(--text); outline: none; }
+.sc-close:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.scorer-card .sc-h { margin-right: 28px; }
+[data-scorer].peek { background: var(--surface-2); }
+[data-scorer].peek .sc-more { transform: rotate(90deg); color: var(--ink); }
+.sc-more { transition: transform 0.2s var(--ease), color 0.2s; }
+/* o selo "+1 ao vivo" não aumenta a altura da linha do jogador */
+.squad-list .gol-hoje { vertical-align: 1px; line-height: 15px; }

@@ -22,7 +22,9 @@ function audit() {
     // caixa do conteúdo (texto + ícones), sem o padding
     const kids = [];
     const walk = (n) => { for (const c of n.childNodes) { if (c.nodeType === 3 && c.textContent.trim()) { const rg = document.createRange(); rg.selectNodeContents(c); [...rg.getClientRects()].forEach((q) => kids.push({ q, k: "t" })); } else if (c.nodeType === 1 && getComputedStyle(c).display !== "none" && getComputedStyle(c).position !== "absolute") { if (/^(svg|img|i)$/i.test(c.tagName) || !c.childNodes.length) { const q = c.getBoundingClientRect(); if (q.width && q.height) kids.push({ q, k: "i" }); } else walk(c); } } };
-    walk(el);
+    // linha de jogador da artilharia (virou botão): a barra começa com largura 0 até aparecer na tela; mede pela caixa do conteúdo
+    if (el.matches("[data-scorer]")) { const box = el.querySelector(":scope > div, .sd-nm"); if (box) kids.push({ q: box.getBoundingClientRect(), k: "i" }); }
+    else walk(el);
     if (!kids.length) continue;
     const top = Math.min(...kids.map((k) => k.q.top)), bot = Math.max(...kids.map((k) => k.q.bottom)), left = Math.min(...kids.map((k) => k.q.left)), right = Math.max(...kids.map((k) => k.q.right));
     const pt = parseFloat(s.paddingTop), pb = parseFloat(s.paddingBottom), bt = parseFloat(s.borderTopWidth), bb = parseFloat(s.borderBottomWidth);

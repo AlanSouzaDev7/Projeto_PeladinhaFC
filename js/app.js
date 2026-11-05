@@ -275,7 +275,7 @@
       if (!list.length) return "";
       return `<div class="card reveal"><div class="card-h">Artilheiros do ${c.abbr} <small>Brasileirão</small></div>
         <ul class="squad-list">${list.map((p) => `<li${scorerAttrs(p.name, clubId)}><span class="n">${p.rank}º</span><div style="flex:1;min-width:0"><b>${p.name}</b>${golHoje(p.vivo, p.rolando)}${p.pos ? `<small class="sl-sub">${p.pos}º na artilharia</small>` : ""}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(p.gols / list[0].gols) * 100}" style="background:${display(c)}"></i></div></div><b class="goals">${p.gols}</b>${scorerOf(p.name, clubId) ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`).join("")}</ul>
-        ${list.some((p) => scorerOf(p.name, clubId)) ? `<div class="source">Passe o mouse (ou toque) no jogador para ver a ficha</div>` : ""}</div>`;
+        ${list.some((p) => scorerOf(p.name, clubId)) ? `<div class="source">Clique (ou toque) no jogador para ver a ficha; clique de novo para fechar</div>` : ""}</div>`;
     }
     const geral = artilhariaGeral(), list = geral.slice(0, limit);
     if (!list.length) return "";
@@ -284,7 +284,7 @@
       <ul class="squad-list">${list.map(([name, cid, g, vivo, rolando], k) => {
         const ficha = scorerOf(name, cid);
         return `<li${scorerAttrs(name, cid)}><span class="n">${k + 1}º</span>${crest(byId[cid], 22)}<div style="flex:1;min-width:0"><b>${name}</b>${golHoje(vivo, rolando)}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(g / max) * 100}" style="background:${display(byId[cid])}"></i></div></div><b class="goals">${g}</b>${ficha ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`;
-      }).join("")}</ul>${list.some(([n, c]) => scorerOf(n, c)) ? `<div class="source">Passe o mouse (ou toque) no jogador para ver a ficha</div>` : ""}</div>`;
+      }).join("")}</ul>${list.some(([n, c]) => scorerOf(n, c)) ? `<div class="source">Clique (ou toque) no jogador para ver a ficha; clique de novo para fechar</div>` : ""}</div>`;
   }
 
   /* partida: top 5 de cada time lado a lado (1º contra 1º, 2º contra 2º...), como nos comparativos dos apps */
@@ -302,7 +302,7 @@
       <div class="sd-head"><div class="sd-t">${crest(h, 26)}<b>${h.abbr}</b></div><span class="sd-vs">gols</span><div class="sd-t sd-ta"><b>${a.abbr}</b>${crest(a, 26)}</div></div>
       <ul class="sd-list">${rows}</ul>
       <div class="sd-foot"><span><b>${tot(H)}</b> gols do top 5</span><span><b>${tot(A)}</b> gols do top 5</span></div>
-      <div class="source">Súmulas da ESPN; quem está no top 10 da CBF aparece com o número oficial. Gols contra não entram.${H.some((p) => scorerOf(p.name, m.home)) || A.some((p) => scorerOf(p.name, m.away)) ? " Passe o mouse (ou toque) no jogador para ver a ficha." : ""}</div></div>`;
+      <div class="source">Súmulas da ESPN; quem está no top 10 da CBF aparece com o número oficial. Gols contra não entram.${H.some((p) => scorerOf(p.name, m.home)) || A.some((p) => scorerOf(p.name, m.away)) ? " Clique (ou toque) no jogador para ver a ficha; clique de novo para fechar." : ""}</div></div>`;
   }
 
   /* ---------- Ficha do artilheiro (cartão flutuante) ----------
@@ -352,6 +352,8 @@
       <div class="sc-src">Súmulas: ESPN${p.golsSumulas !== p.gols ? ` · ${p.golsSumulas} gols nas súmulas do Brasileirão` : ""}</div>`;
   }
   let scTip = null;
+  /* ficha do artilheiro: abre e fecha no clique (mouse, toque ou Enter/Espaço), como um botão.
+     Fica aberta enquanto a pessoa rola a ficha ou a página; fecha clicando de novo no jogador, fora dela, no ✕ ou com Esc. */
   function scorerCards(root) {
     const items = $$("[data-scorer]", root);
     if (!items.length) return;
@@ -361,52 +363,76 @@
       scTip.setAttribute("role", "dialog");
       scTip.setAttribute("aria-hidden", "true");
       document.body.appendChild(scTip);
-      // toque fora fecha (celular)
-      document.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" && !e.target.closest("[data-scorer], .scorer-card")) hideScorer(); });
-      addEventListener("scroll", () => { if (scTip.dataset.by === "mouse") hideScorer(); }, { passive: true });
+      document.addEventListener("pointerdown", (e) => { if (scTip.classList.contains("open") && !e.target.closest("[data-scorer], .scorer-card")) hideScorer(); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape" && scTip.classList.contains("open")) { const el = $(`[data-scorer].peek`); hideScorer(); el?.focus(); } });
+      scTip.addEventListener("click", (e) => { if (e.target.closest(".sc-close")) { const el = $(`[data-scorer].peek`); hideScorer(); el?.focus(); } });
       addEventListener("hashchange", hideScorer);
+      addEventListener("resize", hideScorer);
+      let raf = 0;
+      addEventListener("scroll", () => { if (scTip.classList.contains("open") && !raf) raf = requestAnimationFrame(() => { raf = 0; placeScorer(false); }); }, { passive: true });
     }
     items.forEach((el) => {
       const [name, cid] = el.dataset.scorer.split("|");
-      const open = (by) => { const p = scorerOf(name, cid); if (p) showScorer(el, p, by); };
-      el.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") open("mouse"); });
-      el.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") hideScorer(); });
-      // toque: abre; tocar de novo fecha (o foco do próprio toque pode já ter aberto a ficha: ela não fecha na mesma hora)
-      el.addEventListener("click", (e) => {
-        if (e.pointerType === "mouse") return;
+      el.setAttribute("role", "button");
+      el.setAttribute("aria-expanded", "false");
+      const toggle = () => {
         const aberto = scTip.dataset.for === el.dataset.scorer && scTip.classList.contains("open");
-        if (aberto && Date.now() - +scTip.dataset.t > 450) hideScorer(); else open("touch");
-      });
-      el.addEventListener("focus", () => open("key"));
-      el.addEventListener("blur", hideScorer);
-      el.addEventListener("keydown", (e) => { if (e.key === "Escape") hideScorer(); });
+        if (aberto) return hideScorer();
+        const p = scorerOf(name, cid);
+        if (p) showScorer(el, p);
+      };
+      el.addEventListener("click", (e) => { if (!e.target.closest("a")) toggle(); });
+      el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
     });
   }
-  function showScorer(el, p, by) {
-    $$("[data-scorer].peek").forEach((x) => x.classList.remove("peek"));
+  function showScorer(el, p) {
+    $$("[data-scorer].peek").forEach((x) => { x.classList.remove("peek"); x.setAttribute("aria-expanded", "false"); });
     el.classList.add("peek");
-    scTip.innerHTML = scorerHTML(p);
+    el.setAttribute("aria-expanded", "true");
+    scTip.innerHTML = `<button type="button" class="sc-close" aria-label="Fechar a ficha">✕</button>` + scorerHTML(p);
+    scTip.setAttribute("aria-label", `Ficha de ${p.name}`);
     scTip.dataset.for = el.dataset.scorer;
-    if (scTip.dataset.for !== el.dataset.scorer || !scTip.classList.contains("open")) scTip.dataset.t = Date.now();
-    scTip.dataset.by = by;
-    const b = el.getBoundingClientRect(), w = Math.min(340, innerWidth - 24);
-    scTip.style.width = w + "px";
-    const h = scTip.offsetHeight;
-    // computador: ao lado da lista (à esquerda dela, que fica na coluna da direita); celular: abaixo ou acima do jogador
-    const side = innerWidth >= 900 && b.left - w - 14 > 12;
-    const left = side ? b.left - w - 14 : Math.max(12, Math.min(innerWidth - w - 12, b.left + b.width / 2 - w / 2));
-    const top = side ? Math.max(12, Math.min(innerHeight - h - 12, b.top + b.height / 2 - h / 2))
-      : b.bottom + 8 + h < innerHeight ? b.bottom + 8 : Math.max(12, b.top - 8 - h);
-    scTip.style.left = left + "px";
-    scTip.style.top = top + "px";
+    scTip.scrollTop = 0;
+    scAnchor = el;
+    placeScorer(true);
     scTip.classList.add("open");
     scTip.setAttribute("aria-hidden", "false");
+  }
+  /* posição da ficha. Computador largo: ao lado da lista. Celular / tela baixa: acima ou abaixo do jogador,
+     sem cobri-lo (para tocar nele de novo e fechar), com a altura do espaço livre e rolagem por dentro; sem espaço,
+     a página sobe até o jogador ficar perto do topo. Ao rolar a página, a ficha acompanha o jogador. */
+  let scAnchor = null, scSide = "below";
+  function placeScorer(first) {
+    const el = scAnchor, w = Math.min(340, innerWidth - 24);
+    if (!el || !el.isConnected) return hideScorer();
+    let b = el.getBoundingClientRect();
+    const beside = innerWidth >= 900 && b.left - w - 14 > 12;
+    if (first) { scTip.style.width = w + "px"; scTip.style.maxHeight = ""; }
+    let h = scTip.offsetHeight;
+    if (beside) {
+      scTip.style.left = b.left - w - 14 + "px";
+      scTip.style.top = Math.max(12, Math.min(innerHeight - h - 12, b.top + b.height / 2 - h / 2)) + "px";
+      return;
+    }
+    const head = Math.max(0, $(".header")?.getBoundingClientRect().bottom || 0), gap = 8, topMin = Math.max(12, head + 4);
+    if (first) {
+      let below = innerHeight - b.bottom - gap - 12, above = b.top - gap - topMin;
+      if (h > below && h > above && Math.max(below, above) < Math.min(h, 300)) {
+        scrollBy({ top: b.top - topMin, behavior: "instant" });
+        b = el.getBoundingClientRect();
+        below = innerHeight - b.bottom - gap - 12; above = b.top - gap - topMin;
+      }
+      scSide = h <= below || below >= above ? "below" : "above";
+      if (h > (scSide === "below" ? below : above)) { scTip.style.maxHeight = Math.max(below, above) + "px"; h = scTip.offsetHeight; }
+      scTip.style.left = Math.max(12, Math.min(innerWidth - w - 12, b.left + b.width / 2 - w / 2)) + "px";
+    }
+    scTip.style.top = (scSide === "below" ? b.bottom + gap : b.top - gap - h) + "px";
   }
   function hideScorer() {
     if (!scTip) return;
     scTip.classList.remove("open");
     scTip.setAttribute("aria-hidden", "true");
-    $$("[data-scorer].peek").forEach((x) => x.classList.remove("peek"));
+    $$("[data-scorer].peek").forEach((x) => { x.classList.remove("peek"); x.setAttribute("aria-expanded", "false"); });
   }
 
   /* pontos de todos os clubes, com o clube atual em destaque */
