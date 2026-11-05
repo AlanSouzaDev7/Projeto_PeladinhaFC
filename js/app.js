@@ -962,7 +962,79 @@
           <li><b>Primeiros sites</b><small>HTML em tabelas, GIFs animados e muita vontade</small></li>
         </ul></div></div>
       </div>
-    </div>`;
+    </div>${docsHTML()}`;
+  }
+
+  /* ---------- "Sobre o projeto": como o PLACAR funciona (painel, fluxo dos dados e gráficos) ---------- */
+  function docsHTML() {
+    const S = window.PLAYER_STATS || {}, sq = window.SQUADS || {};
+    const kpis = [
+      [CLUBS.length, "clubes com identidade própria", "cores, cena animada, GOL! e goleada no relógio"],
+      [(S.sumulas || []).length || 336, "súmulas lidas", "cada jogo do Brasileirão, gol a gol"],
+      [Object.values(sq).flat().length || 945, "jogadores", "elencos e escalações reais"],
+      [12, "rotas de API", "servidor em Python, sem dependências"],
+      [30, "testes automáticos", "PC, iPhone e Android"],
+      [0, "frameworks", "HTML, CSS e JavaScript puros"],
+    ];
+    // fluxo: de onde vem cada dado até a tela
+    const flow = [
+      ["Fontes", "ESPN · CBF · Google Notícias · API-Football (opcional)", ["placar e lances", "tabela e súmulas", "manchetes"]],
+      ["Coleta", "server/placar_api.py · robô do GitHub Actions", ["a cada 30 min", "filtra, cruza e confere", "nunca raspa site que proíbe"]],
+      ["Arquivos", "js/live-data.js · player-stats.js · heatmaps.js", ["o site funciona sem servidor", "GitHub Pages"]],
+      ["Navegador", "js/live.js · ticker.js · app.js", ["placar ao vivo a cada 12 s", "tabela e artilharia ao vivo", "troca só o que mudou"]],
+    ];
+    // de quanto em quanto tempo cada coisa se atualiza (escala logarítmica: de segundos a horas)
+    const ritmo = [["Faixa: troca a manchete", 8], ["Placar e minuto ao vivo", 12], ["Tabela da ESPN (rodada)", 120], ["Manchetes do futebol", 1800], ["Arbitragem nas manchetes", 1800], ["Notícias de cada clube", 1800], ["Tabela, artilharia e súmulas", 1800], ["Elencos", 21600]];
+    const fmt = (s) => (s < 60 ? `${s} s` : s < 3600 ? `${s / 60} min` : `${s / 3600} h`);
+    const lmin = Math.log(5), lmax = Math.log(30000), pos = (s) => ((Math.log(s) - lmin) / (lmax - lmin)) * 100;
+    // o que foi construído, na ordem
+    const fases = [
+      ["Base", "20 clubes com tema próprio, tabela, rodada, partidas e o campinho do elenco"],
+      ["Identidade", "GOL! no placar de transmissão com o símbolo de cada clube, cenas animadas e cortina de entrada"],
+      ["Bora pro jogo", "prancheta tática com arrastar e mapa de calor estimado pelas escalações"],
+      ["QA", "contraste AA, alinhamento, escudos inteiros, fluidez e 66 links conferidos em 3 aparelhos"],
+      ["Ao vivo", "tabela, artilharia, fichas e GOL! em tempo real; a página não se redesenha sozinha"],
+      ["Notícias", "faixa de manchetes embaixo do menu e notícias filtradas por clube"],
+      ["Jogo", "top 5 de artilheiros lado a lado e arbitragem pelas manchetes"],
+    ];
+    // testes por área
+    const testes = [["Telas e alinhamento", 7], ["Ao vivo e dados", 9], ["Animações e escudos", 5], ["Bora pro jogo e elenco", 4], ["Notícias e arbitragem", 3], ["Desempenho e acesso", 2]];
+    const tMax = Math.max(...testes.map((t) => t[1]));
+    // de que é feito o código (linhas)
+    const codigo = [["Interface (JS)", 3200, "var(--accent)"], ["Cenas e GOL! (JS)", 1570, "#e0182a"], ["Estilos (CSS)", 2370, "#13a37a"], ["Servidor (Python)", 1500, "#f0a020"]];
+    const cTot = codigo.reduce((a, c) => a + c[1], 0);
+    return `<section class="docs" aria-labelledby="docs-h">
+      <div class="docs-head"><div class="eyebrow">Por dentro do PLACAR.</div><h2 id="docs-h" class="docs-title">Como o site funciona</h2>
+        <p>Um resumo do que foi construído, de onde vêm os dados e com que frequência eles chegam à tela.</p></div>
+      <div class="docs-kpis">${kpis.map(([n, t, s], i) => `<div class="dk" style="--i:${i}"><b data-count="${n}">${n}</b><span>${t}</span><small>${s}</small></div>`).join("")}</div>
+
+      <div class="card docs-card"><div class="card-h">Caminho dos dados <small>da fonte até a tela</small></div>
+        <ol class="flow">${flow.map(([t, s, xs], i) => `<li class="fl" style="--i:${i}"><span class="fl-n">${i + 1}</span><b>${t}</b><small>${s}</small><ul>${xs.map((x) => `<li>${x}</li>`).join("")}</ul></li>`).join("")}</ol>
+        <div class="source">Sem a API ligada, o site usa os arquivos gravados pelo robô e consulta a ESPN direto do navegador durante os jogos.</div></div>
+
+      <div class="docs-grid">
+        <div class="card docs-card"><div class="card-h">Ritmo das atualizações <small>escala de segundos a horas</small></div>
+          <div class="rt">${ritmo.map(([t, s]) => `<div class="rt-row"><span>${t}</span><div class="rt-bar"><i style="--w:${pos(s).toFixed(1)}%"></i></div><b>${fmt(s)}</b></div>`).join("")}
+          <div class="rt-axis" aria-hidden="true">${[[10, "10 s"], [60, "1 min"], [600, "10 min"], [3600, "1 h"], [21600, "6 h"]].map(([s, l]) => `<span style="left:${pos(s).toFixed(1)}%">${l}</span>`).join("")}</div></div></div>
+        <div class="card docs-card"><div class="card-h">Testes automáticos <small>por área · PC, iPhone e Android</small></div>
+          <div class="tz">${testes.map(([t, n]) => `<div class="tz-row"><span>${t}</span><i style="--w:${((n / tMax) * 100).toFixed(0)}%"></i><b>${n}</b></div>`).join("")}</div>
+          <div class="source">Cada teste abre o site num navegador de verdade (Playwright) e confere o que a pessoa vê.</div></div>
+      </div>
+
+      <div class="docs-grid">
+        <div class="card docs-card"><div class="card-h">O que foi construído <small>em ordem</small></div>
+          <ol class="fases">${fases.map(([t, s], i) => `<li style="--i:${i}"><b>${t}</b><p>${s}</p></li>`).join("")}</ol></div>
+        <div class="card docs-card"><div class="card-h">De que é feito <small>~${(cTot / 1000).toFixed(1).replace(".", ",")} mil linhas</small></div>
+          <div class="cz" role="img" aria-label="${codigo.map(([t, n]) => `${t}: ${Math.round((n / cTot) * 100)}%`).join(", ")}">${codigo.map(([t, n, c]) => `<i style="flex:${n};background:${c}" title="${t}"></i>`).join("")}</div>
+          <ul class="cz-leg">${codigo.map(([t, n, c]) => `<li><i style="background:${c}"></i><span>${t}</span><b>${Math.round((n / cTot) * 100)}%</b></li>`).join("")}</ul>
+          <div class="cz-rules"><b>Regras do projeto</b><ul>
+            <li>Dados de fontes públicas, com a fonte citada; notícia só com título, fonte e link</li>
+            <li>Sem copiar conteúdo de site que proíbe (por isso a arbitragem vem das manchetes)</li>
+            <li>Símbolos e cenas desenhados do zero; escudos oficiais só para identificar</li>
+            <li>Legível (contraste AA), navegável por teclado e sem animação para quem pede menos movimento</li>
+          </ul></div></div>
+      </div>
+    </section>`;
   }
 
   const pageNotFound = () => `<div class="empty" style="padding:120px 0"><h1 class="display">Impedimento!</h1><p>Essa página não existe. <a href="#/" style="color:var(--ink)">Voltar ao placar</a></p></div>`;
