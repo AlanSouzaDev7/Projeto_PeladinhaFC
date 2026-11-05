@@ -2307,3 +2307,16 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .arb-none { margin: 0; color: var(--text-2); font-size: 14px; }
 .arb-aviso { margin: 10px 0 0; font-size: 12px; line-height: 1.45; color: var(--text-3); }
 .arb-aviso a { color: var(--ink); font-weight: 600; white-space: nowrap; }
+
+/* menu entre 900 e 1240 px (notebook pequeno, tablet deitado): os links nunca quebram em duas linhas */
+.nav a { white-space: nowrap; }
+@media (max-width: 1240px) and (min-width: 901px) {
+  .header { gap: 14px; padding: 0 18px; }
+  .nav { gap: 2px; }
+  .nav a { padding: 8px 10px; font-size: 14px; }
+  .search { width: clamp(150px, 20vw, 280px); }
+}
+@media (max-width: 1040px) and (min-width: 901px) {
+  .logo-word { display: none; }
+  .search input::placeholder { color: transparent; }
+}
