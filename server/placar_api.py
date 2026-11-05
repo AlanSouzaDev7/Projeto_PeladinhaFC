@@ -653,7 +653,8 @@ def minute(txt):
     return min(int(m.group(1)), 90) if m else None
 
 
-MATCH_VERSION = 3  # 2: gols, assistências, finalizações e pênaltis · 3: posição em campo (formação, nº da posição e sigla da ESPN)
+MATCH_VERSION = 4  # 2: gols, assistências, finalizações e pênaltis · 3: posição em campo (formação, nº da posição e sigla da ESPN)
+#                   4: números do time (posse, passes, finalizações...), placar e minuto de cada gol, para o Raio-X
 
 
 def match_extract(eid):
@@ -697,6 +698,7 @@ def match_extract(eid):
                          int(st.get("yellowCards", 0)), int(st.get("redCards", 0)), int(st.get("totalGoals", 0)), int(st.get("goalAssists", 0)),
                          int(st.get("totalShots", 0)), int(st.get("shotsOnTarget", 0)), pens.get(aid, 0), pos.get(aid)])
         out["teams"][r["team"]["id"]] = rows
+    out.update(match_box(d))
     return out
 
 
@@ -1487,6 +1489,267 @@ def update_dm():
     return dm
 
 
+# ---------------------------------------------------------------------------
+# Raio-X: estatísticas táticas de cada clube no Brasileirão, calculadas das súmulas da ESPN,
+# com a posição do clube em cada número (1º a 20º) e a média da liga
+# ---------------------------------------------------------------------------
+# estatística da ESPN -> nome curto no site
+BOX_KEYS = {"possessionPct": "posse", "totalShots": "chutes", "shotsOnTarget": "noAlvo", "wonCorners": "escanteios", "foulsCommitted": "faltas",
+            "totalPasses": "passes", "accuratePasses": "passesCertos", "totalCrosses": "cruzamentos", "accurateCrosses": "cruzCertos",
+            "totalLongBalls": "lancamentos", "accurateLongBalls": "lancCertos", "effectiveTackles": "desarmes", "interceptions": "interceptacoes",
+            "saves": "defesas", "offsides": "impedimentos", "yellowCards": "amarelos", "redCards": "vermelhos", "effectiveClearance": "cortes"}
+FAIXAS = ["0–15", "16–30", "31–45", "46–60", "61–75", "76–90"]
+
+
+def _num(v):
+    try:
+        return float(str(v).replace(",", "."))
+    except Exception:
+        return None
+
+
+def match_box(d):
+    """Números do time no jogo (posse, finalizações, passes...), o placar e cada gol com o minuto."""
+    comp = d["header"]["competitions"][0]
+    placar = {str(c["team"]["id"]): int(c.get("score") or 0) for c in comp.get("competitors", []) if str(c.get("score", "")).isdigit()}
+    home = next((str(c["team"]["id"]) for c in comp.get("competitors", []) if c.get("homeAway") == "home"), None)
+    box = {}
+    for t in (d.get("boxscore") or {}).get("teams", []):
+        st = {s["name"]: s.get("displayValue") for s in t.get("statistics", [])}
+        box[str(t["team"]["id"])] = {v: _num(st.get(k)) for k, v in BOX_KEYS.items()}
+    gols = []
+    for k in d.get("keyEvents", []):
+        if not k.get("scoringPlay"):
+            continue
+        tp = (k.get("type") or {}).get("type", "")
+        clock = k.get("clock") or {}
+        quem = ((k.get("participants") or [{}])[0].get("athlete") or {}).get("id")
+        # o time do lance é o beneficiado (no gol contra, quem ganhou o gol)
+        gols.append([minute(clock.get("displayValue")), int(clock.get("value") or 0), str((k.get("team") or {}).get("id") or ""), quem,
+                     "c" if "own" in tp else "p" if "penalty" in tp else ""])
+    gols.sort(key=lambda g: g[1])
+    return {"home": home, "placar": placar, "box": box, "gols": gols}
+
+
+def _faixa(m):
+    if m is None:
+        return None
+    return min(5, max(0, (m - 1) // 15)) if m > 0 else 0
+
+
+def raio_x(matches, squads):
+    """Para cada clube: médias por jogo, quando marca e sofre, como reage ao placar, sequências e destaques individuais.
+    Cada número vem com a posição do clube entre os 20 e a média da liga."""
+    by_espn = {str(c["espn"]): cid for cid, c in CLUBS.items()}
+    acc = {cid: {"jogos": [], "box": [], "contra": []} for cid in CLUBS}
+    for eid, m in matches.items():
+        if m.get("v", 1) < 4 or not m.get("placar") or len(m["placar"]) != 2:
+            continue
+        ids = list(m["placar"])
+        for e in ids:
+            cid = by_espn.get(e)
+            if not cid:
+                continue
+            o = ids[1] if ids[0] == e else ids[0]
+            gf, ga = m["placar"][e], m["placar"][o]
+            gols = m.get("gols") or []
+            ok = sum(1 for g in gols if g[2] == e) == gf and sum(1 for g in gols if g[2] == o) == ga   # os lances batem com o placar
+            acc[cid]["jogos"].append({"id": eid, "date": m["date"], "casa": m.get("home") == e, "gf": gf, "ga": ga, "op": by_espn.get(o), "gols": gols if ok else None, "e": e})
+            if m.get("box", {}).get(e):
+                acc[cid]["box"].append(m["box"][e])
+            if m.get("box", {}).get(o):
+                acc[cid]["contra"].append(m["box"][o])
+
+    def media(lst, k):
+        vs = [b[k] for b in lst if b.get(k) is not None]
+        return round(sum(vs) / len(vs), 2) if vs else None
+
+    def pct(a, b):
+        return round(100 * a / b, 1) if b else None
+
+    out = {}
+    for cid, a in acc.items():
+        js = sorted(a["jogos"], key=lambda j: j["date"])
+        if not js:
+            continue
+        n = len(js)
+        res = ["V" if j["gf"] > j["ga"] else "E" if j["gf"] == j["ga"] else "D" for j in js]
+        pts = lambda rs: sum(3 if r == "V" else 1 if r == "E" else 0 for r in rs)
+        casa = [r for j, r in zip(js, res) if j["casa"]]
+        fora = [r for j, r in zip(js, res) if not j["casa"]]
+        # quando marca e quando sofre (só os jogos em que os lances batem com o placar)
+        pro, contra = [0] * 6, [0] * 6
+        frente = {"V": 0, "E": 0, "D": 0}
+        atras = {"V": 0, "E": 0, "D": 0}
+        pen = gc_fav = tarde = tarde_dec = 0
+        com_lances = 0
+        for j, r in zip(js, res):
+            if j["gols"] is None:
+                continue
+            com_lances += 1
+            e = j["e"]
+            for g in j["gols"]:
+                f = _faixa(g[0])
+                if f is None:
+                    continue
+                (pro if g[2] == e else contra)[f] += 1
+                if g[2] == e:
+                    pen += g[4] == "p"
+                    gc_fav += g[4] == "c"
+                    tarde += (g[0] or 0) >= 80
+            if j["gols"]:
+                (frente if j["gols"][0][2] == e else atras)[r] += 1
+            # pontos que vieram de gols depois dos 80': o resultado final menos o que seria sem esses gols
+            sem = j["gf"] - sum(1 for g in j["gols"] if g[2] == e and (g[0] or 0) >= 80)
+            p_sem = 3 if sem > j["ga"] else 1 if sem == j["ga"] else 0
+            tarde_dec += (3 if r == "V" else 1 if r == "E" else 0) - p_sem
+        # sequências
+        def seq(cond):
+            best = cur = 0
+            for r in res:
+                cur = cur + 1 if cond(r) else 0
+                best = max(best, cur)
+            return best
+        atual_inv = 0
+        for r in reversed(res):
+            if r == "D":
+                break
+            atual_inv += 1
+        maior = max(js, key=lambda j: (j["gf"] - j["ga"], j["gf"]))
+        b = a["box"]
+        passes, certos = sum(x.get("passes") or 0 for x in b), sum(x.get("passesCertos") or 0 for x in b)
+        chutes, alvo = sum(x.get("chutes") or 0 for x in b), sum(x.get("noAlvo") or 0 for x in b)
+        gf, ga = sum(j["gf"] for j in js), sum(j["ga"] for j in js)
+        out[cid] = {
+            "jogos": n, "pontos": pts(res), "aprov": pct(pts(res), 3 * n), "gf": gf, "ga": ga,
+            "casa": {"j": len(casa), "pts": pts(casa), "aprov": pct(pts(casa), 3 * len(casa))},
+            "fora": {"j": len(fora), "pts": pts(fora), "aprov": pct(pts(fora), 3 * len(fora))},
+            "media": {k: media(b, k) for k in ("posse", "chutes", "noAlvo", "escanteios", "faltas", "passes", "desarmes", "interceptacoes", "defesas", "impedimentos", "cortes", "amarelos")},
+            "sofre": {"chutes": media(a["contra"], "chutes"), "noAlvo": media(a["contra"], "noAlvo")},
+            "precisaoPasse": pct(certos, passes), "conversao": pct(gf, chutes), "pontaria": pct(alvo, chutes),
+            "golsPorJogo": round(gf / n, 2), "sofridosPorJogo": round(ga / n, 2),
+            "faixas": {"pro": pro, "contra": contra, "rotulos": FAIXAS}, "comLances": com_lances,
+            "tempos": {"pro": [sum(pro[:3]), sum(pro[3:])], "contra": [sum(contra[:3]), sum(contra[3:])]},
+            "saiuNaFrente": frente, "saiuAtras": atras, "pontosBuscados": 3 * atras["V"] + atras["E"],
+            "semSofrer": sum(1 for j in js if j["ga"] == 0), "semMarcar": sum(1 for j in js if j["gf"] == 0),
+            "penaltis": pen, "golsContraAFavor": gc_fav, "golsApos80": tarde, "pontosApos80": tarde_dec,
+            "sequencias": {"vitorias": seq(lambda r: r == "V"), "invicta": seq(lambda r: r != "D"), "invictaAtual": atual_inv, "semVencer": seq(lambda r: r != "V")},
+            "maiorVitoria": {"gf": maior["gf"], "ga": maior["ga"], "op": maior["op"], "date": maior["date"], "casa": maior["casa"]} if maior["gf"] > maior["ga"] else None,
+            "ultimos": res[-10:],
+        }
+        out[cid]["destaques"] = raio_x_jogadores(cid, matches, squads)
+
+    # posição do clube em cada número e a média da liga
+    METRICAS = {  # caminho no dicionário e se "mais é melhor"
+        "posse": (("media", "posse"), True), "chutes": (("media", "chutes"), True), "noAlvo": (("media", "noAlvo"), True),
+        "escanteios": (("media", "escanteios"), True), "passes": (("media", "passes"), True), "precisaoPasse": (("precisaoPasse",), True),
+        "desarmes": (("media", "desarmes"), True), "interceptacoes": (("media", "interceptacoes"), True), "defesas": (("media", "defesas"), True),
+        "faltas": (("media", "faltas"), False), "amarelos": (("media", "amarelos"), False), "chutesSofridos": (("sofre", "chutes"), False),
+        "noAlvoSofridos": (("sofre", "noAlvo"), False), "conversao": (("conversao",), True), "pontaria": (("pontaria",), True),
+        "golsPorJogo": (("golsPorJogo",), True), "sofridosPorJogo": (("sofridosPorJogo",), False), "semSofrer": (("semSofrer",), True),
+        "pontosBuscados": (("pontosBuscados",), True), "golsApos80": (("golsApos80",), True), "aprovCasa": (("casa", "aprov"), True),
+        "aprovFora": (("fora", "aprov"), True), "cortes": (("media", "cortes"), True), "pontosApos80": (("pontosApos80",), True),
+    }
+
+    def val(d, path):
+        for k in path:
+            d = (d or {}).get(k)
+        return d
+
+    liga = {}
+    for nome, (path, alto) in METRICAS.items():
+        vs = {cid: val(d, path) for cid, d in out.items() if val(d, path) is not None}
+        if not vs:
+            continue
+        liga[nome] = {"media": round(sum(vs.values()) / len(vs), 2), "max": max(vs.values()), "min": min(vs.values()), "maisEMelhor": alto}
+        ordem = sorted(vs, key=lambda c: vs[c], reverse=alto)
+        for cid in vs:
+            # empate: mesma posição
+            out[cid].setdefault("ranks", {})[nome] = 1 + sum(1 for c in ordem if (vs[c] > vs[cid] if alto else vs[c] < vs[cid]))
+    return {"updated": time.strftime("%d/%m/%Y às %H:%M"), "clubs": out, "liga": liga, "fonte": "súmulas e estatísticas das partidas da ESPN (Brasileirão)"}
+
+
+def raio_x_jogadores(cid, matches, squads):
+    """Destaques individuais no Brasileirão: quem mais finaliza, quem converte melhor, participações em gol e minutos por gol."""
+    espn = str(CLUBS[cid]["espn"])
+    no_clube = {r[4] for r in squads.get(cid, [])}
+    acc = {}
+    for m in matches.values():
+        for r in m.get("teams", {}).get(espn, []):
+            p = acc.setdefault(r[0], {"id": r[0], "name": r[1], "jogos": 0, "min": 0, "gols": 0, "assist": 0, "chutes": 0, "noAlvo": 0})
+            p["jogos"] += 1
+            p["min"] += r[3] or 0
+            p["gols"] += r[6] or 0
+            p["assist"] += r[7] or 0
+            p["chutes"] += r[8] or 0
+            p["noAlvo"] += r[9] or 0
+    ps = [dict(p, noClube=p["id"] in no_clube) for p in acc.values()]
+    top = lambda key, filtro, n=3: [p for p in sorted([p for p in ps if filtro(p)], key=key)][:n]
+    pick = lambda p, *ks: {k: p[k] for k in ("id", "name", "noClube", *ks)}
+    return {
+        "finalizadores": [pick(p, "chutes", "noAlvo", "jogos") for p in top(lambda p: (-p["chutes"], -p["noAlvo"]), lambda p: p["chutes"] > 0)],
+        "participacoes": [pick(p, "gols", "assist", "jogos") for p in top(lambda p: (-(p["gols"] + p["assist"]), -p["gols"]), lambda p: p["gols"] + p["assist"] > 0)],
+        "conversao": [dict(pick(p, "gols", "chutes"), pct=round(100 * p["gols"] / p["chutes"], 1)) for p in top(lambda p: -p["gols"] / p["chutes"], lambda p: p["chutes"] >= 15 and p["gols"] >= 2)],
+        "minutosPorGol": [dict(pick(p, "gols", "min"), mpg=round(p["min"] / p["gols"])) for p in top(lambda p: p["min"] / p["gols"], lambda p: p["gols"] >= 3)],
+        "garcons": [pick(p, "assist", "jogos") for p in top(lambda p: (-p["assist"], -p["jogos"]), lambda p: p["assist"] > 0)],
+    }
+
+
+AGREGADORES = re.compile(r"fotmob|365scores|sofascore|flashscore|soccerway|transfermarkt|ogol|footystats|fbref|whoscored|besoccer|espn|onefootball", re.I)
+
+
+def paginas_torcida():
+    """Páginas de estatística mantidas por torcedores (créditos no site): o perfil, o que a imprensa publicou citando a página
+    (só título, fonte, data e link) e, com a chave da API oficial do X, as publicações recentes."""
+    cfg = CONFIG.get("paginas_estatistica") or {}
+    out = {}
+    for cid, paginas in cfg.items():
+        if cid not in CLUBS:
+            continue
+        lst = []
+        for p in paginas:
+            if not X_HANDLE.match(p.get("x") or ""):
+                continue
+            imprensa = []
+            try:
+                busca = p.get("busca") or p["nome"]
+                # só reportagens que citam a página (não agregadores de resultados, que usam "stats" como palavra comum)
+                for it in news_query(f'"{busca}" (segundo OR levantamento OR dados OR perfil OR página OR apontou OR números) when:120d'):
+                    if "x.com" in (it.get("link") or "") or AGREGADORES.search(it.get("source") or "") or len(imprensa) >= 3:
+                        continue
+                    imprensa.append({k: it.get(k) for k in ("title", "link", "source", "ts")})
+            except Exception as ex:
+                log("páginas da torcida", cid, ex)
+            time.sleep(0.3)
+            posts = []
+            try:
+                posts = [{k: x.get(k) for k in ("texto", "link", "ts")} for x in x_posts([p["x"]], "")][:3]
+            except Exception as ex:
+                log("X", p["x"], ex)
+            lst.append({"nome": p["nome"], "x": p["x"], "sobre": p.get("sobre", ""), "imprensa": imprensa, "posts": posts})
+        out[cid] = lst
+    return out
+
+
+def update_raiox():
+    with lock:
+        squads = state["squads"] or {}
+    if not squads:
+        src = open(os.path.join(ROOT, "js", "squads.js"), encoding="utf-8").read()
+        squads = json.loads(src[src.index("window.SQUADS = ") + 16:src.index("window.SQUADS_LAST")].strip().rstrip(";"))
+    rx = raio_x(load_matches(), squads)
+    try:
+        rx["torcida"] = paginas_torcida()
+    except Exception as ex:
+        log("páginas da torcida", ex)
+        rx["torcida"] = {}
+    rx["gerais"] = [{k: p.get(k) for k in ("nome", "x", "sobre")} for p in CONFIG.get("paginas_estatistica_gerais", []) if X_HANDLE.match(p.get("x") or "")]
+    with lock:
+        state["raiox"] = rx
+    log("raio-x:", len(rx["clubs"]), "clubes")
+    return rx
+
+
 def update_players():
     with lock:
         squads = state["squads"] or {}
@@ -1556,7 +1819,7 @@ def write_snapshot():
             state.update({k: old[k] for k in ("fixtures", "round") if old.get(k)})
         except Exception as ex:
             log("base anterior ignorada", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("departamento médico", update_dm), ("histórico", update_form)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form)]
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
             fn()
@@ -1567,11 +1830,13 @@ def write_snapshot():
         live["manchetes"] = state.get("manchetes")
         live["arbitragem"] = state.get("arbitragem")
         live["news"] = {cid: [{k: x.get(k) for k in ("title", "link", "source", "ts", "tag")} for x in items[:8]] for cid, items in (state.get("news") or {}).items()}
-        players, form, positions, dm = state.get("players"), state.get("form"), state.get("positions"), state.get("dm")
+        players, form, positions, dm, raiox = state.get("players"), state.get("form"), state.get("positions"), state.get("dm"), state.get("raiox")
     if live["standings"]:
         write_js("live-data.js", "LIVE_DATA", live, "tabela, jogos e manchetes (só título, fonte e link). Fontes: ESPN, CBF, Google Notícias")
     if players:
         write_js("player-stats.js", "PLAYER_STATS", players, "estatísticas de jogadores. Súmulas: ESPN · lesões: manchetes que citam o jogador")
+    if raiox and raiox.get("clubs"):
+        write_js("raio-x.js", "RAIO_X", raiox, "Raio-X tático de cada clube no Brasileirão e as páginas de estatística da torcida (créditos). Fonte: súmulas da ESPN")
     if dm and dm.get("clubs"):
         write_js("departamento-medico.js", "DM", dm, "departamento médico da temporada (quem está e quem já passou). Fontes: imprensa nacional e local, sites oficiais, setoristas e súmulas da ESPN")
     if form:

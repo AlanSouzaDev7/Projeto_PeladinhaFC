@@ -202,6 +202,203 @@
       : `<div class="card reveal"><div class="card-h">Estatísticas do elenco <small><a href="#/clube/${id}/estatisticas" style="color:var(--ink)">ver tudo ›</a></small></div>${grid}${foot}</div>`;
   }
 
+  /* ---------- Raio-X do clube (js/raio-x.js, baixado só na aba Estatísticas) ----------
+     Números táticos do Brasileirão calculados das súmulas da ESPN, com a posição do clube entre os 20 e a média da liga,
+     curiosidades geradas desses números e os créditos às páginas de estatística mantidas pela torcida. */
+  const rxN = (v, d = 1) => (v == null ? "–" : (+v).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const rxFem = (c) => c?.id === "chapecoense";
+  const rxDo = (c) => (rxFem(c) ? "da " : "do ") + c.abbr, rxO = (c) => (rxFem(c) ? "a " : "o ") + c.abbr;
+  const rxDate = (iso) => (iso ? iso.split("-").reverse().slice(0, 2).join("/") : "");
+  // [rótulo, "mais...", "menos...", unidade, casas decimais]
+  const RX_M = {
+    golsPorJogo: ["Gols por jogo", "que mais marca", "que menos marca", "gols por jogo", 2],
+    sofridosPorJogo: ["Gols sofridos por jogo", "que mais sofre gols", "que menos sofre gols", "gols sofridos por jogo", 2],
+    chutes: ["Finalizações", "que mais finaliza", "que menos finaliza", "finalizações por jogo", 1],
+    noAlvo: ["No alvo", "que mais acerta o gol", "que menos acerta o gol", "finalizações no alvo por jogo", 1],
+    posse: ["Posse de bola", "que mais fica com a bola", "que menos fica com a bola", "% de posse", 1],
+    passes: ["Passes", "que mais troca passes", "que menos troca passes", "passes por jogo", 0],
+    precisaoPasse: ["Passes certos", "que mais acerta passes", "que menos acerta passes", "% de passes certos", 1],
+    escanteios: ["Escanteios", "que mais cobra escanteios", "que menos cobra escanteios", "escanteios por jogo", 1],
+    desarmes: ["Desarmes", "que mais desarma", "que menos desarma", "desarmes por jogo", 1],
+    interceptacoes: ["Interceptações", "que mais intercepta passes", "que menos intercepta passes", "interceptações por jogo", 1],
+    cortes: ["Cortes", "que mais afasta a bola da área", "que menos afasta a bola da área", "cortes por jogo", 1],
+    defesas: ["Defesas do goleiro", "que mais exige do próprio goleiro", "que menos exige do próprio goleiro", "defesas do goleiro por jogo", 1],
+    chutesSofridos: ["Finalizações sofridas", "que mais sofre finalizações", "que menos sofre finalizações", "finalizações sofridas por jogo", 1],
+    faltas: ["Faltas", "que mais faz faltas", "que menos faz faltas", "faltas por jogo", 1],
+    amarelos: ["Amarelos", "que mais leva amarelo", "que menos leva amarelo", "amarelos por jogo", 1],
+    pontaria: ["Pontaria", "que mais acerta o alvo proporcionalmente", "que menos acerta o alvo proporcionalmente", "% das finalizações no alvo", 1],
+    conversao: ["Conversão", "que mais aproveita as finalizações", "que menos aproveita as finalizações", "% das finalizações viram gol", 1],
+    semSofrer: ["Sem sofrer gol", "com mais jogos sem sofrer gol", "com menos jogos sem sofrer gol", "jogos sem sofrer gol", 0],
+    pontosBuscados: ["Pontos buscados", "que mais pontos buscou saindo atrás", "que menos pontos buscou saindo atrás", "pontos depois de sair atrás no placar", 0],
+    golsApos80: ["Gols depois dos 80'", "que mais marca depois dos 80 minutos", "que menos marca depois dos 80 minutos", "gols depois dos 80'", 0],
+    aprovCasa: ["Em casa", "com melhor aproveitamento em casa", "com pior aproveitamento em casa", "% de aproveitamento em casa", 1],
+    aprovFora: ["Fora de casa", "com melhor aproveitamento fora de casa", "com pior aproveitamento fora de casa", "% de aproveitamento fora", 1],
+  };
+  const rxVal = (c, k) => ({ chutes: c.media.chutes, noAlvo: c.media.noAlvo, posse: c.media.posse, passes: c.media.passes, escanteios: c.media.escanteios, desarmes: c.media.desarmes,
+    interceptacoes: c.media.interceptacoes, cortes: c.media.cortes, defesas: c.media.defesas, faltas: c.media.faltas, amarelos: c.media.amarelos, chutesSofridos: c.sofre.chutes,
+    aprovCasa: c.casa.aprov, aprovFora: c.fora.aprov })[k] ?? c[k];
+  // posição entre os 20, já do jeito que se lê: "2º que mais finaliza"
+  function rxRank(c, k, liga) {
+    const r = c.ranks?.[k], L = liga[k];
+    if (!r || !L) return null;
+    const bom = r <= 10;
+    return { r, bom, top: r <= 4, fundo: r >= 17, txt: `${r}º`, frase: L.maisEMelhor === bom ? RX_M[k][1] : RX_M[k][2], pos: bom ? r : 21 - r };
+  }
+  const rxChip = (rk) => (rk ? `<span class="rx-rank ${rk.top ? "top" : rk.fundo ? "low" : ""}" title="${rk.r}º entre os 20 clubes">${rk.txt}</span>` : "");
+  // número que conta até o valor quando aparece na tela
+  const rxNum = (v, d = 1, suf = "") => `<span class="rx-nw"><b class="rx-num" data-num="${v ?? 0}" data-dec="${d}">${rxN(v, d)}</b>${suf ? `<i class="rx-suf">${suf}</i>` : ""}</span>`;
+
+  function rxFacts(c, liga, club) {
+    const out = [];
+    for (const k of Object.keys(RX_M)) {
+      const rk = rxRank(c, k, liga), v = rxVal(c, k);
+      if (!rk || v == null || rk.pos > 3) continue;
+      const peso = rk.pos === 1 ? 10 : 8 - rk.pos;
+      const ordinal = rk.pos === 1 ? "" : `${rk.pos}º `;
+      out.push({ peso, big: rxN(v, RX_M[k][4]) + (RX_M[k][3].startsWith("%") ? "%" : ""), txt: `${rk.pos === 1 ? "É o time" : `É o ${ordinal}time`} ${rk.frase} no Brasileirão: ${rxN(v, RX_M[k][4])}${RX_M[k][3].startsWith("%") ? RX_M[k][3] : ` ${RX_M[k][3]}`} (média da liga: ${rxN(liga[k].media, RX_M[k][4])}).`, tag: rk.bom === liga[k].maisEMelhor ? "destaque" : "atenção" });
+    }
+    const fx = c.faixas, iMax = fx.pro.indexOf(Math.max(...fx.pro));
+    const totPro = fx.pro.reduce((a, b) => a + b, 0);
+    if (totPro >= 6) out.push({ peso: 6, big: `${fx.rotulos[iMax]}'`, txt: `A faixa mais letal: ${fx.pro[iMax]} dos ${totPro} gols saíram entre os ${fx.rotulos[iMax].replace("–", " e os ")} minutos.`, tag: "quando marca" });
+    const t2 = c.tempos.pro[1], tt = c.tempos.pro[0] + t2;
+    if (tt >= 8 && (t2 / tt >= 0.6 || t2 / tt <= 0.4)) out.push({ peso: 5, big: `${Math.round((100 * t2) / tt)}%`, txt: `${Math.round((100 * t2) / tt)}% dos gols marcados saem no segundo tempo${t2 / tt >= 0.6 ? ": o time cresce depois do intervalo" : ": o time resolve cedo"}.`, tag: "quando marca" });
+    const f = c.saiuNaFrente, ft = f.V + f.E + f.D;
+    if (ft >= 4) out.push({ peso: f.V / ft >= 0.75 ? 7 : 4, big: `${Math.round((100 * f.V) / ft)}%`, txt: `Quando abre o placar, vence ${Math.round((100 * f.V) / ft)}% das vezes (${f.V} de ${ft} jogos)${f.D ? ` e perdeu ${f.D}` : " e nunca perdeu"}.`, tag: "placar" });
+    const at = c.saiuAtras;
+    if (at.V) out.push({ peso: 6 + at.V, big: `${at.V}`, txt: `Já virou ${at.V} jogo${at.V > 1 ? "s" : ""} depois de sair atrás no placar: ${c.pontosBuscados} pontos buscados no campeonato.`, tag: "placar" });
+    if (c.pontosApos80 > 0) out.push({ peso: 4 + c.pontosApos80, big: `${c.pontosApos80}`, txt: `${c.pontosApos80} ponto${c.pontosApos80 > 1 ? "s vieram" : " veio"} de gols depois dos 80 minutos.`, tag: "reta final" });
+    if (c.maiorVitoria && c.maiorVitoria.gf - c.maiorVitoria.ga >= 3) out.push({ peso: 5, big: `${c.maiorVitoria.gf}x${c.maiorVitoria.ga}`, txt: `Maior vitória no campeonato: ${c.maiorVitoria.gf} a ${c.maiorVitoria.ga} sobre ${byId[c.maiorVitoria.op] ? rxO(byId[c.maiorVitoria.op]) : "o adversário"}${c.maiorVitoria.casa ? " em casa" : " fora de casa"}, em ${rxDate(c.maiorVitoria.date)}.`, tag: "marca" });
+    if (c.sequencias.vitorias >= 4) out.push({ peso: 4 + c.sequencias.vitorias / 2, big: `${c.sequencias.vitorias}`, txt: `Maior sequência de vitórias no Brasileirão: ${c.sequencias.vitorias} seguidas.`, tag: "sequência" });
+    if (c.sequencias.invictaAtual >= 5) out.push({ peso: 9, big: `${c.sequencias.invictaAtual}`, txt: `Está há ${c.sequencias.invictaAtual} jogos sem perder no campeonato.`, tag: "sequência" });
+    const dc = c.destaques?.conversao?.[0];
+    if (dc && dc.pct >= 20) out.push({ peso: 5, big: `${rxN(dc.pct, 0)}%`, txt: `${SEG.esc(dc.name)} transforma ${rxN(dc.pct, 0)}% das finalizações em gol (${dc.gols} gols em ${dc.chutes} chutes).`, tag: "individual" });
+    const dif = (c.casa.aprov ?? 0) - (c.fora.aprov ?? 0);
+    if (Math.abs(dif) >= 25) out.push({ peso: 5, big: `${rxN(Math.abs(dif), 0)}`, txt: `${dif > 0 ? "Muito mais forte em casa" : "Rende mais fora de casa"}: ${rxN(c.casa.aprov, 0)}% de aproveitamento como mandante e ${rxN(c.fora.aprov, 0)}% como visitante.`, tag: "casa e fora" });
+    return out.sort((a, b) => b.peso - a.peso).slice(0, 8);
+  }
+
+  function raioxHTML(id) {
+    const all = window.RAIO_X, c = all?.clubs?.[id], club = byId[id];
+    if (!all) return `<div class="card rx-wait"><div class="empty" style="padding:28px">Carregando o Raio-X ${rxDo(club)}…</div></div>`;
+    if (!c) return "";
+    const L = all.liga, ring = (k, v, rot, sub) => {
+      const p = Math.max(0, Math.min(100, v ?? 0)) / 100;
+      return `<div class="rx-ring-w"><svg class="rx-ring" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34" class="bg"/><circle cx="40" cy="40" r="34" class="v" style="--p:${p.toFixed(3)}"/></svg>
+        <div class="rx-ring-t">${rxNum(v, 0, "%")}</div><span>${rot}</span><small>${sub} ${rxChip(rxRank(c, k, L))}</small></div>`;
+    };
+    // topo: quatro números grandes
+    const heads = [["golsPorJogo", "Gols por jogo", c.golsPorJogo, 2, `${c.gf} gols em ${c.jogos} jogos`], ["sofridosPorJogo", "Sofridos por jogo", c.sofridosPorJogo, 2, `${c.ga} gols sofridos`],
+      ["chutes", "Finalizações por jogo", c.media.chutes, 1, `${rxN(c.media.noAlvo)} no alvo`], ["semSofrer", "Jogos sem sofrer gol", c.semSofrer, 0, `${c.semMarcar} sem marcar`]];
+    const top = `<div class="rx-heads">${heads.map(([k, t, v, d, sub], i) => `<div class="rx-head" style="--i:${i}"><small>${t}</small><div class="rx-big">${rxNum(v, d)}${rxChip(rxRank(c, k, L))}</div><em>${sub}</em></div>`).join("")}</div>`;
+    // quando marca e quando sofre (gols por faixa de 15 minutos)
+    const fx = c.faixas, mx = Math.max(1, ...fx.pro, ...fx.contra), iMax = fx.pro.indexOf(Math.max(...fx.pro));
+    const faixas = `<section class="rx-b rx-when"><h4>Quando ${rxO(club)} marca e sofre<small>gols por faixa de 15 minutos · ${c.comLances} jogos com os lances completos</small></h4>
+      <div class="rx-fx" role="img" aria-label="${fx.rotulos.map((r, i) => `${r} minutos: ${fx.pro[i]} gols marcados e ${fx.contra[i]} sofridos`).join("; ")}">
+        ${fx.rotulos.map((r, i) => `<div class="rx-col${i === iMax && fx.pro[i] ? " hot" : ""}" style="--k:${i}"><span class="up"><i style="--h:${((fx.pro[i] / mx) * 100).toFixed(1)}"></i><b>${fx.pro[i]}</b></span><span class="lbl">${r}'</span><span class="dn"><i style="--h:${((fx.contra[i] / mx) * 100).toFixed(1)}"></i><b>${fx.contra[i]}</b></span></div>`).join("")}
+      </div>
+      <div class="rx-legend"><span><i class="pro"></i>marcados</span><span><i class="contra"></i>sofridos</span><span>1º tempo ${c.tempos.pro[0]} x ${c.tempos.contra[0]} · 2º tempo ${c.tempos.pro[1]} x ${c.tempos.contra[1]}</span></div></section>`;
+    const aneis = `<section class="rx-b rx-rings"><h4>Estilo de jogo<small>médias por jogo no Brasileirão</small></h4><div class="rx-ring-grid">
+      ${ring("posse", c.media.posse, "Posse de bola", `média da liga ${rxN(L.posse?.media, 0)}%`)}
+      ${ring("precisaoPasse", c.precisaoPasse, "Passes certos", `${rxN(c.media.passes, 0)} passes por jogo`)}
+      ${ring("pontaria", c.pontaria, "Chutes no alvo", `${rxN(c.conversao, 1)}% viram gol`)}
+      ${ring("aprovCasa", c.casa.aprov, "Aproveitamento em casa", `fora: ${rxN(c.fora.aprov, 0)}%`)}</div></section>`;
+    // comparado com a liga: onde o clube fica entre o pior e o melhor
+    const comp = ["chutes", "noAlvo", "escanteios", "passes", "desarmes", "interceptacoes", "cortes", "defesas", "chutesSofridos", "faltas"].map((k, i) => {
+      const v = rxVal(c, k), l = L[k];
+      if (v == null || !l) return "";
+      const span = l.max - l.min || 1, x = ((v - l.min) / span) * 100, xm = ((l.media - l.min) / span) * 100;
+      const rk = rxRank(c, k, L);
+      // nos extremos, a frase ("2º que mais finaliza"); no meio da tabela, só a posição
+      const sub = !rk ? "" : rk.pos <= 5 ? `${rk.pos}º ${rk.frase.replace(/^que |^cujo /, "")}` : `${rk.r}º de 20`;
+      return `<li style="--k:${i}"><span class="rx-cl">${RX_M[k][0]}<small>${sub}</small></span>
+        <span class="rx-track" title="Liga: de ${rxN(l.min, RX_M[k][4])} a ${rxN(l.max, RX_M[k][4])}, média ${rxN(l.media, RX_M[k][4])}"><i class="avg" style="--x:${xm.toFixed(1)}"></i><i class="me${rk && rk.r >= 15 ? " bad" : ""}" style="--x:${x.toFixed(1)}"></i></span>
+        <span class="rx-v">${rxN(v, RX_M[k][4])}<small>liga ${rxN(l.media, RX_M[k][4])}</small></span></li>`;
+    }).join("");
+    const liga = `<section class="rx-b rx-comp"><h4>Comparado com a liga<small>a bolinha é ${rxO(club)}; o traço, a média dos 20 clubes</small></h4><ul>${comp}</ul></section>`;
+    // reação ao placar
+    const stack = (o, t) => {
+      const n = o.V + o.E + o.D;
+      if (!n) return `<div class="rx-stack-w"><span class="rx-st-t">${t}</span><em class="rx-none">nunca aconteceu</em></div>`;
+      return `<div class="rx-stack-w"><span class="rx-st-t">${t}<small>${n} jogo${n > 1 ? "s" : ""}</small></span><div class="rx-stack">${[["V", "v"], ["E", "e"], ["D", "d"]].map(([k, cl]) => (o[k] ? `<i class="${cl}" style="--w:${((o[k] / n) * 100).toFixed(1)}" title="${o[k]} ${k === "V" ? "vitória" : k === "E" ? "empate" : "derrota"}${o[k] > 1 ? "s" : ""}">${o[k]}${k}</i>` : "")).join("")}</div></div>`;
+    };
+    const s = c.sequencias;
+    const placar = `<section class="rx-b rx-score"><h4>Reação ao placar<small>como termina o jogo depois do primeiro gol</small></h4>
+      ${stack(c.saiuNaFrente, "Saiu na frente")}${stack(c.saiuAtras, "Saiu atrás")}
+      <div class="rx-mini"><div><b>${rxNum(c.pontosBuscados, 0)}</b><span>pontos buscados saindo atrás</span></div><div><b>${rxNum(c.pontosApos80, 0)}</b><span>pontos com gols depois dos 80'</span></div><div><b>${rxNum(c.penaltis, 0)}</b><span>gols de pênalti</span></div></div></section>`;
+    const seqs = `<section class="rx-b rx-seq"><h4>Sequências e marcas<small>no Brasileirão</small></h4><div class="rx-mini">
+      <div><b>${rxNum(s.vitorias, 0)}</b><span>vitórias seguidas (a maior)</span></div><div><b>${rxNum(s.invicta, 0)}</b><span>jogos sem perder (a maior)</span></div>
+      <div><b>${rxNum(s.invictaAtual, 0)}</b><span>jogos sem perder agora</span></div><div><b>${c.maiorVitoria ? `${c.maiorVitoria.gf}x${c.maiorVitoria.ga}` : "–"}</b><span>maior vitória${c.maiorVitoria ? ` · ${byId[c.maiorVitoria.op]?.abbr || ""} · ${rxDate(c.maiorVitoria.date)}` : ""}</span></div></div>
+      <div class="rx-form" aria-label="Últimos ${c.ultimos.length} jogos">${c.ultimos.map((r, i) => `<i class="${r === "V" ? "v" : r === "E" ? "e" : "d"}" style="--k:${i}">${r}</i>`).join("")}<small>últimos ${c.ultimos.length}</small></div></section>`;
+    // você sabia?
+    const facts = rxFacts(c, L, club);
+    const sabia = facts.length ? `<section class="rx-b rx-facts"><h4>Você sabia?<small>curiosidades tiradas dos números ${rxDo(club)}</small></h4>
+      <div class="rx-cards">${facts.map((f, i) => `<article class="rx-fact" style="--k:${i}"><span class="rx-tag">${f.tag}</span><b>${f.big}</b><p>${f.txt}</p></article>`).join("")}</div></section>` : "";
+    // destaques individuais
+    const d = c.destaques || {}, nm = (p) => `${SEG.esc(p.name)}${p.noClube === false ? ` <i class="rx-out" title="Já não está no elenco">saiu</i>` : ""}`;
+    const lb = (t, lst, val, sub) => (lst?.length ? `<div class="rx-lb"><h5>${t}</h5><ol>${lst.map((p, i) => `<li style="--k:${i}"><span class="rx-pos">${i + 1}</span><span class="rx-pn">${nm(p)}<small>${sub(p)}</small></span><b>${val(p)}</b></li>`).join("")}</ol></div>` : "");
+    const indiv = `<section class="rx-b rx-ind"><h4>Destaques individuais<small>Brasileirão, pelas súmulas</small></h4><div class="rx-lbs">
+      ${lb("Participações em gol", d.participacoes, (p) => p.gols + p.assist, (p) => `${p.gols} gols · ${p.assist} assistências`)}
+      ${lb("Quem mais finaliza", d.finalizadores, (p) => p.chutes, (p) => `${p.noAlvo} no alvo · ${p.jogos} jogos`)}
+      ${lb("Melhor conversão", d.conversao, (p) => `${rxN(p.pct, 0)}%`, (p) => `${p.gols} gols em ${p.chutes} chutes`)}
+      ${lb("Minutos por gol", d.minutosPorGol, (p) => `${p.mpg}'`, (p) => `${p.gols} gols em ${p.min} minutos`)}
+      ${lb("Garçons", d.garcons, (p) => p.assist, (p) => `${p.jogos} jogos`)}</div></section>`;
+    return `<div class="card rx" data-rx>
+      <div class="card-h">Raio-X ${rxDo(club)}<small>Brasileirão · ${c.jogos} jogos · ${c.pontos} pontos (${rxN(c.aprov, 0)}%)</small></div>
+      ${top}<div class="rx-grid">${faixas}${aneis}${liga}${placar}${seqs}${sabia}${indiv}</div>
+      <div class="source">Números calculados pelo PLACAR a partir das ${SEG.esc(all.fonte || "súmulas da ESPN")} · posição entre os 20 clubes ao lado de cada número · atualizado em ${SEG.esc(all.updated)}</div></div>
+      ${torcidaHTML(id)}`;
+  }
+
+  // créditos: páginas de estatística mantidas por torcedores (o conteúdo delas é dos autores; aqui vão o perfil, o que a imprensa publicou citando a página e, com a API oficial do X, as publicações)
+  function torcidaHTML(id) {
+    const all = window.RAIO_X, club = byId[id], pags = all?.torcida?.[id] || [], gerais = all?.gerais || [];
+    const fmt = (ts) => (ts ? new Date(ts * 1000).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "");
+    const ini = (n) => SEG.esc(n.replace(/[^A-Za-zÀ-ÿ ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "@");
+    const perfil = (p, geral) => `<li class="rx-page${geral ? " geral" : ""}">
+        <a class="rx-pg-h" href="https://x.com/${encodeURIComponent(p.x)}" target="_blank" rel="noopener noreferrer"><span class="rx-av" aria-hidden="true">${ini(p.nome)}</span>
+          <span class="rx-pg-n"><b>${SEG.esc(p.nome)}</b><small>@${SEG.esc(p.x)} no X${p.sobre ? ` · ${SEG.esc(p.sobre)}` : ""}</small></span><em>seguir ↗</em></a>
+        ${(p.posts || []).map((x) => `<a class="rx-post" href="${SEG.esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer"><span>${SEG.esc(x.texto)}</span><small>publicado no X · ${fmt(x.ts)} ↗</small></a>`).join("")}
+        ${(p.imprensa || []).length ? `<div class="rx-press"><small>Na imprensa, citando a página</small>${p.imprensa.map((x) => `<a class="ps-src" href="${SEG.esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer">${SEG.esc(x.source || "")} · ${fmt(x.ts)} · ${SEG.esc(x.title)}</a>`).join("")}</div>` : ""}
+      </li>`;
+    const lista = pags.length ? `<ul class="rx-pages">${pags.map((p) => perfil(p)).join("")}</ul>`
+      : `<p class="rx-none-p">Ainda não encontramos uma página de estatística da torcida ${rxDo(club)} com dados conferíveis e atualizados. As páginas abaixo cobrem todos os clubes.</p>`;
+    return `<div class="card rx-torcida reveal"><div class="card-h">Estatística feita pela torcida<small>créditos</small></div>
+      <div class="card-b">${lista}
+        ${gerais.length ? `<h5 class="rx-sub">Cobrem todos os clubes</h5><ul class="rx-pages">${gerais.map((p) => perfil(p, true)).join("")}</ul>` : ""}
+        <p class="rx-credit">Torcedores que estudam o clube a fundo e publicam análises, recordes e curiosidades. O que eles publicam pertence a eles: aqui ficam o perfil, as reportagens que citaram a página e, quando a API oficial do X está ligada, as publicações com link para o original. Os números do Raio-X acima são calculados pelo PLACAR, no mesmo espírito.</p></div></div>`;
+  }
+
+  // anima o Raio-X quando aparece na tela (contadores, barras, anéis); sem animação: já no valor final
+  function rxMount(root) {
+    const els = $$("[data-rx]", root);
+    if (!els.length) return;
+    const fin = (el) => { el.classList.add("on"); $$(".rx-num", el).forEach((b) => (b.textContent = rxN(+b.dataset.num, +b.dataset.dec))); };
+    if (reduced) return els.forEach(fin);
+    const io = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return;
+      io.unobserve(e.target);
+      e.target.classList.add("on");
+      $$(".rx-num", e.target).forEach((b) => {
+        const to = +b.dataset.num, d = +b.dataset.dec, t0 = performance.now(), dur = 1300;
+        const step = () => { const k = Math.min(1, (performance.now() - t0) / dur); b.textContent = rxN(to * (1 - (1 - k) ** 3), d); if (k < 1) requestAnimationFrame(step); };
+        requestAnimationFrame(step);
+      });
+    }), { threshold: 0.08 });
+    // cada bloco anima quando chega na tela
+    els.forEach((el) => $$(".rx-heads, .rx-b", el).forEach((b) => { b.setAttribute("data-rx-part", ""); io.observe(b); }));
+  }
+  let rxScript = null;
+  function loadRaioX() {
+    if (rxScript) return rxScript;
+    rxScript = new Promise((res) => {
+      const sc = document.createElement("script");
+      sc.src = "js/raio-x.js";
+      sc.onload = sc.onerror = () => res();
+      document.head.appendChild(sc);
+    });
+    return rxScript;
+  }
+
   /* ---------- nome do estádio: a ESPN escreve os brasileiros sem acento ("Estadio do Maracana") ---------- */
   const ESTADIO_BR = /\b(do|da|dos|das)\b|Mineir|Beira-Rio|Maracan|Manoel Barradas|Barrad|José Maria de Campos|Evandro Almeida|Baen|Eucaliptos|Magalhães|Lourival|Morumb|Pacaembu|Nilton Santos|São Januário|Couto Pereira|Vila Belmiro|Fonte Nova|Castelão|Mangueir|Cícero|Cicero|Lucarelli|Brinco de Ouro|Moça Bonita|Raulino|Independência|Serra Dourada|Arruda|Ilha do Retiro|Almeidão|Kleber Andrade|Bezerrão|Mané Garrincha|Estadual|Municipal [A-ZÁÉÍÓÚ][a-zà-ÿ]+ (de|do|da) /;
   const estadio = (v) => {
@@ -691,7 +888,7 @@
     if (tab === "partidas") body = `<div data-history="${id}">${historyHTML(id, window.CLUB_FORM?.clubs?.[id])}</div>`;
 
     if (tab === "elenco") body = LINEUP.builder(id);
-    if (tab === "estatisticas") body = playerStatsHTML(id, true);
+    if (tab === "estatisticas") body = `<div data-raiox="${id}">${raioxHTML(id)}</div>${playerStatsHTML(id, true)}`;
 
     if (tab === "tabela") {
       body = `<div class="card">${standingsTable(state.standings, id)}${legend}</div>`;
@@ -1020,7 +1217,7 @@
     const flow = [
       ["Fontes", "ESPN · CBF · Google Notícias · API-Football (opcional)", ["placar e lances", "tabela e súmulas", "manchetes"]],
       ["Coleta", "server/placar_api.py · robô do GitHub Actions", ["a cada 30 min", "filtra, cruza e confere", "nunca raspa site que proíbe"]],
-      ["Arquivos", "js/live-data.js · player-stats.js · heatmaps.js", ["o site funciona sem servidor", "GitHub Pages"]],
+      ["Arquivos", "js/live-data.js · player-stats.js · heatmaps.js · raio-x.js", ["o site funciona sem servidor", "GitHub Pages"]],
       ["Navegador", "js/live.js · ticker.js · app.js", ["placar ao vivo a cada 12 s", "tabela e artilharia ao vivo", "troca só o que mudou"]],
     ];
     // de quanto em quanto tempo cada coisa se atualiza (escala logarítmica: de segundos a horas)
@@ -1298,6 +1495,11 @@
       el.addEventListener("pointerleave", () => { el.style.setProperty("--tilt-x", "0deg"); el.style.setProperty("--tilt-y", "0deg"); });
     });
     rankPreviews();
+    // Raio-X: o arquivo só é baixado na aba Estatísticas
+    $$("[data-raiox]", view).forEach((el) => {
+      if (window.RAIO_X) return rxMount(el);
+      loadRaioX().then(() => { if (!el.isConnected) return; el.innerHTML = raioxHTML(el.dataset.raiox); rxMount(el); $$(".reveal", el).forEach((r) => r.classList.add("seen")); });
+    });
     // sem a API (GitHub Pages), o retrospecto é atualizado direto da ESPN ao abrir o clube;
     // enquanto isso, mostra a temporada gravada (js/club-form.js, baixado só nas páginas de clube)
     const paintForm = (el, d) => {

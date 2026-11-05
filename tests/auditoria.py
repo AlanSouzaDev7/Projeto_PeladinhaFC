@@ -130,6 +130,32 @@ for cid, c in F["clubs"].items():
     check(all(a["date"] <= b["date"] for a, b in zip(c.get("next", []), c.get("next", [])[1:])), f"retrospecto {cid}: próximos jogos fora de ordem")
     check(all(e["date"] >= hoje for e in c.get("next", []) if e.get("state") == "pre"), f"retrospecto {cid}: jogo 'próximo' com data passada", aviso=True)
 
+# ---- Raio-X: os números das súmulas fecham com a tabela
+try:
+    RX = load("raio-x.js")
+except Exception:
+    RX = None
+if RX:
+    tab = {r[0]: r for r in T}
+    for cid, c in RX["clubs"].items():
+        r = tab.get(cid)
+        # a súmula de um jogo recém-encerrado pode chegar uma atualização depois da tabela: aviso, não erro
+        if r and r[2] == c["jogos"]:
+            check(c["pontos"] == r[1] and c["gf"] == r[6] and c["ga"] == r[7], f"Raio-X {cid}: {c['pontos']} pts {c['gf']}x{c['ga']} não bate com a tabela ({r[1]} pts {r[6]}x{r[7]})")
+        else:
+            check(False, f"Raio-X {cid}: {c['jogos']} jogos nas súmulas e {r[2] if r else '?'} na tabela", aviso=True)
+        if c["comLances"] == c["jogos"]:
+            check(sum(c["faixas"]["pro"]) == c["gf"] and sum(c["faixas"]["contra"]) == c["ga"], f"Raio-X {cid}: gols por faixa não somam o total")
+        fr, at = c["saiuNaFrente"], c["saiuAtras"]
+        check(sum(fr.values()) + sum(at.values()) <= c["jogos"], f"Raio-X {cid}: mais jogos com gol que jogos")
+        check(c["pontosBuscados"] == 3 * at["V"] + at["E"], f"Raio-X {cid}: pontos buscados não fecham")
+        check(all(1 <= v <= 20 for v in c.get("ranks", {}).values()), f"Raio-X {cid}: posição fora de 1–20")
+        check(0 <= (c["media"].get("posse") or 50) <= 100, f"Raio-X {cid}: posse fora de 0–100%")
+    for cid, pags in (RX.get("torcida") or {}).items():
+        for p in pags:
+            check(re.fullmatch(r"[A-Za-z0-9_]{1,15}", p["x"]) is not None, f"Raio-X {cid}: perfil inválido {p['x']}")
+            check(all(x["link"].startswith("https://") for x in p.get("imprensa", []) + p.get("posts", [])), f"Raio-X {cid}: link sem https")
+
 print(f"{checks} conferências · {len(erros)} erro(s) · {len(avisos)} aviso(s)")
 for x in erros:
     print("ERRO  ", x)

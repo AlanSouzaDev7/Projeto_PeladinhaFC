@@ -9,6 +9,7 @@ on:
       - "js/player-stats.js"
       - "js/club-form.js"
       - "js/heatmaps.js"
+      - "js/raio-x.js"
   pull_request:
     branches: [main]
   schedule:

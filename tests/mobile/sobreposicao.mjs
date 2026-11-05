@@ -3,14 +3,14 @@
    - elementos vizinhos que se sobrepõem (escudo em cima da data, rótulo em cima de número...);
    - conteúdo que sai da tela para os lados.
    Uso: python -m http.server 5174 --bind 127.0.0.1  e depois  node tests/mobile/sobreposicao.mjs
-   SO=cel  roda só a largura de celular. */
+   SO=cel  roda só a largura de celular · CLUBES=1 os 20 clubes · ABA=estatisticas a aba de cada clube. */
 import { chromium } from "playwright";
 const BASE = process.env.BASE || "http://127.0.0.1:5174";
 const ROTAS = ["#/", "#/clubes", "#/clube/cruzeiro", "#/clube/cruzeiro/elenco", "#/clube/cruzeiro/partidas", "#/clube/cruzeiro/estatisticas", "#/clube/flamengo",
   "#/clube/atletico-mg", "#/clube/sao-paulo/partidas", "#/clube/internacional/estatisticas", "#/tabela", "#/tabela/gols", "#/tabela/amarelos", "#/partida/bragantino-x-santos-r34",
   "#/bora-pro-jogo", "#/bora-pro-jogo/cruzeiro/atletico-mg", "#/sobre"];
 if (process.env.CLUBES) ROTAS.splice(0, ROTAS.length, ...["athletico-pr", "atletico-mg", "bahia", "botafogo", "bragantino", "chapecoense", "corinthians", "coritiba", "cruzeiro", "flamengo",
-  "fluminense", "gremio", "internacional", "mirassol", "palmeiras", "remo", "santos", "sao-paulo", "vasco", "vitoria"].map((c) => `#/clube/${c}`));
+  "fluminense", "gremio", "internacional", "mirassol", "palmeiras", "remo", "santos", "sao-paulo", "vasco", "vitoria"].map((c) => `#/clube/${c}${process.env.ABA ? "/" + process.env.ABA : ""}`));
 const LARG = (process.env.SO === "cel" ? [390] : [1440, 1180, 900, 390, 360]);
 const achados = new Map();
 

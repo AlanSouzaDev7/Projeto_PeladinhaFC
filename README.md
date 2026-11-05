@@ -126,6 +126,20 @@ Eles ganham o selo "base".
 2. Cadastre-as em *Settings → Secrets and variables → Actions* com os nomes `X_BEARER_TOKEN`, `IG_USER_ID` e `IG_ACCESS_TOKEN`.
 3. O robô passa a usá-las sozinho. As chaves nunca ficam no código.
 
+## Raio-X do clube e estatística da torcida
+
+A aba **Estatísticas** de cada clube abre com o **Raio-X**: números táticos do Brasileirão calculados pelo PLACAR a partir das súmulas da ESPN (posse, passes, finalizações, escanteios, desarmes, defesas do goleiro e o minuto de cada gol). Cada número vem com a posição do clube entre os 20 e a média da liga, e tudo anima quando aparece na tela:
+
+- **Quando marca e sofre**: gols por faixa de 15 minutos, 1º e 2º tempo;
+- **Estilo de jogo**: anéis de posse, passes certos, chutes no alvo e aproveitamento em casa;
+- **Comparado com a liga**: onde o clube fica entre o pior e o melhor em dez números;
+- **Reação ao placar**: como termina o jogo quando sai na frente ou atrás, pontos buscados e pontos com gols depois dos 80';
+- **Sequências e marcas**, **Você sabia?** (curiosidades geradas dos próprios números) e **destaques individuais** (participações em gol, finalizações, conversão, minutos por gol e garçons).
+
+A auditoria (`tests/auditoria.py`) confere que pontos e gols do Raio-X fecham com a tabela e que os gols por faixa somam o total.
+
+**Estatística feita pela torcida (créditos).** Logo abaixo ficam as páginas de torcedores que estudam o clube a fundo, como o [Cruzeiro Stats](https://x.com/cruzeirostats). Para cada uma aparecem o perfil (com link), as reportagens que citaram a página (só título, fonte, data e link) e, com a chave da API oficial do X (`X_BEARER_TOKEN`, plano pago), as publicações recentes com link para o original. O conteúdo dessas páginas pertence aos autores; o PLACAR não copia as artes nem os textos delas. A lista fica em `server/config.json` (`paginas_estatistica`), conferida em 05/11/2026: Cruzeiro, Flamengo, Atlético-MG, São Paulo, Fluminense, Corinthians, Grêmio, Botafogo e Vasco. Para os outros clubes ainda não há página de torcida com dados conferíveis e atualizados, e aparecem as que cobrem todos os clubes (Jogo em Números e DataFut).
+
 ## Arbitragem dos próximos jogos (pelas manchetes)
 
 A escala oficial (árbitro, assistentes, quarto árbitro e VAR) é publicada pela CBF, mas os termos de uso do site da CBF não permitem reutilizar os dados sem autorização. Por isso a API **monitora os veículos de comunicação**: a cada 30 min, para cada jogo dos próximos 8 dias, busca no Google Notícias as manchetes sobre a arbitragem daquele confronto (só título, fonte, data e link) publicadas depois do último jogo dos dois clubes. Quando o título traz o nome do árbitro ("Fulano apita…", "CBF escala Fulano…", "com Fulano no apito"), o nome aparece na página do jogo com quantas manchetes confirmam. Um nome só vale se estiver na **lista de árbitros** que a própria API aprende com esse tipo de manchete, para não confundir com jogador, técnico ou dirigente. Enquanto nenhum veículo publicou o nome no título, a página mostra "Ainda não noticiado" e as manchetes da arbitragem, com o link para a escala oficial na CBF.
@@ -173,8 +187,8 @@ node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! 
 node tests/mobile/arbitragem.mjs                   # árbitro nos títulos das manchetes e quadro de arbitragem na página do jogo
 node tests/seguranca/site.mjs                      # testes de invasão no navegador: dados maliciosos nas fontes, endereços forjados, moldura de outro site
 node tests/seguranca/api.mjs                       # testes de invasão da API: arquivos fora do site, travessia de pastas, métodos, parâmetros, limites
-node tests/mobile/sobreposicao.mjs                 # revisão visual: texto vazando da caixa, texto ou escudo por cima do vizinho e conteúdo fora da tela, em 17 páginas e 5 larguras (CLUBES=1: os 20 clubes)
-python -X utf8 tests/auditoria.py                  # coerência dos dados: tabela, rodadas e placares, só jogadores que estão no clube, reservas de verdade, DM, artilharia, retrospecto
+node tests/mobile/sobreposicao.mjs                 # revisão visual: texto vazando da caixa, texto ou escudo por cima do vizinho e conteúdo fora da tela, em 17 páginas e 5 larguras (CLUBES=1: os 20 clubes; ABA=estatisticas: a aba de cada um)
+python -X utf8 tests/auditoria.py                  # coerência dos dados: tabela, rodadas e placares, só jogadores que estão no clube, reservas de verdade, DM, artilharia, retrospecto e o Raio-X contra a tabela
 python -X utf8 tests/dm_casos.py                   # regras do departamento médico com manchetes reais (nome certo, liberado x desfalque, suspensão não conta)
 node tests/mobile/departamento-medico.mjs          # departamento médico na página do clube: situação, desde quando, confirmação, manchetes e quem voltou
 node tests/mobile/faixa.mjs                        # faixa de notícias: troca da manchete, fita, links, atualização sozinha a cada 30 min, reduzir movimento
@@ -245,7 +259,8 @@ prints/               capturas de tela
 
 ## Fontes e créditos
 
-- Tabela e artilharia: **CBF**. Jogos, elencos, escalações e lances: **ESPN**. Resultados: **ge.globo**. Manchetes: **Google Notícias** (só título, fonte e link).
+- Análises e curiosidades da torcida: as páginas listadas na aba Estatísticas de cada clube (perfis no X), com link para o original.
+- Tabela e artilharia: **CBF**. Jogos, elencos, escalações, lances e estatísticas das partidas (Raio-X): **ESPN**. Resultados: **ge.globo**. Manchetes: **Google Notícias** (só título, fonte e link).
 - Escudos: imagens oficiais via **Wikimedia Commons**, marcas registradas dos respectivos clubes, usadas apenas para identificação em projeto sem fins comerciais.
 - Fotos dos ídolos: imagens livres do **Wikimedia Commons** (as mesmas usadas na Wikipédia em português), com os créditos e licenças de cada autor na página do arquivo.
 - Ilustrações das aparições e dos símbolos do GOL!, marca PLACAR. e narração do minuto a minuto são próprias. Os símbolos seguem os mascotes e emblemas que os clubes usam (conferidos no LANCE!, ge e nas páginas oficiais), desenhados do zero; não são os personagens oficiais.

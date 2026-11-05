@@ -622,5 +622,89 @@
       "nome": "CazéTV",
       "youtube": "UCZiYbVptd3PVPf4f6eR6UaQ"
     }
+  ],
+  "paginas_estatistica": {
+    "cruzeiro": [
+      {
+        "nome": "Cruzeiro Stats",
+        "x": "cruzeirostats",
+        "sobre": "dados estatísticos e análises do Cruzeiro"
+      }
+    ],
+    "flamengo": [
+      {
+        "nome": "Flamengo Estatísticas e Contador de Gols",
+        "x": "CRFStatContador",
+        "busca": "CRFStatContador",
+        "sobre": "a história do Flamengo em estatísticas, curiosidades e o contador de gols"
+      }
+    ],
+    "atletico-mg": [
+      {
+        "nome": "Galo Estatísticas",
+        "x": "galoestatistica",
+        "sobre": "histórico, confrontos e números do Atlético"
+      }
+    ],
+    "sao-paulo": [
+      {
+        "nome": "spfcstats",
+        "x": "spfcstats_",
+        "busca": "spfcstats",
+        "sobre": "estatísticas, dados e análises do São Paulo"
+      }
+    ],
+    "fluminense": [
+      {
+        "nome": "Enciclopédia Tricolor",
+        "x": "Flupedia",
+        "sobre": "histórias, estatísticas e curiosidades do Fluminense"
+      }
+    ],
+    "corinthians": [
+      {
+        "nome": "Timão Dados",
+        "x": "TimaoDados",
+        "sobre": "estatísticas e dados curiosos do Corinthians"
+      },
+      {
+        "nome": "Estatísticas Corinthianas",
+        "x": "estcorinthianas",
+        "sobre": "retrospectos e marcas do Corinthians"
+      }
+    ],
+    "gremio": [
+      {
+        "nome": "Grêmio Stats",
+        "x": "gremiostats_",
+        "sobre": "números e opiniões sobre o Grêmio"
+      }
+    ],
+    "botafogo": [
+      {
+        "nome": "Putfire Stats",
+        "x": "putfire_stats",
+        "sobre": "estatísticas, curiosidades e o dia a dia do Botafogo"
+      }
+    ],
+    "vasco": [
+      {
+        "nome": "Wesley Curty",
+        "x": "wesley_curty",
+        "sobre": "estatísticas e curiosidades do Vasco"
+      }
+    ]
+  },
+  "paginas_estatistica_gerais": [
+    {
+      "nome": "Jogo em Números",
+      "x": "JogoEmNumeros",
+      "sobre": "números de cada jogo do Brasileirão, de todos os clubes"
+    },
+    {
+      "nome": "DataFut",
+      "x": "DataFutebol",
+      "sobre": "estatísticas avançadas do futebol brasileiro"
+    }
   ]
 }
