@@ -2474,3 +2474,21 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .dm-base { font: 800 9.5px/1 var(--font-label); letter-spacing: .08em; text-transform: uppercase; font-style: normal; padding: 2px 5px; border-radius: 4px;
   background: color-mix(in srgb, #2f7df6 16%, transparent); color: #2f7df6; vertical-align: 2px; }
 .dm-reps span { display: block; margin-top: 3px; line-height: 1.45; }
+
+/* retrospecto: a coluna da data cabe "Qua · A definir" sem invadir o escudo; no celular o estádio vai para baixo do adversário */
+.fm-row { grid-template-columns: 26px 74px minmax(0, 1fr) auto 42px; }
+.fm-date { min-width: 0; }
+.fm-date small { display: block; overflow: hidden; text-overflow: ellipsis; }
+.fm-venue-m { display: none; }
+@media (max-width: 700px) {
+  .fm-row { grid-template-columns: 24px 72px minmax(0, 1fr) auto; }
+  .fm-venue { display: none; }
+  .fm-venue-m { display: inline; }
+  .fm-opp b { white-space: normal; overflow: visible; line-height: 1.15; }
+}
+
+/* título do clube no topo: encolhe só quando o nome não cabe na coluna (INTERNACIONAL não encosta no GOL!) */
+.hero-text { container-type: inline-size; min-width: 0; }
+.hero h1 { font-size: min(clamp(54px, 8.5vw, 124px), calc(100cqi / (var(--len, 8) * 0.5))); }
+@media (max-width: 1180px) { .hero h1 { font-size: min(clamp(40px, 13vw, 124px), calc(100cqi / (var(--len, 8) * 0.5))); } }
+@media (max-width: 700px) { .hero h1 { font-size: min(clamp(40px, 13vw, 64px), calc(100cqi / (var(--len, 8) * 0.5))); } }

@@ -202,6 +202,15 @@
       : `<div class="card reveal"><div class="card-h">Estatísticas do elenco <small><a href="#/clube/${id}/estatisticas" style="color:var(--ink)">ver tudo ›</a></small></div>${grid}${foot}</div>`;
   }
 
+  /* ---------- nome do estádio: a ESPN escreve os brasileiros sem acento ("Estadio do Maracana") ---------- */
+  const ESTADIO_BR = /\b(do|da|dos|das)\b|Mineir|Beira-Rio|Maracan|Manoel Barradas|Barrad|José Maria de Campos|Evandro Almeida|Baen|Eucaliptos|Magalhães|Lourival|Morumb|Pacaembu|Nilton Santos|São Januário|Couto Pereira|Vila Belmiro|Fonte Nova|Castelão|Mangueir|Cícero|Cicero|Lucarelli|Brinco de Ouro|Moça Bonita|Raulino|Independência|Serra Dourada|Arruda|Ilha do Retiro|Almeidão|Kleber Andrade|Bezerrão|Mané Garrincha|Estadual|Municipal [A-ZÁÉÍÓÚ][a-zà-ÿ]+ (de|do|da) /;
+  const estadio = (v) => {
+    if (!v) return "";
+    let s = String(v).replace(/\bMaracana\b/, "Maracanã").replace(/\bCicero\b/, "Cícero").replace(/\bBaenao\b/, "Baenão");
+    if (/^Estadio /.test(s) && ESTADIO_BR.test(s.slice(8))) s = "Estádio " + s.slice(8);
+    return s;
+  };
+
   /* ---------- retrospecto: últimos 5 e próximos 5 jogos, em todas as competições ---------- */
   function formInner(id, d) {
     if (!d) return `<div class="empty" style="padding:28px">Carregando o retrospecto…</div>`;
@@ -223,8 +232,8 @@
     const next = d.next.map((e, i) => `<li class="fm-row" style="--i:${i}">
         <span class="fm-n">${i + 1}</span>
         <span class="fm-date"><b>${dm(e.date)}</b><small>${wk(e.date)} · ${e.time || "A definir"}</small></span>
-        <span class="fm-opp">${oppCrest(e)}<span><b>${e.home ? "" : "@ "}${e.oppId ? byId[e.oppId].abbr : e.opp}</b>${tag(e)}</span></span>
-        <span class="fm-score"><small>${e.venue || ""}</small></span>
+        <span class="fm-opp">${oppCrest(e)}<span><b>${e.home ? "" : "@ "}${e.oppId ? byId[e.oppId].abbr : e.opp}</b><span class="fm-comp">${e.comp}${e.stage ? ` · ${e.stage}` : ""}${e.venue ? `<span class="fm-venue-m"> · ${estadio(e.venue)}</span>` : ""}</span></span></span>
+        <span class="fm-score fm-venue"><small>${estadio(e.venue)}</small></span>
         ${where(e)}</li>`).join("");
     return `<div class="fm-grid">
         <section><h4>Últimos 5 <span class="fm-strip">${d.last.slice().reverse().map((e) => `<i class="fm-res ${e.res}" title="${dm(e.date)} · ${RES[e.res]}">${e.res}</i>`).join("")}</span>
@@ -257,7 +266,7 @@
         <span class="hm-comp">${e.comp}${e.stage ? `<small>${e.stage}</small>` : ""}</span>
         <span class="hm-match">${H}<span class="hm-mid">${mid}</span>${A}</span>
         <span class="hm-res">${e.res ? `<i class="fm-res ${e.res}">${e.res}</i>` : ""}</span>
-        <span class="hm-venue">${e.venue || ""}</span></li>`;
+        <span class="hm-venue">${estadio(e.venue)}</span></li>`;
     };
     let month = "";
     const rows = list.map((e) => {
@@ -632,7 +641,7 @@
               <div class="card-h">Pontos no campeonato <small>${REAL.source} · ${REAL.updated}</small></div>
               <div class="card-b">${pointsChart(id)}</div>
             </div>
-            ${m ? `<div class="card reveal"><div class="card-h">Jogo da ${ROUND}ª rodada <small>${m.venue || ""}</small></div>
+            ${m ? `<div class="card reveal"><div class="card-h">Jogo da ${ROUND}ª rodada <small>${estadio(m.venue)}</small></div>
               <a class="card-b feature" href="#/partida/${m.id}" style="display:block;${matchVars(m)}">${scoreline(m, false)}<div style="margin-top:12px">${compareHTML(m, 4)}</div></a></div>` : ""}
             ${playerStatsHTML(id)}
           </div>
@@ -694,7 +703,7 @@
         <div class="hero-inner">
           <div class="hero-text">
             <div class="eyebrow">${c.nick} · desde ${c.founded}</div>
-            <h1>${words.map((w, i) => `<span class="w"><span style="--i:${i}">${w}</span></span>`).join(" ")}</h1>
+            <h1 style="--len:${Math.max(...words.map((w) => w.length))}">${words.map((w, i) => `<span class="w"><span style="--i:${i}">${w}</span></span>`).join(" ")}</h1>
             <div class="facts" data-live="facts">
               <span style="--i:0">${ICON.pin}${c.city} · ${c.uf}</span>
               <span style="--i:1">${ICON.stadium}${c.stadium}</span>
@@ -727,7 +736,7 @@
       ["Competição", `Brasileirão Série A · ${m.round}ª rodada`],
       ["Data", m.date ? dayName(m.date) : "—"],
       ["Horário", m.time ? `${m.time} (Brasília)` : "A definir"],
-      ["Estádio", m.venue || "—"],
+      ["Estádio", estadio(m.venue) || "—"],
       ["Situação", statusText(m)],
     ];
     // arbitragem pelas manchetes (a escala oficial é da CBF, que não permite reutilizar os dados do site)
@@ -738,7 +747,7 @@
         <div style="text-align:center;margin-bottom:18px" data-live="pill"><span class="${m.status === "progress" ? "pill" : "pill muted"}">Brasileirão · ${m.round}ª rodada</span></div>
         ${scoreline(m)}
         <div class="mh-marks" data-marks hidden></div>
-        ${m.venue ? `<p style="text-align:center;color:var(--text-2);margin:16px 0 0">${ICON.stadium.replace("<svg", '<svg style="display:inline;vertical-align:-2px;margin-right:4px"')}${m.venue}</p>` : ""}
+        ${m.venue ? `<p style="text-align:center;color:var(--text-2);margin:16px 0 0">${ICON.stadium.replace("<svg", '<svg style="display:inline;vertical-align:-2px;margin-right:4px"')}${estadio(m.venue)}</p>` : ""}
       </section>
       <div class="grid-2">
         <div>
@@ -801,7 +810,7 @@
         </div>
         <a class="feat-link" href="#/partida/${m.id}">
           ${scoreline(m, false)}
-          ${m.venue ? `<small class="feat-venue">${m.venue}</small>` : ""}
+          ${m.venue ? `<small class="feat-venue">${estadio(m.venue)}</small>` : ""}
           <div class="feat-sub">No campeonato</div>
           <div style="margin-top:6px">${compareHTML(m, 3)}</div>
         </a>

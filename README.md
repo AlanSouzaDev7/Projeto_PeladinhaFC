@@ -173,6 +173,7 @@ node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! 
 node tests/mobile/arbitragem.mjs                   # árbitro nos títulos das manchetes e quadro de arbitragem na página do jogo
 node tests/seguranca/site.mjs                      # testes de invasão no navegador: dados maliciosos nas fontes, endereços forjados, moldura de outro site
 node tests/seguranca/api.mjs                       # testes de invasão da API: arquivos fora do site, travessia de pastas, métodos, parâmetros, limites
+node tests/mobile/sobreposicao.mjs                 # revisão visual: texto vazando da caixa, texto ou escudo por cima do vizinho e conteúdo fora da tela, em 17 páginas e 5 larguras (CLUBES=1: os 20 clubes)
 python -X utf8 tests/auditoria.py                  # coerência dos dados: tabela, rodadas e placares, só jogadores que estão no clube, reservas de verdade, DM, artilharia, retrospecto
 python -X utf8 tests/dm_casos.py                   # regras do departamento médico com manchetes reais (nome certo, liberado x desfalque, suspensão não conta)
 node tests/mobile/departamento-medico.mjs          # departamento médico na página do clube: situação, desde quando, confirmação, manchetes e quem voltou
