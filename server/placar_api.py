@@ -85,10 +85,10 @@ def log(*a):
 MAX_BYTES = 15 * 1024 * 1024   # nenhuma resposta de fonte de dados passa disso
 
 
-def get(url, timeout=20):
+def get(url, timeout=20, headers=None):
     if not str(url).startswith("https://"):
         raise ValueError("só endereços https")
-    req = urllib.request.Request(url, headers={"User-Agent": "placar-portfolio/1.0", "Accept-Encoding": "gzip"})
+    req = urllib.request.Request(url, headers={"User-Agent": "placar-portfolio/1.0", "Accept-Encoding": "gzip", **(headers or {})})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         if not r.geturl().startswith("https://"):
             raise ValueError("redirecionado para endereço sem https")
@@ -832,8 +832,8 @@ def press_news(c):
     sites = " OR ".join(f"site:{s}" for s in CONFIG["fontes"])
     terms = '(lesão OR lesionado OR "departamento médico" OR cirurgia OR desfalque OR vetado OR pendurado OR pendurados)'
     items = [dict(x, tag="clube") for x in news_query(f'"{c["busca"]}" {terms} ({sites}) when:21d')]
-    for rep in c.get("setoristas", []):
-        items += [dict(x, tag=rep) for x in news_query(f'"{rep}" "{c["busca"]}" {terms} when:21d')]
+    if reps(c):
+        items += [dict(x, tag="setorista") for x in news_query(f'({reps_query(c)}) "{c["busca"]}" {terms} when:21d')]
     return items
 
 
@@ -948,6 +948,143 @@ def position_profiles(matches):
 
 
 # ---------------------------------------------------------------------------
+# Setoristas: o que os jornalistas que cobrem o dia a dia de cada clube publicam
+#   - Google Notícias: matérias e publicações indexadas que citam o setorista e o clube;
+#   - YouTube: feed oficial (RSS) dos canais dos setoristas e dos canais nacionais (CazéTV), só os títulos;
+#   - X e Instagram: só pelas APIs oficiais, e só se as chaves estiverem configuradas (X_BEARER_TOKEN;
+#     IG_USER_ID e IG_ACCESS_TOKEN). Os termos de uso do Instagram, do X e do TikTok proíbem coleta
+#     automática fora das APIs oficiais, e o TikTok não oferece API pública para isso: nada é raspado.
+#   Do que vem das redes, o site mostra só "publicação de @perfil", a data e o link; o texto serve só para
+#   reconhecer o jogador e a situação.
+# ---------------------------------------------------------------------------
+YT_ID = re.compile(r"^UC[A-Za-z0-9_-]{22}$")
+X_HANDLE = re.compile(r"^[A-Za-z0-9_]{1,15}$")
+IG_HANDLE = re.compile(r"^[A-Za-z0-9._]{1,30}$")
+SETOR_TERMOS = "(lesão OR lesionado OR DM OR desconforto OR dores OR cirurgia OR desfalque OR vetado OR liberado OR transição OR dúvida)"
+_setor_cache = {}
+
+
+def reps(c):
+    return [r if isinstance(r, dict) else {"nome": str(r)} for r in c.get("setoristas", [])]
+
+
+def reps_query(c):
+    return " OR ".join(f'"{r["nome"]}"' for r in reps(c)[:8])
+
+
+def cached(key, ttl, fn):
+    hit = _setor_cache.get(key)
+    if hit and time.time() - hit[0] < ttl:
+        return hit[1]
+    try:
+        val = fn()
+    except Exception as ex:
+        log("setoristas", key[0], ex)
+        val = hit[1] if hit else []
+    _setor_cache[key] = (time.time(), val)
+    return val
+
+
+def youtube_feed(channel_id, nome):
+    """Títulos dos vídeos mais recentes de um canal, pelo feed oficial do YouTube."""
+    if not YT_ID.match(channel_id or ""):
+        return []
+
+    def load():
+        raw = get(f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}")
+        if re.search(rb"<!(DOCTYPE|ENTITY)", raw, re.I):
+            raise ValueError("feed com declarações não permitidas")
+        ns = {"a": "http://www.w3.org/2005/Atom"}
+        out = []
+        for e in ET.fromstring(raw).findall("a:entry", ns):
+            t = e.findtext("a:title", default="", namespaces=ns)
+            a = e.find("a:link", ns)
+            pub = e.findtext("a:published", default="", namespaces=ns)
+            try:
+                ts = calendar.timegm(time.strptime(pub[:19], "%Y-%m-%dT%H:%M:%S"))
+            except Exception:
+                ts = 0
+            link = clean_link(a.get("href") if a is not None else "")
+            if t and link:
+                out.append({"title": clean_text(t, 300), "link": link, "source": f"{nome} (YouTube)", "ts": ts, "canal": "YouTube"})
+        return out
+    return cached(("youtube", channel_id), 25 * 60, load)
+
+
+def x_posts(handles, termos):
+    """Publicações recentes dos perfis no X (API oficial v2, busca recente). Sem chave: nada."""
+    tok = os.environ.get("X_BEARER_TOKEN", "").strip()
+    hs = [h for h in handles if X_HANDLE.match(h or "")][:10]
+    if not tok or not hs:
+        return []
+
+    def load():
+        q = f'({" OR ".join("from:" + h for h in hs)}) -is:retweet {termos}'[:512]
+        url = ("https://api.x.com/2/tweets/search/recent?" + urllib.parse.urlencode(
+            {"query": q, "max_results": 50, "tweet.fields": "created_at,author_id", "expansions": "author_id", "user.fields": "username,name"}))
+        d = json.loads(get(url, headers={"Authorization": f"Bearer {tok}"}))
+        users = {u["id"]: u for u in (d.get("includes") or {}).get("users", [])}
+        out = []
+        for p in d.get("data", []):
+            u = users.get(p.get("author_id"), {})
+            h = u.get("username", "")
+            try:
+                ts = calendar.timegm(time.strptime(p.get("created_at", "")[:19], "%Y-%m-%dT%H:%M:%S"))
+            except Exception:
+                ts = 0
+            if X_HANDLE.match(h) and re.fullmatch(r"\d{1,25}", p.get("id", "")):
+                out.append({"title": f"Publicação de @{h} no X", "texto": clean_text(p.get("text", ""), 500), "link": f"https://x.com/{h}/status/{p['id']}",
+                            "source": f"{u.get('name') or h} (X)", "ts": ts, "canal": "X", "perfil": h})
+        return out
+    return cached(("x", ",".join(hs)), 60 * 60, load)
+
+
+def ig_posts(username, nome):
+    """Publicações recentes de um perfil profissional do Instagram (Graph API, Business Discovery). Sem chave: nada."""
+    uid, tok = os.environ.get("IG_USER_ID", "").strip(), os.environ.get("IG_ACCESS_TOKEN", "").strip()
+    if not (uid and tok) or not re.fullmatch(r"\d{5,25}", uid) or not IG_HANDLE.match(username or ""):
+        return []
+
+    def load():
+        fields = f"business_discovery.username({username}){{media.limit(12){{caption,timestamp,permalink}}}}"
+        d = json.loads(get(f"https://graph.facebook.com/v21.0/{uid}?" + urllib.parse.urlencode({"fields": fields}), headers={"Authorization": f"Bearer {tok}"}))
+        out = []
+        for m in ((d.get("business_discovery") or {}).get("media") or {}).get("data", []):
+            try:
+                ts = calendar.timegm(time.strptime(m.get("timestamp", "")[:19], "%Y-%m-%dT%H:%M:%S"))
+            except Exception:
+                ts = 0
+            link = clean_link(m.get("permalink"))
+            if link:
+                out.append({"title": f"Publicação de @{username} no Instagram", "texto": clean_text(m.get("caption", ""), 800), "link": link,
+                            "source": f"{nome} (Instagram)", "ts": ts, "canal": "Instagram", "perfil": username})
+        return out
+    return cached(("instagram", username), 60 * 60, load)
+
+
+def setorista_items(cid):
+    """Tudo o que os setoristas do clube (e os canais nacionais, quando citam o clube) publicaram nas últimas semanas."""
+    c = CLUBS[cid]
+    rs = reps(c)
+    out = []
+    for r in rs:
+        if r.get("youtube"):
+            out += [dict(x, setorista=r["nome"]) for x in youtube_feed(r["youtube"], r.get("canal") or r["nome"])]
+        if r.get("instagram"):
+            out += [dict(x, setorista=r["nome"]) for x in ig_posts(r["instagram"], r["nome"])]
+    por_x = {r["x"].lower(): r["nome"] for r in rs if r.get("x")}
+    out += [dict(x, setorista=por_x.get(x["perfil"].lower(), x["perfil"])) for x in x_posts(list(por_x), SETOR_TERMOS)]
+    # canais nacionais (CazéTV): só os vídeos que citam o clube
+    palavras = [fold(w) for w in (c["busca"], *HEADLINE_NAMES.get(cid, []), *c.get("apelidos", []))]
+    for canal in CONFIG.get("canais_nacionais", []):
+        for x in youtube_feed(canal.get("youtube"), canal["nome"]):
+            ft = fold(x["title"])
+            if any(re.search(rf"(?<![a-z]){re.escape(w)}(?![a-z])", ft) for w in palavras):
+                out.append(dict(x, nacional=canal["nome"]))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Departamento médico: monitor da temporada inteira
 #   Quem pode estar no DM: titular/reserva frequente que não jogou nem foi relacionado no último jogo,
 #   quem já está no DM e quem foi citado numa manchete de lesão do clube.
@@ -959,7 +1096,7 @@ def position_profiles(matches):
 # ---------------------------------------------------------------------------
 DM_FILE = os.path.join(ROOT, "js", "departamento-medico.js")
 DM_MED = re.compile(r"les[ãa]o|lesion|departamento m[ée]dico|\bDM\b|cirurgi|contus|estiramento|entorse|fratur|ruptur|ligamento|menisco|edema|h[ée]rnia|"
-                    r"desconforto|\bdor(es)?\b|problema (f[íi]sico|muscular)|machuc|inc[ôo]modo|trauma|pancada|virose|concuss|"
+                    r"desconforto|\bdor(es)?\b|problema (f[íi]sico|muscular)|machuc|inc[ôo]modo (na|no|muscular|f[íi]sico)|trauma|pancada|virose|concuss|"
                     r"deixa (o )?campo|sai (de campo )?machucado|tratamento|fisioterap|transi[çc][ãa]o|recupera[çc][ãa]o|boletim m[ée]dico", re.I)
 DM_OUT = re.compile(r"desfalc|desfalque|\bfora\b|vetad|n[ãa]o (joga|enfrenta|viaja|treina|atua)|poupad|\bperde\b|aus[êe]n|d[úu]vida|preocupa", re.I)
 DM_NAO = re.compile(r"stjd|julga|puni[çc]|gancho|tribunal|denunci|suspens|suspenso|cart[ãa]o|amarel|expuls|vermelho|convoca|sele[çc][ãa]o|negocia|proposta|vend[ae]|transfer|empr[ée]st|contrato|"
@@ -971,7 +1108,7 @@ DM_VOLTA = re.compile(r"\blibera\b|volta de\b|(?<!n[ãa]o )\bjoga\b(?! mais)|vem
 DM_GRAVE = re.compile(r"cirurgi|operad|ruptur|ligamento|fratur|meses|longo prazo|grave|fora da temporada|n[ãa]o joga mais|s[óo] volta em 20", re.I)
 DM_FORA_TEMP = re.compile(r"(fora|n[ãa]o (joga|volta|atua)( mais)?|perde|encerra|restante|resto)\b[^.;]*\b(temporada|em 20[2-9]\d)|s[óo] volta em 20[2-9]\d|fora da temporada", re.I)
 DM_HOSPITAL = re.compile(r"alta hospitalar|libera(do|da)? (do )?hospital|deixa o hospital|sai do hospital", re.I)
-DM_DUV = re.compile(r"d[úu]vida|desconforto|preocupa|inc[ôo]modo|poupad", re.I)
+DM_DUV = re.compile(r"d[úu]vida|desconforto|preocupa|inc[ôo]modo (na|no|muscular|f[íi]sico)|poupad", re.I)
 DM_PARTES = [(r"joelho", "joelho"), (r"posterior", "posterior da coxa"), (r"coxa", "coxa"), (r"panturrilha", "panturrilha"), (r"tornozelo", "tornozelo"),
              (r"adutor|virilha|pubalgia", "adutor"), (r"ombro", "ombro"), (r"quadril", "quadril"), (r"lombar|coluna|costas", "coluna"), (r"costela", "costela"),
              (r"t[íi]bia|f[íi]bula|perna", "perna"), (r"\bp[ée]\b|metatarso", "pé"), (r"menisco", "menisco"), (r"m[ãa]o|punho|dedo", "mão"),
@@ -998,19 +1135,26 @@ DM_LIGA = {"o", "a", "os", "as", "e", "de", "do", "da", "dos", "das", "com", "se
 _TOK = re.compile(r"[0-9A-Za-zÀ-ÿ'’-]+")
 
 
-def has_name(title, ftoks):
+def has_name(title, ftoks, nomes=None):
     """O nome (já em fold) aparece inteiro na manchete, sem outro nome próprio colado antes ou depois
     ("Lucas" não é "Lucas Paquetá"; "Santos" não é "Nilton Santos"; "Marcelo" não é "João Marcelo")."""
     toks = [(m.start(), m.end(), m.group(0)) for m in _TOK.finditer(title or "")]
     f = [fold(t[2]) for t in toks]
     n = len(ftoks)
+    letras = [ch for ch in title or "" if ch.isalpha()]
+    caps = len(letras) > 8 and sum(ch.isupper() for ch in letras) / len(letras) > 0.6
+
+    def nome_colado(k):
+        if f[k] in DM_LIGA:
+            return False
+        return (f[k] in (nomes or ())) if caps else toks[k][2][:1].isupper()
     for i in range(len(toks) - n + 1):
         if f[i:i + n] != ftoks:
             continue
-        if i > 0 and title[toks[i - 1][1]:toks[i][0]].strip() == "" and toks[i - 1][2][:1].isupper() and f[i - 1] not in DM_LIGA:
+        if i > 0 and title[toks[i - 1][1]:toks[i][0]].strip() == "" and nome_colado(i - 1):
             continue
         j = i + n
-        if j < len(toks) and title[toks[j - 1][1]:toks[j][0]].strip() == "" and toks[j][2][:1].isupper() and f[j] not in DM_LIGA:
+        if j < len(toks) and title[toks[j - 1][1]:toks[j][0]].strip() == "" and nome_colado(j):
             continue
         return (toks[i][0], toks[j - 1][1])
     return None
@@ -1121,12 +1265,14 @@ def dm_classify(t, span):
     return "duvida" if DM_DUV.search(t) else "ausencia"
 
 
-def club_dm(cid, matches, squad, old, news_extra):
+def club_dm(cid, matches, squad, old, news_extra, extra_base=None):
     c = CLUBS[cid]
     espn = c["espn"]
     hoje = time.strftime("%Y-%m-%d")
     names = {pid: nm for pid, nm in squad.items()}
+    base_ids = {pid for pid in squad if pid in (extra_base or ())}
     folded = {pid: fold(nm) for pid, nm in names.items()}
+    tokset = {w for f in folded.values() for w in f.split()}
     lastw = {}
     for pid, f in folded.items():
         parts = [w for w in f.split() if len(w) >= 5]
@@ -1135,7 +1281,7 @@ def club_dm(cid, matches, squad, old, news_extra):
     club_words = [fold(w) for w in (c["busca"], *HEADLINE_NAMES.get(cid, []), *c.get("apelidos", []))]
 
     def named(t, pid):
-        sp = has_name(t, folded[pid].split())
+        sp = has_name(t, folded[pid].split(), tokset)
         if sp:
             return sp
         # sobrenome sozinho ("Arroyo"): só se ninguém mais do elenco tem esse sobrenome e a manchete cita o clube
@@ -1143,7 +1289,7 @@ def club_dm(cid, matches, squad, old, news_extra):
         ft = fold(t)
         if (bool(parts) and len(folded[pid].split()) >= 2 and len(lastw.get(parts[-1], ())) == 1
                 and any(re.search(rf"(?<![a-z]){re.escape(w)}(?![a-z])", ft) for w in club_words)):
-            return has_name(t, [parts[-1]])
+            return has_name(t, [parts[-1]], tokset)
         return None
 
     games = club_games(espn, matches)
@@ -1168,16 +1314,35 @@ def club_dm(cid, matches, squad, old, news_extra):
     consultas = [f'"{c["busca"]}" (lesão OR lesionado OR "departamento médico" OR desconforto OR dores OR cirurgia OR desfalque OR vetado OR "boletim médico") when:14d']
     if c.get("oficial"):
         consultas.append(f'site:{c["oficial"]} (lesão OR "departamento médico" OR "boletim médico" OR cirurgia OR recuperação OR transição OR atualização) when:60d')
-    for rep in c.get("setoristas", []):
-        consultas.append(f'"{rep}" "{c["busca"]}" (lesão OR "departamento médico" OR desfalque OR desconforto) when:21d')
+    if reps(c):
+        consultas.append(f'({reps_query(c)}) "{c["busca"]}" (lesão OR "departamento médico" OR desfalque OR desconforto OR dores OR liberado) when:21d')
     for q in consultas:
         try:
             itens += [dict(x, oficial=q.startswith("site:")) for x in news_query(q)]
         except Exception as ex:
             log("DM", cid, ex)
         time.sleep(0.25)
+    itens += setorista_items(cid)   # canais dos setoristas (YouTube), CazéTV e, com chave, X e Instagram
     itens = [x for x in itens if (x.get("ts") or 0) >= time.time() - (DM_JANELA + 5) * 86400]
-    citados = {pid for it in itens for pid in names if named(it["title"], pid) and DM_MED.search(it["title"]) and not DM_NAO.search(it["title"])}
+    txt_of = lambda it: it.get("texto") or it["title"]
+    # jogador da base que ainda não está no elenco da ESPN: nome que aparece como "joia/cria/garoto... Fulano" numa notícia de lesão
+    novos = {}
+    for it in itens:
+        t = txt_of(it)
+        if not DM_MED.search(t):
+            continue
+        for m in re.finditer(r"\b(?:[Jj]oia|[Cc]ria|[Gg]aroto|[Jj]ovem|[Pp]romessa|[Rr]evela[çc][ãa]o)(?: da base)?(?: d[oa] [A-ZÀ-Ý][\w-]+)?,? ([A-ZÀ-Ý][a-zà-ÿ]{2,}(?: [A-ZÀ-Ý][a-zà-ÿ]{2,})?)", t):
+            nm = m.group(1)
+            fn = fold(nm)
+            if fn in club_words or any(fn == f or fn in f.split() for f in folded.values()) or len(novos) >= 3:
+                continue
+            novos.setdefault("base-" + re.sub(r"[^a-z0-9]+", "-", fn), nm)
+    for pid, nm in novos.items():
+        names[pid] = nm
+        folded[pid] = fold(nm)
+        tokset.update(folded[pid].split())
+        base_ids.add(pid)
+    citados = {pid for it in itens for pid in names if named(txt_of(it), pid) and DM_MED.search(txt_of(it)) and not DM_NAO.search(txt_of(it))}
 
     # 2) candidatos: frequentes que não estavam no último jogo, quem já está no DM e quem foi citado
     recentes = games[-10:]
@@ -1196,17 +1361,18 @@ def club_dm(cid, matches, squad, old, news_extra):
             res = []
         time.sleep(0.25)
         ev, vistos = [], set()
-        for it in res + [x for x in itens if named(x["title"], pid)]:
-            k = headline_key(it["title"])
+        for it in res + [x for x in itens if named(txt_of(x), pid)]:
+            k = it["link"] if it.get("texto") else headline_key(it["title"])
             if k in vistos or not it.get("link"):
                 continue
             vistos.add(k)
-            nmd = named(it["title"], pid)
-            tipo = dm_classify(it["title"], nmd)
+            nmd = named(txt_of(it), pid)
+            tipo = dm_classify(txt_of(it), nmd)
             if not tipo or (it.get("ts") or 0) < time.time() - (DM_JANELA + 5) * 86400:
                 continue
             of, conf = dm_fonte(it.get("source", ""), cid)
-            ev.append({"data": time.strftime("%Y-%m-%d", time.localtime(it.get("ts") or 0)), "tipo": tipo, "nomeado": bool(nmd),
+            conf = conf or bool(it.get("setorista") or it.get("nacional"))   # setorista cadastrado e CazéTV confirmam
+            ev.append({"setorista": it.get("setorista"), "canal": it.get("canal"), "data": time.strftime("%Y-%m-%d", time.localtime(it.get("ts") or 0)), "tipo": tipo, "nomeado": bool(nmd),
                        "manchete": it["title"], "fonte": it.get("source", ""), "link": it["link"], "oficial": of or bool(it.get("oficial")), "confiavel": conf or bool(it.get("oficial"))})
         prev = ativos_old.get(pid)
         if prev:  # o que já foi apurado antes continua valendo (a busca só olha as últimas semanas)
@@ -1221,7 +1387,8 @@ def club_dm(cid, matches, squad, old, news_extra):
         les = [x for x in ev if x["tipo"] != "volta" and (x["data"] >= base if x["nomeado"] and x["tipo"] == "lesao" else x["data"] > base)]
         fortes = [x for x in les if x["nomeado"] and x["tipo"] in ("lesao", "duvida", "evol")]
         medias = [x for x in les if x not in fortes]
-        dentro = bool(fortes) or len({fold(x["fonte"]) for x in medias}) >= 2 or (bool(prev) and bool(les))
+        dentro = (bool(fortes) or (len({fold(x["fonte"]) for x in medias}) >= 2 and any(DM_MED.search(x["manchete"]) for x in medias))
+                  or (bool(prev) and bool(les)))
         if not les:
             if prev:   # sem notícia nova e sem jogo: continua como estava
                 ativos.append(prev)
@@ -1252,7 +1419,7 @@ def club_dm(cid, matches, squad, old, news_extra):
         if status == "dúvida" and fora >= 2:
             status = "lesionado"   # "dúvida" que já perdeu dois jogos não é mais dúvida
         noticias = sorted(les, key=lambda x: (x["nomeado"], x["data"]), reverse=True)[:8]
-        ativos.append({"id": pid, "name": nm, "status": status, "parte": parte, "desde": desde, "jogosFora": fora,
+        ativos.append({"id": pid, "name": nm, "base": pid in base_ids, "setoristas": sorted({x["setorista"] for x in les if x.get("setorista")}), "status": status, "parte": parte, "desde": desde, "jogosFora": fora,
                        "ultimoJogo": base or None, "atualizado": max(x["data"] for x in les),
                        "fontes": sorted({x["fonte"] for x in les}), "confirmado": bool(fortes) and (len({fold(x["fonte"]) for x in les}) >= 2 or any(x["confiavel"] for x in les)),
                        "oficial": any(x["oficial"] for x in les), "noticias": noticias})
@@ -1269,7 +1436,8 @@ def club_dm(cid, matches, squad, old, news_extra):
         hist.insert(0, {k: s.get(k) for k in ("id", "name", "status", "parte", "desde", "ate", "motivo", "fontes")})
     ordem_st = {"fora da temporada": 0, "longo prazo": 1, "lesionado": 2, "em transição": 3, "dúvida": 4}
     ativos.sort(key=lambda a: (ordem_st.get(a["status"], 9), not a["confirmado"], a["desde"]))
-    return {"ativos": ativos, "historico": hist[:80], "monitorados": len(ordem), "ultimoJogo": ultimo}
+    return {"ativos": ativos, "historico": hist[:80], "monitorados": len(ordem), "ultimoJogo": ultimo,
+            "setoristas": [{k: r[k] for k in ("nome", "veiculo", "x", "instagram", "canal") if r.get(k)} for r in reps(c)]}
 
 
 def update_dm():
@@ -1285,9 +1453,15 @@ def update_dm():
     out = {}
     for cid in CLUBS:
         squad = {row[4]: row[1] for row in squads.get(cid, []) if row[4]}
+        sumula = {}
+        for m in matches.values():
+            for r in m.get("teams", {}).get(str(CLUBS[cid]["espn"]), []):
+                if r[0] and r[0] not in squad:
+                    sumula[r[0]] = r[1]
+        squad.update(sumula)
         try:
             extra = [dict(x, source=x.get("source", "")) for x in club_news.get(cid, [])]
-            out[cid] = club_dm(cid, matches, squad, (old.get("clubs") or {}).get(cid), extra)
+            out[cid] = club_dm(cid, matches, squad, (old.get("clubs") or {}).get(cid), extra, set(sumula))
         except Exception as ex:
             log("DM", cid, ex)
             if (old.get("clubs") or {}).get(cid):
@@ -1471,8 +1645,8 @@ def update_news():
             # busca pelo nome (no título, quando dá) e filtra: só fica o que é do clube
             terms = " OR ".join(f'intitle:"{n}"' for n in (c.get("apelidos") or [c["busca"]])[:3])
             items += [dict(x, tag="clube") for x in news_query(f'({terms}) ({sites}) when:3d')]
-            for rep in c.get("setoristas", []):
-                items += [dict(x, tag=rep) for x in news_query(f'"{rep}" "{c["busca"]}" when:3d')]
+            if reps(c):
+                items += [dict(x, tag="setorista") for x in news_query(f'({reps_query(c)}) "{c["busca"]}" when:3d')]
             items = [x for x in items if about_club(cid, x["title"])]
         except Exception as ex:
             log("notícias", cid, ex)

@@ -33,6 +33,8 @@ TIPO = [  # (manchete, jogador, tipo esperado)
     ("Matheus Pereira recebe terceiro amarelo e está suspenso", "Matheus Pereira", None),
     ("Kaio Jorge é convocado para a Seleção", "Kaio Jorge", None),
     ("Arrascaeta treina com o grupo e está liberado para o clássico", "Arrascaeta", "volta"),
+    ("Weverton é questionado sobre Palmeiras e admite incômodo com decisão de Renato no Grêmio", "Weverton", None),
+    ("Kaio Jorge sente incômodo na coxa e deixa o treino", "Kaio Jorge", "duvida"),
 ]
 erros = 0
 for t, n, exp in NOME:
@@ -43,6 +45,13 @@ for t, n, exp in TIPO:
     r = a.dm_classify(t, a.has_name(t, a.fold(n).split()))
     erros += r != exp
     print("ok " if r == exp else "ERRO", f"{n}: {r}", "|", t)
+# títulos todos em maiúsculas (YouTube): o vizinho só barra se também for nome de jogador do elenco
+TOK = {"lucas", "paqueta", "felipe", "morais", "joao", "marcelo", "fred"}
+for t, n, exp in [("FELIPE MORAIS FORA? SAMUEL VENÂNCIO EXPLICA", "Felipe Morais", True), ("LUCAS PAQUETÁ SENTE DORES", "Lucas", False),
+                  ("JOÃO MARCELO OPERA O JOELHO", "Marcelo", False), ("FRED SENTE DORES E PREOCUPA", "Fred", True)]:
+    r = bool(a.has_name(t, a.fold(n).split(), TOK))
+    erros += r != exp
+    print("ok " if r == exp else "ERRO", "maiúsculas", n, "|", t)
 st = [("João Marcelo passa por cirurgia no joelho e não joga mais pelo Cruzeiro na temporada", "fora"),
       ("Danilo passa por cirurgia após fraturas na mandíbula", "grave"), ("Fred sente dores na coxa", "")]
 for t, exp in st:

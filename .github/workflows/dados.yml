@@ -46,6 +46,11 @@ jobs:
 
       - name: Gerar dados
         run: python -X utf8 server/placar_api.py --snapshot
+        env:
+          # opcionais: com as chaves das APIs oficiais, o departamento médico também lê os perfis dos setoristas no X e no Instagram
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
 
       - name: Publicar se algo mudou
         run: |

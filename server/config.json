@@ -1,5 +1,5 @@
 {
-  "_leia_me": "Configuração da API do PLACAR. 'setoristas' recebe nomes de jornalistas que cobrem o clube: a API busca as notícias publicadas com o nome de cada um no Google Notícias. 'fontes' limita a busca a portais (domínios). 'oficial' é o site oficial do clube (consultado no departamento médico). 'fontes_dm' são os veículos (nacionais e locais, onde estão os setoristas) que confirmam uma lesão sozinhos; os demais precisam de uma segunda fonte.",
+  "_leia_me": "Configuração da API do PLACAR. 'setoristas': jornalistas que cobrem o dia a dia de cada clube (nome, veículo e, quando há, perfis no X e no Instagram e o canal do YouTube). A API busca no Google Notícias o que eles publicam, lê o feed oficial dos canais do YouTube e, se as chaves oficiais estiverem configuradas (X_BEARER_TOKEN; IG_USER_ID e IG_ACCESS_TOKEN), as publicações nos perfis pelo X e pelo Instagram. 'canais_nacionais': canais de cobertura nacional (CazéTV) cujos vídeos que citam o clube também entram.",
   "intervalos_minutos": {
     "tabela_e_jogos": 5,
     "noticias": 15,
@@ -22,7 +22,21 @@
     "athletico-pr": {
       "espn": "3458",
       "busca": "Athletico Paranaense",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Monique Vilela",
+          "veiculo": "TMC e Canal Monique Vilela",
+          "x": "Monivilela",
+          "instagram": "monivilela",
+          "youtube": "UCH_bfZW6UW0DUA5mfcv7DoA",
+          "canal": "Monique Vilela"
+        },
+        {
+          "nome": "Vinicius Cordeiro",
+          "veiculo": "Um Dois Esportes",
+          "x": "vinacordeiros"
+        }
+      ],
       "apelidos": [
         "Athletico",
         "Athletico-PR",
@@ -34,7 +48,20 @@
     "atletico-mg": {
       "espn": "7632",
       "busca": "Atlético-MG",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Breno Galante",
+          "veiculo": "Band Minas e canal Breno Galante",
+          "x": "BrenoGalante",
+          "instagram": "brenogalantebh",
+          "youtube": "UC2Zzj4636i_mqvSdOJddbbQ",
+          "canal": "Breno Galante"
+        },
+        {
+          "nome": "Igor Assunção",
+          "veiculo": "Rede 98"
+        }
+      ],
       "apelidos": [
         "Atlético-MG",
         "Atlético Mineiro",
@@ -45,7 +72,13 @@
     "bahia": {
       "espn": "9967",
       "busca": "Esporte Clube Bahia",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Téo Mazzoni",
+          "veiculo": "A Tarde",
+          "x": "teovpmazzoni"
+        }
+      ],
       "apelidos": [
         "Bahia",
         "Esquadrão de Aço",
@@ -56,7 +89,35 @@
     "botafogo": {
       "espn": "6086",
       "busca": "Botafogo",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Thiago Veras",
+          "veiculo": "Super Rádio Tupi e Arena Alvinegra",
+          "x": "verasthiago",
+          "youtube": "UCLAbj3Gne6kgnTX6XwH7nQg",
+          "canal": "Arena Alvinegra"
+        },
+        {
+          "nome": "Rafael Bizarelo",
+          "veiculo": "ge",
+          "x": "rafaelbizarelo"
+        },
+        {
+          "nome": "Letícia Marques",
+          "veiculo": "ge",
+          "x": "soyyleticia"
+        },
+        {
+          "nome": "Leonardo Bessa",
+          "veiculo": "Lance!",
+          "x": "Bessa_Leo"
+        },
+        {
+          "nome": "João Pedro Fragoso",
+          "veiculo": "O Globo",
+          "x": "jotapfragoso"
+        }
+      ],
       "apelidos": [
         "Botafogo",
         "Fogão",
@@ -67,7 +128,14 @@
     "bragantino": {
       "espn": "6079",
       "busca": "Red Bull Bragantino",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Diego Perez",
+          "veiculo": "102 FM Bragança",
+          "x": "Diegoprz97",
+          "instagram": "diegoperez5"
+        }
+      ],
       "apelidos": [
         "Bragantino",
         "Massa Bruta"
@@ -77,7 +145,18 @@
     "chapecoense": {
       "espn": "9318",
       "busca": "Chapecoense",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Rangel Agnolin",
+          "veiculo": "Canal Mais Sports e NDFM",
+          "x": "rangelreporter"
+        },
+        {
+          "nome": "Rodrigo Goulart",
+          "veiculo": "Diário do Iguaçu e Rádio Chapecó",
+          "x": "goulart0rodrigo"
+        }
+      ],
       "apelidos": [
         "Chapecoense",
         "Chape",
@@ -88,7 +167,35 @@
     "corinthians": {
       "espn": "874",
       "busca": "Corinthians",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Yago Rudá",
+          "veiculo": "ge",
+          "x": "yago_ruda",
+          "instagram": "ruda.yago"
+        },
+        {
+          "nome": "Guilherme Lesnok",
+          "veiculo": "Lance!",
+          "x": "g_lesnok"
+        },
+        {
+          "nome": "Fábio Lázaro",
+          "veiculo": "UOL",
+          "x": "FabioLazaro_"
+        },
+        {
+          "nome": "Luis Fabiani",
+          "veiculo": "Rádio Bandeirantes",
+          "x": "luissfabiani",
+          "instagram": "luisfabiani"
+        },
+        {
+          "nome": "Marco Bello Jr",
+          "veiculo": "Meu Timão e TMC",
+          "x": "marcobellojr"
+        }
+      ],
       "apelidos": [
         "Corinthians",
         "Timão"
@@ -98,7 +205,15 @@
     "coritiba": {
       "espn": "3456",
       "busca": "Coritiba",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Rogerio Scarione",
+          "veiculo": "Jovem Pan e Meu Coritiba",
+          "x": "RogerioScarione",
+          "youtube": "UCQ8DGCpFDsRkgef8gi7ajCw",
+          "canal": "Meu Coritiba"
+        }
+      ],
       "apelidos": [
         "Coritiba",
         "Coxa"
@@ -108,7 +223,36 @@
     "cruzeiro": {
       "espn": "2022",
       "busca": "Cruzeiro",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Samuel Venâncio",
+          "veiculo": "Samuca TV e Central da Toca",
+          "x": "samuelvenancio",
+          "instagram": "samuelvenancio",
+          "youtube": "UC6pQ2mcqn2t8nTxiwQePtiA",
+          "canal": "Samuca TV"
+        },
+        {
+          "nome": "Emerson Pancieri",
+          "veiculo": "Rádio Itatiaia",
+          "x": "emersonpancieri"
+        },
+        {
+          "nome": "Lucas Barbosa",
+          "veiculo": "Rádio Itatiaia",
+          "x": "lucassbarbosa_"
+        },
+        {
+          "nome": "Guilherme Alves",
+          "veiculo": "Cruzeiro Sports e Rede 98",
+          "x": "Gui_alvesc"
+        },
+        {
+          "nome": "Leonardo Garcia Gimenez",
+          "veiculo": "Central da Toca",
+          "x": "leonageral"
+        }
+      ],
       "apelidos": [
         "Cruzeiro",
         "Raposa"
@@ -118,7 +262,27 @@
     "flamengo": {
       "espn": "819",
       "busca": "Flamengo",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Venê Casagrande",
+          "veiculo": "SBT Rio e canal Venê Casagrande",
+          "x": "venecasagrande",
+          "youtube": "UC084Mraf1n0rUIhz0V3sZfg",
+          "canal": "Venê Casagrande"
+        },
+        {
+          "nome": "Marcello Neves",
+          "veiculo": "ge",
+          "x": "nevesmarcello"
+        },
+        {
+          "nome": "Rafael Mello",
+          "veiculo": "Canal RaFla Mello",
+          "x": "raflamello81",
+          "youtube": "UCf0bs928KW_GIN6q0XeiJ2Q",
+          "canal": "RaFla Mello"
+        }
+      ],
       "apelidos": [
         "Flamengo",
         "Mengão",
@@ -129,7 +293,25 @@
     "fluminense": {
       "espn": "3445",
       "busca": "Fluminense",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Victor Lessa",
+          "veiculo": "Canal do Lessa",
+          "x": "Victorg_Lessa",
+          "youtube": "UCSti-zyC2NKrQHP0h4VHqxQ",
+          "canal": "Canal do Lessa"
+        },
+        {
+          "nome": "Giba Perez",
+          "veiculo": "ge",
+          "x": "GibaPerez"
+        },
+        {
+          "nome": "Lucas Ribeiro",
+          "veiculo": "O Globo e Extra",
+          "x": "lucasvdsribeiro"
+        }
+      ],
       "apelidos": [
         "Fluminense",
         "Flu"
@@ -139,7 +321,23 @@
     "gremio": {
       "espn": "6273",
       "busca": "Grêmio",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Fabíola Thiele",
+          "veiculo": "Prosa de Gremista",
+          "x": "fathiele"
+        },
+        {
+          "nome": "Diego Torbes",
+          "veiculo": "Bolavip",
+          "x": "DiegoTorbesBage"
+        },
+        {
+          "nome": "Kaliel Dorneles",
+          "veiculo": "setorista independente",
+          "x": "Kaliel_Dorneles"
+        }
+      ],
       "apelidos": [
         "Grêmio",
         "Imortal Tricolor"
@@ -149,7 +347,20 @@
     "internacional": {
       "espn": "1936",
       "busca": "Internacional",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Lucas Collar",
+          "veiculo": "setorista independente",
+          "x": "LucasCollar",
+          "instagram": "lucascollar"
+        },
+        {
+          "nome": "Tainan Nunes",
+          "veiculo": "Bolavip e Canal TN",
+          "x": "canaldotn",
+          "instagram": "canaldotn"
+        }
+      ],
       "apelidos": [
         "Internacional",
         "Inter",
@@ -160,7 +371,17 @@
     "mirassol": {
       "espn": "9169",
       "busca": "Mirassol",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Alan Ribeiro",
+          "veiculo": "Portal ENM",
+          "x": "alangomes92"
+        },
+        {
+          "nome": "Gustavo Villa",
+          "veiculo": "setorista do Mirassol"
+        }
+      ],
       "apelidos": [
         "Mirassol"
       ],
@@ -169,7 +390,36 @@
     "palmeiras": {
       "espn": "2029",
       "busca": "Palmeiras",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Thiago Ferri",
+          "veiculo": "ge",
+          "x": "b_ferri"
+        },
+        {
+          "nome": "Flavio Latif",
+          "veiculo": "UOL",
+          "x": "latiflavio"
+        },
+        {
+          "nome": "Rodrigo Fragoso",
+          "veiculo": "TNT Sports e Canal do Fragoso",
+          "x": "reporterfragoso",
+          "instagram": "rodrigo_fragoso_",
+          "youtube": "UCAWPsw_OWTHCPiro9eH7WyA",
+          "canal": "Canal do Fragoso"
+        },
+        {
+          "nome": "Gustavo Soler",
+          "veiculo": "Rádio TMC",
+          "x": "falasoler"
+        },
+        {
+          "nome": "Diego Iwata Lima",
+          "veiculo": "setorista independente",
+          "x": "DiegoMarada"
+        }
+      ],
       "apelidos": [
         "Palmeiras",
         "Verdão",
@@ -180,7 +430,12 @@
     "remo": {
       "espn": "4936",
       "busca": "Clube do Remo",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Paulo Caxiado",
+          "veiculo": "Rádio Clube do Pará"
+        }
+      ],
       "apelidos": [
         "Remo",
         "Leão Azul"
@@ -190,7 +445,20 @@
     "santos": {
       "espn": "2674",
       "busca": "Santos FC",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Lucas Musetti Perazolli",
+          "veiculo": "setorista independente",
+          "x": "lucas_musetti"
+        },
+        {
+          "nome": "Gabriela Brino",
+          "veiculo": "canal Setorista da Vila",
+          "x": "gabbsbrino",
+          "youtube": "UCGn-JoHKMAJtOPfGPoNWf5g",
+          "canal": "Gabriela Brino"
+        }
+      ],
       "apelidos": [
         "Santos",
         "Peixe",
@@ -201,7 +469,30 @@
     "sao-paulo": {
       "espn": "2026",
       "busca": "São Paulo FC",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Eder Traskini",
+          "veiculo": "ge",
+          "x": "EderTraskini"
+        },
+        {
+          "nome": "Marcelo Baseggio",
+          "veiculo": "Gazeta Esportiva e TV Gazeta",
+          "x": "celobaseggio",
+          "instagram": "mabaseggio"
+        },
+        {
+          "nome": "Bruno Faria",
+          "veiculo": "Rádio Globo e CBN",
+          "x": "bruno_faria",
+          "instagram": "brunofaria_jornalista"
+        },
+        {
+          "nome": "Caique Silva",
+          "veiculo": "Rádio TMC",
+          "x": "silvapcaique"
+        }
+      ],
       "apelidos": [
         "São Paulo",
         "SPFC",
@@ -212,7 +503,24 @@
     "vasco": {
       "espn": "3454",
       "busca": "Vasco",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Sergio Santana",
+          "veiculo": "ge",
+          "x": "sergiostn_"
+        },
+        {
+          "nome": "Pedro Cobalea",
+          "veiculo": "Lance!",
+          "x": "pedrocobalea_",
+          "instagram": "pedrocobalea"
+        },
+        {
+          "nome": "Gustavo Tutinha",
+          "veiculo": "Colina 1927",
+          "x": "gustavotutinha"
+        }
+      ],
       "apelidos": [
         "Vasco",
         "Cruz-Maltino",
@@ -223,7 +531,17 @@
     "vitoria": {
       "espn": "3457",
       "busca": "Vitória",
-      "setoristas": [],
+      "setoristas": [
+        {
+          "nome": "Reinaldo Oliveira",
+          "veiculo": "Itapoan FM",
+          "x": "reinaldoliveira"
+        },
+        {
+          "nome": "Rafa Reina",
+          "veiculo": "setorista do Vitória"
+        }
+      ],
       "apelidos": [
         "Vitória",
         "Leão da Barra",
@@ -290,6 +608,19 @@
     "Netflu",
     "NOSSO PALESTRA",
     "Diário do Nordeste",
-    "GE Globo"
+    "GE Globo",
+    "CazéTV",
+    "Samuca TV",
+    "Itapoan FM",
+    "Rádio Clube do Pará",
+    "TMC",
+    "Rádio Bandeirantes",
+    "Bolavip Brasil"
+  ],
+  "canais_nacionais": [
+    {
+      "nome": "CazéTV",
+      "youtube": "UCZiYbVptd3PVPf4f6eR6UaQ"
+    }
   ]
 }

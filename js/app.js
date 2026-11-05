@@ -145,7 +145,7 @@
      Quem está no DM, com a situação, desde quando, a parte do corpo, quantos veículos confirmam e as manchetes.
      Sai sozinho quando entra em campo, é relacionado ou uma manchete diz que foi liberado. */
   const DM_ST = { "fora da temporada": "bad", "longo prazo": "bad", lesionado: "bad", "em transição": "mid", "dúvida": "warn" };
-  const dmSrc = (x, fmt) => `<a class="ps-src" href="${SEG.esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer" title="${SEG.esc(x.manchete)}">${SEG.esc(x.fonte)} · ${fmt(x.data)} · ${SEG.esc(x.manchete)}</a>`;
+  const dmSrc = (x, fmt) => `<a class="ps-src" href="${SEG.esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer" title="${SEG.esc(x.manchete)}">${x.setorista ? `<em class="dm-set">setorista · ${SEG.esc(x.setorista)}</em> ` : ""}${SEG.esc(x.fonte)} · ${fmt(x.data)} · ${SEG.esc(x.manchete)}</a>`;
   function dmBlock(id, full, n, num, fmt, empty, d, src) {
     const c = window.DM?.clubs?.[id];
     if (!c) { // sem o monitor: as lesões das manchetes (versão antiga)
@@ -154,14 +154,15 @@
         : empty("Nenhuma lesão noticiada nos últimos 21 dias.")];
     }
     const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
-    const li = (p) => `<li class="dm-li">${num(p.id)}<b>${SEG.esc(p.name)}</b><span class="ps-v dm-st ${DM_ST[p.status] || ""}">${SEG.esc(p.status)}</span>
+    const li = (p) => `<li class="dm-li">${num(p.id)}<b>${SEG.esc(p.name)}${p.base ? ` <i class="dm-base" title="Jogador da base, fora do elenco cadastrado na ESPN">base</i>` : ""}</b><span class="ps-v dm-st ${DM_ST[p.status] || ""}">${SEG.esc(p.status)}</span>
       <span class="ps-sub">${[p.parte ? cap(SEG.esc(p.parte)) : null, `desde ${fmt(p.desde)}`, p.jogosFora ? `fora de ${p.jogosFora} jogo${p.jogosFora > 1 ? "s" : ""}` : null, p.ultimoJogo ? `último jogo em ${fmt(p.ultimoJogo)}` : "sem jogos no Brasileirão"].filter(Boolean).join(" · ")}</span>
       <span class="ps-tag ${p.confirmado ? "ok" : "warn"}">${p.oficial ? "site oficial · " : ""}${p.confirmado ? `confirmado · ${p.fontes.length} veículo${p.fontes.length > 1 ? "s" : ""}` : "1 fonte · sem confirmação"}</span>
       ${(full ? p.noticias.slice(0, 4) : p.noticias.slice(0, 1)).map((x) => dmSrc(x, fmt)).join("")}</li>`;
     const vistos = c.historico.length;
+    const reps = (c.setoristas || []).length ? `<li class="ps-note dm-reps"><b>Setoristas monitorados</b><span>${c.setoristas.map((r) => `${SEG.esc(r.nome)}${r.veiculo ? ` (${SEG.esc(r.veiculo)})` : ""}`).join(" · ")}</span></li>` : "";
     return ["dm", "Departamento médico", `${c.ativos.length ? `${c.ativos.length} fora` : "elenco à disposição"} · ${vistos} saída${vistos === 1 ? "" : "s"} do DM na temporada`, c.ativos.length
-      ? c.ativos.slice(0, full ? 99 : Math.max(n, 5)).map(li).join("")
-      : empty("Ninguém no departamento médico: todos jogaram, foram relacionados ou não há notícia de lesão.")];
+      ? c.ativos.slice(0, full ? 99 : Math.max(n, 5)).map(li).join("") + (full ? reps : "")
+      : empty("Ninguém no departamento médico: todos jogaram, foram relacionados ou não há notícia de lesão.") + (full ? reps : "")];
   }
   function dmHistBlock(c, num, fmt, empty) {
     return ["dmh", "Voltaram ao time", "saíram do departamento médico nesta temporada", c.historico.length

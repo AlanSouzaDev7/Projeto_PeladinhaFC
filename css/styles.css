@@ -2469,3 +2469,8 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .dm-st.warn { background: color-mix(in srgb, #f5c518 26%, transparent); color: #6b4f00; }
 :root:not([data-theme="light"]) .dm-st.warn { color: #f5c518; }
 .dm-li .ps-src { display: block; line-height: 1.35; min-height: 0; padding: 2px 0; }
+.dm-set { font-style: normal; font-weight: 800; color: var(--c1, var(--ink)); filter: saturate(1.2); }
+:root:not([data-theme="light"]) .dm-set { color: var(--text); }
+.dm-base { font: 800 9.5px/1 var(--font-label); letter-spacing: .08em; text-transform: uppercase; font-style: normal; padding: 2px 5px; border-radius: 4px;
+  background: color-mix(in srgb, #2f7df6 16%, transparent); color: #2f7df6; vertical-align: 2px; }
+.dm-reps span { display: block; margin-top: 3px; line-height: 1.45; }

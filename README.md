@@ -93,6 +93,39 @@ Para cada um desses jogadores, busca no Google Notícias o nome dele com o clube
 
 As regras de leitura têm casos reais de teste em `tests/dm_casos.py`.
 
+### Setoristas e canais monitorados
+
+Cada clube tem em `server/config.json` os jornalistas que cobrem o dia a dia dele: 54 setoristas, que se apresentam como setoristas do clube e informam o veículo. Por exemplo:
+- Samuel Venâncio (Samuca TV) no Cruzeiro;
+- Breno Galante no Atlético-MG;
+- Venê Casagrande no Flamengo;
+- Victor Lessa no Fluminense.
+
+A **CazéTV** entra como canal nacional.
+
+| Onde | Como é lido |
+|---|---|
+| Matérias e publicações indexadas | Google Notícias, uma busca por clube com todos os setoristas |
+| YouTube (10 canais de setoristas + CazéTV) | feed oficial (RSS) de cada canal, só os títulos dos vídeos |
+| X | API oficial v2, se houver a chave `X_BEARER_TOKEN` |
+| Instagram | Graph API oficial (perfis profissionais), se houver `IG_USER_ID` e `IG_ACCESS_TOKEN` |
+| TikTok | não é lido: não há API pública para isso |
+
+Os termos de uso do Instagram, do X e do TikTok proíbem coleta automática fora das APIs oficiais, por isso nada é raspado. Das redes, o site mostra só "publicação de @perfil", a data e o link; o texto serve apenas para reconhecer o jogador e a situação.
+
+Notícia de setorista cadastrado ou da CazéTV confirma a lesão sozinha, e na página do clube aparece "setorista · Nome".
+
+**Jogadores da base:** entram no monitor:
+- os que já entraram em campo pelo clube, mesmo fora do elenco da ESPN;
+- os que aparecem como "joia/cria/garoto… Fulano" numa notícia de lesão (no máximo 3 por clube).
+
+Eles ganham o selo "base".
+
+**Ligar o X e o Instagram (opcional):**
+1. Crie as chaves no [portal de desenvolvedores do X](https://developer.x.com) (o plano gratuito não permite leitura) e/ou num app da [Meta for Developers](https://developers.facebook.com) ligado a uma conta profissional do Instagram.
+2. Cadastre-as em *Settings → Secrets and variables → Actions* com os nomes `X_BEARER_TOKEN`, `IG_USER_ID` e `IG_ACCESS_TOKEN`.
+3. O robô passa a usá-las sozinho. As chaves nunca ficam no código.
+
 ## Arbitragem dos próximos jogos (pelas manchetes)
 
 A escala oficial (árbitro, assistentes, quarto árbitro e VAR) é publicada pela CBF, mas os termos de uso do site da CBF não permitem reutilizar os dados sem autorização. Por isso a API **monitora os veículos de comunicação**: a cada 30 min, para cada jogo dos próximos 8 dias, busca no Google Notícias as manchetes sobre a arbitragem daquele confronto (só título, fonte, data e link) publicadas depois do último jogo dos dois clubes. Quando o título traz o nome do árbitro ("Fulano apita…", "CBF escala Fulano…", "com Fulano no apito"), o nome aparece na página do jogo com quantas manchetes confirmam. Um nome só vale se estiver na **lista de árbitros** que a própria API aprende com esse tipo de manchete, para não confundir com jogador, técnico ou dirigente. Enquanto nenhum veículo publicou o nome no título, a página mostra "Ainda não noticiado" e as manchetes da arbitragem, com o link para a escala oficial na CBF.
