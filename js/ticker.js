@@ -1,3 +1,4 @@
+/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
    PLACAR — faixa de notícias embaixo do menu (como a tarja dos telejornais)
    Em cima, a manchete principal (troca a cada 8 s); embaixo, a fita com as outras passando.

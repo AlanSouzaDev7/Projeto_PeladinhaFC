@@ -1,3 +1,4 @@
+/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
    PLACAR — aparições dos escudos em tela cheia (canvas)
    Motor de cena: cuida do tamanho, da nitidez em telas retina, do laço de

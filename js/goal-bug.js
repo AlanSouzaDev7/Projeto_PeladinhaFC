@@ -1,3 +1,4 @@
+/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
    PLACAR — "GOL!" de cada clube no placar de transmissão
    A aparição do topo do clube imita um pacote de TV: o placar neutro (0 · 0),

@@ -183,6 +183,10 @@ assets/               marca do PLACAR.
 prints/               capturas de tela
 ```
 
+## Direitos autorais
+
+© 2026 Alan Souza (AlanSouzaDev7). **Todos os direitos reservados.** O código está visível só para avaliação do portfólio. Copiar, modificar, publicar ou usar este projeto, no todo ou em parte, exige autorização prévia e por escrito do autor. Os detalhes estão em [LICENSE](LICENSE). Escudos, dados e manchetes de terceiros pertencem aos seus donos.
+
 ## Fontes e créditos
 
 - Tabela e artilharia: **CBF**. Jogos, elencos, escalações e lances: **ESPN**. Resultados: **ge.globo**. Manchetes: **Google Notícias** (só título, fonte e link).

@@ -1,3 +1,4 @@
+/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
    PLACAR — placar ao vivo pela API-Football (Cloudflare Worker)
    O site no GitHub Pages não pode guardar a chave da API (qualquer um veria),

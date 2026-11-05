@@ -1,3 +1,4 @@
+/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
    PLACAR — mapa de calor estimado de cada jogador
    Nenhum site oficial publica o mapa de calor dos jogadores do Brasileirão (os das transmissões

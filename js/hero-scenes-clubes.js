@@ -1,3 +1,4 @@
+/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
    PLACAR — aparições em tela cheia dos outros 19 clubes
    Mesma linguagem do Cruzeiro: céu em camadas, paralaxe, partículas e um
