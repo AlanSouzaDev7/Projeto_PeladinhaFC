@@ -7,27 +7,206 @@
     "jogadores": 60,
     "retrospecto": 30
   },
-  "fontes": ["ge.globo.com", "uol.com.br", "espn.com.br", "lance.com.br", "gazetaesportiva.com", "terra.com.br"],
+  "fontes": [
+    "ge.globo.com",
+    "uol.com.br",
+    "espn.com.br",
+    "lance.com.br",
+    "gazetaesportiva.com",
+    "terra.com.br"
+  ],
   "clubes": {
-    "athletico-pr": { "espn": "3458", "busca": "Athletico Paranaense", "setoristas": [] },
-    "atletico-mg": { "espn": "7632", "busca": "Atlético-MG", "setoristas": [] },
-    "bahia": { "espn": "9967", "busca": "Esporte Clube Bahia", "setoristas": [] },
-    "botafogo": { "espn": "6086", "busca": "Botafogo", "setoristas": [] },
-    "bragantino": { "espn": "6079", "busca": "Red Bull Bragantino", "setoristas": [] },
-    "chapecoense": { "espn": "9318", "busca": "Chapecoense", "setoristas": [] },
-    "corinthians": { "espn": "874", "busca": "Corinthians", "setoristas": [] },
-    "coritiba": { "espn": "3456", "busca": "Coritiba", "setoristas": [] },
-    "cruzeiro": { "espn": "2022", "busca": "Cruzeiro", "setoristas": [] },
-    "flamengo": { "espn": "819", "busca": "Flamengo", "setoristas": [] },
-    "fluminense": { "espn": "3445", "busca": "Fluminense", "setoristas": [] },
-    "gremio": { "espn": "6273", "busca": "Grêmio", "setoristas": [] },
-    "internacional": { "espn": "1936", "busca": "Internacional", "setoristas": [] },
-    "mirassol": { "espn": "9169", "busca": "Mirassol", "setoristas": [] },
-    "palmeiras": { "espn": "2029", "busca": "Palmeiras", "setoristas": [] },
-    "remo": { "espn": "4936", "busca": "Clube do Remo", "setoristas": [] },
-    "santos": { "espn": "2674", "busca": "Santos FC", "setoristas": [] },
-    "sao-paulo": { "espn": "2026", "busca": "São Paulo FC", "setoristas": [] },
-    "vasco": { "espn": "3454", "busca": "Vasco", "setoristas": [] },
-    "vitoria": { "espn": "3457", "busca": "Esporte Clube Vitória", "setoristas": [] }
+    "athletico-pr": {
+      "espn": "3458",
+      "busca": "Athletico Paranaense",
+      "setoristas": [],
+      "apelidos": [
+        "Athletico",
+        "Athletico-PR",
+        "Furacão",
+        "CAP"
+      ]
+    },
+    "atletico-mg": {
+      "espn": "7632",
+      "busca": "Atlético-MG",
+      "setoristas": [],
+      "apelidos": [
+        "Atlético-MG",
+        "Atlético Mineiro",
+        "Galo"
+      ]
+    },
+    "bahia": {
+      "espn": "9967",
+      "busca": "Esporte Clube Bahia",
+      "setoristas": [],
+      "apelidos": [
+        "Bahia",
+        "Esquadrão de Aço",
+        "Tricolor de Aço"
+      ]
+    },
+    "botafogo": {
+      "espn": "6086",
+      "busca": "Botafogo",
+      "setoristas": [],
+      "apelidos": [
+        "Botafogo",
+        "Fogão",
+        "Glorioso"
+      ]
+    },
+    "bragantino": {
+      "espn": "6079",
+      "busca": "Red Bull Bragantino",
+      "setoristas": [],
+      "apelidos": [
+        "Bragantino",
+        "Massa Bruta"
+      ]
+    },
+    "chapecoense": {
+      "espn": "9318",
+      "busca": "Chapecoense",
+      "setoristas": [],
+      "apelidos": [
+        "Chapecoense",
+        "Chape",
+        "Verdão do Oeste"
+      ]
+    },
+    "corinthians": {
+      "espn": "874",
+      "busca": "Corinthians",
+      "setoristas": [],
+      "apelidos": [
+        "Corinthians",
+        "Timão"
+      ]
+    },
+    "coritiba": {
+      "espn": "3456",
+      "busca": "Coritiba",
+      "setoristas": [],
+      "apelidos": [
+        "Coritiba",
+        "Coxa"
+      ]
+    },
+    "cruzeiro": {
+      "espn": "2022",
+      "busca": "Cruzeiro",
+      "setoristas": [],
+      "apelidos": [
+        "Cruzeiro",
+        "Raposa"
+      ]
+    },
+    "flamengo": {
+      "espn": "819",
+      "busca": "Flamengo",
+      "setoristas": [],
+      "apelidos": [
+        "Flamengo",
+        "Mengão",
+        "Fla"
+      ]
+    },
+    "fluminense": {
+      "espn": "3445",
+      "busca": "Fluminense",
+      "setoristas": [],
+      "apelidos": [
+        "Fluminense",
+        "Flu"
+      ]
+    },
+    "gremio": {
+      "espn": "6273",
+      "busca": "Grêmio",
+      "setoristas": [],
+      "apelidos": [
+        "Grêmio",
+        "Imortal Tricolor"
+      ]
+    },
+    "internacional": {
+      "espn": "1936",
+      "busca": "Internacional",
+      "setoristas": [],
+      "apelidos": [
+        "Internacional",
+        "Inter",
+        "Colorado"
+      ]
+    },
+    "mirassol": {
+      "espn": "9169",
+      "busca": "Mirassol",
+      "setoristas": [],
+      "apelidos": [
+        "Mirassol"
+      ]
+    },
+    "palmeiras": {
+      "espn": "2029",
+      "busca": "Palmeiras",
+      "setoristas": [],
+      "apelidos": [
+        "Palmeiras",
+        "Verdão",
+        "Alviverde"
+      ]
+    },
+    "remo": {
+      "espn": "4936",
+      "busca": "Clube do Remo",
+      "setoristas": [],
+      "apelidos": [
+        "Remo",
+        "Leão Azul"
+      ]
+    },
+    "santos": {
+      "espn": "2674",
+      "busca": "Santos FC",
+      "setoristas": [],
+      "apelidos": [
+        "Santos",
+        "Peixe",
+        "Alvinegro Praiano"
+      ]
+    },
+    "sao-paulo": {
+      "espn": "2026",
+      "busca": "São Paulo FC",
+      "setoristas": [],
+      "apelidos": [
+        "São Paulo",
+        "SPFC",
+        "Tricolor Paulista"
+      ]
+    },
+    "vasco": {
+      "espn": "3454",
+      "busca": "Vasco",
+      "setoristas": [],
+      "apelidos": [
+        "Vasco",
+        "Cruz-Maltino",
+        "Gigante da Colina"
+      ]
+    },
+    "vitoria": {
+      "espn": "3457",
+      "busca": "Vitória",
+      "setoristas": [],
+      "apelidos": [
+        "Vitória",
+        "Leão da Barra",
+        "Rubro-Negro Baiano"
+      ]
+    }
   }
 }

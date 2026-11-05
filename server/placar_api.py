@@ -998,14 +998,62 @@ def news_query(q):
     return out
 
 
+# palavras que viram "falso positivo" no título: "Inter de Milão", "Danilo Santos" (sobrenome), "vitória" (a palavra)...
+NOT_CLUB = {
+    "internacional": r"Inter (de Mil[aã]o|Miami)|Internacional de Lime",
+    "santos": r"\b(?!(?:O|A|E|Do|Da|Dos|No|Na|Ao|Pelo|Pela|Contra|Sobre|Para|Com|Até)\b)[A-ZÁÉÍÓÚÂÊÔÃÕ][a-záéíóúâêôãõç]+ Santos\b|Nilton Santos|\bd[oa]s Santos\b|\bSantos \(SP\)|Todos os Santos",
+    "sao-paulo": r"(Prefeitura|Estado|Governo|cidade|Grande|Bienal|metrô) d?e? ?São Paulo|Marginal",
+    "bahia": r"(Governo|Estado|interior) da Bahia",
+}
+
+
+# nomes que também são palavra, cidade ou estado: além do nome, o título precisa falar de futebol
+AMBIGUOUS = {"santos", "vitoria", "sao-paulo", "remo"}
+FOOTBALL = (r"\b(x|vence|venceu|vencer|perde|perdeu|empata|empatam|empate|gols?|técnico|treinador|interino|elenco|jogador(es)?|atacante|zagueiro|volante|meia|goleiro|"
+            r"lateral|reforços?|contrata[rç]?|contratação|Brasileirão|Série [AB]|Copa|campeonato|clássico|torcida|torcedores|rodada|escalaç(ão|ões)|ao vivo|placar|time|clube|"
+            r"STJD|CBF|Libertadores|Sul-Americana|rebaixa(mento|do|da)?|Z-?4|G-?\d|tabela|partida|jogo|estádio|treinos?|treina|lesão|desfalques?|vitória|derrota|virada|"
+            r"contrato|salários?|direitos de imagem|patrocin\w*|camisa|uniforme|sócios?|ingressos?|renova\w*|negocia\w*|proposta|multa|dívidas?|estreia|torneio|FPF|Paulistão|estadual|fora d[oa]|"
+            r"Neymar|Vila Belmiro|Barradão|Morumbi|MorumBIS|Baenão|Fonte Nova|Ba-Vi|Re-Pa|Majestoso|San-São|Choque-Rei|boletim|diretoria|presidente|SAF|base|sub-\d+)\b")
+
+
+def about_club(cid, title):
+    """A notícia é do clube? O título tem de falar dele (nome ou apelido próprio, palavra inteira, com maiúscula).
+    Fica de fora quem só cita o clube como passado de alguém ("ex-Flamengo") ou um homônimo."""
+    import re
+    c = CLUBS[cid]
+    names = c.get("apelidos") or [c["busca"]]
+    t = title
+    if NOT_CLUB.get(cid):
+        t = re.sub(NOT_CLUB[cid], " ", t)
+    if cid in AMBIGUOUS:
+        ctx = t
+        for n in names:
+            ctx = re.sub(rf"(?<![\wÀ-ÿ]){re.escape(n)}(?![\wÀ-ÿ])", " ", ctx)
+        if not re.search(FOOTBALL, ctx, re.I):
+            return False
+    for n in names:
+        for m in re.finditer(rf"(?<![\wÀ-ÿ]){re.escape(n)}(?![\wÀ-ÿ])", t):
+            # "ex-Flamengo" e também "ex-Flamengo e Atlético-MG" (o "ex" vale para os dois)
+            if re.search(r"ex-(?:[\wÀ-ÿ-]+(?:,| e) )*$", t[:m.start()], re.I):
+                continue
+            # "vitória" como palavra: só conta o clube quando não é "vitória do/da/de/sobre..." (a vitória de alguém)
+            if cid == "vitoria" and re.match(r"\s+(d[oae]s?|sobre|no|na|em|por|contra|fora|em casa|magra|suada|histórica)\b", t[m.end():], re.I):
+                continue
+            return True
+    return False
+
+
 def update_news():
     sites = " OR ".join(f"site:{s}" for s in CONFIG["fontes"])
     for cid, c in CLUBS.items():
         items = []
         try:
-            items += [dict(x, tag="clube") for x in news_query(f'"{c["busca"]}" ({sites}) when:2d')]
+            # busca pelo nome (no título, quando dá) e filtra: só fica o que é do clube
+            terms = " OR ".join(f'intitle:"{n}"' for n in (c.get("apelidos") or [c["busca"]])[:3])
+            items += [dict(x, tag="clube") for x in news_query(f'({terms}) ({sites}) when:3d')]
             for rep in c.get("setoristas", []):
                 items += [dict(x, tag=rep) for x in news_query(f'"{rep}" "{c["busca"]}" when:3d')]
+            items = [x for x in items if about_club(cid, x["title"])]
         except Exception as ex:
             log("notícias", cid, ex)
             continue
