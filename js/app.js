@@ -28,9 +28,17 @@
   };
   const rowOf = (id) => state.standings.find((r) => r.id === id);
   /* próximo jogo: o da rodada atual, se ainda não foi disputado; senão o que a CBF indica */
+  // próximo adversário: o primeiro jogo do clube ainda não encerrado, em qualquer rodada (inclusive adiados).
+  // Assim que o jogo da rodada termina, a tabela já mostra o adversário seguinte; com a bola rolando, o de agora.
   const nextOf = (id) => {
-    const m = state.matches.find((x) => x.status !== "ft" && (x.home === id || x.away === id));
-    return m ? (m.home === id ? m.away : m.home) : rowOf(id).next;
+    const enc = (g) => g[8]?.state === "post" || (g[2] != null && !(g[8] && g[8].state === "in"));
+    let best = null, bk = Infinity;
+    for (const g of Object.values(window.PD.FIXTURES || {}).flat()) {
+      if ((g[0] !== id && g[1] !== id) || enc(g)) continue;
+      const k = g[4] ? Date.parse(`${g[4]}T${g[5] || "23:59"}:00-03:00`) : Infinity;
+      if (k < bk) { bk = k; best = g; }
+    }
+    return best ? (best[0] === id ? best[1] : best[0]) : rowOf(id).next;
   };
 
   /* ---------- utilidades ---------- */

@@ -198,6 +198,7 @@ node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! 
 node tests/mobile/arbitragem.mjs                   # árbitro nos títulos das manchetes e quadro de arbitragem na página do jogo
 node tests/seguranca/site.mjs                      # testes de invasão no navegador: dados maliciosos nas fontes, endereços forjados, moldura de outro site
 node tests/seguranca/api.mjs                       # testes de invasão da API: arquivos fora do site, travessia de pastas, métodos, parâmetros, limites
+node tests/mobile/menu.mjs                         # menu principal visível e clicável no PC, tablet e celular; coluna "Próx." troca assim que o jogo termina
 node tests/mobile/vigia.mjs                        # vigia: aba aberta desde a noite anterior, jogo parado aos 63' e jogo sem resultado são corrigidos sozinhos
 node tests/mobile/sobreposicao.mjs                 # revisão visual: texto vazando da caixa, texto ou escudo por cima do vizinho e conteúdo fora da tela, em 17 páginas e 5 larguras (CLUBES=1: os 20 clubes; ABA=estatisticas: a aba de cada um)
 python -X utf8 tests/auditoria.py                  # coerência dos dados: tabela, rodadas e placares, só jogadores que estão no clube, reservas de verdade, DM, artilharia, retrospecto e o Raio-X contra a tabela

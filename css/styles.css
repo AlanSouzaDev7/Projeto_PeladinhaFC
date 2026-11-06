@@ -2685,3 +2685,8 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .rx-col span.dn i, .rx-legend i.contra { background: color-mix(in srgb, var(--text-3) 55%, var(--surface-3)); }
 .rx-track .me.bad { box-sizing: border-box; background: var(--surface); border: 3px solid var(--loss); }
 @media (max-width: 420px) { .rx-col { grid-template-rows: 78px auto 78px; } }
+/* menu no celular e no tablet: a barra inferior com os 5 itens do menu principal.
+   A regra base (display: none) vinha depois da que a mostra e vencia: abaixo de 900 px o site ficava sem menu. */
+@media (max-width: 900px) {
+  .bottom-nav { display: flex; }
+}
