@@ -30,6 +30,17 @@ O site publicado no GitHub Pages se mantém atualizado sozinho:
 
 Para atualizar na hora: aba **Actions** do repositório › **Atualizar dados** › **Run workflow**.
 
+### Vigia: dados que ficam para trás
+
+Uma aba aberta por horas (computador dormindo, aba em segundo plano, internet caindo) ficava parada no tempo: um jogo "ao vivo, 63'" que já tinha acabado e o jogo seguinte sem resultado. O GitHub também atrasa a rotina de 30 min (às vezes roda de 5 em 5 horas). O **vigia** confere a coerência dos dados e corrige sozinho:
+
+- **No navegador** (`js/live.js`), a cada 2 min e na hora em que a aba volta a aparecer, a internet volta ou a página sai do cache:
+  - jogo "ao vivo" ou "a disputar" que começou há mais de 2h15 → busca o placar daquele dia na ESPN;
+  - arquivo gravado com mais de 40 min → relê a versão publicada pelo robô e fica com o placar mais adiantado de cada jogo.
+  - O que foi visto e corrigido fica em `PD.vigia` (no console do navegador).
+- **No robô** (`server/placar_api.py`): antes de gravar, o jogo parado no tempo é consultado de novo pelo outro endereço da ESPN.
+- **Nos testes**: `tests/mobile/vigia.mjs` reproduz a aba aberta desde a noite anterior (com e sem a ESPN no ar), e a auditoria reprova um arquivo gravado com jogo parado no tempo.
+
 ### Placar mais rápido com a API-Football (opcional)
 
 Um Worker da Cloudflare ([`worker/`](worker/README.md)) guarda a chave da **API-Football** e entrega placar e lances ao site. Ele é ligado em [`js/config.js`](js/config.js). Com ele ligado, a API-Football vem primeiro e a ESPN fica de reserva (Worker fora do ar ou limite do plano esgotado). Um jogo hipotético simulado testa os três casos:
@@ -187,6 +198,7 @@ node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! 
 node tests/mobile/arbitragem.mjs                   # árbitro nos títulos das manchetes e quadro de arbitragem na página do jogo
 node tests/seguranca/site.mjs                      # testes de invasão no navegador: dados maliciosos nas fontes, endereços forjados, moldura de outro site
 node tests/seguranca/api.mjs                       # testes de invasão da API: arquivos fora do site, travessia de pastas, métodos, parâmetros, limites
+node tests/mobile/vigia.mjs                        # vigia: aba aberta desde a noite anterior, jogo parado aos 63' e jogo sem resultado são corrigidos sozinhos
 node tests/mobile/sobreposicao.mjs                 # revisão visual: texto vazando da caixa, texto ou escudo por cima do vizinho e conteúdo fora da tela, em 17 páginas e 5 larguras (CLUBES=1: os 20 clubes; ABA=estatisticas: a aba de cada um)
 python -X utf8 tests/auditoria.py                  # coerência dos dados: tabela, rodadas e placares, só jogadores que estão no clube, reservas de verdade, DM, artilharia, retrospecto e o Raio-X contra a tabela
 python -X utf8 tests/dm_casos.py                   # regras do departamento médico com manchetes reais (nome certo, liberado x desfalque, suspensão não conta)

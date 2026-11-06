@@ -164,6 +164,62 @@ def seed():
 # ---------------------------------------------------------------------------
 # Atualizações
 # ---------------------------------------------------------------------------
+VELHO_JOGO = 135 * 60   # um jogo dura ~2 h com intervalo e acréscimos
+
+
+def jogos_parados(fixtures, agora=None):
+    """Jogos que deveriam ter terminado (começaram há mais de 2h15, até 4 dias atrás) e ainda estão 'ao vivo' ou sem placar."""
+    agora = agora or time.time()
+    out = []
+    for games in fixtures.values():
+        for g in games:
+            if not (g[4] and g[5]):
+                continue
+            try:
+                k = calendar.timegm(time.strptime(f"{g[4]} {g[5]}", "%Y-%m-%d %H:%M")) + 3 * 3600   # horário de Brasília
+            except ValueError:
+                continue
+            st = (g[8] or {}).get("state") if len(g) > 8 and isinstance(g[8], dict) else None
+            encerrado = st == "post" or (st is None and g[2] is not None)
+            if not encerrado and k + VELHO_JOGO < agora < k + 4 * 86400:
+                out.append(g)
+    return out
+
+
+def vigia_jogos(fixtures):
+    """Vigia: jogo parado no tempo (a consulta do dia falhou ou veio incompleta) é consultado de novo, pelo outro endereço da ESPN."""
+    lista = jogos_parados(fixtures)
+    if not lista:
+        return 0
+    log("vigia:", len(lista), "jogo(s) parado(s) no tempo:", ", ".join(f"{g[0]} x {g[1]}" for g in lista))
+    corrigidos = 0
+    for day in sorted({g[4] for g in lista}):
+        for host in ("https://site.web.api.espn.com/apis", ESPN):
+            try:
+                sb = get_json(f"{host}/site/v2/sports/soccer/bra.1/scoreboard?dates={day.replace('-', '')}")
+                break
+            except Exception as ex:
+                log("vigia", day, host, ex)
+                sb = None
+        for g in [g for g in lista if g[4] == day]:
+            for ev in (sb or {}).get("events", []):
+                comp = ev["competitions"][0]
+                teams = {BY_ESPN.get(c["team"]["id"]): c for c in comp["competitors"]}
+                if g[0] in teams and g[1] in teams:
+                    st = comp["status"]["type"]
+                    while len(g) < 9:
+                        g.append(None)
+                    g[7] = ev["id"]
+                    if st["state"] in ("in", "post"):
+                        g[2], g[3] = int(teams[g[0]]["score"]), int(teams[g[1]]["score"])
+                    g[8] = {"state": st["state"], "clock": clock_label(comp["status"]), "detail": st.get("shortDetail"), "gols": goals_of(comp)}
+                    if st["state"] == "in":
+                        g[8]["live"] = True
+                    corrigidos += st["state"] == "post"
+    log("vigia:", corrigidos, "corrigido(s)")
+    return corrigidos
+
+
 def update_standings_and_fixtures():
     real, fixtures = seed()
     with lock:
@@ -214,6 +270,7 @@ def update_standings_and_fixtures():
                     g[8] = {"state": st["state"], "clock": clock_label(comp["status"]), "detail": st.get("shortDetail"), "gols": goals_of(comp)}
                     if st["state"] == "in":  # ainda em andamento: placar parcial, não final
                         g[8]["live"] = True
+    vigia_jogos(fixtures)
     add_new_cards(table, old, fixtures)
     try:
         add_upcoming_rounds(fixtures)

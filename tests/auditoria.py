@@ -67,6 +67,20 @@ for rnd, games in L["fixtures"].items():
                 ph = sum(1 for x in gols if x[2] == h)   # a súmula credita o gol (inclusive o contra) ao time beneficiado
                 check(ph == g[2] and len(gols) == g[2] + g[3], f"rodada {rnd}: {h} {g[2]}x{g[3]} {a} não bate com os gols da súmula ({len(gols)})", aviso=True)
 
+# ---- vigia: nenhum jogo "parado no tempo" (começou há mais de 2h15 antes da gravação e não tem resultado)
+m_upd = re.search(r"(\d{2})/(\d{2})/(\d{4})\D+(\d{2}):(\d{2})", L.get("updated") or "")
+if m_upd:
+    import calendar
+    gravado = calendar.timegm(time.strptime("{2}-{1}-{0} {3}:{4}".format(*m_upd.groups()), "%Y-%m-%d %H:%M")) + 3 * 3600
+    for rnd, games in L["fixtures"].items():
+        for g in games:
+            if not (g[4] and g[5]):
+                continue
+            k = calendar.timegm(time.strptime(f"{g[4]} {g[5]}", "%Y-%m-%d %H:%M")) + 3 * 3600
+            st = (g[8] or {}).get("state") if len(g) > 8 and isinstance(g[8], dict) else None
+            if k + 135 * 60 < gravado < k + 4 * 86400:
+                check(st == "post" or (st is None and g[2] is not None), f"rodada {rnd}: {g[0]} x {g[1]} parado no tempo ({st or 'sem placar'}) na gravação de {L['updated']}")
+
 # ---- elenco: listas só com quem está no clube
 def club_games(cid):
     e = ESPN[cid]

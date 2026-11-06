@@ -188,6 +188,26 @@
     return k && st !== "post" && now > k - 15 * 60e3 && now < k + 3 * 3600e3;
   };
 
+  // placar de um dia na ESPN: atualiza os jogos encontrados; true = algo mudou
+  async function espnDia(day, games, skip = new Set()) {
+    const sb = await scoreboard(`?dates=${day}`);
+    if (!sb) return false;
+    let changed = false;
+    for (const ev of sb.events || []) {
+      const comp = ev.competitions[0], { s: side, h, a } = sides(ev);
+      const g = games.find((x) => x[0] === h && x[1] === a);
+      if (!g || skip.has(g)) continue;
+      while (g.length < 9) g.push(null);
+      const st = comp.status.type.state;
+      const before = JSON.stringify(g);
+      g[7] = ev.id;
+      if (st === "in" || st === "post") { g[2] = +side.home.score; g[3] = +side.away.score; }
+      g[8] = { state: st, clock: clockOf(comp.status), detail: comp.status.type.shortDetail, live: st === "in", gols: golsESPN(comp) };
+      if (JSON.stringify(g) !== before) changed = true;
+    }
+    return changed;
+  }
+
   async function pollScores() {
     lembrar();
     const games = allGames(), now = Date.now();
@@ -208,22 +228,7 @@
     }
     // 2) ESPN para o que faltou
     const days = [...new Set(need.filter((g) => !covered.has(g)).map((g) => g[4].replace(/-/g, "")))];
-    for (const day of days) {
-      const sb = await scoreboard(`?dates=${day}`);
-      if (!sb) continue;
-      for (const ev of sb.events || []) {
-        const comp = ev.competitions[0], { s: side, h, a } = sides(ev);
-        const g = games.find((x) => x[0] === h && x[1] === a);
-        if (!g || covered.has(g)) continue;
-        while (g.length < 9) g.push(null);
-        const st = comp.status.type.state;
-        const before = JSON.stringify(g);
-        g[7] = ev.id;
-        if (st === "in" || st === "post") { g[2] = +side.home.score; g[3] = +side.away.score; }
-        g[8] = { state: st, clock: clockOf(comp.status), detail: comp.status.type.shortDetail, live: st === "in", gols: golsESPN(comp) };
-        if (JSON.stringify(g) !== before) changed = true;
-      }
-    }
+    for (const day of days) if (await espnDia(day, games, covered)) changed = true;
     if (changed) {
       if (!PD.LIVE) PD.ROUND = currentRound(); // rodada terminou: passa para a próxima
       window.dispatchEvent(new Event("placar:data"));
@@ -348,6 +353,104 @@
   }
   PD.aoVivoTabela = tabelaAoVivo;
   PD.aoVivoArtilharia = artilhariaAoVivo;
+
+  /* ---------------- Vigia: dados que ficaram para trás ----------------
+     A aba pode ficar aberta por horas (computador dormindo, aba em segundo plano, sem internet): o jogo ficava
+     "ao vivo, 63'" para sempre e o jogo seguinte nunca ganhava resultado. O vigia confere a coerência dos dados
+     a cada 2 min e sempre que a aba volta a aparecer, a internet volta ou a página sai do cache do navegador:
+       - jogo "ao vivo" ou "a disputar" que começou há mais de 2h15 (um jogo dura ~2 h com intervalo e acréscimos);
+       - arquivo gravado (js/live-data.js) com mais de 40 min: relê a versão publicada pelo robô.
+     O que estiver velho é corrigido na hora pela ESPN (o placar do dia daquele jogo) e o problema fica registrado
+     em PD.vigia (o que foi visto, o que foi corrigido e quando). */
+  const VELHO_JOGO = 135 * 60e3, VELHO_ARQUIVO = 40 * 60e3, RODA = 120e3;
+  const ordemSt = (g) => (g[8]?.state === "post" ? 2 : g[8]?.state === "in" ? 1 : g[2] != null && !g[8] ? 2 : 0);
+  const quandoGravado = (u) => { const m = /(\d{2})\/(\d{2})\/(\d{4})\D+(\d{2}):(\d{2})/.exec(u || ""); return m ? new Date(`${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}:00-03:00`).getTime() : 0; };
+  const vigia = (PD.vigia = { rodadas: 0, ultima: null, problemas: [], corrigidos: 0, arquivo: null });
+  function parados(now = Date.now()) {
+    return allGames().filter((g) => {
+      const k = kickOf(g);
+      return k && ordemSt(g) < 2 && now > k + VELHO_JOGO && now < k + 4 * 864e5;
+    });
+  }
+  // relê js/live-data.js (só sem a API) e junta: o placar mais adiantado vence (encerrado > ao vivo > a disputar)
+  let relendo = null;
+  function relerArquivo() {
+    if (relendo) return relendo;
+    relendo = new Promise((res) => {
+      const velho = window.LIVE_DATA, sc = document.createElement("script");
+      sc.src = `js/live-data.js?v=${Date.now()}`;
+      sc.onload = sc.onerror = () => { sc.remove(); const d = window.LIVE_DATA; if (d === velho) return res(false); window.SEG?.limpa(d); res(juntar(d)); };
+      document.head.appendChild(sc);
+    }).finally(() => setTimeout(() => (relendo = null), 1000));
+    return relendo;
+  }
+  function juntar(d) {
+    if (!d || !d.standings || quandoGravado(d.updated) <= quandoGravado(PD.REAL.updated)) return false;
+    lembrar();
+    let mudou = false;
+    const meus = new Map(allGames().map((g) => [`${g[0]}|${g[1]}`, g]));
+    for (const [rd, lista] of Object.entries(d.fixtures || {})) {
+      for (const n of lista) {
+        const g = meus.get(`${n[0]}|${n[1]}`);
+        if (!g) { (PD.FIXTURES[rd] = PD.FIXTURES[rd] || []).push(n); mudou = true; continue; }
+        if (ordemSt(n) >= ordemSt(g) && JSON.stringify(n) !== JSON.stringify(g)) { g.splice(0, g.length, ...n); mudou = true; }
+      }
+    }
+    PD.REAL.table = d.standings;
+    if (d.scorers) PD.REAL.scorers = d.scorers;
+    PD.REAL.updated = d.updated;
+    if (d.arbitragem) window.ARBITRAGEM = d.arbitragem;
+    PD.ROUNDS = Object.keys(PD.FIXTURES).map(Number).sort((a, b) => a - b);
+    return true;
+  }
+  let vigiando = null, vigiaEm = 0, relidoEm = 0;
+  function vigiar(motivo = "rotina") {
+    if (vigiando) return vigiando;
+    vigiando = (async () => {
+      await window.PD_BOOT;
+      const now = Date.now();
+      vigiaEm = now;
+      vigia.rodadas++;
+      vigia.ultima = new Date(now).toISOString();
+      let mudou = false;
+      // 1) arquivo gravado velho: relê o publicado
+      // (no máximo a cada 10 min: com o robô do GitHub atrasado, não baixa o mesmo arquivo de novo a cada rodada)
+      if (!PD.LIVE && now - quandoGravado(PD.REAL.updated) > VELHO_ARQUIVO && now - relidoEm > 10 * 60e3) {
+        relidoEm = now;
+        const novo = await relerArquivo();
+        vigia.arquivo = { gravado: PD.REAL.updated, relido: vigia.ultima, novo };
+        mudou ||= novo;
+      }
+      // 2) jogos parados no tempo: placar do dia na ESPN
+      const lista = parados(now);
+      if (lista.length) {
+        const nomes = lista.map((g) => `${g[0]} x ${g[1]} (${g[8]?.state || "sem placar"}${g[8]?.clock ? ` ${g[8].clock}` : ""})`);
+        vigia.problemas.push({ quando: vigia.ultima, motivo, jogos: nomes });
+        if (vigia.problemas.length > 20) vigia.problemas.shift();
+        const games = allGames();
+        for (const day of new Set(lista.map((g) => g[4].replace(/-/g, "")))) if (await espnDia(day, games)) mudou = true;
+        const resolvidos = lista.filter((g) => ordemSt(g) === 2).length;
+        vigia.corrigidos += resolvidos;
+        console.info(`[vigia] ${lista.length} jogo(s) parado(s) no tempo (${motivo}): ${nomes.join(", ")} · ${resolvidos} corrigido(s)`);
+      }
+      if (mudou) {
+        lembrar();
+        if (!PD.LIVE) PD.ROUND = currentRound();
+        window.dispatchEvent(new Event("placar:data"));
+      }
+      return mudou;
+    })().finally(() => (vigiando = null));
+    return vigiando;
+  }
+  PD.vigiar = vigiar;
+  // a cada 2 min; e na hora em que a aba volta (o computador acordou), a internet voltou ou a página saiu do cache
+  setInterval(() => vigiar("rotina"), RODA);
+  const voltou = (m) => () => { if (document.visibilityState !== "hidden" && Date.now() - vigiaEm > 5000) vigiar(m); };
+  document.addEventListener("visibilitychange", voltou("aba voltou"));
+  addEventListener("online", voltou("internet voltou"));
+  addEventListener("focus", voltou("janela em foco"));
+  addEventListener("pageshow", (e) => e.persisted && vigiar("página restaurada"));
+  window.PD_BOOT?.then(() => vigiar("abertura"));
 
   // com o Worker: consulta logo depois que ele tiver placar novo (entre 2 s e o intervalo configurado)
   const proxyDelay = (next) => (next == null ? PROXY_MS : Math.min(PROXY_MS, Math.max(2000, next + 700)));
