@@ -21,7 +21,7 @@
   const esc = (x) => String(x || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
   const hora = (ts) => new Date(ts * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
   const ha = (ts) => { const m = Math.max(1, Math.round((Date.now() / 1000 - ts) / 60)); return m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} d`; };
-  const escudos = (x) => (x.clubes || []).slice(0, 2).map((c) => (window.PD?.byId && Object.prototype.hasOwnProperty.call(window.PD.byId, c) && window.GFX ? window.GFX.crest(window.PD.byId[c], 16) : "")).join("");
+  const escudos = (x) => (x.clubes || []).slice(0, 2).map((c) => (window.PD?.byId && Object.prototype.hasOwnProperty.call(window.PD.byId, c) && window.GFX ? window.GFX.crest(window.PD.byId[c], 20) : "")).join("");
   let items = [], cur = 0, timer = null;
 
   function paint() {

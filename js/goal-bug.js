@@ -44,13 +44,20 @@
       <path d="M5 -3 C12 -13 21 -15 28 -11 L24.5 -7.5 L28 -5 L23.5 -2 L26 1 L20.5 2.5 L21.5 6 L15 4.5 Q9 6 5 7 Z" fill="#111"/></g>
       <ellipse cx="0" cy="5" rx="7" ry="11" fill="#111"/><path d="M-4 15 L0 22 L4 15 Z" fill="#111"/>
       <circle cx="0" cy="-8.5" r="5" fill="#3b3b3b"/><path d="M1 -7 L5.5 -4.5 L1.2 -3.5 Z" fill="#e8e8e8"/><circle cx="1.6" cy="-9.6" r="1.1" fill="#fff"/>`,
-    // galo: cabeça de perfil, crista e barbela vermelhas, bico dourado
-    "atletico-mg": `<path d="M-13 22 C-15 8 -13 -4 -5 -10 C1 -14 8 -13 12 -8 L21 -5 L12 -2.5 C13 6 8 14 6 22 Z" fill="#111"/>
-      <path d="M-8 -10.5 C-10.5 -18 -4.5 -21 -2 -15 C-1 -23 6 -23 6 -15.5 C9.5 -21 15 -17.5 11 -10.5 C5 -13.5 -2 -13.5 -8 -10.5 Z" fill="#e0262f"/>
-      <path d="M12 -2.5 C15 4 9.5 7 8 1 Z" fill="#e0262f"/>
-      <path d="M12 -8.5 L22 -5 L12 -2.5 Z" fill="#c9a54a"/>
-      <circle cx="4.5" cy="-6.5" r="2.6" fill="#fff"/><circle cx="5.2" cy="-6.5" r="1.2" fill="#111"/>
-      <path d="M-10 6 C-6 10 -2 10 2 6 M-11 13 C-6 17 0 17 4 13" stroke="#c9a54a" stroke-width="1.6" fill="none" stroke-linecap="round"/>`,
+    // galo: cabeça de perfil com as penas do pescoço em camadas (preto e branco), crista serrilhada com volume,
+    // barbela, bico dourado com narina e olho com brilho
+    "atletico-mg": `<defs><linearGradient id="gbCr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff4a4f"/><stop offset="1" stop-color="#b3121b"/></linearGradient>
+      <linearGradient id="gbBi" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3d27a"/><stop offset="1" stop-color="#b8892e"/></linearGradient></defs>
+      <path d="M-16 23 C-19 10 -17 -2 -10 -9 C-4 -14 5 -15 11 -10 C14 -7 15 -4 14 0 C13 8 9 15 7 23 Z" fill="#111"/>
+      ${[[-15, 21, -6, 6], [-13, 14, -4, -1], [-11, 7, -1, -6], [-8, 1, 3, -9]].map(([x1, y1, x2, y2], k) => `<path d="M${x1} ${y1} Q${(x1 + x2) / 2 - 4} ${(y1 + y2) / 2 + 3} ${x2} ${y2} Q${(x1 + x2) / 2 + 1} ${(y1 + y2) / 2 + 6} ${x1 + 3} ${y1 + 2} Z" fill="${k % 2 ? "#fff" : "#2a2a2a"}" opacity="${k % 2 ? 0.92 : 1}"/>`).join("")}
+      <path d="M-14 23 L-12 16 L-9 23 L-6 15 L-3 23 L0 16 L3 23 Z" fill="#fff" opacity=".9"/>
+      <path d="M-8 -9.5 C-11 -14 -9.5 -19 -6 -18.5 C-5.5 -23 -0.5 -24.5 1.5 -20 C3 -24.5 8 -24 8.5 -19 C11.5 -21 15 -18.5 13 -14 C14.5 -12.5 13.5 -10 11 -9.5 C5 -12.5 -2 -12.5 -8 -9.5 Z" fill="url(#gbCr)"/>
+      <path d="M-5 -17 C-4 -19.5 -1 -20 0.5 -18 M3 -19.5 C4.5 -21 7 -20.5 7.5 -18.5" stroke="#ff9a9c" stroke-width=".9" fill="none" stroke-linecap="round" opacity=".8"/>
+      <path d="M12 -2 C16.5 3 13.5 9.5 9.5 8 C7.5 6.5 8 1 9 -1 Z" fill="url(#gbCr)"/>
+      <path d="M12 -8.5 L23 -5 L12.5 -1.8 C13 -4 13 -6.5 12 -8.5 Z" fill="url(#gbBi)"/><path d="M12.6 -5 L21 -4.6" stroke="#8a6420" stroke-width=".7"/>
+      <circle cx="15.6" cy="-6.6" r=".7" fill="#6b4a14"/>
+      <circle cx="5" cy="-6" r="3" fill="#f3b23a"/><circle cx="5.5" cy="-6" r="1.6" fill="#111"/><circle cx="6.1" cy="-6.7" r=".6" fill="#fff"/>
+      <path d="M1.5 -9.5 C3.5 -11 7 -10.8 8.6 -8.8" stroke="#fff" stroke-width=".8" fill="none" opacity=".55"/>`,
     // furacão: três braços girando
     "athletico-pr": `<g class="spin">${[0, 120, 240].map((a) => `<path transform="rotate(${a})" d="M0 0 C2 -13 15 -19 26 -10 C15 -13 6 -7 4.5 3 Z" fill="#c8102e"/><path transform="rotate(${a + 60})" d="M0 0 C1.5 -9 10 -13 17 -8.5 C10 -9.5 4.5 -5 3.2 1.5 Z" fill="#fff" opacity=".9"/>`).join("")}<circle r="5.5" fill="#111" stroke="#c8102e" stroke-width="2"/></g>`,
     // onda da Baía de Todos os Santos, nas três cores

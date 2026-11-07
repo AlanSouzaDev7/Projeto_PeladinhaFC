@@ -345,11 +345,11 @@
     const A = byId[a], B = byId[b], an = analyse(a, b);
     const ca = display(A), cb = display(B);
     const pick = (side, cur, other) => `<label class="bp-pick" style="--pc:${display(byId[cur])}">
-      ${crest(byId[cur], 34)}<select data-bp-pick="${side}" aria-label="Escolher clube">${Object.values(byId).map((c) => `<option value="${c.id}" ${c.id === cur ? "selected" : ""} ${c.id === other ? "disabled" : ""}>${c.name}</option>`).join("")}</select></label>`;
+      ${crest(byId[cur], 42)}<select data-bp-pick="${side}" aria-label="Escolher clube">${Object.values(byId).map((c) => `<option value="${c.id}" ${c.id === cur ? "selected" : ""} ${c.id === other ? "disabled" : ""}>${c.name}</option>`).join("")}</select></label>`;
     const formChips = (cid) => `<div class="chips">${FORMS.map((f) => `<button class="chip ${f === load(cid).f ? "on" : ""}" data-bp-form="${cid}|${f}">${f}</button>`).join("")}</div>`;
     const xiList = (cid) => {
       const c = byId[cid];
-      return `<div class="card"><div class="card-h"><span style="display:flex;gap:8px;align-items:center">${crest(c, 20)}${c.abbr}</span><small>${load(cid).f} · <a href="#/clube/${cid}/elenco" style="color:var(--ink)">editar</a></small></div>
+      return `<div class="card"><div class="card-h"><span style="display:flex;gap:8px;align-items:center">${crest(c, 26)}${c.abbr}</span><small>${load(cid).f} · <a href="#/clube/${cid}/elenco" style="color:var(--ink)">editar</a></small></div>
         <ul class="squad-list">${shape(cid).map((s) => `<li><span class="n">${s.p ? s.p.n ?? "–" : ""}</span><b>${s.p ? s.p.name : "—"}</b><span class="p">${s.role}</span></li>`).join("")}</ul></div>`;
     };
     const pct = (v) => `${Math.round(v * 100)}%`;
@@ -450,7 +450,7 @@
       cv.classList.add("on");
       const { top, base } = HEATMAP.summary(pr);
       card.style.setProperty("--tc", display(c));
-      card.innerHTML = `<div class="hc-head"><span class="hc-n" style="background:${display(c)};color:${onColor(display(c))}">${s.p?.n ?? "–"}</span><div><b>${s.p ? s.p.name : s.role}</b><small>${crest(c, 14)} ${c.abbr} · ${s.role} na escalação</small></div></div>
+      card.innerHTML = `<div class="hc-head"><span class="hc-n" style="background:${display(c)};color:${onColor(display(c))}">${s.p?.n ?? "–"}</span><div><b>${s.p ? s.p.name : s.role}</b><small>${crest(c, 18)} ${c.abbr} · ${s.role} na escalação</small></div></div>
         <div class="hc-roles">${top}</div><div class="hc-meta">${base}</div>
         <div class="hc-scale" aria-hidden="true"><i></i><span>menos</span><span>mais tempo</span></div>
         <div class="hc-src">Mapa de calor estimado: posições em que jogou (escalações da ESPN), pesadas pelos minutos</div>`;

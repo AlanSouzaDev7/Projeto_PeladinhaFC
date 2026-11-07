@@ -137,6 +137,16 @@ Eles ganham o selo "base".
 2. Cadastre-as em *Settings → Secrets and variables → Actions* com os nomes `X_BEARER_TOKEN`, `IG_USER_ID` e `IG_ACCESS_TOKEN`.
 3. O robô passa a usá-las sozinho. As chaves nunca ficam no código.
 
+## Cenas dos clubes com a cidade de verdade
+
+Ao abrir um clube, a cena de abertura (o urubu, o galo, o farol, a caravela...) acontece sobre uma **foto real da cidade do clube**: o Rio com o Cristo no Corcovado para o Flamengo, o nascer do sol no Mirante do Mangabeiras para o Atlético, o Farol da Barra para o Vitória, o Guaíba para o Inter, e assim nos 19 clubes.
+
+- Fotos de licença livre do Wikimedia Commons, com autor e licença no canto da faixa.
+- Cada foto ganha as cores do clube (preto e branco para Atlético, Botafogo, Corinthians, Santos e Vasco), começa escura e "acende" com a cena, com uma aproximação lenta da câmera e paralaxe do mouse.
+- Luz de cinema por cima: raios de sol e brilho de lente saindo do sol de verdade da foto, névoa baixa e vinheta.
+- Bichos em silhueta realista: o galo contra o sol, com rabo de penas em foice balançando, penas do pescoço, crista e esporas, que levanta voo até o escudo; aves com as penas da ponta da asa abertas (os urubus sobem em espiral perto do Cristo). A abertura do Flamengo abre as listras rubro-negras como uma cortina.
+- No celular, cada foto tem um enquadramento próprio, com o ponto principal no alto, longe do texto. Sem a foto (internet lenta ou fora do ar), vale o fundo desenhado.
+
 ## Tomada de drone do estádio (página da partida)
 
 Ao abrir um jogo, a faixa com os escudos, a data e o estádio ganha uma **tomada de drone do estádio da partida**: a câmera começa no céu, acima das nuvens, atravessa as nuvens descendo e inclinando para baixo até o estádio aparecer atrás do placar, freia como um drone de verdade e fica parada. As cores dos dois clubes continuam nas laterais. Os **escudos** são grandes (imagem de 330 px, nítida) e entram com uma animação, cada um do seu lado, em todos os jogos, passados e futuros.
@@ -216,6 +226,8 @@ python -X utf8 tests/dm_casos.py                   # regras do departamento méd
 node tests/mobile/departamento-medico.mjs          # departamento médico na página do clube: situação, desde quando, confirmação, manchetes e quem voltou
 node tests/mobile/faixa.mjs                        # faixa de notícias: troca da manchete, fita, links, atualização sozinha a cada 30 min, reduzir movimento
 node tests/mobile/movimento.mjs                    # fita andando e escudos grandes da partida em 13 aparelhos (320 px a 2560 px, Chrome e Safari, retrato e paisagem)
+node tests/mobile/escudos-espaco.mjs               # escudos x textos, letra por letra: nenhum texto embaixo de escudo, em 18 páginas e 6 telas (320 px a 1440 px)
+node tests/mobile/cenas.mjs                        # cenas dos 19 clubes com a foto da cidade (foto, crédito, sem erros) e fluidez no PC, Android e iPhone
 node tests/mobile/noticias.mjs                     # "Últimas notícias" do clube: só manchetes que falam dele (20 clubes, PC e celular)
 node tests/mobile/sem-recarregar.mjs                # com jogo rolando, a página não se redesenha sozinha (só o que mudou é trocado)
 node tests/mobile/fotos.mjs [prefixo]               # fotos das páginas principais (PC escuro, celular claro) para revisão visual

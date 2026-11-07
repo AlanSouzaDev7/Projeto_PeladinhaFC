@@ -115,8 +115,8 @@
     return `<a class="match" href="#/partida/${m.id}" data-match="${m.id}" style="--i:${i};${matchVars(m)}">
       <div class="time ${live ? "live" : ""}">${statusLabel(m)}${m.adiado ? `<small class="adiado">adiado</small>` : ""}</div>
       <div class="teams">
-        <div class="team ${lose("home") ? "loser" : ""}">${crest(h, 22)}<span>${h.abbr}</span></div>
-        <div class="team ${lose("away") ? "loser" : ""}">${crest(a, 22)}<span>${a.abbr}</span></div>
+        <div class="team ${lose("home") ? "loser" : ""}">${crest(h, 30)}<span>${h.abbr}</span></div>
+        <div class="team ${lose("away") ? "loser" : ""}">${crest(a, 30)}<span>${a.abbr}</span></div>
       </div>
       <div class="score ${live ? "live" : ""}"><b data-s="h">${started ? m.hs : ""}</b><b data-s="a">${started ? m.as : ""}</b></div>
       <button class="star ${fav ? "on" : ""}" data-fav="${m.home}" aria-label="Favoritar ${h.abbr}">${ICON.star}</button>
@@ -132,11 +132,11 @@
         const hd = (v) => `<td class="hide-sm">${v}</td>`;
         return `<tr class="${r.id === highlight ? "me" : ""}" style="--i:${i}">
           <td><span class="pos ${posClass(r.pos)}">${r.pos}</span>${r.mov ? `<span class="mov ${r.mov > 0 ? "up" : "down"}" title="${r.mov > 0 ? "Subiu" : "Caiu"} ${Math.abs(r.mov)} ${Math.abs(r.mov) > 1 ? "posições" : "posição"} com os jogos de agora">${r.mov > 0 ? "▲" : "▼"}${Math.abs(r.mov)}</span>` : ""}</td>
-          <td class="club"><a href="#/clube/${c.id}">${crest(c, compact ? 22 : 24)}${compact ? `<span>${c.abbr}</span>` : `<span class="nm-l">${c.name}</span><span class="nm-s">${c.abbr}</span>`}${r.vivo ? vivoChip(r.vivo, compact) : ""}</a></td>
+          <td class="club"><a href="#/clube/${c.id}">${crest(c, compact ? 28 : 30)}${compact ? `<span>${c.abbr}</span>` : `<span class="nm-l">${c.name}</span><span class="nm-s">${c.abbr}</span>`}${r.vivo ? vivoChip(r.vivo, compact) : ""}</a></td>
           <td class="pts">${r.p}</td><td>${r.j}</td>
           ${compact ? "" : [r.w, r.d, r.l, r.gf, r.ga].map(hd).join("")}
           <td>${r.sg > 0 ? "+" : ""}${r.sg}</td>
-          ${compact ? "" : [r.pct, r.ca, `<span class="cv">${r.cv}</span>`, nx ? `<a href="#/clube/${nx.id}" title="${nx.name}" style="display:inline-block">${crest(nx, 20)}</a>` : "—"].map(hd).join("")}
+          ${compact ? "" : [r.pct, r.ca, `<span class="cv">${r.cv}</span>`, nx ? `<a href="#/clube/${nx.id}" title="${nx.name}" style="display:inline-block">${crest(nx, 26)}</a>` : "—"].map(hd).join("")}
         </tr>`;
       }).join("")}</tbody></table>`;
   }
@@ -421,7 +421,7 @@
     if (!d) return `<div class="empty" style="padding:28px">Carregando o retrospecto…</div>`;
     if (!d.last?.length && !d.next?.length) return `<div class="empty" style="padding:28px">Retrospecto ainda não disponível.</div>`;
     const c = byId[id];
-    const oppCrest = (e) => (e.oppId && byId[e.oppId] ? crest(byId[e.oppId], 26) : e.oppLogo ? `<img class="crest" src="${e.oppLogo}" width="26" height="26" alt="" loading="lazy" />` : `<i class="fm-nocrest"></i>`);
+    const oppCrest = (e) => (e.oppId && byId[e.oppId] ? crest(byId[e.oppId], 32) : e.oppLogo ? `<img class="crest" src="${e.oppLogo}" width="32" height="32" alt="" loading="lazy" />` : `<i class="fm-nocrest"></i>`);
     const dm = (iso) => iso.split("-").reverse().slice(0, 2).join("/");
     const wk = (iso) => WD[new Date(`${iso}T12:00:00-03:00`).getDay()];
     const tag = (e) => `<span class="fm-comp">${e.comp}${e.stage ? ` · ${e.stage}` : ""}</span>`;
@@ -458,7 +458,7 @@
     const done = list.filter((e) => e.state === "post");
     const n = (r) => done.filter((e) => e.res === r).length;
     const gp = done.reduce((t, e) => t + e.gf, 0), gc = done.reduce((t, e) => t + e.ga, 0);
-    const side = (club, name, logo) => `<span class="hm-team">${club ? crest(club, 24) : logo ? `<img class="crest" src="${logo}" width="24" height="24" alt="" loading="lazy" />` : `<i class="fm-nocrest"></i>`}<b>${club ? club.abbr : name}</b></span>`;
+    const side = (club, name, logo) => `<span class="hm-team">${club ? crest(club, 30) : logo ? `<img class="crest" src="${logo}" width="30" height="30" alt="" loading="lazy" />` : `<i class="fm-nocrest"></i>`}<b>${club ? club.abbr : name}</b></span>`;
     const opp = (e) => (e.oppId && byId[e.oppId] ? byId[e.oppId] : null);
     const row = (e) => {
       const H = e.home ? side(c) : side(opp(e), e.opp, e.oppLogo), A = e.home ? side(opp(e), e.opp, e.oppLogo) : side(c);
@@ -529,7 +529,7 @@
     return `<div class="card reveal" data-live="art"><div class="card-h">Artilharia <small>${geral.some((x) => x[4]) ? "ao vivo · " : ""}${REAL.source}</small></div>
       <ul class="squad-list">${list.map(([name, cid, g, vivo, rolando], k) => {
         const ficha = scorerOf(name, cid);
-        return `<li${scorerAttrs(name, cid)}><span class="n">${k + 1}º</span>${crest(byId[cid], 28)}<div style="flex:1;min-width:0"><b>${name}</b>${golHoje(vivo, rolando)}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(g / max) * 100}" style="background:${display(byId[cid])}"></i></div></div><b class="goals">${g}</b>${ficha ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`;
+        return `<li${scorerAttrs(name, cid)}><span class="n">${k + 1}º</span>${crest(byId[cid], 36)}<div style="flex:1;min-width:0"><b>${name}</b>${golHoje(vivo, rolando)}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(g / max) * 100}" style="background:${display(byId[cid])}"></i></div></div><b class="goals">${g}</b>${ficha ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`;
       }).join("")}</ul>${list.some(([n, c]) => scorerOf(n, c)) ? `<div class="source">Clique (ou toque) no jogador para ver a ficha; clique de novo para fechar</div>` : ""}</div>`;
   }
 
@@ -545,7 +545,7 @@
         <i class="sd-bar" style="--f:${(p.gols / max).toFixed(3)};--c:${display(c)}"></i></div>` : `<div class="sd-p sd-${side} sd-none">—</div>`;
     const rows = Array.from({ length: Math.max(H.length, A.length) }, (_, k) => `<li>${cell(H[k], h, "h")}<span class="sd-k">${k + 1}º</span>${cell(A[k], a, "a")}</li>`).join("");
     return `<div class="card reveal scorers-duel" data-live="duel"><div class="card-h">Artilheiros dos dois times <small>top 5 · Brasileirão</small></div>
-      <div class="sd-head"><div class="sd-t">${crest(h, 32)}<b>${h.abbr}</b></div><span class="sd-vs">gols</span><div class="sd-t sd-ta"><b>${a.abbr}</b>${crest(a, 32)}</div></div>
+      <div class="sd-head"><div class="sd-t">${crest(h, 42)}<b>${h.abbr}</b></div><span class="sd-vs">gols</span><div class="sd-t sd-ta"><b>${a.abbr}</b>${crest(a, 42)}</div></div>
       <ul class="sd-list">${rows}</ul>
       <div class="sd-foot"><span><b>${tot(H)}</b> gols do top 5</span><span><b>${tot(A)}</b> gols do top 5</span></div>
       <div class="source">Súmulas da ESPN; quem está no top 10 da CBF aparece com o número oficial. Gols contra não entram.${H.some((p) => scorerOf(p.name, m.home)) || A.some((p) => scorerOf(p.name, m.away)) ? " Clique (ou toque) no jogador para ver a ficha; clique de novo para fechar." : ""}</div></div>`;
@@ -585,16 +585,16 @@
     ];
     const maxAdv = p.adversarios[0]?.[1] || 1;
     return `<div class="sc-h" style="--sc:${cor}">
-        ${crest(c, 40)}
+        ${crest(c, 52)}
         <div><b>${p.name}</b><small>${c.name} · ${p.pos ? `${p.pos}º na artilharia` : `${p.rank}º artilheiro do clube`}</small></div>
         <div class="sc-g"><b>${p.gols}</b><small>${p.aoVivo ? `gols · +${p.aoVivo} hoje` : "gols"}</small></div>
       </div>
       <div class="sc-sec">Ficha técnica</div>
       <dl class="sc-ficha">${fatos.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
       ${p.clubes.length ? `<div class="sc-sec">Gols por clube na temporada</div>
-        <ul class="sc-clubes">${p.clubes.map(([k, j, g]) => `<li>${crest(byId[k], 20)}<span>${byId[k].abbr}</span><small>${j} jogos</small><b>${g}</b></li>`).join("")}</ul>` : ""}
+        <ul class="sc-clubes">${p.clubes.map(([k, j, g]) => `<li>${crest(byId[k], 26)}<span>${byId[k].abbr}</span><small>${j} jogos</small><b>${g}</b></li>`).join("")}</ul>` : ""}
       <div class="sc-sec">Contra quem marcou <small>${p.adversarios.length} clubes</small></div>
-      ${p.adversarios.length ? `<ul class="sc-adv">${p.adversarios.map(([k, g]) => `<li>${crest(byId[k], 20)}<span>${byId[k].abbr}</span><i style="--w:${(g / maxAdv) * 100}%;background:${cor}"></i><b>${g}${p.adversariosVivo?.[k] ? `<small class="sc-hoje">+${p.adversariosVivo[k]} hoje</small>` : ""}</b></li>`).join("")}</ul>` : `<p class="sc-none">Nenhum gol nas súmulas.</p>`}
+      ${p.adversarios.length ? `<ul class="sc-adv">${p.adversarios.map(([k, g]) => `<li>${crest(byId[k], 26)}<span>${byId[k].abbr}</span><i style="--w:${(g / maxAdv) * 100}%;background:${cor}"></i><b>${g}${p.adversariosVivo?.[k] ? `<small class="sc-hoje">+${p.adversariosVivo[k]} hoje</small>` : ""}</b></li>`).join("")}</ul>` : `<p class="sc-none">Nenhum gol nas súmulas.</p>`}
       <div class="sc-src">Súmulas: ESPN${p.golsSumulas !== p.gols ? ` · ${p.golsSumulas} gols nas súmulas do Brasileirão` : ""}</div>`;
   }
   let scTip = null;
@@ -753,7 +753,7 @@
       <aside class="left sticky">
         <div class="card">
           <div class="card-h">Favoritos <small>${favClubs.length}</small></div>
-          <div class="side-list">${favClubs.length ? favClubs.map((c) => `<a href="#/clube/${c.id}" style="--club:${display(c)}">${crest(c, 24)}${c.abbr}<span class="count">${rowOf(c.id).pos}º</span></a>`).join("") : `<p class="empty" style="padding:16px">Toque na ★ de uma partida para favoritar.</p>`}</div>
+          <div class="side-list">${favClubs.length ? favClubs.map((c) => `<a href="#/clube/${c.id}" style="--club:${display(c)}">${crest(c, 30)}${c.abbr}<span class="count">${rowOf(c.id).pos}º</span></a>`).join("") : `<p class="empty" style="padding:16px">Toque na ★ de uma partida para favoritar.</p>`}</div>
         </div>
         <div class="card">
           <div class="card-h">Competições</div>
@@ -764,7 +764,7 @@
         </div>
         <div class="card">
           <div class="card-h">Clubes</div>
-          <div class="side-list">${CLUBS.map((c) => `<a href="#/clube/${c.id}" style="--club:${display(c)}">${crest(c, 24)}${c.abbr}</a>`).join("")}</div>
+          <div class="side-list">${CLUBS.map((c) => `<a href="#/clube/${c.id}" style="--club:${display(c)}">${crest(c, 30)}${c.abbr}</a>`).join("")}</div>
         </div>
       </aside>
 
@@ -813,13 +813,20 @@
         <a class="club-card" href="#/clube/${c.id}" style="${clubVars(c)};--i:${i}" data-tilt>
           <div class="kit-bg" style="background:${kitBg(c)}"></div>
           <div class="card-scene">${SCENES.scene(c, "card")}</div>
-          <div class="crest-wrap">${crest(c, 60, true)}</div>
+          <div class="crest-wrap">${crest(c, 80, true)}</div>
           <span class="rank">${rowOf(c.id).pos}º</span>
           <div class="info"><h3>${c.abbr}</h3><p><span>${SCENES.caption(c.id)}</span><span>${c.city} · ${c.uf}</span></p></div>
           <span class="go">${ICON.arrow}</span>
         </a>`).join("")}</div>`;
   }
 
+  // crédito da foto da cidade que aparece ao fundo da cena (licença livre do Wikimedia Commons)
+  function fotoCidade(id) {
+    const f = window.HERO_SCENES?.foto?.(id);
+    if (!f) return "";
+    const e = (x) => (window.SEG ? SEG.esc(x) : String(x).replace(/[&<>"']/g, ""));
+    return `<a class="hero-credit" href="${e(f.pagina)}" target="_blank" rel="noopener noreferrer" title="${e(f.nome)} — foto no Wikimedia Commons">Foto: ${e(f.autor)} · ${e(f.licenca)} · Wikimedia Commons</a>`;
+  }
   // cenas de dia (mais claras) pedem uma sombra mais forte atrás do texto do topo
   const SCRIM = { bahia: 0.8, mirassol: 0.84, chapecoense: 0.62, coritiba: 0.6 };
   function pageClub(id, tab = "geral") {
@@ -873,7 +880,7 @@
               </div>
             </div>
             ${byId[nextOf(id)] ? `<div class="card reveal"><div class="card-h">Próximo adversário</div>
-              <a class="derby" href="#/clube/${nextOf(id)}">${crest(c, 34)}<span class="vs">VS</span>${crest(byId[nextOf(id)], 34)}<div style="margin-left:6px"><b>${byId[nextOf(id)].name}</b><br/><small style="color:var(--text-3)">${rowOf(nextOf(id)).pos}º · ${rowOf(nextOf(id)).p} pts</small></div></a></div>` : ""}
+              <a class="derby" href="#/clube/${nextOf(id)}">${crest(c, 46)}<span class="vs">VS</span>${crest(byId[nextOf(id)], 46)}<div style="margin-left:6px"><b>${byId[nextOf(id)].name}</b><br/><small style="color:var(--text-3)">${rowOf(nextOf(id)).pos}º · ${rowOf(nextOf(id)).p} pts</small></div></a></div>` : ""}
             ${scorersCard(5, id)}
             ${c.idol ? `<div class="card idol reveal${c.idolPhoto ? " has-photo" : ""}">${c.idolPhoto ? `<img class="idol-photo" src="${c.idolPhoto}" alt="" loading="lazy" referrerpolicy="no-referrer" data-sem-foto />` : ""}<div class="eyebrow" style="color:inherit;opacity:.92;text-shadow:0 1px 3px rgb(0 0 0 / .5)">Ídolo eterno</div><h4>${c.idol}</h4>${c.idolPhoto ? `<small class="idol-credit">Foto: Wikimedia Commons</small>` : ""}</div>` : ""}
             ${LIVE.hasNews() ? `<div class="card news" data-news="${id}"><div class="card-h">Últimas notícias <small>Google Notícias</small></div><ul><li class="mam-empty">Buscando notícias…</li></ul></div>` : ""}
@@ -888,7 +895,7 @@
               </div>
             </div>
             ${rival ? `<div class="card reveal"><div class="card-h">Grande rival</div>
-              <a class="derby" href="#/clube/${rival.id}">${crest(c, 34)}<span class="vs">VS</span>${crest(rival, 34)}<div style="margin-left:6px"><b>${rival.name}</b><br/><small style="color:var(--text-3)">${rowOf(rival.id).pos}º na tabela · ${rowOf(rival.id).p} pts</small></div></a></div>` : ""}
+              <a class="derby" href="#/clube/${rival.id}">${crest(c, 46)}<span class="vs">VS</span>${crest(rival, 46)}<div style="margin-left:6px"><b>${rival.name}</b><br/><small style="color:var(--text-3)">${rowOf(rival.id).pos}º na tabela · ${rowOf(rival.id).p} pts</small></div></a></div>` : ""}
           </div>
         </div>`;
     }
@@ -905,6 +912,7 @@
     return `<div class="club-page">
       <section class="hero hero--gb ${HERO_SCENES.has(id) ? "hero--canvas" : ""}" data-short="${c.short}"${SCRIM[id] ? ` style="--scrim:${SCRIM[id]}"` : ""}>
         ${HERO_SCENES.has(id) ? `<canvas class="hero-canvas" data-hero-scene="${id}" aria-hidden="true"></canvas>` : `<div class="kit-bg" style="background:${kitBg(c)}"></div>`}
+        ${fotoCidade(id)}
         <div class="hero-inner">
           <div class="hero-text">
             <div class="eyebrow">${c.nick} · desde ${c.founded}</div>
@@ -1109,7 +1117,7 @@
     const att = best("gf"), def = best("ga", -1), yel = best("ca"), red = best("cv");
     const tile = (i, key, value, sub, c) => `<a class="kpi kpi-link" href="#/tabela/${key}" data-rank-preview="${key}" style="--i:${i}${c ? `;--c1:${c.colors[0]}` : ""}">
         <i class="kpi-sheet" aria-hidden="true"></i><i class="kpi-sheet" aria-hidden="true"></i>
-        <small>${RANKINGS[key].kpi}</small><b>${value}</b><em>${c ? `<span style="display:inline-flex;align-items:center;gap:6px">${crest(c, 16)}${sub}</span>` : sub}</em>
+        <small>${RANKINGS[key].kpi}</small><b>${value}</b><em>${c ? `<span style="display:inline-flex;align-items:center;gap:6px">${crest(c, 22)}${sub}</span>` : sub}</em>
         <span class="kpi-more">Ver ranking <svg viewBox="0 0 24 24" width="14" height="14"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>`;
     return `<div class="kpis league-kpis" data-live="liga">
       ${tile(0, "gols", goals, `${(goals / games).toFixed(2).replace(".", ",")} por jogo · ${games} jogos`)}
@@ -1124,7 +1132,7 @@
   /* prévia: os 5 primeiros do ranking e o último, mostrada ao passar o mouse ou segurar o dedo */
   function rankPreviewHTML(key) {
     const R = RANKINGS[key], list = ranked(key), top = list.slice(0, 5), last = list[list.length - 1];
-    const row = (r, i) => `<li style="--c1:${display(byId[r.id])}"><span class="rp-pos">${i}</span>${crest(byId[r.id], 20)}<span class="rp-nm">${byId[r.id].abbr}</span><b>${R.value(r)}</b></li>`;
+    const row = (r, i) => `<li style="--c1:${display(byId[r.id])}"><span class="rp-pos">${i}</span>${crest(byId[r.id], 26)}<span class="rp-nm">${byId[r.id].abbr}</span><b>${R.value(r)}</b></li>`;
     return `<div class="rp-h"><b>${R.title}</b><small>${R.unit}</small></div>
       <ol>${top.map((r, i) => row(r, i + 1)).join("")}</ol>
       <div class="rp-gap">⋯</div><ol class="rp-last">${row(last, list.length)}</ol>
@@ -1142,13 +1150,13 @@
     const podium = [1, 0, 2].map((i) => {
       const r = list[i], c = byId[r.id];
       return `<a class="podium-step p${i + 1}" href="#/clube/${c.id}" style="--c1:${display(c)};--i:${i}">
-        ${crest(c, i ? 54 : 72)}<b>${R.value(r)}</b><span>${c.abbr}</span><i>${i + 1}º</i></a>`;
+        ${crest(c, i ? 66 : 88)}<b>${R.value(r)}</b><span>${c.abbr}</span><i>${i + 1}º</i></a>`;
     }).join("");
     const rows = list.map((r, i) => {
       const c = byId[r.id], v = vals[i];
       return `<li class="rank-row" style="--c1:${display(c)};--i:${Math.min(i, 14)}">
         <span class="rk-pos">${i + 1}</span>
-        <a class="rk-club" href="#/clube/${c.id}">${crest(c, 26)}<span><b>${c.abbr}</b><small>${r.pos}º na tabela</small></span></a>
+        <a class="rk-club" href="#/clube/${c.id}">${crest(c, 34)}<span><b>${c.abbr}</b><small>${r.pos}º na tabela</small></span></a>
         <span class="rk-bar"><i data-w="${pct(v)}"></i></span>
         <b class="rk-val">${R.card ? `<i class="rk-card ${R.card}"></i>` : ""}${R.value(r)}</b>
         ${R.cols.map(([l, f]) => `<span class="rk-col"><small>${l}</small>${f(r)}</span>`).join("")}
@@ -1700,7 +1708,7 @@
     sel = 0;
     if (!q) return results.classList.remove("open");
     const hits = CLUBS.filter((c) => norm([c.name, c.abbr, c.city, c.stadium, c.nick, c.uf].join(" ")).includes(q)).slice(0, 8);
-    results.innerHTML = hits.length ? hits.map((c, i) => `<a href="#/clube/${c.id}" class="${i === 0 ? "sel" : ""}">${crest(c, 26)}<b>${c.name}</b><small>${c.stadium}</small></a>`).join("") : `<div class="empty" style="padding:16px">Nenhum clube encontrado.</div>`;
+    results.innerHTML = hits.length ? hits.map((c, i) => `<a href="#/clube/${c.id}" class="${i === 0 ? "sel" : ""}">${crest(c, 32)}<b>${c.name}</b><small>${c.stadium}</small></a>`).join("") : `<div class="empty" style="padding:16px">Nenhum clube encontrado.</div>`;
     results.classList.add("open");
   });
   input.addEventListener("keydown", (e) => {
