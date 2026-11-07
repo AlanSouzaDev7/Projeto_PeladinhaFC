@@ -139,7 +139,7 @@ Eles ganham o selo "base".
 
 ## Cenas dos clubes com a cidade de verdade
 
-Ao abrir um clube, a cena de abertura (o urubu, o galo, o farol, a caravela...) acontece sobre uma **foto real da cidade do clube**: o Rio com o Cristo no Corcovado para o Flamengo, o nascer do sol no Mirante do Mangabeiras para o Atlético, o Farol da Barra para o Vitória, o Guaíba para o Inter, e assim nos 19 clubes.
+Ao abrir um clube, a cena de abertura (o urubu, o galo, o farol, a caravela...) acontece sobre uma **foto real da cidade do clube**: o Rio com o Cristo no Corcovado para o Flamengo, o nascer do sol no Mirante do Mangabeiras para o Atlético, o Farol da Barra para o Vitória, o Guaíba para o Inter, e assim em todos os 20 clubes. No Cruzeiro, as luzes de Belo Horizonte à noite ficam embaixo do céu estrelado: a foto some aos poucos para cima e a Via Láctea e o Cruzeiro do Sul continuam no céu.
 
 - Fotos de licença livre do Wikimedia Commons, com autor e licença no canto da faixa.
 - Cada foto ganha as cores do clube (preto e branco para Atlético, Botafogo, Corinthians, Santos e Vasco), começa escura e "acende" com a cena, com uma aproximação lenta da câmera e paralaxe do mouse.
@@ -227,7 +227,7 @@ node tests/mobile/departamento-medico.mjs          # departamento médico na pá
 node tests/mobile/faixa.mjs                        # faixa de notícias: troca da manchete, fita, links, atualização sozinha a cada 30 min, reduzir movimento
 node tests/mobile/movimento.mjs                    # fita andando e escudos grandes da partida em 13 aparelhos (320 px a 2560 px, Chrome e Safari, retrato e paisagem)
 node tests/mobile/escudos-espaco.mjs               # escudos x textos, letra por letra: nenhum texto embaixo de escudo, em 18 páginas e 6 telas (320 px a 1440 px)
-node tests/mobile/cenas.mjs                        # cenas dos 19 clubes com a foto da cidade (foto, crédito, sem erros) e fluidez no PC, Android e iPhone
+node tests/mobile/cenas.mjs                        # cenas dos 20 clubes com a foto da cidade (foto, crédito, sem erros) e fluidez no PC, Android e iPhone
 node tests/mobile/noticias.mjs                     # "Últimas notícias" do clube: só manchetes que falam dele (20 clubes, PC e celular)
 node tests/mobile/sem-recarregar.mjs                # com jogo rolando, a página não se redesenha sozinha (só o que mudou é trocado)
 node tests/mobile/fotos.mjs [prefixo]               # fotos das páginas principais (PC escuro, celular claro) para revisão visual

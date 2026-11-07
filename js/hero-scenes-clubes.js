@@ -138,6 +138,31 @@
      com uma aproximação lenta da câmera e a paralaxe do mouse. Enquanto a foto não chega, vale o fundo desenhado;
      quando chega, entra esmaecendo por cima dele. */
   const FOTOS = {
+   "cruzeiro": {
+    "cel": [
+     0.5,
+     0.6,
+     1.1
+    ],
+    "nome": "Belo Horizonte à noite, vista do alto",
+    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Belo_Horizonte_view_from_Comiteco.jpg/960px-Belo_Horizonte_view_from_Comiteco.jpg",
+    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Belo_Horizonte_view_from_Comiteco.jpg/1920px-Belo_Horizonte_view_from_Comiteco.jpg",
+    "ar": 1.778,
+    "autor": "Sudhertzen",
+    "licenca": "CC BY-SA 4.0",
+    "pagina": "https://commons.wikimedia.org/wiki/File:Belo_Horizonte_view_from_Comiteco.jpg",
+    "sombra": "#000818",
+    "luz": "#2f62ff",
+    "forca": 0.42,
+    "foco": [
+     0.5,
+     0.6
+    ],
+    "mascara": [
+     0.4,
+     0.62
+    ]
+   },
    "flamengo": {
     "cel": [0.36, 0.15, 1.5],
     "nome": "Rio de Janeiro e o Pão de Açúcar",
@@ -495,6 +520,12 @@
     const escuro = nova(), ex = escuro.getContext("2d");
     ex.drawImage(claro, 0, 0); ex.globalCompositeOperation = "multiply"; ex.fillStyle = f.sombra; ex.globalAlpha = 0.82; ex.fillRect(0, 0, W, H);
     ex.globalAlpha = 1; ex.globalCompositeOperation = "source-over"; ex.fillStyle = "rgba(0,0,0,.35)"; ex.fillRect(0, 0, W, H);
+    // foto só na parte de baixo (a cidade): em cima ela some aos poucos e fica o céu desenhado da cena
+    if (f.mascara) [claro, escuro].forEach((c) => {
+      const x = c.getContext("2d"), m = x.createLinearGradient(0, H * f.mascara[0], 0, H * f.mascara[1]);
+      m.addColorStop(0, "rgba(0,0,0,0)"); m.addColorStop(1, "rgba(0,0,0,1)");
+      x.globalCompositeOperation = "destination-in"; x.globalAlpha = 1; x.fillStyle = m; x.fillRect(0, 0, W, H);
+    });
     return { claro, escuro, w, h, ar: W / H, src: { sx, sy, sw, sh, nw: im.naturalWidth, nh: im.naturalHeight } };
   }
   // camada da foto: devolve true quando a foto cobre o quadro inteiro (o fundo desenhado pode ser pulado)
@@ -618,6 +649,8 @@
   const reg = (id, spec) => HERO_SCENES.register(id, scene(spec), spec.T || 4.6);
   // créditos da foto da cidade (a página do clube mostra no canto da faixa)
   HERO_SCENES.foto = (id) => FOTOS[id] || null;
+  // a cena do Cruzeiro (js/hero-scenes.js) usa as mesmas peças
+  HERO_SCENES.kit.cidade = { carregaFoto, camadaFoto, naFoto, nevoa, vinheta };
 
   /* ======================================================================
      Flamengo — o urubu sobre o Rio

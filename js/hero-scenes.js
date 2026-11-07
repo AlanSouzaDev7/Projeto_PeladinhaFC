@@ -193,6 +193,7 @@ HERO_SCENES.register("cruzeiro", (st) => {
   const lights = Array.from({ length: 140 }, () => ({ x: R(), y: 0.9 + R() * 0.1, ph: R() * 6, c: R() < 0.7 ? "255,214,140" : "170,200,255" }));
   const shooting = [];
   let nextShoot = 6;
+  const fd = {};   // foto de Belo Horizonte à noite (a cidade embaixo do céu estrelado)
 
   function drawRidge(ctx, pts, color, dx) {
     const { w, h } = st;
@@ -217,7 +218,7 @@ HERO_SCENES.register("cruzeiro", (st) => {
   }
 
   const scene = {
-    resize: buildMilky,
+    resize() { buildMilky(); fd.prep = null; },
     replay() { shooting.length = 0; nextShoot = 6; },
     frame(t, ctx) {
       const { w, h, mouse } = st;
@@ -277,13 +278,23 @@ HERO_SCENES.register("cruzeiro", (st) => {
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - Math.cos(s.ang) * s.len, y - Math.sin(s.ang) * s.len); ctx.stroke();
       }
 
-      // montanhas e luzes da cidade
-      drawRidge(ctx, far, "rgba(6,22,70,.95)", mouse.x * -10);
-      for (const L of lights) {
-        const a = 0.35 + 0.35 * Math.sin(t * 2 + L.ph);
-        ctx.fillStyle = `rgba(${L.c},${a})`; ctx.fillRect(L.x * w + mouse.x * -14, L.y * h, 1.6, 1.6);
+      // montanhas e luzes da cidade: desenhadas enquanto a foto real de BH à noite não chega; depois, a foto
+      // (só a parte de baixo, com as luzes da cidade acendendo) entra esmaecendo e o céu continua por cima
+      const K = HERO_SCENES.kit.cidade;
+      if (K && !fd.foto) fd.foto = K.carregaFoto("cruzeiro");
+      if (!fd.cobre) {
+        drawRidge(ctx, far, "rgba(6,22,70,.95)", mouse.x * -10);
+        for (const L of lights) {
+          const a = 0.35 + 0.35 * Math.sin(t * 2 + L.ph);
+          ctx.fillStyle = `rgba(${L.c},${a})`; ctx.fillRect(L.x * w + mouse.x * -14, L.y * h, 1.6, 1.6);
+        }
+        drawRidge(ctx, near, "#020a24", mouse.x * -18);
       }
-      drawRidge(ctx, near, "#020a24", mouse.x * -18);
+      if (K) {
+        const r = K.camadaFoto(ctx, st, fd, t, w, h, mouse, [0.6, 3.6]);
+        fd.cobre = r === 2;
+        if (r) K.nevoa(ctx, t, w, h, 0.62, "rgba(90,130,255,A)", 0.1);
+      }
 
       // posições das 5 estrelas: no céu → nas estrelas do escudo
       const pts = cross.map((s, i) => {

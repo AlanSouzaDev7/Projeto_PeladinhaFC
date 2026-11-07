@@ -1,12 +1,12 @@
 /* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. */
 /* Cenas de abertura dos clubes (js/hero-scenes-clubes.js) com a foto real da cidade ao fundo:
-   - nos 19 clubes: a foto da cidade carrega e entra na cena, o crédito da foto aparece, a cena desenha (não fica
+   - nos 20 clubes (o Cruzeiro, em js/hero-scenes.js, com Belo Horizonte à noite embaixo do céu estrelado): a foto da cidade carrega e entra na cena, o crédito da foto aparece, a cena desenha (não fica
      preta), sem erros de JavaScript e sem rolagem para os lados;
    - fluidez durante a animação (5 s): PC, Android (Pixel 7 com o processador 4x mais lento) e iPhone.
    Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  node tests/mobile/cenas.mjs */
 import { chromium, webkit, devices } from "playwright";
 const BASE = process.env.BASE || "http://127.0.0.1:5173";
-const CLUBES = ["athletico-pr", "atletico-mg", "bahia", "botafogo", "bragantino", "chapecoense", "corinthians", "coritiba", "flamengo", "fluminense",
+const CLUBES = ["cruzeiro", "athletico-pr", "atletico-mg", "bahia", "botafogo", "bragantino", "chapecoense", "corinthians", "coritiba", "flamengo", "fluminense",
   "gremio", "internacional", "mirassol", "palmeiras", "remo", "santos", "sao-paulo", "vasco", "vitoria"];
 let falhas = 0;
 const ok = (c, m) => { console.log(`${c ? "ok  " : "FALHA"} · ${m}`); if (!c) falhas++; };
@@ -51,9 +51,9 @@ for (const [nome, eng, opts, launch, lento, min] of [
   ["PC", chromium, { viewport: { width: 1440, height: 900 } }, { channel: "chrome" }, false, 50],
   ["Pixel 7 (CPU 4x mais lenta)", chromium, devices["Pixel 7"], { channel: "chrome" }, true, 24],
   ["iPhone 15 (WebKit, sem placa de vídeo neste ambiente)", webkit, devices["iPhone 15"], {}, false, 10],
-]) for (const cl of ["flamengo", "atletico-mg", "vitoria"]) {
+]) for (const cl of ["cruzeiro", "flamengo", "atletico-mg"]) {
   const q = await fps(nome, eng, opts, launch, lento, cl);
   ok(q.fps >= min, `${nome} · ${cl}: ${q.fps} quadros/s durante a animação, ${q.longos} engasgo(s) acima de 50 ms`);
 }
-console.log(falhas ? `\n${falhas} falha(s)` : "\nCenas com a foto da cidade ok nos 19 clubes e fluidas.");
+console.log(falhas ? `\n${falhas} falha(s)` : "\nCenas com a foto da cidade ok nos 20 clubes e fluidas.");
 process.exit(falhas ? 1 : 0);
