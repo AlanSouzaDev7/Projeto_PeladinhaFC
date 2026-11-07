@@ -2690,3 +2690,66 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 @media (max-width: 900px) {
   .bottom-nav { display: flex; }
 }
+
+/* ---------- tomada de drone do estádio na faixa da partida (js/drone.js) ---------- */
+.match-hero.has-drone {
+  /* a foto é escura nos dois temas: o texto da faixa fica claro */
+  --bg: #070b12; --text: #fff; --text-2: rgb(255 255 255 / 0.82); --text-3: rgb(255 255 255 / 0.66);
+  --surface-3: rgb(10 14 22 / 0.62); --line: rgb(255 255 255 / 0.22);
+  color: var(--text);
+  min-height: 440px;
+  isolation: isolate;
+}
+.match-hero.has-drone > :not(.mh-drone) { position: relative; z-index: 2; }
+.match-hero.has-drone .big, .match-hero.has-drone .side a, .match-hero.has-drone .mk li span { text-shadow: 0 2px 14px rgb(0 0 0 / 0.55); }
+.match-hero.has-drone .pill.muted { background: rgb(8 12 20 / 0.6); color: #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.mh-drone { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #0b1220; contain: strict; }
+.dr-cam { position: absolute; inset: 0; transform-origin: var(--fx) var(--fy); transform: scale(1.08); backface-visibility: hidden; }
+.dr-img { width: 100%; height: 100%; object-fit: cover; object-position: var(--fx) var(--fy); display: block; opacity: 0; transition: opacity 0.5s ease; }
+.mh-drone.pronto .dr-img { opacity: 1; }
+/* céu do começo da tomada (acima das nuvens) */
+.dr-sky { position: absolute; inset: 0; opacity: 0; background: linear-gradient(180deg, #7fa9d6 0%, #b9d2ea 46%, #e4eef7 72%, #c9d7e4 100%); }
+.mh-drone.voando .dr-sky { opacity: 1; }
+.dr-cloud {
+  position: absolute; width: 62%; height: 80%; border-radius: 50%; opacity: 0;
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.7) 42%, rgb(255 255 255 / 0) 100%);
+}
+.dr-cloud.c1 { left: -12%; top: 4%; }
+.dr-cloud.c2 { right: -14%; top: -6%; width: 80%; }
+.dr-cloud.c3 { left: 18%; top: 30%; width: 64%; height: 80%; }
+/* cores dos clubes nas laterais e sombra no meio para o placar */
+.dr-shade {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 46% 62% at 50% 46%, rgb(4 7 12 / 0.52), rgb(4 7 12 / 0.18) 70%, transparent 100%),
+    linear-gradient(90deg, color-mix(in srgb, var(--h1) 72%, #04070c) 0%, color-mix(in srgb, var(--h1) 34%, transparent) 26%, rgb(4 7 12 / 0.22) 42%, rgb(4 7 12 / 0.22) 58%, color-mix(in srgb, var(--a1) 34%, transparent) 74%, color-mix(in srgb, var(--a1) 72%, #04070c) 100%),
+    linear-gradient(180deg, rgb(4 7 12 / 0.35), transparent 30%, transparent 70%, rgb(4 7 12 / 0.55));
+}
+.dr-credit {
+  position: absolute !important; z-index: 3 !important; right: 12px; bottom: 8px; max-width: min(60%, 520px);
+  font-size: 10.5px; line-height: 1.3; color: rgb(255 255 255 / 0.72); text-decoration: none; text-align: right;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 4px rgb(0 0 0 / 0.8);
+}
+.dr-credit:hover { color: #fff; text-decoration: underline; }
+@media (max-width: 700px) {
+  .match-hero.has-drone { min-height: 400px; }
+  .dr-shade { background:
+    radial-gradient(ellipse 80% 55% at 50% 45%, rgb(4 7 12 / 0.55), rgb(4 7 12 / 0.2) 75%, transparent 100%),
+    linear-gradient(90deg, color-mix(in srgb, var(--h1) 55%, transparent) 0%, transparent 38%, transparent 62%, color-mix(in srgb, var(--a1) 55%, transparent) 100%),
+    linear-gradient(180deg, rgb(4 7 12 / 0.4), transparent 30%, transparent 65%, rgb(4 7 12 / 0.65)); }
+  .dr-credit { left: 12px; right: 12px; max-width: none; text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) { .dr-img { transition: none; } }
+/* PC (faixa mais larga que a foto): o estádio inteiro no centro, de longe, com as bordas esfumadas;
+   nas laterais, a mesma foto desfocada e parada, sob as cores dos clubes. No celular, a foto preenche a faixa. */
+.mh-drone { container-type: size; }
+/* laterais: a miniatura de 330 px ampliada já sai desfocada (sem filtro, que custa caro a cada quadro); a transparência escurece */
+.dr-bg { position: absolute; inset: -4%; width: 108%; height: 108%; object-fit: cover; object-position: var(--fx) var(--fy); opacity: 0; transition: opacity 0.8s ease; transform: scale(1.9); transform-origin: var(--fx) var(--fy); }
+.mh-drone.pronto .dr-bg { opacity: 0.6; }
+.dr-cam { transform: scale(1.1); }
+.mh-drone.largo .dr-cam {
+  left: 50%; right: auto; width: calc(100cqh * var(--ar)); margin-left: calc(-50cqh * var(--ar)); transform-origin: 50% 50%;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, rgb(0 0 0 / 0.35) 9%, rgb(0 0 0 / 0.8) 19%, #000 30%, #000 70%, rgb(0 0 0 / 0.8) 81%, rgb(0 0 0 / 0.35) 91%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, rgb(0 0 0 / 0.35) 9%, rgb(0 0 0 / 0.8) 19%, #000 30%, #000 70%, rgb(0 0 0 / 0.8) 81%, rgb(0 0 0 / 0.35) 91%, transparent 100%);
+}
+.mh-drone.largo .dr-img { object-position: 50% 50%; }

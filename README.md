@@ -137,6 +137,15 @@ Eles ganham o selo "base".
 2. Cadastre-as em *Settings → Secrets and variables → Actions* com os nomes `X_BEARER_TOKEN`, `IG_USER_ID` e `IG_ACCESS_TOKEN`.
 3. O robô passa a usá-las sozinho. As chaves nunca ficam no código.
 
+## Tomada de drone do estádio (página da partida)
+
+Ao abrir um jogo, a faixa com os escudos, a data e o estádio ganha uma **tomada de drone do estádio da partida**: a câmera começa no céu, acima das nuvens, atravessa as nuvens descendo e inclinando para baixo até o estádio aparecer atrás do placar, freia como um drone de verdade e fica parada. As cores dos dois clubes continuam nas laterais.
+
+- **Fotos reais** dos 20 estádios do Brasileirão, de licença livre (Wikimedia Commons), com autor e licença na própria faixa. Os vídeos do YouTube não podem ser reaproveitados (as imagens têm dono e os termos não permitem), então o "drone" é a câmera feita em código sobre a foto aérea.
+- O estádio vem do nome publicado pela ESPN para aquele jogo; sem o nome, a casa do mandante. Estádio fora da lista (jogo em campo neutro): a faixa fica como antes, sem mostrar outro estádio.
+- **Fluida**: só `transform` e `opacity`; começa quando a foto já está decodificada; no celular, foto menor; nas laterais, uma miniatura ampliada no lugar de um filtro de desfoque (que custa caro a cada quadro). Com movimento reduzido, a foto aparece já parada.
+- Estádios sem foto aérea livre (Nabi Abi Chedid, Couto Pereira, Baenão, Vila Belmiro, Barradão) usam a melhor foto livre do alto da arquibancada.
+
 ## Raio-X do clube e estatística da torcida
 
 A aba **Estatísticas** de cada clube abre com o **Raio-X**: números táticos do Brasileirão calculados pelo PLACAR a partir das súmulas da ESPN (posse, passes, finalizações, escanteios, desarmes, defesas do goleiro e o minuto de cada gol). Cada número vem com a posição do clube entre os 20 e a média da liga, e tudo anima quando aparece na tela:
@@ -198,6 +207,7 @@ node tests/mobile/tabela-ao-vivo.mjs                # tabela, artilharia e GOL! 
 node tests/mobile/arbitragem.mjs                   # árbitro nos títulos das manchetes e quadro de arbitragem na página do jogo
 node tests/seguranca/site.mjs                      # testes de invasão no navegador: dados maliciosos nas fontes, endereços forjados, moldura de outro site
 node tests/seguranca/api.mjs                       # testes de invasão da API: arquivos fora do site, travessia de pastas, métodos, parâmetros, limites
+node tests/mobile/drone.mjs                        # tomada de drone: os 20 estádios (foto, câmera parada, créditos) e a fluidez no PC, Android e iPhone
 node tests/mobile/menu.mjs                         # menu principal visível e clicável no PC, tablet e celular; coluna "Próx." troca assim que o jogo termina
 node tests/mobile/vigia.mjs                        # vigia: aba aberta desde a noite anterior, jogo parado aos 63' e jogo sem resultado são corrigidos sozinhos
 node tests/mobile/sobreposicao.mjs                 # revisão visual: texto vazando da caixa, texto ou escudo por cima do vizinho e conteúdo fora da tela, em 17 páginas e 5 larguras (CLUBES=1: os 20 clubes; ABA=estatisticas: a aba de cada um)

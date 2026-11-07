@@ -948,7 +948,8 @@
     const arb = m.status !== "ft" ? arbitragemDe(m) : null;
     if (arb) info.push(["Árbitro", arb.arbitro ? `${arb.arbitro}<small class="arb-src">segundo ${arb.confirmacoes > 1 ? `${arb.confirmacoes} manchetes` : "a imprensa"}</small>` : `<span class="arb-pend">Ainda não noticiado</span>`]);
     const both = state.standings.filter((r) => r.id === m.home || r.id === m.away);
-    return `<section class="match-hero" style="${matchVars(m)}"><h1 class="sr-only">${h.name} x ${a.name} — ${statusText(m)}</h1>
+    const drone = window.DRONE ? DRONE.html(m.venue, m.home) : "";
+    return `<section class="match-hero${drone ? " has-drone" : ""}" data-jogo="${m.id}" style="${matchVars(m)}">${drone}<h1 class="sr-only">${h.name} x ${a.name} — ${statusText(m)}</h1>
         <div style="text-align:center;margin-bottom:18px" data-live="pill"><span class="${m.status === "progress" ? "pill" : "pill muted"}">Brasileirão · ${m.round}ª rodada</span></div>
         ${scoreline(m)}
         <div class="mh-marks" data-marks hidden></div>
@@ -1462,6 +1463,7 @@
     HERO_SCENES.mount(view);
     GOALBUG.mount(view);
     LINEUP.mount(view);
+    window.DRONE?.mount(view);
     LIVE.mount(view);
     featSwipe($("[data-feature]", view));
     scorerCards(view);
