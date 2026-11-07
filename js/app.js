@@ -719,12 +719,12 @@
     }).join("");
   }
 
-  function scoreline(m, link = true) {
+  function scoreline(m, link = true, tam = 46) {
     const h = byId[m.home], a = byId[m.away];
     const started = m.status === "ft" || (m.status === "progress" && m.hs != null);
     const st = `<div class="status ${m.status === "progress" ? "" : "ft"}">${statusText(m)}</div>`;
     const side = (c, size) => link ? `<a href="#/clube/${c.id}" class="side">${crest(c, size)}<span>${c.abbr}</span></a>` : `<div class="side">${crest(c, size)}<span>${c.abbr}</span></div>`;
-    return `<div class="scoreline">${side(h, 46)}<div><div class="big" data-score>${started ? `${m.hs} - ${m.as}` : "vs"}</div>${st}</div>${side(a, 46)}</div>`;
+    return `<div class="scoreline">${side(h, tam)}<div><div class="big" data-score>${started ? `${m.hs} - ${m.as}` : "vs"}</div>${st}</div>${side(a, tam)}</div>`;
   }
 
   /* ==========================================================================
@@ -951,7 +951,7 @@
     const drone = window.DRONE ? DRONE.html(m.venue, m.home) : "";
     return `<section class="match-hero${drone ? " has-drone" : ""}" data-jogo="${m.id}" style="${matchVars(m)}">${drone}<h1 class="sr-only">${h.name} x ${a.name} — ${statusText(m)}</h1>
         <div style="text-align:center;margin-bottom:18px" data-live="pill"><span class="${m.status === "progress" ? "pill" : "pill muted"}">Brasileirão · ${m.round}ª rodada</span></div>
-        ${scoreline(m)}
+        ${scoreline(m, true, 128)}
         <div class="mh-marks" data-marks hidden></div>
         ${m.venue ? `<p style="text-align:center;color:var(--text-2);margin:16px 0 0">${ICON.stadium.replace("<svg", '<svg style="display:inline;vertical-align:-2px;margin-right:4px"')}${estadio(m.venue)}</p>` : ""}
       </section>
@@ -1404,6 +1404,24 @@
   const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
   // "?estatico" na URL mostra os números já no valor final (útil para prints)
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches || new URLSearchParams(location.search).has("estatico");
+  // faixa da partida: os escudos entram (cada um do seu lado) quando as imagens estão prontas;
+  // o mesmo jogo redesenhado em menos de 90 s (placar ao vivo, troca de aba) não repete a entrada
+  const escudosVistos = new Map();
+  function escudosEntram(root) {
+    const mh = root.querySelector(".match-hero[data-jogo]");
+    if (!mh || mh.dataset.escudos) return;
+    mh.dataset.escudos = "1";
+    const k = mh.dataset.jogo, antes = escudosVistos.get(k) || 0;
+    escudosVistos.set(k, Date.now());
+    if (reduced || Date.now() - antes < 90e3) return mh.classList.add("escudos-ok");
+    mh.classList.add("escudos-espera");
+    const imgs = [...mh.querySelectorAll(".scoreline img.crest")];
+    const pronto = (i) => (i.complete && i.naturalWidth ? (i.decode ? i.decode().catch(() => {}) : Promise.resolve()) : new Promise((r) => { i.addEventListener("load", r, { once: true }); i.addEventListener("error", r, { once: true }); }));
+    let foi = false;
+    const vai = () => { if (foi) return; foi = true; mh.classList.remove("escudos-espera"); mh.classList.add("escudos-entram"); };
+    Promise.all(imgs.map(pronto)).then(vai);
+    setTimeout(vai, 1200);   // internet lenta: entra assim mesmo
+  }
   let prev = parse();
 
   async function onRoute() {
@@ -1464,6 +1482,7 @@
     GOALBUG.mount(view);
     LINEUP.mount(view);
     window.DRONE?.mount(view);
+    escudosEntram(view);
     LIVE.mount(view);
     featSwipe($("[data-feature]", view));
     scorerCards(view);

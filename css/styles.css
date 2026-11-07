@@ -2267,14 +2267,28 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .tk-prog { position: absolute; left: 18px; bottom: 0; height: 2px; width: calc(100% - 18px); background: var(--tk-red); transform-origin: left; transform: scaleX(0); }
 .tk-prog.run { animation: tkProg 8s linear forwards; }
 @keyframes tkProg { to { transform: scaleX(1); } }
-.ticker:hover .tk-prog, .ticker:focus-within .tk-prog { animation-play-state: paused; }
+/* pausa só com o mouse de verdade em cima ou com o foco do teclado (no celular o "hover" fica preso depois do toque,
+   e o foco fica no link depois de abrir a matéria em outra aba: antes, a fita parava para sempre nesses casos) */
+.ticker.segura .tk-prog, .ticker.pausado .tk-prog { animation-play-state: paused; }
 /* fita */
 .tk-run { position: relative; overflow: hidden; padding-left: 18px; color: #111827;
   background: linear-gradient(180deg, #fff, var(--tk-tape)); box-shadow: inset 0 1px 0 rgb(0 0 0 / 0.06);
   -webkit-mask-image: linear-gradient(90deg, transparent 18px, #000 54px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, transparent 18px, #000 54px, #000 calc(100% - 36px), transparent); }
-.tk-track { display: flex; width: max-content; height: 100%; animation: tkRun var(--tk-dur, 90s) linear infinite; }
-.ticker:hover .tk-track, .ticker:focus-within .tk-track { animation-play-state: paused; }
-@keyframes tkRun { to { transform: translateX(-50%); } }
+/* a fita anda pela Web Animations API (js/ticker.js), que a regra geral de "reduzir movimento" não desliga;
+   a animação em CSS (.css) fica só para navegadores antigos sem ela */
+.tk-track { display: flex; width: max-content; height: 100%; will-change: transform; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.tk-track.css { -webkit-animation: tkRun var(--tk-dur, 90s) linear infinite; animation: tkRun var(--tk-dur, 90s) linear infinite; }
+@media (hover: hover) and (pointer: fine) { .ticker:hover .tk-track.css { animation-play-state: paused; } }
+.ticker.pausado .tk-track.css { -webkit-animation-play-state: paused; animation-play-state: paused; }
+@-webkit-keyframes tkRun { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } }
+@keyframes tkRun { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } }
+/* botão de pausar a fita (para quem prefere a fita parada) */
+.tk-body { position: relative; }
+.tk-pause { position: absolute; right: 6px; bottom: calc((var(--tk-r) - 24px) / 2); z-index: 3; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer; color: #fff; background: var(--tk-ink); box-shadow: 0 0 0 2px #fff; opacity: 0.85; }
+.tk-pause:hover, .tk-pause:focus-visible { opacity: 1; outline: none; box-shadow: 0 0 0 2px var(--tk-red); }
+.tk-pause::before { content: ""; width: 8px; height: 9px; border-left: 3px solid; border-right: 3px solid; box-sizing: border-box; }
+.ticker.pausado .tk-pause::before { width: 0; height: 0; border: 5px solid transparent; border-left: 8px solid #fff; border-right: 0; margin-left: 3px; }
 .tk-copy { display: flex; align-items: center; height: 100%; }
 .tk-item { display: inline-flex; align-items: center; gap: 8px; padding: 0 2px; white-space: nowrap; color: inherit; text-decoration: none; }
 .tk-item b { font: 600 15px var(--font-label); letter-spacing: 0.01em; }
@@ -2314,10 +2328,12 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
   .tk-tag b { font-size: 15px; }
   .tk-h b { font-size: 14.5px; }
 }
+/* animações do aparelho desligadas (Windows, iPhone, Android): a fita continua andando, mais devagar e sem os efeitos
+   em volta; a manchete troca só esmaecendo, sem deslizar. O botão ao lado da fita para tudo. */
 @media (prefers-reduced-motion: reduce) {
-  .ticker, .tk-tag span::before, .tk-track, .tk-prog.run { animation: none; }
-  .tk-run { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
-  .tk-h { transition: none; }
+  .ticker, .tk-tag span::before { animation: none; }
+  .tk-h, .tk-h.out { transform: none; transition: opacity 0.4s; }
+  .tk-prog { display: none; }
 }
 
 /* ---------- Partida: arbitragem pelas manchetes ---------- */
@@ -2753,3 +2769,33 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
   mask-image: linear-gradient(90deg, transparent 0, rgb(0 0 0 / 0.35) 9%, rgb(0 0 0 / 0.8) 19%, #000 30%, #000 70%, rgb(0 0 0 / 0.8) 81%, rgb(0 0 0 / 0.35) 91%, transparent 100%);
 }
 .mh-drone.largo .dr-img { object-position: 50% 50%; }
+
+/* ---------- faixa da partida: escudos grandes, cada um entrando do seu lado ---------- */
+.match-hero .scoreline { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: clamp(8px, 2.4vw, 32px); }
+.match-hero .scoreline .side { gap: 12px; }
+.match-hero .scoreline .crest { width: clamp(84px, 12vw, 140px); height: auto; aspect-ratio: 1 / 1; object-fit: contain;
+  filter: drop-shadow(0 6px 16px rgb(0 0 0 / 0.38)) drop-shadow(0 0 1px rgb(255 255 255 / 0.35)); }
+.match-hero .scoreline .side:hover .crest { transform: translateY(-3px) scale(1.03); transition: transform 0.25s var(--ease); }
+.match-hero.escudos-espera .scoreline .crest, .match-hero.escudos-espera .scoreline .side span { opacity: 0; }
+.match-hero.escudos-entram .scoreline .side:first-child .crest { animation: mhCrestE 1s cubic-bezier(.2,.9,.25,1.15) 0.1s both; }
+.match-hero.escudos-entram .scoreline .side:last-child .crest { animation: mhCrestD 1s cubic-bezier(.2,.9,.25,1.15) 0.28s both; }
+.match-hero.escudos-entram .scoreline .side span { animation: mhSigla 0.5s var(--ease) 0.75s both; }
+.match-hero.escudos-entram .scoreline .big { animation: mhPlacar 0.6s var(--ease) 0.45s both; }
+@keyframes mhCrestE {
+  0% { opacity: 0; transform: translate3d(-60%, -18%, 0) scale(0.35) rotate(-16deg); }
+  55% { opacity: 1; }
+  72% { transform: translate3d(3%, 0, 0) scale(1.08) rotate(2deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes mhCrestD {
+  0% { opacity: 0; transform: translate3d(60%, -18%, 0) scale(0.35) rotate(16deg); }
+  55% { opacity: 1; }
+  72% { transform: translate3d(-3%, 0, 0) scale(1.08) rotate(-2deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes mhSigla { from { opacity: 0; transform: translateY(8px); } }
+@keyframes mhPlacar { from { opacity: 0; transform: scale(0.82); } }
+@media (max-width: 420px) {
+  .match-hero .scoreline .crest { width: clamp(72px, 22vw, 92px); }
+  .match-hero .big { font-size: clamp(44px, 13vw, 64px); }
+}

@@ -1,10 +1,10 @@
 /* Faixa de notícias embaixo do menu: aparece em todas as páginas, a manchete troca a cada 8 s, a fita anda
    (e para com o mouse em cima), cada notícia é um link para a matéria, não cria rolagem para os lados e se atualiza
    sozinha (relógio adiantado em 30 min: busca o js/live-data.js novo, sem recarregar a página).
-   Com "reduzir movimento", nada se mexe e a fita rola com o dedo.
+   Com as animações do aparelho desligadas ("reduzir movimento"), a fita continua andando, mais devagar.
    Uso: python -m http.server 5174 --bind 127.0.0.1  e depois  node tests/mobile/faixa.mjs */
 import { chromium, webkit, devices } from "playwright";
-const BASE = process.env.BASE || "http://127.0.0.1:5174";
+const BASE = process.env.BASE || "http://127.0.0.1:5173";
 const erros = [], ok = (c, m) => (c ? console.log("ok ·", m) : erros.push(m));
 for (const [dev, L, opts] of [["pc", chromium, { viewport: { width: 1440, height: 900 } }], ["iphone", webkit, devices["iPhone 15"]], ["pixel", chromium, devices["Pixel 7"]]]) {
   const b = await L.launch(L === chromium ? { channel: "chrome" } : {});
@@ -54,8 +54,10 @@ for (const [dev, L, opts] of [["pc", chromium, { viewport: { width: 1440, height
   const ctx2 = await b.newContext({ ...opts, reducedMotion: "reduce" });
   const q = await ctx2.newPage();
   await q.goto(`${BASE}/?f=${Date.now()}#/`, { waitUntil: "load" }); await q.waitForTimeout(1200);
-  const rm = await q.evaluate(() => ({ anim: getComputedStyle(document.querySelector(".tk-track")).animationName, rola: getComputedStyle(document.querySelector(".tk-run")).overflowX }));
-  ok(rm.anim === "none" && rm.rola === "auto", `${dev}: com "reduzir movimento" a fita fica parada e rola com o dedo`);
+  const x2 = await q.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector(".tk-track")).transform).m41);
+  await q.waitForTimeout(2500);
+  const x3 = await q.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector(".tk-track")).transform).m41);
+  ok(x2 - x3 > 40, `${dev}: com as animações do aparelho desligadas a fita continua andando, mais devagar (${Math.round(x2 - x3)} px em 2,5 s)`);
   await ctx2.close();
   await b.close();
 }
