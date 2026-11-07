@@ -825,7 +825,11 @@
     const f = window.HERO_SCENES?.foto?.(id);
     if (!f) return "";
     const e = (x) => (window.SEG ? SEG.esc(x) : String(x).replace(/[&<>"']/g, ""));
-    return `<a class="hero-credit" href="${e(f.pagina)}" target="_blank" rel="noopener noreferrer" title="${e(f.nome)} — foto no Wikimedia Commons">Foto: ${e(f.autor)} · ${e(f.licenca)} · Wikimedia Commons</a>`;
+    const txtFoto = `Foto: ${f.autor} · ${f.licenca} · Wikimedia Commons`;
+    // com o vídeo da cidade (Pexels): o crédito é do vídeo; se o vídeo não tocar, volta o da foto
+    const v = window.HERO_SCENES?.video?.(id), semVideo = matchMedia("(prefers-reduced-motion: reduce)").matches || new URLSearchParams(location.search).has("estatico");
+    if (v && !semVideo) return `<a class="hero-credit" href="${e(v.pagina)}" target="_blank" rel="noopener noreferrer" title="${e(v.titulo)} — vídeo no Pexels" data-foto="${e(txtFoto)}" data-foto-href="${e(f.pagina)}">Vídeo: ${e(v.autor)} · Pexels</a>`;
+    return `<a class="hero-credit" href="${e(f.pagina)}" target="_blank" rel="noopener noreferrer" title="${e(f.nome)} — foto no Wikimedia Commons">${e(txtFoto)}</a>`;
   }
   // cenas de dia (mais claras) pedem uma sombra mais forte atrás do texto do topo
   const SCRIM = { bahia: 0.8, mirassol: 0.84, chapecoense: 0.62, coritiba: 0.6 };
@@ -911,6 +915,7 @@
 
     return `<div class="club-page">
       <section class="hero hero--gb ${HERO_SCENES.has(id) ? "hero--canvas" : ""}" data-short="${c.short}"${SCRIM[id] ? ` style="--scrim:${SCRIM[id]}"` : ""}>
+        ${HERO_SCENES.has(id) && window.HERO_SCENES.video?.(id) ? `<video class="hero-video" muted playsinline loop preload="none" aria-hidden="true" tabindex="-1"></video><div class="hero-tinta" aria-hidden="true"></div>` : ""}
         ${HERO_SCENES.has(id) ? `<canvas class="hero-canvas" data-hero-scene="${id}" aria-hidden="true"></canvas>` : `<div class="kit-bg" style="background:${kitBg(c)}"></div>`}
         ${fotoCidade(id)}
         <div class="hero-inner">

@@ -139,14 +139,13 @@ Eles ganham o selo "base".
 
 ## Cenas dos clubes com a cidade de verdade
 
-Ao abrir um clube, a cena de abertura (o urubu, o galo, o farol, a caravela...) acontece sobre uma **foto real da cidade do clube**: o Rio com o Cristo no Corcovado para o Flamengo, o nascer do sol no Mirante do Mangabeiras para o Atlético, o Farol da Barra para o Vitória, o Guaíba para o Inter, e assim em todos os 20 clubes. No Cruzeiro, as luzes de Belo Horizonte à noite ficam embaixo do céu estrelado: a foto some aos poucos para cima e a Via Láctea e o Cruzeiro do Sul continuam no céu.
+Ao abrir um clube, a cena de abertura (o urubu, o galo, o farol, a caravela, o Cruzeiro do Sul...) acontece sobre a **cidade do clube filmada de verdade**: um trecho de vídeo aéreo de cerca de 10 s, em repetição contínua e sem som, por baixo da animação. Nos 3 clubes sem vídeo da cidade disponível (Bragantino, Chapecoense e Mirassol), vale uma foto real.
 
-- Fotos de licença livre do Wikimedia Commons, com autor e licença no canto da faixa.
-- Cada foto ganha as cores do clube (preto e branco para Atlético, Botafogo, Corinthians, Santos e Vasco), começa escura e "acende" com a cena, com uma aproximação lenta da câmera e paralaxe do mouse.
-- Luz de cinema por cima: raios de sol e brilho de lente saindo do sol de verdade da foto, névoa baixa e vinheta.
-- Bichos em silhueta realista: o galo contra o sol, com rabo de penas em foice balançando, penas do pescoço, crista e esporas, que levanta voo até o escudo; aves com as penas da ponta da asa abertas (os urubus sobem em espiral perto do Cristo). A abertura do Flamengo abre as listras rubro-negras como uma cortina.
-- No celular, cada foto tem um enquadramento próprio, com o ponto principal no alto, longe do texto. Sem a foto (internet lenta ou fora do ar), vale o fundo desenhado.
-
+- **Vídeos:** 17 clubes, do Pexels (licença que permite uso e edição, sem marca d'água), com o nome do autor no canto da faixa. Cortados e comprimidos para o site: 720p no computador e 540p no celular, de 0,6 a 3 MB cada (`media/cidades/`). Vídeos do YouTube não são usados: as imagens têm dono e os termos não permitem baixar nem tirar a marca d'água.
+- **Fotos:** Wikimedia Commons, licença livre, com autor e licença na faixa. Também são a reserva do vídeo.
+- **Cores do clube** por cima da imagem (preto e branco para Atlético, Botafogo, Corinthians, Santos e Vasco); nas cenas noturnas (Cruzeiro, Botafogo, Vasco, Grêmio, Remo e Vitória) o vídeo é escurecido como noite. A cidade começa escura e "acende" com a cena, com aproximação lenta da câmera e paralaxe do mouse. No Cruzeiro, as luzes de Belo Horizonte ficam embaixo do céu estrelado, e a Via Láctea e o Cruzeiro do Sul continuam no céu.
+- **Luz de cinema:** raios de sol e brilho de lente saindo do sol do vídeo ou da foto, névoa baixa e vinheta. **Bichos em silhueta realista:** o galo contra o sol, com rabo de penas em foice balançando, crista e esporas, que levanta voo até o escudo; aves com as penas da ponta da asa abertas (os urubus sobem em espiral perto do Cristo). A abertura do Flamengo abre as listras rubro-negras como uma cortina.
+- **Quando fica a foto:** com "reduzir movimento" no aparelho, se o vídeo não carregar em 6 s ou falhar, e em aparelho sem fôlego (se a animação cair abaixo de ~25 quadros/s com o vídeo, a cena troca para a foto e segue fluida). O vídeo pausa fora da tela.
 ## Tomada de drone do estádio (página da partida)
 
 Ao abrir um jogo, a faixa com os escudos, a data e o estádio ganha uma **tomada de drone do estádio da partida**: a câmera começa no céu, acima das nuvens, atravessa as nuvens descendo e inclinando para baixo até o estádio aparecer atrás do placar, freia como um drone de verdade e fica parada. As cores dos dois clubes continuam nas laterais. Os **escudos** são grandes (imagem de 330 px, nítida) e entram com uma animação, cada um do seu lado, em todos os jogos, passados e futuros.
@@ -227,7 +226,7 @@ node tests/mobile/departamento-medico.mjs          # departamento médico na pá
 node tests/mobile/faixa.mjs                        # faixa de notícias: troca da manchete, fita, links, atualização sozinha a cada 30 min, reduzir movimento
 node tests/mobile/movimento.mjs                    # fita andando e escudos grandes da partida em 13 aparelhos (320 px a 2560 px, Chrome e Safari, retrato e paisagem)
 node tests/mobile/escudos-espaco.mjs               # escudos x textos, letra por letra: nenhum texto embaixo de escudo, em 18 páginas e 6 telas (320 px a 1440 px)
-node tests/mobile/cenas.mjs                        # cenas dos 20 clubes com a foto da cidade (foto, crédito, sem erros) e fluidez no PC, Android e iPhone
+node tests/mobile/cenas.mjs                        # cenas dos 20 clubes: vídeo da cidade (toca, crédito, foto de reserva) e foto, sem erros, e fluidez no PC, Android e iPhone
 node tests/mobile/noticias.mjs                     # "Últimas notícias" do clube: só manchetes que falam dele (20 clubes, PC e celular)
 node tests/mobile/sem-recarregar.mjs                # com jogo rolando, a página não se redesenha sozinha (só o que mudou é trocado)
 node tests/mobile/fotos.mjs [prefixo]               # fotos das páginas principais (PC escuro, celular claro) para revisão visual

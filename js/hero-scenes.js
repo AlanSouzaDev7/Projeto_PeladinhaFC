@@ -222,6 +222,7 @@ HERO_SCENES.register("cruzeiro", (st) => {
     replay() { shooting.length = 0; nextShoot = 6; },
     frame(t, ctx) {
       const { w, h, mouse } = st;
+      ctx.clearRect(0, 0, w, h);
       // linha do tempo (segundos)
       const tCam = ease.inOut(span(t, 0, 4.2));       // câmera viaja até a constelação
       const tGlow = ease.out(span(t, 1.2, 2.6));      // estrelas da cruz acendem
@@ -281,8 +282,17 @@ HERO_SCENES.register("cruzeiro", (st) => {
       // montanhas e luzes da cidade: desenhadas enquanto a foto real de BH à noite não chega; depois, a foto
       // (só a parte de baixo, com as luzes da cidade acendendo) entra esmaecendo e o céu continua por cima
       const K = HERO_SCENES.kit.cidade;
-      if (K && !fd.foto) fd.foto = K.carregaFoto("cruzeiro");
-      if (!fd.cobre) {
+      // com o vídeo de BH (por baixo do canvas): o céu some aos poucos embaixo e a cidade aparece, escurecida como à noite
+      const vq = K && K.videoQuadro(st, fd, t, w, h, mouse);
+      if (vq) {
+        ctx.save(); ctx.globalCompositeOperation = "destination-out";
+        const g = ctx.createLinearGradient(0, h * 0.42, 0, h * 0.7); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, `rgba(0,0,0,${vq.ent})`);
+        ctx.fillStyle = g; ctx.fillRect(0, h * 0.42, w, h * 0.58); ctx.restore();
+        const lz = ease.inOutSine(span(t, 0.6, 3.6));
+        ctx.fillStyle = `rgba(0,8,24,${(1 - lz) * 0.7 * vq.ent})`; ctx.fillRect(0, h * 0.42, w, h * 0.58);
+      }
+      if (K && !fd.foto && !vq) fd.foto = K.carregaFoto("cruzeiro");
+      if (!fd.cobre && !vq) {
         drawRidge(ctx, far, "rgba(6,22,70,.95)", mouse.x * -10);
         for (const L of lights) {
           const a = 0.35 + 0.35 * Math.sin(t * 2 + L.ph);
@@ -290,7 +300,7 @@ HERO_SCENES.register("cruzeiro", (st) => {
         }
         drawRidge(ctx, near, "#020a24", mouse.x * -18);
       }
-      if (K) {
+      if (K && !vq) {
         const r = K.camadaFoto(ctx, st, fd, t, w, h, mouse, [0.6, 3.6]);
         fd.cobre = r === 2;
         if (r) K.nevoa(ctx, t, w, h, 0.62, "rgba(90,130,255,A)", 0.1);

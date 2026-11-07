@@ -2809,3 +2809,17 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
   color: rgb(255 255 255 / 0.66); text-decoration: none; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 4px rgb(0 0 0 / 0.85); }
 .hero-credit:hover { color: #fff; text-decoration: underline; }
 @media (max-width: 700px) { .hero-credit { left: 12px; right: 12px; max-width: none; text-align: center; bottom: 6px; } }
+
+/* vídeo da cidade por baixo da cena do clube (js/hero-scenes-clubes.js) */
+.hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -5; opacity: 0; transition: opacity 0.9s ease;
+  transform-origin: 50% 50%; will-change: transform; pointer-events: none; background: transparent; }
+.hero-video.on { opacity: 1; }
+.hero.video-mono .hero-video { filter: grayscale(1) contrast(1.08); }
+.hero.video-noite .hero-video { filter: brightness(0.42) saturate(0.55) contrast(1.12); }
+.hero.video-noite.video-mono .hero-video { filter: grayscale(1) brightness(0.45) contrast(1.15); }
+/* sem opacidade nem transformação aqui: isso isolaria a mistura e a cor não pegaria no vídeo */
+.hero-tinta { position: absolute; inset: 0; z-index: -4; pointer-events: none; display: none; }
+.hero.tem-video .hero-tinta { display: block; }
+.hero-tinta::before { content: ""; position: absolute; inset: 0; background: var(--tinta, #000); mix-blend-mode: color; opacity: var(--forca, 0.35); }
+.hero-tinta::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgb(255 255 255 / 0) 55%, var(--sombra, #000)); mix-blend-mode: multiply; }
+@media (prefers-reduced-motion: reduce) { .hero-video, .hero-tinta { display: none; } }

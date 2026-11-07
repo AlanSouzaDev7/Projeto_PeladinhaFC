@@ -556,6 +556,240 @@
     return [c.ox + u * c.dw, c.oy + v * c.dh];
   }
 
+  /* ---------- vídeo da cidade (Pexels, licença livre; créditos na faixa) ----------
+     Trecho de ~10 s em repetição, sem som, por baixo da cena (o canvas fica transparente onde ia a foto). As cores do
+     clube entram por uma camada de mistura em cima do vídeo; clubes com cena noturna ganham o vídeo escurecido
+     ("noite americana"). Sem vídeo (movimento reduzido, ?estatico, erro ou internet lenta), vale a foto. */
+  const VIDEOS = {
+   "cruzeiro": {
+    "arq": "media/cidades/cruzeiro",
+    "autor": "Malcoln Oliveira",
+    "pagina": "https://www.pexels.com/video/aerial-view-of-belo-horizonte-skyline-at-dusk-31917478/",
+    "titulo": "Aerial View of Belo Horizonte Skyline at Dusk",
+    "noite": 1
+   },
+   "atletico-mg": {
+    "arq": "media/cidades/atletico-mg",
+    "autor": "Malcoln Oliveira",
+    "pagina": "https://www.pexels.com/video/aerial-view-of-belo-horizonte-at-sunset-34292003/",
+    "titulo": "Aerial View of Belo Horizonte at Sunset",
+    "pontos": {
+     "0.5,0.535": [
+      [
+       0,
+       0.6,
+       0.3
+      ]
+     ]
+    }
+   },
+   "flamengo": {
+    "arq": "media/cidades/flamengo",
+    "autor": "Carlos Leandro Ramos",
+    "pagina": "https://www.pexels.com/video/aerial-view-of-christ-the-redeemer-at-sunset-35933207/",
+    "titulo": "Aerial View of Christ the Redeemer at Sunset",
+    "pontos": {
+     "0.86,0.04": [
+      [
+       0,
+       0.72,
+       0.14
+      ]
+     ],
+     "0.51,0.1": [
+      [
+       0,
+       0.5,
+       0.16
+      ]
+     ]
+    }
+   },
+   "fluminense": {
+    "arq": "media/cidades/fluminense",
+    "autor": "Aaron Hairston",
+    "pagina": "https://www.pexels.com/video/aerial-view-of-rio-de-janeiro-s-stunning-landscape-30198964/",
+    "titulo": "Aerial View of Rio de Janeiro's Stunning Landscape"
+   },
+   "botafogo": {
+    "arq": "media/cidades/botafogo",
+    "autor": "Bráulio Jardim",
+    "pagina": "https://www.pexels.com/video/aerial-view-of-rio-de-janeiro-with-sugarloaf-40383470/",
+    "titulo": "Aerial View of Rio de Janeiro with Sugarloaf Mountain",
+    "noite": 1
+   },
+   "vasco": {
+    "arq": "media/cidades/vasco",
+    "autor": "Matheus De Moraes Gugelmim",
+    "pagina": "https://www.pexels.com/video/drone-footage-of-the-beach-at-copacabana-8493544/",
+    "titulo": "Drone Footage of the Beach at Copacabana",
+    "noite": 1
+   },
+   "athletico-pr": {
+    "arq": "media/cidades/athletico-pr",
+    "autor": "Gustavo Russo",
+    "pagina": "https://www.pexels.com/video/drone-footage-of-a-city-curitiba-parana-brazil-12348563/",
+    "titulo": "Drone Footage of a City, Curitiba, Parana, Brazil"
+   },
+   "coritiba": {
+    "arq": "media/cidades/coritiba",
+    "autor": "Jonathan Rodrigues",
+    "pagina": "https://www.pexels.com/video/stunning-overview-of-curitiba-s-botanical-garden-39299289/",
+    "titulo": "Stunning Overview of Curitiba's Botanical Garden"
+   },
+   "bahia": {
+    "arq": "media/cidades/bahia",
+    "autor": "Leonardo Dourado",
+    "pagina": "https://www.pexels.com/video/cidade-alta-e-baixa-18360942/",
+    "titulo": "Cidade Alta e Baixa"
+   },
+   "vitoria": {
+    "arq": "media/cidades/vitoria",
+    "autor": "Lion Victor",
+    "pagina": "https://www.pexels.com/video/drone-footage-of-lighthouse-and-seacoast-11934141/",
+    "titulo": "Drone Footage of Lighthouse and Seacoast",
+    "noite": 1,
+    "pontos": {
+     "0.11,0.37": [
+      [
+       0,
+       0.52,
+       0.3
+      ],
+      [
+       0.5,
+       0.53,
+       0.5
+      ],
+      [
+       1,
+       0.57,
+       0.85
+      ]
+     ]
+    }
+   },
+   "corinthians": {
+    "arq": "media/cidades/corinthians",
+    "autor": "Lucas Bocato",
+    "pagina": "https://www.pexels.com/video/aerial-view-of-avenida-paulista-sao-paulo-30758629/",
+    "titulo": "Aerial View of Avenida Paulista São Paulo"
+   },
+   "palmeiras": {
+    "arq": "media/cidades/palmeiras",
+    "autor": "Leandro Barreto",
+    "pagina": "https://www.pexels.com/video/sunset-moema-sao-paulo-16192867/",
+    "titulo": "Sunset Moema Sao Paulo"
+   },
+   "sao-paulo": {
+    "arq": "media/cidades/sao-paulo",
+    "autor": "fabianoshow4",
+    "pagina": "https://www.pexels.com/video/aerial-view-of-ponte-estaiada-in-sao-paulo-29839944/",
+    "titulo": "Aerial View of Ponte Estaiada in São Paulo"
+   },
+   "gremio": {
+    "arq": "media/cidades/gremio",
+    "autor": "Daiane Empinotti",
+    "pagina": "https://www.pexels.com/video/aerial-view-of-porto-alegre-cityscape-33404367/",
+    "titulo": "Aerial View of Porto Alegre Cityscape",
+    "noite": 1
+   },
+   "internacional": {
+    "arq": "media/cidades/internacional",
+    "autor": "Guilherme Soares Rosa",
+    "pagina": "https://www.pexels.com/video/drone-footage-of-usina-do-gasometro-cultural-center-7971189/",
+    "titulo": "Drone Footage of Usina Do Gasometro Cultural Center",
+    "pontos": {
+     "0.38,0.45": [
+      [
+       0,
+       0.82,
+       0.08
+      ]
+     ]
+    }
+   },
+   "remo": {
+    "arq": "media/cidades/remo",
+    "autor": "Melquizedeque Almeida",
+    "pagina": "https://www.pexels.com/video/boat-sailing-on-brazilian-river-at-belem-33624107/",
+    "titulo": "Boat Sailing on Brazilian River at Belem",
+    "noite": 1
+   },
+   "santos": {
+    "arq": "media/cidades/santos",
+    "autor": "Victor Cedini",
+    "pagina": "https://www.pexels.com/video/aerial-view-of-santos-beachfront-skyline-34006368/",
+    "titulo": "Aerial View of Santos Beachfront Skyline"
+   }
+  };
+  const semVideo = () => matchMedia("(prefers-reduced-motion: reduce)").matches || new URLSearchParams(location.search).has("estatico");
+  function ligaVideo(st, d) {
+    if (d.vid !== undefined) return d.vid;
+    const id = st.club.id, V = VIDEOS[id], hero = st.c.closest(".hero"), el = hero && hero.querySelector("video.hero-video");
+    if (!V || !el || semVideo()) return (d.vid = null);
+    const f = FOTOS[id] || {};
+    const o = (d.vid = { el, on: false, falhou: false, V });
+    hero.classList.add("tem-video");
+    if (V.noite) hero.classList.add("video-noite");
+    if (f.mono) hero.classList.add("video-mono");
+    const tinta = hero.querySelector(".hero-tinta");
+    if (tinta) {
+      tinta.style.setProperty("--tinta", f.luz || "#000");
+      tinta.style.setProperty("--forca", String(f.mono ? 0 : (f.forca ?? 0.4) * (V.noite ? 0.6 : 0.85)));
+      tinta.style.setProperty("--sombra", f.sombra || "#000");
+    }
+    el.muted = true; el.defaultMuted = true; el.loop = true; el.playsInline = true; el.setAttribute("playsinline", ""); el.preload = "auto";
+    el.src = `${V.arq}-${innerWidth < 900 ? 540 : 720}.mp4`;
+    const falha = () => {
+      if (o.falhou) return;
+      o.falhou = true; el.classList.remove("on"); el.removeAttribute("src"); el.load();
+      hero.classList.remove("tem-video", "video-noite", "video-mono");
+      const cr = hero.querySelector(".hero-credit[data-foto]");
+      if (cr) { cr.textContent = cr.dataset.foto; cr.href = cr.dataset.fotoHref; }
+    };
+    o.falha = falha;
+    el.addEventListener("error", falha, { once: true });
+    el.addEventListener("playing", () => { if (!o.on) { o.on = true; el.classList.add("on"); } });
+    const tenta = () => { const pr = el.play(); if (pr && pr.catch) pr.catch(() => {}); };
+    tenta();
+    // fora da tela: pausa (economiza bateria); de volta: continua
+    o.io = new IntersectionObserver(([e]) => { if (o.falhou) return; if (e.isIntersecting) tenta(); else el.pause(); });
+    o.io.observe(el);
+    // internet lenta (ou o navegador não deixou tocar): em 6 s sem começar, fica a foto
+    setTimeout(() => { if (!o.on) falha(); }, 6000);
+    return o;
+  }
+  // estado do vídeo neste quadro: null (sem vídeo) ou { ent } (0→1 entrando); move a câmera do vídeo
+  function videoQuadro(st, d, t, w, h, m) {
+    const o = ligaVideo(st, d);
+    if (!o || o.falhou || !o.on) return null;
+    if (d.vidT0 == null) d.vidT0 = t < 0.4 ? -1 : t;
+    // aparelho sem fôlego para vídeo + animação (abaixo de ~25 quadros/s por um tempo): fica a foto, e a cena segue fluida
+    if (st.avg > 40 && t - Math.max(0, d.vidT0) > 2.5) { o.falha(); return null; }
+    const ent = d.vidT0 < 0 ? 1 : ease.inOutSine(span(t, d.vidT0, d.vidT0 + 0.9));
+    const z = lerp(1.12, 1.03, ease.out(span(t, 0, 7)));
+    const ox = m.x * -w * 0.012, oy = m.y * -h * 0.01;
+    o.el.style.transform = `translate3d(${ox.toFixed(1)}px, ${oy.toFixed(1)}px, 0) scale(${z.toFixed(4)})`;
+    d.vcam = { z, ox, oy, w, h };
+    return { ent, o };
+  }
+  // ponto do vídeo (pela mesma chave da foto) na tela, acompanhando o trecho (pontos que andam com o drone);
+  // undefined: sem vídeo (vale a foto); null: o vídeo não tem esse ponto
+  function noVideo(d, fx, fy) {
+    const o = d.vid, c = d.vcam;
+    if (!o || !o.on || o.falhou || !c) return undefined;
+    const kf = o.V.pontos && o.V.pontos[`${fx},${fy}`];
+    if (!kf) return null;
+    const el = o.el, vw = el.videoWidth || 16, vh = el.videoHeight || 9, q = el.duration ? (el.currentTime / el.duration) % 1 : 0;
+    let a = kf[0], b = kf[kf.length - 1];
+    for (let i = 0; i < kf.length - 1; i++) if (q >= kf[i][0] && q <= kf[i + 1][0]) { a = kf[i]; b = kf[i + 1]; break; }
+    const u = b[0] > a[0] ? (q - a[0]) / (b[0] - a[0]) : 0, vx = lerp(a[1], b[1], u), vy = lerp(a[2], b[2], u);
+    const sc = Math.max(c.w / vw, c.h / vh), dw = vw * sc, dh = vh * sc;
+    const x = (c.w - dw) / 2 + vx * dw, y = (c.h - dh) / 2 + vy * dh;
+    return [c.w / 2 + (x - c.w / 2) * c.z + c.ox, c.h / 2 + (y - c.h / 2) * c.z + c.oy];
+  }
+
   /* ---------- luz: raios de sol, brilho de lente, névoa ---------- */
   function raios(ctx, x, y, w, h, cor, a, t, n = 9) {
     if (a <= 0.01) return;
@@ -635,12 +869,24 @@
         resize() { data.cache = null; data.prep = null; },
         frame(t, ctx) {
           const L = layout(st), m = st.mouse;
-          // fundo da cena: o desenhado (reserva) e, por cima, a foto da cidade; com a foto cobrindo tudo, o desenhado nem é feito
-          const fundo = (desenho) => { if (!data.cobre) desenho(); const r = camadaFoto(ctx, st, data, t, L.w, L.h, m, spec.luz); data.cobre = r === 2; return r > 0; };
-          spec.draw({ t, ctx, L, w: L.w, h: L.h, m, d: data, img, fundo, foto: (fx, fy) => naFoto(data, fx, fy) });
+          ctx.clearRect(0, 0, L.w, L.h);
+          // fundo da cena: o vídeo da cidade (por baixo do canvas) ou a foto; o desenhado é a reserva e some quando eles entram
+          const vq = videoQuadro(st, data, t, L.w, L.h, m);
+          const fundo = (desenho) => {
+            if (vq) {
+              if (vq.ent < 1) { ctx.save(); ctx.globalAlpha = 1 - vq.ent; desenho(); ctx.restore(); }
+              // antes da luz: a cidade escura, que "acende" com a cena
+              const lz = spec.luz || [0.2, 3.4], k = ease.inOutSine(span(t, lz[0], lz[1])), f = FOTOS[st.club.id] || {};
+              ctx.save(); ctx.globalAlpha = (1 - k) * 0.78 * vq.ent; ctx.fillStyle = f.sombra || "#000"; ctx.fillRect(0, 0, L.w, L.h); ctx.restore();
+              return true;
+            }
+            if (!data.cobre) desenho(); const r = camadaFoto(ctx, st, data, t, L.w, L.h, m, spec.luz); data.cobre = r === 2; return r > 0;
+          };
+          const foto = (fx, fy) => { const pv = noVideo(data, fx, fy); return pv === undefined ? naFoto(data, fx, fy) : pv; };
+          spec.draw({ t, ctx, L, w: L.w, h: L.h, m, d: data, img, fundo, foto });
           crestReveal(ctx, img, t, spec.T || 4.6, L, spec.ring, spec.halo);
           if (spec.after) spec.after({ t, ctx, L, w: L.w, h: L.h, m, d: data });
-          if (data.prep) vinheta(ctx, L.w, L.h, 0.42);
+          if (data.prep || vq) vinheta(ctx, L.w, L.h, 0.42);
           veil(ctx, L.w, L.h, spec.veil || "0,0,0", spec.veilA ?? 0.6);
         },
       };
@@ -650,7 +896,8 @@
   // créditos da foto da cidade (a página do clube mostra no canto da faixa)
   HERO_SCENES.foto = (id) => FOTOS[id] || null;
   // a cena do Cruzeiro (js/hero-scenes.js) usa as mesmas peças
-  HERO_SCENES.kit.cidade = { carregaFoto, camadaFoto, naFoto, nevoa, vinheta };
+  HERO_SCENES.kit.cidade = { carregaFoto, camadaFoto, naFoto, nevoa, vinheta, videoQuadro, FOTOS };
+  HERO_SCENES.video = (id) => VIDEOS[id] || null;
 
   /* ======================================================================
      Flamengo — o urubu sobre o Rio
@@ -715,10 +962,10 @@
       nevoa(ctx, t, w, h, 0.82, "rgba(230,220,200,A)", 0.16 * dawn);
       for (const p of d.dust) { const yy = ((p.y * h - t * 10 * p.v) % h + h) % h; ctx.fillStyle = `rgba(255,236,190,${0.35 * dawn * (0.5 + 0.5 * Math.sin(t * 2 + p.p))})`; ctx.beginPath(); ctx.arc(p.x * w + Math.sin(t * 0.7 + p.p) * 8, yy, p.s * 0.9, 0, TAU); ctx.fill(); }
       // o galo, no alto de uma pedra da serra, contra o sol
-      const crow = span(t, 1.6, 3.2), rs = L.cs / 260, gs = 2 * rs, px = sol[0] - 40 * rs, py = sol[1] + 60 * rs, pe = py + 48 * gs;
+      const crow = span(t, 1.6, 3.2), rs = L.cs / 260, gs = 2 * rs, px = sol[0] - 40 * rs, py = d.vid && d.vid.on ? Math.max(sol[1] + 60 * rs, h * 0.6) : sol[1] + 60 * rs, pe = py + 48 * gs;
       // topo de morro com pedras: silhueta irregular, larga, com a borda acesa pelo sol
       const morro = [[-0.42, h + 4], [-0.3, pe + 60], [-0.22, pe + 34], [-0.15, pe + 22], [-0.09, pe + 6], [-0.05, pe + 1], [0.04, pe - 1], [0.08, pe + 4], [0.12, pe + 3], [0.17, pe + 16], [0.24, pe + 30], [0.33, pe + 52], [0.44, pe + 70], [0.6, h + 4]];
-      const mx = (q) => px + q * w * 0.5;
+      const mx = (q) => px + q * w * (d.vid && d.vid.on ? 0.3 : 0.5);
       ctx.fillStyle = "#050505"; ctx.beginPath(); morro.forEach(([q, yy], i) => (i ? ctx.lineTo(mx(q), yy) : ctx.moveTo(mx(q), yy))); ctx.closePath(); ctx.fill();
       ctx.strokeStyle = `rgba(255,224,170,${0.55 * dawn})`; ctx.lineWidth = 1.4; ctx.beginPath(); morro.slice(2, 12).forEach(([q, yy], i) => (i ? ctx.lineTo(mx(q), yy - 0.5) : ctx.moveTo(mx(q), yy - 0.5))); ctx.stroke();
       // canto: ondas sonoras a partir do bico
