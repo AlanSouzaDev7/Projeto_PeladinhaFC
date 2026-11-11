@@ -173,7 +173,7 @@ Na aba **Simulador** (`#/simulador`), o usuário dá o placar dos jogos que falt
 ## Som do gol
 
 O único som do site (`js/sons.js`, gerado no navegador com Web Audio, sem arquivos de áudio): quando um clube marca, junto com o alerta GOL!, tocam 5 s de
-- um grito de **"GOOOOOL"** (voz sintetizada: o "G", o "ô" que sobe e segura com vibrato e o "L" no fim);
+- o grito de **"GOOOOOL"** de um narrador: voz sintetizada como numa transmissão, com o pulso das pregas vocais e as pequenas irregularidades de uma voz de verdade, a rouquidão do esforço, cinco ressonâncias da boca na vogal "ô", o tom que sobe e segura com vibrato e ondas de fôlego, o "L" no fim, timbre de microfone de narrador e o eco do estádio;
 - a **torcida vibrando ao fundo**: o ronco da arquibancada, gente gritando e aplausos. A torcida fica mais baixa enquanto o grito está no ar e cresce depois dele.
 
 Cada clube muda um pouco o tom da voz, a duração do grito e a força da torcida.

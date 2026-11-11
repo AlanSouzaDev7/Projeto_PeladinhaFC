@@ -2,7 +2,9 @@
 /* ==========================================================================
    PLACAR — som do gol (Web Audio, sem arquivos de áudio)
    O único som do site: quando um clube marca, 5 s de
-     - um grito de "GOOOOOL" (voz sintetizada: o "G", o "ô" segurado com vibrato e o "L" no fim);
+     - o grito de "GOOOOOL" de um narrador (voz sintetizada como numa transmissão: pulso das pregas vocais com as
+       pequenas irregularidades de uma voz de verdade, rouquidão do esforço, cinco ressonâncias da boca na vogal "ô",
+       timbre de microfone de narrador e o eco do estádio);
      - a torcida vibrando ao fundo: o ronco da arquibancada, gente gritando e aplausos.
    Cada clube muda um pouco o tom da voz e a mistura da torcida (sorteados pelo nome do clube).
    Os hinos dos clubes têm autor e gravação protegidos (Lei 9.610/98) e não estão no site. Quem tiver a licença do
@@ -55,7 +57,7 @@
   // estilo de cada clube: tom da voz do grito e força da torcida
   function estilo(id) {
     const r = sorteio(semente(id || "placar"));
-    return { tom: 150 + Math.floor(r() * 9) * 6, grito: +(2.9 + r() * 0.5).toFixed(2), torcida: +(0.85 + r() * 0.3).toFixed(2) };
+    return { tom: 235 + Math.floor(r() * 9) * 7, grito: +(3.5 + r() * 0.4).toFixed(2), torcida: +(0.85 + r() * 0.3).toFixed(2) };
   }
 
   /* arquibancada: ronco grave + chiado agudo, sobe com a bola na rede e vai baixando */
@@ -91,22 +93,91 @@
     vib0.start(t0); vib0.stop(t0 + dur + 0.05);
     return bocca.gain; // volume ao longo do tempo: quem chama desenha
   }
-  /* o grito de gol: "G" (estalo abafado), "ôôôôô" subindo e segurado com vibrato, "L" no fim */
-  function gritoGol(c, out, t0, E) {
-    const dur = E.grito;
-    // "G": estalo curto e grave antes da vogal
-    const st = fonteRuido(c), lp = c.createBiquadFilter(), sg = c.createGain();
-    lp.type = "lowpass"; lp.frequency.value = 900; sg.gain.setValueAtTime(0.0001, t0); sg.gain.exponentialRampToValueAtTime(0.5, t0 + 0.01); sg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06);
-    st.connect(lp).connect(sg).connect(out); st.start(t0, Math.random()); st.stop(t0 + 0.08);
-    const g = voz(c, out, t0 + 0.04, dur, {
-      f0: E.tom, vol: 1, vib: 0.025, sopro: 0.06,
-      // "ô" aberto (F1 ~ 520, F2 ~ 900), fecha um pouco e vira "L" (F1 baixo, F2 ~ 1150) no fim
-      formas: [[0, 400, 1100, 2500], [0.08, 540, 900, 2550], [dur * 0.8, 500, 860, 2500], [dur - 0.18, 380, 1150, 2700], [dur, 330, 1200, 2800]],
-      // começa mais grave, sobe com a emoção e segura; no fim cai um pouco
-      alturas: [[0, 0.82], [0.25, 1.12], [0.6, 1.2], [dur * 0.85, 1.22], [dur, 1.05]],
+  /* ---------- o narrador ---------- */
+  // pulso das pregas vocais: harmônicos caindo devagar (voz gritada é brilhante), não a "serra" zumbida
+  const ondas = new WeakMap();
+  function glote(c) {
+    if (ondas.has(c)) return ondas.get(c);
+    const N = 90, re = new Float32Array(N), im = new Float32Array(N);
+    for (let n = 1; n < N; n++) { const a = Math.pow(n, -1.35) * (1 + 0.25 * Math.cos(n * 0.9)); re[n] = a * 0.35; im[n] = a; }
+    const w = c.createPeriodicWave(re, im);
+    ondas.set(c, w); return w;
+  }
+  // oscilação irregular (jitter e shimmer de uma voz de verdade): ruído bem lento
+  function tremor(c, t0, fim, hz, amp) {
+    const s = fonteRuido(c), lp = c.createBiquadFilter(), g = c.createGain();
+    lp.type = "lowpass"; lp.frequency.value = hz; lp.Q.value = 0.4; g.gain.value = amp;
+    s.connect(lp).connect(g); s.start(t0, Math.random()); s.stop(fim);
+    return g;
+  }
+  // eco do estádio: resposta ao impulso de ~1,6 s (ruído que decai), um pouco diferente em cada lado
+  const salas = new WeakMap();
+  function sala(c) {
+    if (salas.has(c)) return salas.get(c);
+    const sr = c.sampleRate, n = Math.floor(sr * 1.6), b = c.createBuffer(2, n, sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = b.getChannelData(ch);
+      for (let i = 0; i < n; i++) { const t = i / sr; d[i] = (Math.random() * 2 - 1) * Math.exp(-t * 3.2) * (t < 0.02 ? t / 0.02 : 1) * (t < 0.008 ? 0 : 1); }
+    }
+    salas.set(c, b); return b;
+  }
+  const curva = (k) => { const a = new Float32Array(2048); for (let i = 0; i < 2048; i++) { const x = i / 1023.5 - 1; a[i] = Math.tanh(k * x) / Math.tanh(k); } return a; };
+  const rampa = (param, t0, pontos, f = 1) => pontos.forEach(([t, v], i) => (i ? param.linearRampToValueAtTime(v * f, t0 + t) : param.setValueAtTime(v * f, t0 + t)));
+  /* o grito: "G" (velar: estalo com o tom subindo), "ôôôôô" que sobe, segura com vibrato e ondas de fôlego, "L" no fim */
+  function narrador(c, out, t0, E) {
+    const dur = E.grito, fim = t0 + dur + 0.12, f0 = E.tom;
+    // transmissão: microfone de narrador (corta o grave, realça a presença), compressor de rádio, saturação leve, eco
+    const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 150; hp.Q.value = 0.7;
+    const pres = c.createBiquadFilter(); pres.type = "peaking"; pres.frequency.value = 3100; pres.Q.value = 0.9; pres.gain.value = 6;
+    const corpo = c.createBiquadFilter(); corpo.type = "peaking"; corpo.frequency.value = 350; corpo.Q.value = 1; corpo.gain.value = 2.5;
+    const topo = c.createBiquadFilter(); topo.type = "lowpass"; topo.frequency.value = 7800;
+    const comp = c.createDynamicsCompressor(); comp.threshold.value = -26; comp.ratio.value = 8; comp.knee.value = 6; comp.attack.value = 0.002; comp.release.value = 0.09;
+    const sat = c.createWaveShaper(); sat.curve = curva(1.6); sat.oversample = "2x";
+    const seco = c.createGain(), conv = c.createConvolver(), molhado = c.createGain();
+    seco.gain.value = 1; conv.buffer = sala(c); molhado.gain.value = 0.2;
+    hp.connect(corpo).connect(pres).connect(topo).connect(comp).connect(sat);
+    sat.connect(seco).connect(out); sat.connect(conv).connect(molhado).connect(out);
+    // boca: 5 ressonâncias (formantes) da vogal "ô" gritada, que se mexem no "G" e no "L"
+    const boca = c.createGain(); boca.gain.value = 0.0001;
+    const L = dur - 0.22; // começo do "L"
+    [
+      { f: [[0, 300], [0.07, 640], [L, 600], [dur, 380]], bw: 95, g: 1 },
+      { f: [[0, 1850], [0.08, 1060], [L, 990], [dur, 1250]], bw: 115, g: 0.6 },
+      { f: [[0, 2100], [0.08, 2550], [L, 2600], [dur, 2850]], bw: 170, g: 0.24 },
+      { f: [[0, 3350]], bw: 230, g: 0.17 },
+      { f: [[0, 4300]], bw: 320, g: 0.08 },
+    ].forEach((x) => {
+      const bp = c.createBiquadFilter(), g = c.createGain();
+      bp.type = "bandpass"; rampa(bp.frequency, t0, x.f); bp.Q.value = (x.f[1] || x.f[0])[1] / x.bw; g.gain.value = x.g;
+      boca.connect(bp).connect(g).connect(hp);
     });
-    g.setValueAtTime(0.0001, t0 + 0.04); g.exponentialRampToValueAtTime(1.15, t0 + 0.14);
-    g.setValueAtTime(1.15, t0 + dur * 0.82); g.linearRampToValueAtTime(0.7, t0 + dur - 0.15); g.exponentialRampToValueAtTime(0.0001, t0 + dur + 0.04);
+    // pregas vocais: tom que começa mais baixo, sobe com a emoção, segura lá em cima e cai no "L"
+    const o = c.createOscillator(); o.setPeriodicWave(glote(c));
+    rampa(o.frequency, t0, [[0, 0.74], [0.1, 0.98], [0.42, 1.17], [1.1, 1.21], [dur * 0.78, 1.25], [L, 1.22], [dur, 0.97]], f0);
+    const vib = c.createOscillator(), vg = c.createGain();
+    vib.frequency.setValueAtTime(5.0, t0); vib.frequency.linearRampToValueAtTime(6.1, t0 + dur);
+    rampa(vg.gain, t0, [[0, 0], [0.55, 0], [dur * 0.7, 0.032], [L, 0.036], [dur, 0.01]], f0);
+    vib.connect(vg).connect(o.frequency);
+    tremor(c, t0, fim, 8, f0 * 0.05).connect(o.frequency);           // jitter: o tom nunca fica parado
+    const prega = c.createGain(); prega.gain.value = 1;
+    tremor(c, t0, fim, 12, 0.35).connect(prega.gain);                 // shimmer: o volume treme um pouco
+    const esforco = c.createWaveShaper(); esforco.curve = curva(2.6);  // a voz "rasga" no grito
+    o.connect(prega).connect(esforco).connect(boca);
+    // ar: sopro que pulsa junto com cada ciclo da voz (rouquidão)
+    const ar = fonteRuido(c), arF = c.createBiquadFilter(), arG = c.createGain(), mod = c.createGain();
+    arF.type = "highpass"; arF.frequency.value = 1200; arG.gain.value = 0.05; mod.gain.value = 0.07;
+    o.connect(mod).connect(arG.gain); ar.connect(arF).connect(arG).connect(boca);
+    // "G": estalo curto na região da garganta, logo antes da voz
+    const gs = fonteRuido(c), gbp = c.createBiquadFilter(), gg = c.createGain();
+    gbp.type = "bandpass"; gbp.frequency.value = 1700; gbp.Q.value = 2;
+    gg.gain.setValueAtTime(0.0001, t0); gg.gain.exponentialRampToValueAtTime(0.9, t0 + 0.006); gg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.04);
+    gs.connect(gbp).connect(gg).connect(hp); gs.start(t0, Math.random()); gs.stop(t0 + 0.06);
+    // volume: entra forte, ondas de fôlego no "ô" longo, "L" mais baixo e o fim
+    const vb = boca.gain;
+    vb.setValueAtTime(0.0001, t0 + 0.012); vb.exponentialRampToValueAtTime(1, t0 + 0.09);
+    for (let t = 0.6; t < L - 0.3; t += 0.55 + Math.random() * 0.3) { vb.linearRampToValueAtTime(0.86 + Math.random() * 0.08, t0 + t); vb.linearRampToValueAtTime(1, t0 + t + 0.25); }
+    vb.linearRampToValueAtTime(0.92, t0 + L); vb.linearRampToValueAtTime(0.5, t0 + dur - 0.03); vb.exponentialRampToValueAtTime(0.0001, t0 + dur + 0.1);
+    [o, vib].forEach((n) => { n.start(t0); n.stop(fim); }); ar.start(t0, Math.random()); ar.stop(fim);
     return dur;
   }
   /* torcida vibrando: muitas vozes soltas gritando ("êêê", "uhuu"), cada uma num tom, entrando e saindo */
@@ -150,8 +221,8 @@
     ronco(c, fundo, t0, fim);
     vozesTorcida(c, fundo, t0 + 0.1, fim, 1);
     aplausos(c, fundo, t0 + 0.15, fim, 1);
-    const frente = c.createGain(); frente.gain.value = 3.2; frente.connect(mix);
-    gritoGol(c, frente, t0 + 0.05, E);
+    const frente = c.createGain(); frente.gain.value = 0.85; frente.connect(mix);
+    narrador(c, frente, t0 + 0.05, E);
     return DUR_GOL;
   }
 
