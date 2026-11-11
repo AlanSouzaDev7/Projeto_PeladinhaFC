@@ -1,6 +1,6 @@
 /* Vídeo de demonstração das novidades (tests/mobile/out/demo-novidades.mp4), com som.
    Roteiro: busca por letra inicial, simulador da tabela, gol ao vivo (Cruzeiro x Palmeiras simulado, com o tempo
-   entre o gol na fonte e o alerta na tela), apito nas estatísticas e no "Bora pro jogo" e o botão de som.
+   entre o gol na fonte e o alerta na tela) com o som do gol.
    O Playwright grava só a imagem; os sons são gerados pelo próprio site (SONS.wav, o mesmo som que toca no navegador)
    e postos no vídeo nos instantes em que tocaram.
    Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  node tests/mobile/demo-video.mjs */
@@ -95,7 +95,7 @@ async function clica(sel, opts = {}) {
 await page.goto(`${BASE}/?v=${Date.now()}#/`, { waitUntil: "load" });
 await page.waitForSelector(".match");
 await page.mouse.move(640, 360);
-await leg("PLACAR. — novidades desta versão", "busca · simulador · placar ao vivo mais rápido · sons");
+await leg("PLACAR. — novidades desta versão", "busca · simulador · placar ao vivo mais rápido · som do gol");
 await w(3500);
 
 // 1) busca
@@ -132,32 +132,19 @@ await page.mouse.wheel(0, 900); await w(2400); await page.mouse.wheel(0, -900); 
 await leg("3. Placar ao vivo mais rápido", "o site consulta o placar a cada 0,8 s (antes: 12 s)");
 await clica('.nav a[data-nav="home"]', { depois: 2500 });
 const golAgora = async (lado) => { placar[lado]++; const t = Date.now(); await page.evaluate((f) => window.__cron(f), t); };
-await leg("Cruzeiro x Palmeiras ao vivo: gol do Cruzeiro!", "alerta GOL! e 5 s de festa do clube que marcou");
+await leg("Cruzeiro x Palmeiras ao vivo: gol do Cruzeiro!", "alerta GOL! e 5 s de estádio: torcida, buzina e batucada");
 await golAgora("h"); await w(9000);
-await leg("Gol do Palmeiras!", "cada clube tem a sua fanfarra");
+await leg("Gol do Palmeiras!", "o único som do site: o do gol");
 await golAgora("a"); await w(9000);
 
-// 4) apito
-await leg("4. Apito do árbitro ao entrar no “Bora pro jogo”…");
-await clica('.nav a[data-nav="bora-pro-jogo"]', { depois: 3200 });
-await leg("…e nas estatísticas (do clube e rankings)");
-await page.evaluate(() => { location.hash = "#/clube/cruzeiro"; }); await w(2200);
-const est = page.locator('a[href="#/clube/cruzeiro/estatisticas"]').first();
-if (await est.count()) await clica('a[href="#/clube/cruzeiro/estatisticas"]', { depois: 3000 }); else { await page.evaluate(() => { location.hash = "#/clube/cruzeiro/estatisticas"; }); await w(3000); }
-await clica('.nav a[data-nav="tabela"]', { depois: 1500 });
-await clica('a.kpi-link[href="#/tabela/gols"]', { depois: 3000 });
-
-// 5) botão de som
-await leg("5. Botão de som no topo", "desliga e liga (com um apito de confirmação); o site lembra a escolha");
-await clica("#som", { depois: 1500 }); await clica("#som", { depois: 2500 });
-await leg("Tudo testado no PC e no celular", "busca · simulador · placar ao vivo · sons · QA");
+await leg("Tudo testado no PC e no celular", "busca · simulador · placar ao vivo · som do gol · QA");
 await w(3200);
 
 const hist = await page.evaluate(() => window.SONS.historico.filter((h) => h.tocou).map((h) => ({ tipo: h.tipo, clube: h.clube, em: h.em })));
 // sons em arquivos WAV, gerados pelo próprio site
 const wavs = [];
 for (const [i, h] of hist.entries()) {
-  const b64 = await page.evaluate(([t, c]) => window.SONS.wav(t, c), [h.tipo, h.clube]);
+  const b64 = await page.evaluate((c) => window.SONS.wav(c), h.clube);
   const f = `${TMP}som${i}.wav`; writeFileSync(f, Buffer.from(b64, "base64"));
   wavs.push({ f, ms: Math.max(0, h.em - tVideo) });
 }

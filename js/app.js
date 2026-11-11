@@ -1487,7 +1487,6 @@
       r.page === "bora-pro-jogo" ? LINEUP.pageBora(r.id, r.tab) :
       r.page === "simulador" ? pageSim(r.id) :
       r.page === "sobre" ? pageAbout() : pageNotFound();
-  let ultimoApito = null;
   function render() {
     const r = parse();
     state.route = r;
@@ -1497,10 +1496,6 @@
     stamp(view);
     const navKey = r.page === "" || r.page === "partida" ? "home" : r.page === "clube" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    // apito do árbitro ao entrar nas estatísticas (do clube ou rankings) e no "Bora pro jogo" (só na entrada)
-    const apitoKey = r.page === "bora-pro-jogo" ? "bora" : r.page === "clube" && r.tab === "estatisticas" && club ? `est:${r.id}` : r.page === "tabela" && RANKINGS[r.id] ? "rank" : null;
-    if (apitoKey && apitoKey !== ultimoApito) window.SONS?.apito();
-    ultimoApito = apitoKey;
     document.title = club ? `${club.name} — Placar` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — Placar` : r.page === "partida" ? "Partida — Placar" : r.page === "bora-pro-jogo" ? "Bora pro jogo — Placar" : r.page === "simulador" ? "Simulador da tabela — Placar" : "Placar — Futebol Brasileiro";
     enhance();
   }

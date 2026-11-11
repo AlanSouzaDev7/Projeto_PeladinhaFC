@@ -1,10 +1,8 @@
-/* Sons do site (js/sons.js).
-   - apito ao ENTRAR no "Bora pro jogo", nas estatísticas do clube e nos rankings (e só na entrada);
-   - nada toca nas outras páginas;
-   - gol: o alerta GOL! toca 5 s do som do clube que marcou; dois gols juntos tocam um depois do outro;
-   - botão de som: desliga (nada toca), lembra depois de recarregar e liga de novo (com um apito);
+/* Som do gol (js/sons.js) — o único som do site.
+   - o alerta GOL! toca 5 s do som de estádio do clube que marcou; dois gols juntos tocam um depois do outro;
+   - nenhum som ao navegar (nem no "Bora pro jogo", nas estatísticas ou nos rankings) e nenhum botão de som;
    - antes do primeiro toque na página o navegador não deixa tocar: nada quebra;
-   - a fanfarra de cada um dos 20 clubes é diferente das outras, tem som de verdade (não é silêncio) e não estoura.
+   - os 20 clubes: som de verdade (não é silêncio), sem estourar, 5 s com final suave e variação própria de cada clube.
    Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  node tests/mobile/sons.mjs */
 import { chromium, devices } from "playwright";
 
@@ -23,32 +21,21 @@ for (const [nome, opts] of [["PC", { viewport: { width: 1366, height: 800 } }], 
   await page.goto(`${BASE}/?v=${Date.now()}#/`, { waitUntil: "load" });
   await page.waitForSelector(".match");
   const hist = () => page.evaluate(() => window.SONS.historico.map((h) => ({ tipo: h.tipo, clube: h.clube, tocou: h.tocou, motivo: h.motivo, inicio: h.inicio, dur: h.dur })));
-  // antes de qualquer toque: o navegador bloqueia, o site só registra
+  if (await page.locator("#som, .som-btn").count()) erro("ainda existe botão de som"); else ok("sem botão de som");
   await page.evaluate(() => window.SONS.gol("flamengo"));
   const h0 = (await hist()).at(-1);
-  // alguns navegadores automáticos já liberam o áudio sem toque; aí a regra do navegador não tem o que bloquear
   const livre = await page.evaluate(() => { const c = new AudioContext(); const s = c.state; c.close(); return s === "running"; });
   if (livre) ok("este navegador libera o áudio sem toque (teste de bloqueio não se aplica)");
-  else if (h0.tocou) erro("tocou antes do primeiro toque na página (o navegador deveria bloquear)"); else ok(`antes do primeiro toque: não toca (${h0.motivo})`);
-  // primeiro toque (gesto de verdade) destrava
-  if (opts.hasTouch) await page.tap(".page-head, .round-head, h1, body"); else await page.mouse.click(5, 300);
+  else if (h0.tocou) erro("tocou antes do primeiro toque na página"); else ok(`antes do primeiro toque: não toca (${h0.motivo})`);
+  if (opts.hasTouch) await page.tap("h1, body"); else await page.mouse.click(5, 300);
   await page.waitForTimeout(200);
-  if (!(await page.evaluate(() => window.SONS.pronto()))) erro("áudio continuou travado depois do toque"); else ok("áudio destravado com o primeiro toque");
+  if (!(await page.evaluate(() => window.SONS.pronto()))) erro("áudio travado depois do toque"); else ok("áudio destravado com o primeiro toque");
+  // navegar não toca nada
   const n0 = (await hist()).length;
-  // navegação pelos links (como o usuário faz)
-  const vai = async (hash) => { await page.evaluate((h) => { location.hash = h; }, hash); await page.waitForTimeout(1600); };
-  const casos = [["#/bora-pro-jogo", 1], ["#/bora-pro-jogo", 0], ["#/", 0], ["#/clube/flamengo", 0], ["#/clube/flamengo/estatisticas", 1], ["#/clube/flamengo/elenco", 0], ["#/clube/palmeiras/estatisticas", 1], ["#/tabela", 0], ["#/tabela/gols", 1], ["#/tabela/ataque", 0], ["#/simulador", 0], ["#/clubes", 0], ["#/bora-pro-jogo", 1]];
-  let antes = n0;
-  for (const [h, esp] of casos) {
-    await vai(h);
-    const l = await hist(), novos = l.slice(antes); antes = l.length;
-    const apitos = novos.filter((x) => x.tipo === "apito");
-    if (apitos.length !== esp) erro(`${h}: ${apitos.length} apito(s), esperava ${esp}`);
-    if (apitos.some((x) => !x.tocou)) erro(`${h}: apito registrado mas não tocou (${apitos[0].motivo})`);
-  }
-  if (!falhas.some((f) => f.startsWith("#/"))) ok(`apito nas entradas certas (${casos.filter((c) => c[1]).length} de ${casos.length} navegações) e silêncio nas outras`);
-  // gol: o alerta toca o som do clube
-  await vai("#/");
+  for (const h of ["#/bora-pro-jogo", "#/clube/flamengo/estatisticas", "#/tabela/gols", "#/simulador", "#/"]) { await page.evaluate((x) => { location.hash = x; }, h); await page.waitForTimeout(1600); }
+  const navs = (await hist()).slice(n0);
+  if (navs.length) erro(`navegar tocou ${navs.length} som(ns): ${navs.map((x) => x.tipo).join(", ")}`); else ok("navegar pelas páginas não toca som (sem apito)");
+  // gol: o alerta toca o som do clube; dois seguidos não se sobrepõem
   await page.evaluate(() => {
     const c = window.PD.byId;
     window.GOALBUG.alerta({ club: c.cruzeiro, de: 0, para: 1, outro: 0, relogio: "12'", texto: "Teste · CRU 1 x 0 PAL", link: "#/" });
@@ -56,35 +43,19 @@ for (const [nome, opts] of [["PC", { viewport: { width: 1366, height: 800 } }], 
   });
   await page.waitForTimeout(600);
   let gols = (await hist()).filter((x) => x.tipo === "gol" && x.tocou);
-  if (!gols.some((g) => g.clube === "cruzeiro")) erro("alerta de gol do Cruzeiro sem som");
-  else ok(`gol do Cruzeiro: ${gols.find((g) => g.clube === "cruzeiro").dur} s de som`);
-  await page.waitForTimeout(8500); // o segundo alerta entra depois do primeiro
+  if (!gols.some((g) => g.clube === "cruzeiro")) erro("alerta de gol do Cruzeiro sem som"); else ok(`gol do Cruzeiro: ${gols.find((g) => g.clube === "cruzeiro").dur} s de som`);
+  await page.waitForTimeout(8500);
   gols = (await hist()).filter((x) => x.tipo === "gol" && x.tocou);
   const cru = gols.find((g) => g.clube === "cruzeiro"), pal = gols.find((g) => g.clube === "palmeiras");
   if (!pal) erro("segundo gol (Palmeiras) sem som");
   else if (pal.inicio < cru.inicio + cru.dur - 0.01) erro("dois gols tocaram por cima um do outro");
-  else ok("dois gols seguidos: um som depois do outro, sem sobrepor");
-  // botão de som
-  await page.locator("#som").click();
-  await page.evaluate(() => window.SONS.gol("santos"));
-  const desl = (await hist()).at(-1);
-  if (desl.tocou || (await page.locator("#som").getAttribute("aria-pressed")) !== "false") erro("botão desligado e o som tocou"); else ok("botão desliga o som");
-  await page.reload(); await page.waitForSelector(".match");
-  if ((await page.locator("#som").getAttribute("aria-pressed")) !== "false") erro("som voltou ligado depois de recarregar"); else ok("som desligado continua desligado depois de recarregar");
-  await vai("#/bora-pro-jogo");
-  if ((await hist()).some((x) => x.tocou)) erro("tocou com o som desligado");
-  await page.locator("#som").click();
-  await page.waitForTimeout(300);
-  const lig = (await hist()).at(-1);
-  if (!(lig.tipo === "apito" && lig.tocou)) erro("ligar o som não tocou o apito de confirmação"); else ok("ligar o som toca um apito de confirmação");
-  const tam = await page.locator("#som").boundingBox();
-  if (tam.width < 40 || tam.height < 40) erro(`botão de som pequeno (${tam.width}x${tam.height})`);
+  else ok("dois gols seguidos: um som depois do outro");
+  if ((await hist()).some((x) => x.tipo !== "gol")) erro("tocou algum som que não é de gol");
   if (erros.length) erro(`${nome}: erros de JavaScript: ${erros.join(" | ")}`);
   await ctx.close();
 }
 
-// as 20 fanfaras: diferentes entre si, com som e sem estourar
-console.log("fanfarras dos clubes");
+console.log("som do gol dos 20 clubes");
 {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
@@ -92,30 +63,30 @@ console.log("fanfarras dos clubes");
   const r = await page.evaluate(async () => {
     const out = [];
     for (const c of window.PD.CLUBS) {
-      const b64 = await window.SONS.wav("gol", c.id), bin = atob(b64), n = (bin.length - 44) / 4;
-      let soma = 0, pico = 0, somaFim = 0, nFim = 0;
+      const bin = atob(await window.SONS.wav(c.id)), n = (bin.length - 44) / 4;
+      let soma = 0, pico = 0, somaFim = 0, nFim = 0, somaIni = 0, nIni = 0;
       for (let i = 0; i < n; i++) {
-        const lo = bin.charCodeAt(44 + i * 4), hi = bin.charCodeAt(45 + i * 4), v = ((hi << 8 | lo) << 16 >> 16) / 32768;
+        const v = (((bin.charCodeAt(45 + i * 4) << 8) | bin.charCodeAt(44 + i * 4)) << 16 >> 16) / 32768;
         soma += v * v; pico = Math.max(pico, Math.abs(v));
         if (i > n - 44100 * 0.15) { somaFim += v * v; nFim++; }
+        if (i > 44100 * 0.3 && i < 44100 * 1.3) { somaIni += v * v; nIni++; }
       }
-      const F = window.SONS.fanfarra(c.id);
-      out.push({ id: c.id, seg: +(n / 44100).toFixed(2), rms: +Math.sqrt(soma / n).toFixed(3), pico: +pico.toFixed(3), fim: +Math.sqrt(somaFim / nFim).toFixed(4), melodia: F.notas.map((x) => x.m).join(","), bpm: F.bpm });
+      const E = window.SONS.estilo(c.id);
+      out.push({ id: c.id, seg: +(n / 44100).toFixed(2), rms: +Math.sqrt(soma / n).toFixed(3), explosao: +Math.sqrt(somaIni / nIni).toFixed(3), pico: +pico.toFixed(3), fim: +Math.sqrt(somaFim / nFim).toFixed(4), estilo: `${E.bpm}|${E.buzina}|${E.desenho}` });
     }
-    const a = await window.SONS.wav("apito"), bin = atob(a);
-    return { out, apitoSeg: +((bin.length - 44) / 4 / 44100).toFixed(2) };
+    return out;
   });
-  const mel = new Set(r.out.map((x) => `${x.melodia}|${x.bpm}`));
-  if (mel.size !== r.out.length) erro(`fanfarras repetidas: ${r.out.length - mel.size}`); else ok(`${r.out.length} fanfarras diferentes (melodia e andamento)`);
-  const mudas = r.out.filter((x) => x.rms < 0.02), estouro = r.out.filter((x) => x.pico >= 0.999), longo = r.out.filter((x) => x.seg > 5.3), rabo = r.out.filter((x) => x.fim > 0.01);
-  if (mudas.length) erro(`fanfarras quase mudas: ${mudas.map((x) => x.id).join(", ")}`);
-  if (estouro.length) erro(`fanfarras estourando: ${estouro.map((x) => x.id).join(", ")}`);
-  if (longo.length) erro(`fanfarras com mais de 5 s: ${longo.map((x) => x.id).join(", ")}`);
-  if (rabo.length) erro(`fanfarras terminando de repente (sem final suave): ${rabo.map((x) => x.id).join(", ")}`);
-  if (!mudas.length && !estouro.length) ok(`volume ok: RMS ${Math.min(...r.out.map((x) => x.rms))}–${Math.max(...r.out.map((x) => x.rms))}, pico máximo ${Math.max(...r.out.map((x) => x.pico))}; duração ${r.out[0].seg} s com final suave`);
-  ok(`apito: ${r.apitoSeg} s`);
+  const mudas = r.filter((x) => x.rms < 0.02), estouro = r.filter((x) => x.pico >= 0.999), longo = r.filter((x) => x.seg > 5.3), rabo = r.filter((x) => x.fim > 0.01), fraca = r.filter((x) => x.explosao < x.rms);
+  if (mudas.length) erro(`quase mudos: ${mudas.map((x) => x.id).join(", ")}`);
+  if (estouro.length) erro(`estourando: ${estouro.map((x) => x.id).join(", ")}`);
+  if (longo.length) erro(`mais de 5 s: ${longo.map((x) => x.id).join(", ")}`);
+  if (rabo.length) erro(`terminam de repente: ${rabo.map((x) => x.id).join(", ")}`);
+  if (fraca.length) erro(`sem a explosão no começo (o grito do gol mais fraco que a média): ${fraca.map((x) => x.id).join(", ")}`);
+  const estilos = new Set(r.map((x) => x.estilo)).size;
+  if (estilos < 15) erro(`só ${estilos} variações entre os 20 clubes`);
+  if (!falhas.some((f) => /mudos|estourando|5 s|repente|explosão|variações/.test(f))) ok(`20 clubes: ${r[0].seg} s, RMS ${Math.min(...r.map((x) => x.rms))}–${Math.max(...r.map((x) => x.rms))}, pico ${Math.max(...r.map((x) => x.pico))}, explosão no 1º segundo, final suave, ${estilos} variações`);
   await ctx.close();
 }
 await browser.close();
-console.log(falhas.length ? `\nFALHOU (${falhas.length}):\n- ${falhas.join("\n- ")}` : "\nOK: sons conferidos");
+console.log(falhas.length ? `\nFALHOU (${falhas.length}):\n- ${falhas.join("\n- ")}` : "\nOK: som do gol conferido");
 process.exitCode = falhas.length ? 1 : 0;
