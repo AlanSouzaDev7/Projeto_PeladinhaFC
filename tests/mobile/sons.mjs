@@ -1,8 +1,8 @@
 /* Som do gol (js/sons.js) — o único som do site.
-   - o alerta GOL! toca 5 s do som de estádio do clube que marcou; dois gols juntos tocam um depois do outro;
+   - o alerta GOL! toca 5 s de grito de gol com a torcida ao fundo; dois gols juntos tocam um depois do outro;
    - nenhum som ao navegar (nem no "Bora pro jogo", nas estatísticas ou nos rankings) e nenhum botão de som;
    - antes do primeiro toque na página o navegador não deixa tocar: nada quebra;
-   - os 20 clubes: som de verdade (não é silêncio), sem estourar, 5 s com final suave e variação própria de cada clube.
+   - os 20 clubes: grito de gol com a torcida ao fundo, som de verdade (não é silêncio), sem estourar, 5 s com final suave e variação própria de cada clube.
    Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  node tests/mobile/sons.mjs */
 import { chromium, devices } from "playwright";
 
@@ -72,7 +72,7 @@ console.log("som do gol dos 20 clubes");
         if (i > 44100 * 0.3 && i < 44100 * 1.3) { somaIni += v * v; nIni++; }
       }
       const E = window.SONS.estilo(c.id);
-      out.push({ id: c.id, seg: +(n / 44100).toFixed(2), rms: +Math.sqrt(soma / n).toFixed(3), explosao: +Math.sqrt(somaIni / nIni).toFixed(3), pico: +pico.toFixed(3), fim: +Math.sqrt(somaFim / nFim).toFixed(4), estilo: `${E.bpm}|${E.buzina}|${E.desenho}` });
+      out.push({ id: c.id, seg: +(n / 44100).toFixed(2), rms: +Math.sqrt(soma / n).toFixed(3), explosao: +Math.sqrt(somaIni / nIni).toFixed(3), pico: +pico.toFixed(3), fim: +Math.sqrt(somaFim / nFim).toFixed(4), estilo: JSON.stringify(E) });
     }
     return out;
   });

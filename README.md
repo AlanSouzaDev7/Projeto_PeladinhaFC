@@ -172,10 +172,11 @@ Na aba **Simulador** (`#/simulador`), o usuário dá o placar dos jogos que falt
 
 ## Som do gol
 
-O único som do site (`js/sons.js`, gerado no navegador com Web Audio, sem arquivos de áudio): quando um clube marca, junto com o alerta GOL!, tocam 5 s de estádio explodindo, sem melodia:
-- a torcida gritando "GOOOL", com dezenas de vozes, por cima do ronco da arquibancada;
-- a buzina do estádio;
-- a batucada da torcida organizada (surdo, caixa e repique). Cada clube muda o andamento da batucada e o tom da buzina.
+O único som do site (`js/sons.js`, gerado no navegador com Web Audio, sem arquivos de áudio): quando um clube marca, junto com o alerta GOL!, tocam 5 s de
+- um grito de **"GOOOOOL"** (voz sintetizada: o "G", o "ô" que sobe e segura com vibrato e o "L" no fim);
+- a **torcida vibrando ao fundo**: o ronco da arquibancada, gente gritando e aplausos. A torcida fica mais baixa enquanto o grito está no ar e cresce depois dele.
+
+Cada clube muda um pouco o tom da voz, a duração do grito e a força da torcida.
 
 Dois gols juntos tocam um depois do outro. Com a aba escondida, o som toca na hora e o alerta aparece quando ela voltar. O navegador só deixa tocar som depois do primeiro toque na página. Não há botão de som nem apito.
 
@@ -285,7 +286,7 @@ node tests/mobile/retrospecto.mjs                  # últimos 5 e próximos 5 de
 node tests/mobile/sem-servidor.mjs                 # site funcionando só com os arquivos (GitHub Pages)
 node tests/mobile/busca.mjs                        # busca: só clubes que começam com o que foi digitado (A a Z e começos de nome, PC e celular)
 node tests/mobile/simulador.mjs                    # simulador: só jogos que faltam, conta da tabela, botões, palpites guardados, 320 px a tablet
-node tests/mobile/sons.mjs                         # som do gol: toca no alerta, um gol depois do outro, nada ao navegar, os 20 clubes sem estourar
+node tests/mobile/sons.mjs                         # som do gol (grito + torcida): toca no alerta, um gol depois do outro, nada ao navegar, os 20 clubes sem estourar
 node tests/mobile/latencia.mjs                     # atraso do placar ao vivo: versão anterior x atual, com e sem horário marcado
 node tests/mobile/demo-video.mjs                   # vídeo de demonstração das novidades, com som (tests/mobile/out/demo-novidades.mp4)
 ```
