@@ -166,6 +166,7 @@ Na aba **Simulador** (`#/simulador`), o usuário dá o placar dos jogos que falt
 - Só entram jogos que ainda não começaram. Os que estão rolando já contam na tabela com o placar de agora.
 - Rodada por rodada ou **Todas** (até o fim do campeonato). Botões rápidos: vitória, empate, "Mandantes vencem", "Tudo empate" e "Limpar".
 - Mesma conta da tabela ao vivo: pontos, vitórias, saldo e gols pró.
+- **Palpites acumulam**: a tabela de cada rodada já soma os placares dados nas rodadas anteriores (Palmeiras 3 x 0 Flamengo na 36ª: na 37ª o Palmeiras já aparece com os 3 pontos e o jogo a mais). Rodadas anteriores não contam palpites das seguintes.
 - Os palpites ficam guardados no aparelho.
 - **Próxima temporada**: os jogos vêm da mesma fonte do placar (ESPN). Quando a tabela de 2027 for divulgada e os jogos ganharem data, eles aparecem no simulador sozinhos. As páginas do ge.globo, da CazéTV e do site da ESPN não são lidas, porque os termos de uso desses sites não permitem copiar o conteúdo.
 

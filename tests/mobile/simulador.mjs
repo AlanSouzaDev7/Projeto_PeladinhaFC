@@ -23,6 +23,7 @@ const restam = Object.entries(D.fixtures).flatMap(([rd, l]) => l.filter((g) => !
 const browser = await chromium.launch({ channel: "chrome" });
 const falhas = [];
 const erro = (m) => { falhas.push(m); console.log("  ✗", m); };
+const ok = (m) => console.log("  ✓", m);
 
 async function abrir(opts, hash) {
   const ctx = await browser.newContext({ ...opts, locale: "pt-BR", colorScheme: "dark" });
@@ -41,9 +42,11 @@ const leTabela = (page) => page.evaluate(() => [...document.querySelectorAll(".s
   return { id: tr.querySelector("td.club a").getAttribute("href").split("/").pop(), pos: +tr.querySelector(".pos").textContent, p: +tr.querySelector(".pts").textContent, j: +td[3], sg: +td[9].replace("+", "") };
 }));
 async function confere(page, rotulo) {
-  const r = await page.evaluate(() => {
+  const r = await page.evaluate((restam) => {
     const base = window.__base, palp = JSON.parse(localStorage.getItem("placar:simulador") || "{}");
-    const vis = [...document.querySelectorAll(".sim-j")].map((li) => li.dataset.k);
+    // a tabela de uma rodada soma os palpites dela e das rodadas anteriores
+    const sel = document.querySelector(".sim-grid").dataset.sim;
+    const vis = restam.filter((x) => sel === "todas" || x.rd <= +sel).map((x) => x.k);
     const rows = base.map((r) => ({ ...r })), by = Object.fromEntries(rows.map((r) => [r.id, r]));
     for (const k of vis) {
       const pl = palp[k]; if (!pl || pl[0] == null || pl[1] == null) continue;
@@ -53,7 +56,7 @@ async function confere(page, rotulo) {
     const ord = Object.fromEntries(base.map((r, i) => [r.id, i]));
     rows.sort((x, y) => y.p - x.p || y.w - x.w || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || ord[x.id] - ord[y.id]);
     return rows.map((r, i) => ({ id: r.id, pos: i + 1, p: r.p, j: r.j, sg: r.gf - r.ga }));
-  });
+  }, restam);
   const vistos = await leTabela(page);
   const dif = r.filter((x, i) => JSON.stringify(x) !== JSON.stringify(vistos[i]));
   if (dif.length) erro(`${rotulo}: tabela diferente da conta (${dif.length} linhas), ex.: esperado ${JSON.stringify(dif[0])}, visto ${JSON.stringify(vistos.find((v) => v.id === dif[0].id))}`);
@@ -117,6 +120,37 @@ console.log("PC 1366x800");
   const sobra = await page.$$eval(".sim-j input", (l) => l.filter((i) => i.value !== "").length);
   if (sobra) erro(`"Limpar" deixou ${sobra} campos preenchidos`);
   await confere(page, "depois de limpar");
+  // palpite de uma rodada continua valendo na seguinte (o exemplo do pedido: Palmeiras 3 x 0 Flamengo)
+  {
+    const pf = restam.find((x) => x.k === "palmeiras-x-flamengo");
+    const rds = [...new Set(restam.map((x) => x.rd))].sort((a, b) => a - b);
+    const prox = pf && rds.find((r) => r > pf.rd), ant = pf && rds.filter((r) => r < pf.rd).pop();
+    if (!pf || !prox) console.log("  (sem Palmeiras x Flamengo com rodada seguinte entre os jogos que faltam)");
+    else {
+      await page.goto(`${BASE}/?v=${Date.now()}#/simulador/${pf.rd}`); await page.waitForSelector(".sim-grid");
+      const linha = async (id) => (await leTabela(page)).find((x) => x.id === id);
+      const p0 = await linha("palmeiras"), f0 = await linha("flamengo");
+      await darPlacar(page, "palmeiras-x-flamengo", 3, 0);
+      await page.goto(`${BASE}/?v=${Date.now()}#/simulador/${prox}`); await page.waitForSelector(".sim-grid");
+      const p1 = await linha("palmeiras"), f1 = await linha("flamengo");
+      const txt = await page.locator("[data-sim-n]").textContent();
+      if (p1.p !== p0.p + 3 || p1.j !== p0.j + 1 || p1.sg !== p0.sg + 3 || f1.p !== f0.p || f1.j !== f0.j + 1 || f1.sg !== f0.sg - 3)
+        erro(`rodada ${prox}: o 3 x 0 da rodada ${pf.rd} não entrou (Palmeiras ${p0.p}→${p1.p} pts, Flamengo ${f0.p}→${f1.p} pts)`);
+      else ok(`rodada ${prox} já conta o 3 x 0 da rodada ${pf.rd}: Palmeiras ${p0.p}→${p1.p} pts, Flamengo ${f0.p}→${f1.p} pts, 1 jogo a mais cada`);
+      if (!/rodadas anteriores/.test(txt)) erro(`contador da rodada ${prox} não avisa os palpites anteriores ("${txt}")`); else ok(`contador: "${txt}"`);
+      await confere(page, `rodada ${prox} com o palpite da ${pf.rd}`);
+      await darPlacar(page, (await page.$eval(".sim-j", (li) => li.dataset.k)), 2, 2);
+      await confere(page, `rodada ${prox} com palpites das duas rodadas`);
+      const prox2 = rds.find((r) => r > prox);
+      if (prox2) { await page.goto(`${BASE}/?v=${Date.now()}#/simulador/${prox2}`); await page.waitForSelector(".sim-grid"); await confere(page, `rodada ${prox2} acumulando as anteriores`); }
+      if (ant != null) {
+        await page.goto(`${BASE}/?v=${Date.now()}#/simulador/${ant}`); await page.waitForSelector(".sim-grid");
+        const pa = await linha("palmeiras");
+        if (pa.p !== p0.p) erro(`rodada ${ant} (anterior) contou o palpite da rodada ${pf.rd}`); else ok(`rodada ${ant} (anterior) não conta o palpite da ${pf.rd}`);
+      }
+      await page.evaluate(() => localStorage.removeItem("placar:simulador"));
+    }
+  }
   // aba da rodada atual: só os jogos dela
   await page.goto(`${BASE}/?v=${Date.now()}#/simulador`); await page.waitForSelector(".sim-grid");
   const rd = await page.$eval(".sim-grid", (g) => g.dataset.sim);

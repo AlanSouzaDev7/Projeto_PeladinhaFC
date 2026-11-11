@@ -1237,6 +1237,15 @@
     const { rows, n } = simTabela(jogos, palp);
     return { n, html: standingsTable(rows).replace(/com os jogos de agora/g, "com os placares simulados") };
   }
+  // jogos que entram na tabela de uma rodada: os dela e os das rodadas anteriores (o palpite de antes continua valendo)
+  const simAte = (jogos, rd) => (rd == null ? jogos : jogos.filter((j) => j.rd <= rd));
+  function simContagem(jogos, palp, rd) {
+    const dado = (j) => { const pl = palp[j.k]; return pl && pl[0] != null && pl[1] != null; };
+    const aqui = jogos.filter((j) => (rd == null || j.rd === rd) && dado(j)).length, antes = rd == null ? 0 : jogos.filter((j) => j.rd < rd && dado(j)).length;
+    if (!aqui && !antes) return "dê um placar ao lado";
+    const pl = (n) => `${n} jogo${n > 1 ? "s" : ""}`;
+    return [aqui ? `${pl(aqui)} simulado${aqui > 1 ? "s" : ""}` : "", antes ? `${aqui ? "+ " : ""}${pl(antes)} das rodadas anteriores` : ""].filter(Boolean).join(" ");
+  }
   function simRodadas(jogos) { return [...new Set(jogos.map((j) => j.rd))]; }
   function simLinha(j, palp) {
     const h = byId[j.home], a = byId[j.away], pl = palp[j.k] || [];
@@ -1274,7 +1283,7 @@
       if (todas && j.rd !== rdAtual) { rdAtual = j.rd; lista += `<li class="sim-rd">${j.rd}ª rodada</li>`; }
       lista += simLinha(j, palp);
     }
-    const t = simTabelaHTML(todas ? jogos : vis, palp);
+    const t = simTabelaHTML(simAte(jogos, todas ? null : rd), palp);
     return `<div class="page-head"><div><div class="eyebrow">Brasileirão Série A · simulador</div><h1>Simulador da tabela</h1>
         <p>Dê o placar dos jogos que faltam e veja onde cada clube ficaria. Só entram jogos que ainda não começaram${temAoVivo() ? "; os que estão rolando já contam com o placar de agora" : ""}.</p></div></div>
       <div class="chips sim-chips">${chips}</div>
@@ -1287,10 +1296,10 @@
             <button type="button" class="chip" data-sim-auto="limpa">Limpar ${todas ? "tudo" : "rodada"}</button>
           </div>
           <ol class="sim-list">${lista}</ol>
-          <p class="sim-nota">Jogos e datas: ESPN, a mesma fonte do placar. Os placares que você der ficam guardados só neste aparelho.</p>
+          <p class="sim-nota">Jogos e datas: ESPN, a mesma fonte do placar. A tabela de cada rodada já soma os placares que você deu nas rodadas anteriores. Os placares ficam guardados só neste aparelho.</p>
         </div>
         <div class="card sim-tab-card">
-          <div class="card-h">Classificação simulada<small data-sim-n>${t.n ? `${t.n} jogo${t.n > 1 ? "s" : ""} simulado${t.n > 1 ? "s" : ""}` : "dê um placar ao lado"}</small></div>
+          <div class="card-h">Classificação simulada<small data-sim-n>${simContagem(jogos, palp, todas ? null : rd)}</small></div>
           <div class="sim-tab" data-sim-tabela>${t.html}</div>${legend}
         </div>
       </div>`;
@@ -1299,7 +1308,7 @@
     const grid = $(".sim-grid", root);
     if (!grid) return;
     const sel = grid.dataset.sim, todas = sel === "todas";
-    const jogosDaVista = () => { const js = simJogos(); return todas ? js : js.filter((j) => j.rd === +sel); };
+    const jogosDaVista = () => simAte(simJogos(), todas ? null : +sel);
     const salva = (palp) => store.set("simulador", palp);
     function atualiza() {
       const palp = simPalpites(), tab = $("[data-sim-tabela]", grid);
@@ -1308,7 +1317,7 @@
       const t = simTabelaHTML(jogosDaVista(), palp);
       tab.innerHTML = t.html;
       tab.classList.add("sem-entrada");
-      $("[data-sim-n]", grid).textContent = t.n ? `${t.n} jogo${t.n > 1 ? "s" : ""} simulado${t.n > 1 ? "s" : ""}` : "dê um placar ao lado";
+      $("[data-sim-n]", grid).textContent = simContagem(simJogos(), palp, todas ? null : +sel);
       if (reduced) return;
       $$("tbody tr", tab).forEach((tr) => {
         const y0 = antes.get($("td.club a", tr).getAttribute("href")), dy = y0 == null ? 0 : y0 - tr.getBoundingClientRect().top;
