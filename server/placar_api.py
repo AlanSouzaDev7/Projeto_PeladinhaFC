@@ -19,6 +19,8 @@ Rotas
   GET /api/state                          tabela, jogos, elencos e últimas escalações
   GET /api/rankings        [?tipo=gols|ataque|defesa|amarelos|vermelhos]   rankings do campeonato
   GET /api/retrospecto     [?club=id]     últimos 5 e próximos 5 jogos de cada clube, em todas as competições
+  GET /api/calendario      ?club=id [&mes=AAAA-MM]   calendário do clube: a temporada inteira (ou um mês), todas as competições
+  GET /api/jogo            ?event=id_espn&lg=liga   estatísticas rápidas de um jogo (placar, gols, posse, finalizações...)
   GET /api/jogadores       [?club=id]     pendurados, sequência de jogos, lesionados e minutagem dos reservas
 
 Gera também o arquivo do site sem a API (GitHub Pages):  python server/placar_api.py --snapshot
@@ -41,6 +43,7 @@ import sys
 import threading
 import time
 import traceback
+import unicodedata
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -440,7 +443,7 @@ def form_event(ev, espn_id, lg):
     op = [c for c in comp["competitors"] if c["team"]["id"] != espn_id][0]
     st = comp["status"]["type"]
     t = time.gmtime(calendar.timegm(time.strptime(ev["date"][:16], "%Y-%m-%dT%H:%M")) - 3 * 3600)
-    out = {"id": ev["id"], "date": time.strftime("%Y-%m-%d", t), "time": time.strftime("%H:%M", t), "comp": COMP_NAME[lg],
+    out = {"id": ev["id"], "lg": lg, "date": time.strftime("%Y-%m-%d", t), "time": time.strftime("%H:%M", t), "comp": COMP_NAME[lg],
            "stage": STAGE_PT.get((ev.get("seasonType") or {}).get("name"), "") if lg != "bra.1" else "",
            "home": me.get("homeAway") == "home", "opp": op["team"].get("displayName"), "oppId": BY_ESPN.get(op["team"]["id"]),
            "oppLogo": ((op["team"].get("logos") or [{}])[0]).get("href"), "state": st.get("state"), "venue": (comp.get("venue") or {}).get("fullName")}
@@ -471,11 +474,188 @@ def club_form(cid):
                 except Exception:
                     continue
                 (past if e["state"] == "post" else nxt).append(e)
+    # torneios que a ESPN não cobre (estaduais do PR, BA, SC e PA, Copa do Nordeste, Copa Verde, Fifa): API-Football,
+    # só com a chave API_FOOTBALL_KEY configurada (sem ela, o calendário fica com o que a ESPN tem)
+    for e in af_extra(cid):
+        (past if e["state"] == "post" else nxt).append(e)
     dedup = lambda xs: list({x["id"]: x for x in xs}.values())
     key = lambda x: x["date"] + (x["time"] or "99:99")
     past, nxt = sorted(dedup(past), key=key), sorted(dedup(nxt), key=key)
     # "all": a temporada inteira (resultados e jogos por vir), usada na aba Partidas
     return {"last": past[-5:][::-1], "next": nxt[:5], "all": past + nxt}
+
+
+# ---------------------------------------------------------------------------
+# Calendário: competições fora da ESPN pela API-Football (opcional, com chave)
+# ---------------------------------------------------------------------------
+AF_BASE = "https://v3.football.api-sports.io"
+AF_CACHE = os.path.join(ROOT, "server", "cache", "api-football-times.json")
+# nomes da API-Football -> nome no site; as competições que a ESPN já traz ficam de fora (não duplica)
+AF_NOMES = {"paranaense - 1": "Paranaense", "paranaense": "Paranaense", "baiano - 1": "Baiano", "baiano": "Baiano",
+            "catarinense - 1": "Catarinense", "catarinense": "Catarinense", "paraense": "Paraense", "paraense - 1": "Paraense",
+            "copa do nordeste": "Copa do Nordeste", "copa verde": "Copa Verde", "fifa club world cup": "Mundial de Clubes",
+            "fifa intercontinental cup": "Intercontinental", "copa paulista": "Copa Paulista"}
+AF_ESPN = {"serie a", "copa do brasil", "conmebol libertadores", "conmebol sudamericana", "recopa sudamericana", "super cup",
+           "carioca - 1", "paulista - a1", "mineiro - 1", "gaucho - 1", "gaúcho - 1"}
+AF_ESTADO = {"PST": None, "CANC": None, "ABD": None, "AWD": "post", "WO": "post", "FT": "post", "AET": "post", "PEN": "post",
+             "1H": "in", "HT": "in", "2H": "in", "ET": "in", "BT": "in", "P": "in", "LIVE": "in", "SUSP": "in", "INT": "in", "NS": "pre", "TBD": "pre"}
+_af_times = None
+
+
+def af_get(path):
+    key = os.environ.get("API_FOOTBALL_KEY", "").strip()
+    if not key:
+        return None
+    return json.loads(get(f"{AF_BASE}{path}", headers={"x-apisports-key": key}))
+
+
+def af_time(cid):
+    """Número do clube na API-Football (procurado uma vez pelo nome e guardado em server/cache)."""
+    global _af_times
+    if _af_times is None:
+        try:
+            _af_times = json.load(open(AF_CACHE, encoding="utf-8"))
+        except Exception:
+            _af_times = {}
+    if cid in _af_times:
+        return _af_times[cid]
+    nome = CLUBS[cid].get("busca") or cid
+    d = af_get("/teams?" + urllib.parse.urlencode({"search": nome.split(" ")[0] if len(nome) > 20 else nome, "country": "Brazil"}))
+    alvo = norm_txt(nome)
+    achado = None
+    for r in (d or {}).get("response", []):
+        t = r.get("team") or {}
+        if t.get("national"):
+            continue
+        n = norm_txt(t.get("name") or "")
+        if n == alvo or alvo.startswith(n) or n.startswith(alvo):
+            achado = t.get("id"); break
+    _af_times[cid] = achado
+    try:
+        os.makedirs(os.path.dirname(AF_CACHE), exist_ok=True)
+        json.dump(_af_times, open(AF_CACHE, "w", encoding="utf-8"))
+    except Exception:
+        pass
+    return achado
+
+
+def norm_txt(x):
+    return re.sub(r"[^a-z0-9 ]", " ", unicodedata.normalize("NFD", str(x)).encode("ascii", "ignore").decode().lower()).strip()
+
+
+def af_evento(fx, tid):
+    """Um jogo da API-Football no formato do calendário (None se for competição que a ESPN já traz ou jogo cancelado)."""
+    lg = fx.get("league") or {}
+    nome = (lg.get("name") or "").strip()
+    chave = norm_txt(nome).replace("  ", " ")
+    if chave in AF_ESPN or nome.lower() in AF_ESPN:
+        return None
+    comp = AF_NOMES.get(nome.lower()) or AF_NOMES.get(chave)
+    if not comp:
+        if (lg.get("country") or "") not in ("Brazil", "World"):
+            return None
+        comp = clean_text(nome)[:40]
+    f, tm = fx.get("fixture") or {}, fx.get("teams") or {}
+    st = AF_ESTADO.get(((f.get("status") or {}).get("short") or "NS"), "pre")
+    if st is None:
+        return None
+    casa = (tm.get("home") or {}).get("id") == tid
+    me, op = (tm.get("home"), tm.get("away")) if casa else (tm.get("away"), tm.get("home"))
+    data = str(f.get("date") or "")
+    if not re.match(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", data):
+        return None
+    out = {"id": f"af{int(f.get('id') or 0)}", "lg": None, "src": "API-Football", "date": data[:10], "time": data[11:16], "comp": comp,
+           "stage": clean_text(str(lg.get("round") or "")).replace("Regular Season - ", "Rodada ")[:40], "home": casa,
+           "opp": clean_text((op or {}).get("name") or "")[:40], "oppId": None, "oppLogo": None, "state": st,
+           "venue": clean_text(((f.get("venue") or {}).get("name")) or "")[:60] or None}
+    alvo = norm_txt(out["opp"])
+    out["oppId"] = next((k for k, v in CLUBS.items() if norm_txt(v.get("busca") or "") == alvo or alvo in [norm_txt(a) for a in v.get("apelidos", [])]), None)
+    if st == "pre" and (f.get("status") or {}).get("short") == "TBD":
+        out["time"] = None
+    g = fx.get("goals") or {}
+    gf, ga = (g.get("home"), g.get("away")) if casa else (g.get("away"), g.get("home"))
+    if st in ("in", "post") and gf is not None and ga is not None:
+        out.update(gf=int(gf), ga=int(ga))
+        if st == "post":
+            out["res"] = "V" if gf > ga else "D" if gf < ga else "E"
+            pen = (fx.get("score") or {}).get("penalty") or {}
+            if pen.get("home") is not None and pen.get("away") is not None:
+                out["pen"] = [int(pen["home"]), int(pen["away"])] if casa else [int(pen["away"]), int(pen["home"])]
+    return out
+
+
+def af_extra(cid):
+    try:
+        tid = af_time(cid) if os.environ.get("API_FOOTBALL_KEY", "").strip() else None
+        if not tid:
+            return []
+        d = af_get(f"/fixtures?team={int(tid)}&season={time.strftime('%Y')}&timezone=America/Sao_Paulo")
+        return [e for e in (af_evento(fx, tid) for fx in (d or {}).get("response", [])) if e]
+    except Exception as ex:
+        log("calendário (API-Football)", cid, ex)
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Estatísticas rápidas de um jogo (resumo da ESPN), guardadas por 1 min (ao vivo) ou 6 h (encerrado)
+# ---------------------------------------------------------------------------
+STATS_JOGO = [("possessionPct", "Posse de bola", "%"), ("totalShots", "Finalizações", ""), ("shotsOnTarget", "Finalizações no gol", ""),
+              ("wonCorners", "Escanteios", ""), ("foulsCommitted", "Faltas", ""), ("offsides", "Impedimentos", ""), ("saves", "Defesas do goleiro", ""),
+              ("passPct", "Passes certos", "%"), ("yellowCards", "Cartões amarelos", ""), ("redCards", "Cartões vermelhos", "")]
+GOL_TIPOS = {"goal", "penalty---scored", "own-goal", "goal---header", "goal---free-kick", "goal---volley"}
+_jogos_cache = {}
+
+
+def match_stats(eid, lg):
+    hit = _jogos_cache.get((eid, lg))
+    if hit and time.time() < hit[0]:
+        return hit[1]
+    d = get_json(f"{ESPN_WEB}/site/v2/sports/soccer/{lg}/summary?event={eid}")
+    comp = ((d.get("header") or {}).get("competitions") or [{}])[0]
+    lados = {c.get("homeAway"): c for c in comp.get("competitors", [])}
+    cid_de = lambda c: BY_ESPN.get(((c or {}).get("team") or {}).get("id"))
+    st = (comp.get("status") or {}).get("type") or {}
+    times = {}
+    for t in (d.get("boxscore") or {}).get("teams", []):
+        side = "home" if ((t.get("team") or {}).get("id") == ((lados.get("home") or {}).get("team") or {}).get("id")) else "away"
+        times[side] = {x.get("name"): x.get("displayValue") for x in t.get("statistics", [])}
+    def num(v, unid):
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return None
+        if unid == "%" and f <= 1:
+            f *= 100
+        return round(f) if unid == "%" else int(f)
+    stats = []
+    for k, rot, unid in STATS_JOGO:
+        h, a = num((times.get("home") or {}).get(k), unid), num((times.get("away") or {}).get(k), unid)
+        if h is not None and a is not None:
+            stats.append([rot, h, a, unid])
+    ida = {((lados.get(x) or {}).get("team") or {}).get("id"): x for x in ("home", "away")}
+    gols, vermelhos = [], []
+    for k in d.get("keyEvents", []):
+        tipo = (k.get("type") or {}).get("type") or ""
+        quem = ((k.get("athletesInvolved") or k.get("participants") or [{}])[0])
+        nome = clean_text((quem.get("athlete") or quem).get("displayName") or "")[:40]
+        lado = ida.get((k.get("team") or {}).get("id"))
+        minuto = clean_text((k.get("clock") or {}).get("displayValue") or "")[:10]
+        if tipo in GOL_TIPOS or (k.get("scoringPlay") and "goal" in tipo):
+            gols.append({"min": minuto, "nome": nome, "lado": lado, "pen": "penalty" in tipo, "contra": tipo == "own-goal"})
+        elif tipo == "red-card":
+            vermelhos.append({"min": minuto, "nome": nome, "lado": lado})
+    info = d.get("gameInfo") or {}
+    ven = info.get("venue") or {}
+    out = {"event": eid, "lg": lg, "comp": COMP_NAME.get(lg), "state": st.get("state"), "clock": clock_label(comp.get("status") or {}) if st.get("state") == "in" else None,
+           "home": {"club": cid_de(lados.get("home")), "nome": clean_text((((lados.get("home") or {}).get("team")) or {}).get("displayName") or ""), "gols": score_of(lados.get("home") or {})[0]},
+           "away": {"club": cid_de(lados.get("away")), "nome": clean_text((((lados.get("away") or {}).get("team")) or {}).get("displayName") or ""), "gols": score_of(lados.get("away") or {})[0]},
+           "estadio": clean_text(ven.get("fullName") or "")[:80] or None, "cidade": clean_text(((ven.get("address") or {}).get("city")) or "")[:40] or None,
+           "publico": info.get("attendance") or None, "arbitro": clean_text(((info.get("officials") or [{}])[0]).get("displayName") or "")[:60] or None,
+           "stats": stats, "gols": gols, "vermelhos": vermelhos, "fonte": "ESPN"}
+    _jogos_cache[(eid, lg)] = (time.time() + (60 if st.get("state") == "in" else 6 * 3600), out)
+    if len(_jogos_cache) > 400:
+        _jogos_cache.pop(next(iter(_jogos_cache)))
+    return out
 
 
 def update_form():
@@ -2464,6 +2644,31 @@ class Handler(SimpleHTTPRequestHandler):
                 if not fm:
                     return self.send_json({"ok": False, "message": "carregando dados"}, 503)
                 return self.send_json({"updated": fm["updated"], "club": club, **fm["clubs"].get(club, {})} if club else fm)
+            if parts[1:] == ["calendario"]:
+                if not club:
+                    return self.send_json({"ok": False, "message": "informe o clube (?club=id)"}, 400)
+                mes = one("mes")
+                if mes is not None and not re.fullmatch(r"20\d{2}-(0[1-9]|1[0-2])", mes):
+                    return self.send_json({"ok": False, "message": "mês inválido (use AAAA-MM)"}, 400)
+                with lock:
+                    fm = state.get("form")
+                if not fm:
+                    return self.send_json({"ok": False, "message": "carregando dados"}, 503)
+                jogos = (fm["clubs"].get(club) or {}).get("all", [])
+                if mes:
+                    jogos = [j for j in jogos if j["date"].startswith(mes)]
+                comps = sorted({j["comp"] for j in jogos})
+                return self.send_json({"updated": fm["updated"], "club": club, "mes": mes, "competicoes": comps, "jogos": jogos,
+                                       "fontes": ["ESPN"] + (["API-Football"] if any(j.get("src") == "API-Football" for j in jogos) else [])})
+            if parts[1:] == ["jogo"]:
+                eid, lg = one("event"), one("lg")
+                if not eid or not EVENT_OK.match(eid) or lg not in COMP_NAME:
+                    return self.send_json({"ok": False, "message": "informe event (número do jogo na ESPN) e lg (liga)"}, 400)
+                try:
+                    return self.send_json(match_stats(eid, lg))
+                except Exception as ex:
+                    log("jogo", eid, ex)
+                    return self.send_json({"ok": False, "message": "estatísticas indisponíveis"}, 502)
             if parts[1:] == ["jogadores"]:
                 with lock:
                     pl = state.get("players")

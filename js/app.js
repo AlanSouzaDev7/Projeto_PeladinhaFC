@@ -420,37 +420,6 @@
     return s;
   };
 
-  /* ---------- retrospecto: últimos 5 e próximos 5 jogos, em todas as competições ---------- */
-  function formInner(id, d) {
-    if (!d) return `<div class="empty" style="padding:28px">Carregando o retrospecto…</div>`;
-    if (!d.last?.length && !d.next?.length) return `<div class="empty" style="padding:28px">Retrospecto ainda não disponível.</div>`;
-    const c = byId[id];
-    const oppCrest = (e) => (e.oppId && byId[e.oppId] ? crest(byId[e.oppId], 32) : e.oppLogo ? `<img class="crest" src="${e.oppLogo}" width="32" height="32" alt="" loading="lazy" />` : `<i class="fm-nocrest"></i>`);
-    const dm = (iso) => iso.split("-").reverse().slice(0, 2).join("/");
-    const wk = (iso) => WD[new Date(`${iso}T12:00:00-03:00`).getDay()];
-    const tag = (e) => `<span class="fm-comp">${e.comp}${e.stage ? ` · ${e.stage}` : ""}</span>`;
-    const where = (e) => `<span class="fm-where ${e.home ? "casa" : "fora"}">${e.home ? "Casa" : "Fora"}</span>`;
-    const RES = { V: "Vitória", E: "Empate", D: "Derrota" };
-    const pts = d.last.reduce((t, e) => t + (e.res === "V" ? 3 : e.res === "E" ? 1 : 0), 0);
-    const last = d.last.map((e, i) => `<li class="fm-row" style="--i:${i}">
-        <span class="fm-res ${e.res}" title="${RES[e.res]}">${e.res}</span>
-        <span class="fm-date"><b>${dm(e.date)}</b><small>${wk(e.date)}</small></span>
-        <span class="fm-opp">${oppCrest(e)}<span><b>${e.home ? "" : "@ "}${e.oppId ? byId[e.oppId].abbr : e.opp}</b>${tag(e)}</span></span>
-        <span class="fm-score"><b>${e.home ? `${e.gf}–${e.ga}` : `${e.ga}–${e.gf}`}</b>${e.pen ? `<small>pên. ${e.home ? `${e.pen[0]}–${e.pen[1]}` : `${e.pen[1]}–${e.pen[0]}`}</small>` : ""}</span>
-        ${where(e)}</li>`).join("");
-    const next = d.next.map((e, i) => `<li class="fm-row" style="--i:${i}">
-        <span class="fm-n">${i + 1}</span>
-        <span class="fm-date"><b>${dm(e.date)}</b><small>${wk(e.date)} · ${e.time || "A definir"}</small></span>
-        <span class="fm-opp">${oppCrest(e)}<span><b>${e.home ? "" : "@ "}${e.oppId ? byId[e.oppId].abbr : e.opp}</b><span class="fm-comp">${e.comp}${e.stage ? ` · ${e.stage}` : ""}${e.venue ? `<span class="fm-venue-m"> · ${estadio(e.venue)}</span>` : ""}</span></span></span>
-        <span class="fm-score fm-venue"><small>${estadio(e.venue)}</small></span>
-        ${where(e)}</li>`).join("");
-    return `<div class="fm-grid">
-        <section><h4>Últimos 5 <span class="fm-strip">${d.last.slice().reverse().map((e) => `<i class="fm-res ${e.res}" title="${dm(e.date)} · ${RES[e.res]}">${e.res}</i>`).join("")}</span>
-          <small>${pts} de ${d.last.length * 3} pontos possíveis · do mais recente ao mais antigo</small></h4><ul>${last || `<li class="ps-empty">Sem jogos.</li>`}</ul></section>
-        <section><h4>Próximos 5 <small>${d.next.length ? `próximo: ${dm(d.next[0].date)} ${d.next[0].time ? `às ${d.next[0].time}` : "· horário a definir"}` : "sem jogos marcados"}</small></h4><ul>${next || `<li class="ps-empty">Sem jogos marcados.</li>`}</ul></section>
-      </div>
-      <div class="source">Todas as competições (Brasileirão, Copa do Brasil, Libertadores e Sul-Americana) · fonte: ESPN · placar sempre do ponto de vista do mandante · “@” = ${c.abbr} fora de casa</div>`;
-  }
   /* ---------- aba Partidas: temporada inteira (resultados e jogos por vir), por mês, com filtro de competição ---------- */
   const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
   function historyHTML(id, d, filtro = state.histFilter || "Todas") {
@@ -495,10 +464,132 @@
     </div>`;
   }
 
-  function formCard(id) {
-    const d = window.CLUB_FORM?.clubs?.[id];
-    return `<div class="card reveal fm" data-form="${id}"><div class="card-h">Retrospecto <small>últimos 5 e próximos 5 jogos</small></div>${formInner(id, d)}</div>`;
+  /* ==========================================================================
+     Calendário do clube (visão geral): o mês com cada jogo no seu dia, em todas as competições.
+     Meses anteriores mostram placar e local; os próximos, horário e local. Clicar num jogo abre as estatísticas
+     rápidas (gols, posse, finalizações, escanteios, cartões...) pelo resumo da ESPN (ou /api/jogo com a API).
+     Dados: a temporada do clube (js/club-form.js, gravado a cada 30 min, ou /api/calendario) e a ESPN direto ao abrir.
+     ========================================================================== */
+  const COMP_COR = { "Brasileirão": "#19a35b", "Copa do Brasil": "#e0a200", "Libertadores": "#c9973a", "Sul-Americana": "#2f7bdc", "Supercopa": "#e5484d", "Recopa": "#e5484d",
+    "Mundial de Clubes": "#e5484d", "Intercontinental": "#e5484d", "Copa do Nordeste": "#f97316", "Copa Verde": "#10b981" };
+  const compCor = (c) => COMP_COR[c] || "#9b6cf2"; // estaduais e outros: roxo
+  const mesDe = (iso) => iso.slice(0, 7);
+  const mesNome = (m) => `${MESES[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`;
+  const somaMes = (m, n) => { const d = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7) - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+  state.cal = {};
+  function calMeses(d) {
+    const ms = [...new Set(d.all.map((e) => mesDe(e.date)))].sort();
+    if (!ms.length) return [];
+    const out = [];
+    for (let m = ms[0]; m <= ms[ms.length - 1]; m = somaMes(m, 1)) out.push(m);
+    return out;
   }
+  function calMesInicial(d) {
+    const ms = calMeses(d), hoje = mesDe(dayKey(new Date()));
+    if (ms.includes(hoje)) return hoje;
+    const prox = d.all.find((e) => e.state !== "post");
+    return prox ? mesDe(prox.date) : ms[ms.length - 1];
+  }
+  const calOpp = (e) => (e.oppId && byId[e.oppId] ? byId[e.oppId] : null);
+  const calCrest = (e, n) => { const o = calOpp(e); return o ? crest(o, n) : e.oppLogo && /^https:\/\/a\.espncdn\.com\//.test(e.oppLogo) ? `<img class="crest" src="${SEG.esc(e.oppLogo)}" width="${n}" height="${n}" alt="" loading="lazy" />` : `<i class="fm-nocrest" style="width:${n}px;height:${n}px"></i>`; };
+  const calNome = (e) => SEG.esc(calOpp(e)?.abbr || e.opp || "?");
+  const calPlacar = (e) => (e.home ? `${e.gf}–${e.ga}` : `${e.ga}–${e.gf}`); // sempre mandante primeiro
+  function calInner(id, d) {
+    const c = byId[id];
+    if (!d) return `<div class="empty" style="padding:28px">Carregando o calendário…</div>`;
+    if (!d.all?.length) return `<div class="empty" style="padding:28px">Calendário ainda não disponível.</div>`;
+    const ms = calMeses(d);
+    let mes = state.cal[id];
+    if (!mes || !ms.includes(mes)) mes = state.cal[id] = calMesInicial(d);
+    const i = ms.indexOf(mes), jogos = d.all.filter((e) => mesDe(e.date) === mes);
+    const porDia = {};
+    jogos.forEach((e) => (porDia[e.date] = porDia[e.date] || []).push(e));
+    const hoje = dayKey(new Date()), ano = +mes.slice(0, 4), mm = +mes.slice(5, 7);
+    const ini = new Date(Date.UTC(ano, mm - 1, 1)).getUTCDay(), dias = new Date(Date.UTC(ano, mm, 0)).getUTCDate();
+    const feitos = jogos.filter((e) => e.state === "post"), n = (r) => feitos.filter((e) => e.res === r).length;
+    let cel = "";
+    for (let k = 0; k < ini; k++) cel += `<div class="cal-d vazio" aria-hidden="true"></div>`;
+    for (let dd = 1; dd <= dias; dd++) {
+      const iso = `${mes}-${String(dd).padStart(2, "0")}`, js = porDia[iso] || [];
+      cel += `<div class="cal-d${iso === hoje ? " hoje" : ""}${js.length ? " tem" : ""}"><span class="cal-n">${dd}</span>${js.map((e) => {
+        const quando = e.state === "post" ? calPlacar(e) : e.state === "in" ? `${calPlacar(e)}` : e.time || "a def.";
+        const rot = `${e.comp}${e.stage ? `, ${e.stage}` : ""}: ${e.home ? `${c.name} x ${calNome(e)}` : `${calNome(e)} x ${c.name}`}, ${e.state === "post" ? `${calPlacar(e)} (${{ V: "vitória", E: "empate", D: "derrota" }[e.res]})` : e.state === "in" ? `ao vivo, ${calPlacar(e)}` : e.time ? `às ${e.time}` : "horário a definir"}`;
+        return `<button type="button" class="cal-j ${e.state}${e.res ? ` r${e.res}` : ""}" data-cal-jogo="${SEG.esc(e.id)}" style="--cc:${compCor(e.comp)}" aria-label="${SEG.esc(rot)}" title="${SEG.esc(rot)}">${calCrest(e, 24)}<span class="cal-x">${e.state === "in" ? `<i class="cal-vivo"></i>` : ""}${quando}</span></button>`;
+      }).join("")}</div>`;
+    }
+    const comps = [...new Set(jogos.map((e) => e.comp))];
+    const lista = jogos.map((e) => `<li><button type="button" class="cal-l ${e.state}${e.res ? ` r${e.res}` : ""}" data-cal-jogo="${SEG.esc(e.id)}" style="--cc:${compCor(e.comp)}">
+        <span class="cal-ld"><b>${e.date.slice(8, 10)}/${e.date.slice(5, 7)}</b><small>${WD[new Date(`${e.date}T12:00:00-03:00`).getDay()]}</small></span>
+        <span class="cal-lo">${calCrest(e, 28)}<span><b>${e.home ? "" : "@ "}${calNome(e)}</b><small class="cal-comp">${SEG.esc(e.comp)}${e.stage ? ` · ${SEG.esc(e.stage)}` : ""}</small></span></span>
+        <span class="cal-lp">${e.state === "post" ? `<b>${calPlacar(e)}</b>${e.pen ? `<small>pên. ${e.home ? `${e.pen[0]}–${e.pen[1]}` : `${e.pen[1]}–${e.pen[0]}`}</small>` : ""}` : e.state === "in" ? `<b class="vivo">${calPlacar(e)}</b><small>● ${SEG.esc(e.clock || "ao vivo")}</small>` : `<b class="hora">${e.time || "A definir"}</b>`}</span>
+        <span class="cal-lr">${e.res ? `<i class="fm-res ${e.res}">${e.res}</i>` : ""}</span>
+        <span class="cal-lv">${SEG.esc(estadio(e.venue) || "Local a definir")}</span></button></li>`).join("");
+    return `<div class="cal-top">
+        <button type="button" class="cal-nav" data-cal-nav="-1" ${i <= 0 ? "disabled" : ""} aria-label="Mês anterior">‹</button>
+        <h4 class="cal-mes" aria-live="polite">${mesNome(mes)}</h4>
+        <button type="button" class="cal-nav" data-cal-nav="1" ${i >= ms.length - 1 ? "disabled" : ""} aria-label="Próximo mês">›</button>
+        <button type="button" class="chip cal-hoje" data-cal-hoje ${mes === calMesInicial(d) ? "hidden" : ""}>Hoje</button>
+      </div>
+      <div class="cal-resumo">${jogos.length ? `<span><b>${jogos.length}</b> jogo${jogos.length > 1 ? "s" : ""}</span>${feitos.length ? `<span class="v"><b>${n("V")}</b>V</span><span class="e"><b>${n("E")}</b>E</span><span class="d"><b>${n("D")}</b>D</span>` : ""}` : `<span>Sem jogos neste mês</span>`}
+        ${comps.map((x) => `<span class="cal-leg" style="--cc:${compCor(x)}"><i></i>${SEG.esc(x)}</span>`).join("")}</div>
+      <div class="cal-grade" role="grid" aria-label="Jogos do ${c.abbr} em ${mesNome(mes)}">${WD.map((w) => `<div class="cal-w" aria-hidden="true">${w}</div>`).join("")}${cel}</div>
+      <div class="cal-detalhe" data-cal-det hidden></div>
+      ${jogos.length ? `<ol class="cal-lista">${lista}</ol>` : ""}
+      <div class="source">Todas as competições que o ${c.abbr} disputa na temporada${d.all.some((e) => e.src === "API-Football") ? "" : " (estaduais do PR, BA, SC e PA e Copa do Nordeste/Verde só com a API-Football)"} · fonte: ESPN${d.all.some((e) => e.src === "API-Football") ? " e API-Football" : ""} · horários de Brasília · placar com o mandante primeiro · toque num jogo para ver as estatísticas</div>`;
+  }
+  function calendarCard(id) {
+    return `<div class="card reveal cal" data-cal="${id}"><div class="card-h">Calendário <small>todas as competições</small></div>${calInner(id, window.CLUB_FORM?.clubs?.[id])}</div>`;
+  }
+  // partida do Brasileirão no site (para o link "Ver a partida")
+  function calPartida(id, e) {
+    if (e.comp !== "Brasileirão" || !e.oppId) return null;
+    const [h, a] = e.home ? [id, e.oppId] : [e.oppId, id];
+    for (const [rd, l] of Object.entries(window.PD.FIXTURES || {})) if (l.some((g) => g[0] === h && g[1] === a)) return `#/partida/${h}-x-${a}-r${rd}`;
+    return null;
+  }
+  function calDetalhe(box, id, e) {
+    const c = byId[id], o = calOpp(e), d = window.CLUB_FORM?.clubs?.[id];
+    const [H, A] = e.home ? [{ club: c, nome: c.name }, { club: o, nome: o?.name || e.opp, e }] : [{ club: o, nome: o?.name || e.opp, e }, { club: c, nome: c.name }];
+    const lado = (t) => `<div class="cd-t">${t.club ? crest(t.club, 56) : calCrest(t.e, 56)}<b>${SEG.esc(t.club?.abbr || t.nome)}</b></div>`;
+    const data = new Date(`${e.date}T12:00:00-03:00`), dataTxt = `${["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"][data.getDay()]}, ${e.date.slice(8, 10)}/${e.date.slice(5, 7)}/${e.date.slice(0, 4)}`;
+    const meio = e.state === "post" ? `<b class="cd-placar">${calPlacar(e).replace("–", "<i>×</i>")}</b>${e.pen ? `<small>pênaltis ${e.home ? `${e.pen[0]}–${e.pen[1]}` : `${e.pen[1]}–${e.pen[0]}`}</small>` : ""}<span class="fm-res ${e.res}">${{ V: "Vitória", E: "Empate", D: "Derrota" }[e.res]} do ${c.abbr}</span>`
+      : e.state === "in" ? `<b class="cd-placar vivo">${calPlacar(e).replace("–", "<i>×</i>")}</b><small class="vivo">● ${SEG.esc(e.clock || "ao vivo")}</small>`
+      : `<b class="cd-hora">${e.time || "A definir"}</b><small>${(() => { const k = Math.round((Date.parse(`${e.date}T12:00:00-03:00`) - Date.parse(`${dayKey(new Date())}T12:00:00-03:00`)) / 864e5); return k === 0 ? "é hoje" : k === 1 ? "é amanhã" : `faltam ${k} dias`; })()}</small>`;
+    const link = calPartida(id, e);
+    // antes do jogo: os confrontos com esse adversário na temporada e a fase do clube
+    const confrontos = (d?.all || []).filter((x) => x.state === "post" && x.id !== e.id && ((x.oppId && x.oppId === e.oppId) || (!x.oppId && x.opp === e.opp)));
+    const ult5 = (d?.all || []).filter((x) => x.state === "post" && x.date < e.date).slice(-5);
+    const preJogo = `<div class="cd-sec"><h5>Antes do jogo</h5><ul class="cd-fatos">
+        <li><span>Últimos 5 do ${c.abbr}</span><b class="fm-strip">${ult5.map((x) => `<i class="fm-res ${x.res}" title="${x.date.slice(8, 10)}/${x.date.slice(5, 7)} · ${calNome(x)} ${calPlacar(x)}">${x.res}</i>`).join("") || "—"}</b></li>
+        <li><span>Contra o ${calNome(e)} na temporada</span><b>${confrontos.length ? confrontos.map((x) => `${calPlacar(x)} <small>(${SEG.esc(x.comp)})</small>`).join(" · ") : "primeiro jogo"}</b></li>
+        <li><span>Mando</span><b>${e.home ? "em casa" : "fora de casa"}</b></li></ul></div>`;
+    box.innerHTML = `<button type="button" class="cd-fechar" data-cal-fechar aria-label="Fechar as estatísticas">×</button>
+      <div class="cd-meta" style="--cc:${compCor(e.comp)}"><span class="cd-comp"><i></i>${SEG.esc(e.comp)}${e.stage ? ` · ${SEG.esc(e.stage)}` : ""}</span><span>${dataTxt}${e.time && e.state !== "pre" ? ` · ${e.time}` : ""}</span><span>${SEG.esc(estadio(e.venue) || "Local a definir")}</span></div>
+      <div class="cd-placarbox">${lado(H)}<div class="cd-meio">${meio}</div>${lado(A)}</div>
+      <div class="cd-corpo">${e.state === "pre" ? preJogo : `<div class="empty" style="padding:18px">Carregando as estatísticas…</div>`}</div>
+      ${link ? `<a class="cd-link" href="${link}">Ver a partida completa ›</a>` : ""}`;
+    box.hidden = false;
+    box.dataset.jogo = e.id;
+    if (e.state === "pre") return;
+    if (!e.lg || e.src === "API-Football") { $(".cd-corpo", box).innerHTML = `<p class="cd-nada">Estatísticas detalhadas não disponíveis para esta competição.</p>`; return; }
+    LIVE.jogo(e.id, e.lg).then((s) => {
+      if (!box.isConnected || box.dataset.jogo !== e.id) return;
+      const corpo = $(".cd-corpo", box);
+      if (!s) { corpo.innerHTML = `<p class="cd-nada">Não foi possível carregar as estatísticas agora.</p>`; return; }
+      const cor = (side) => display((side === "home" ? H : A).club || c);
+      const gols = (side) => s.gols.filter((g) => g.lado === side).map((g) => `<li>${SEG.esc(g.nome || "Gol")}${g.pen ? " <small>(pên.)</small>" : g.contra ? " <small>(contra)</small>" : ""} <b>${SEG.esc(g.min)}</b></li>`).join("");
+      const verm = (side) => s.vermelhos.filter((g) => g.lado === side).map((g) => `<li><i class="rk-card r"></i>${SEG.esc(g.nome)} <b>${SEG.esc(g.min)}</b></li>`).join("");
+      const barras = s.stats.map(([rot, h, a, u]) => {
+        const t = h + a || 1, ph = h + a ? Math.round((h / t) * 100) : 50;
+        return `<li><span class="cd-v">${h}${u}</span><span class="cd-r">${rot}<span class="cd-bar${h + a ? "" : " zero"}" style="--ph:${ph}%;--ch:${cor("home")};--ca:${cor("away")}"><i></i><i></i></span></span><span class="cd-v">${a}${u}</span></li>`;
+      }).join("");
+      corpo.innerHTML = `${s.gols.length || s.vermelhos.length ? `<div class="cd-gols"><ul>${gols("home")}${verm("home")}</ul><span class="cd-bola" aria-hidden="true">⚽</span><ul class="dir">${gols("away")}${verm("away")}</ul></div>` : `<p class="cd-nada">${s.state === "in" ? "Ainda sem gols." : "Jogo sem gols."}</p>`}
+        ${barras ? `<ul class="cd-stats">${barras}</ul>` : `<p class="cd-nada">A ESPN ainda não publicou as estatísticas deste jogo.</p>`}
+        <div class="cd-info">${s.arbitro ? `<span>Árbitro: <b>${SEG.esc(s.arbitro)}</b></span>` : ""}${s.publico ? `<span>Público: <b>${(+s.publico).toLocaleString("pt-BR")}</b></span>` : ""}${s.cidade ? `<span>${SEG.esc(s.cidade)}</span>` : ""}<span>fonte: ESPN</span></div>`;
+    });
+  }
+
+
 
   /* artilheiros de um clube: top 5 pelas súmulas (quem está na artilharia oficial fica com o número da CBF);
      sem os dados das súmulas, cai na artilharia oficial filtrada pelo clube */
@@ -854,7 +945,7 @@
           <div class="kpi" style="--i:2"><small>Vitórias</small><b data-count="${r.w}">0</b><em>${r.d} empates · ${r.l} derrotas</em></div>
           <div class="kpi" style="--i:3"><small>Saldo</small><b data-count="${r.sg}" data-sign>0</b><em>${r.gf} marcados · ${r.ga} sofridos</em></div>
         </div>
-        ${formCard(id)}
+        ${calendarCard(id)}
         <div class="grid-2">
           <div>
             <div class="card reveal">
@@ -1724,11 +1815,17 @@
     // enquanto isso, mostra a temporada gravada (js/club-form.js, baixado só nas páginas de clube)
     const paintForm = (el, d) => {
       if (el.dataset.history) el.innerHTML = historyHTML(el.dataset.history, d);
-      else el.innerHTML = el.querySelector(".card-h").outerHTML + formInner(el.dataset.form, d);
+      else if (el.dataset.cal) {
+        // o painel aberto continua aberto quando os dados chegam atualizados
+        const aberto = $("[data-cal-det]", el)?.dataset.jogo;
+        el.innerHTML = el.querySelector(".card-h").outerHTML + calInner(el.dataset.cal, d);
+        const e = aberto && d?.all?.find((x) => x.id === aberto);
+        if (e && mesDe(e.date) === state.cal[el.dataset.cal]) calDetalhe($("[data-cal-det]", el), el.dataset.cal, e);
+      }
     };
-    $$("[data-history], [data-form]").forEach((el) => {
+    $$("[data-history], [data-cal]").forEach((el) => {
       if (LIVE.on()) return;
-      const id = el.dataset.history || el.dataset.form;
+      const id = el.dataset.history || el.dataset.cal;
       if (!window.CLUB_FORM?.clubs?.[id]) loadClubForm().then(() => { const d = window.CLUB_FORM?.clubs?.[id]; if (d && el.isConnected && !el.dataset.fresh) paintForm(el, d); });
       LIVE.form(id).then((d) => {
         if (!d || !el.isConnected) return;
@@ -1813,7 +1910,44 @@
   }
 
   /* ---------- eventos delegados ---------- */
+  // Esc fecha as estatísticas do jogo no calendário e devolve o foco ao jogo
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const box = $("[data-cal-det]:not([hidden])");
+    if (!box) return;
+    const id = box.dataset.jogo; box.hidden = true; delete box.dataset.jogo;
+    const cal = box.closest("[data-cal]"); $$(".on", cal).forEach((x) => x.classList.remove("on"));
+    $(`[data-cal-jogo="${CSS.escape(id || "")}"]`, cal)?.focus();
+  });
   document.addEventListener("click", (e) => {
+    const cal = e.target.closest("[data-cal]");
+    if (cal) {
+      const id = cal.dataset.cal, d = window.CLUB_FORM?.clubs?.[id];
+      const nav = e.target.closest("[data-cal-nav], [data-cal-hoje]");
+      if (nav && d) {
+        const ms = calMeses(d);
+        state.cal[id] = nav.dataset.calHoje != null ? calMesInicial(d) : ms[Math.max(0, Math.min(ms.length - 1, ms.indexOf(state.cal[id]) + +nav.dataset.calNav))];
+        cal.innerHTML = cal.querySelector(".card-h").outerHTML + calInner(id, d);
+        $(".cal-mes", cal)?.focus?.();
+        return;
+      }
+      if (e.target.closest("[data-cal-fechar]")) {
+        const box = $("[data-cal-det]", cal); box.hidden = true; delete box.dataset.jogo;
+        cal.querySelector(".cal-j.on, .cal-l.on") && $$(".cal-j.on, .cal-l.on", cal).forEach((b) => b.classList.remove("on"));
+        return;
+      }
+      const bj = e.target.closest("[data-cal-jogo]");
+      if (bj && d) {
+        const jogo = d.all.find((x) => x.id === bj.dataset.calJogo), box = $("[data-cal-det]", cal);
+        if (!jogo) return;
+        if (box.dataset.jogo === jogo.id && !box.hidden) { box.hidden = true; delete box.dataset.jogo; $$(".on", cal).forEach((b) => b.classList.remove("on")); return; }
+        $$(".cal-j.on, .cal-l.on", cal).forEach((b) => b.classList.remove("on"));
+        $$(`[data-cal-jogo="${CSS.escape(jogo.id)}"]`, cal).forEach((b) => b.classList.add("on"));
+        calDetalhe(box, id, jogo);
+        box.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "nearest" });
+        return;
+      }
+    }
     const hf = e.target.closest("[data-hist-filter]");
     if (hf) {
       state.histFilter = hf.dataset.histFilter;

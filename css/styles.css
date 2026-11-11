@@ -2887,3 +2887,113 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
   .sim-placar input { width: 44px; height: 44px; font-size: 20px; }
   .sim-rap button { min-width: 0; flex: 1; min-height: 36px; }
 }
+
+/* ---------- calendário do clube (visão geral) ---------- */
+.cal-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.cal-mes { margin: 0; flex: 1; text-align: center; font-size: 18px; font-weight: 800; text-transform: capitalize; letter-spacing: 0.01em; }
+.cal-mes:focus { outline: none; }
+.cal-nav { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; font-size: 24px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.cal-nav:hover:not(:disabled) { border-color: var(--accent); }
+.cal-nav:disabled { opacity: 0.35; cursor: default; }
+.cal-hoje { font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; min-height: 32px; }
+.cal-resumo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 12px; color: var(--text-2); margin-bottom: 10px; }
+.cal-resumo b { font-size: 15px; color: var(--text); margin-right: 3px; }
+.cal-resumo .v b { color: var(--win); }
+.cal-resumo .d b { color: var(--loss); }
+.cal-leg { display: inline-flex; align-items: center; gap: 5px; }
+.cal-leg i { width: 9px; height: 9px; border-radius: 3px; background: var(--cc); }
+.cal-grade { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-w { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); text-align: center; padding: 2px 0 4px; }
+.cal-d { min-height: 74px; border-radius: 10px; background: color-mix(in srgb, var(--surface-2) 70%, transparent); padding: 4px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cal-d.vazio { background: transparent; }
+.cal-d.hoje { box-shadow: inset 0 0 0 2px var(--accent); }
+.cal-n { font-size: 11px; font-weight: 700; color: var(--text-3); line-height: 1; padding: 2px 2px 0; }
+.cal-d.hoje .cal-n { color: var(--accent); }
+.cal-j {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; width: 100%;
+  border: 1px solid color-mix(in srgb, var(--cc) 45%, var(--line)); border-left: 3px solid var(--cc); border-radius: 8px;
+  background: color-mix(in srgb, var(--cc) 10%, var(--surface)); color: var(--text); font: inherit; cursor: pointer; padding: 3px 2px; transition: transform 0.15s, box-shadow 0.15s;
+}
+.cal-j:hover { transform: translateY(-1px); box-shadow: 0 4px 14px color-mix(in srgb, var(--cc) 30%, transparent); }
+.cal-j.on, .cal-l.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cal-j .crest, .cal-j .fm-nocrest { width: 24px; height: 24px; flex: none; }
+.cal-x { font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
+.cal-j.rV .cal-x { color: var(--win); }
+.cal-j.rD .cal-x { color: var(--loss); }
+.cal-j.pre .cal-x { color: var(--text-2); font-weight: 700; }
+.cal-vivo { width: 6px; height: 6px; border-radius: 50%; background: var(--loss); animation: livePulse 1.4s ease-in-out infinite; }
+.cal-lista { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.cal-l {
+  width: 100%; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto 26px minmax(0, 0.9fr); align-items: center; gap: 10px;
+  text-align: left; font: inherit; color: var(--text); cursor: pointer; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line);
+  border-left: 3px solid var(--cc); background: var(--surface);
+}
+.cal-l:hover { background: var(--surface-2); }
+.cal-ld { display: grid; line-height: 1.15; }
+.cal-ld small { color: var(--text-3); font-size: 11px; }
+.cal-lo { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cal-lo > span { display: grid; min-width: 0; }
+.cal-lo b, .cal-comp, .cal-lv { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-comp { font-size: 11px; color: var(--text-3); }
+.cal-lp { display: grid; justify-items: center; font-variant-numeric: tabular-nums; }
+.cal-lp b { font-size: 16px; }
+.cal-lp .hora { font-size: 13px; color: var(--text-2); }
+.cal-lp .vivo { color: var(--loss); }
+.cal-lp small { font-size: 11px; color: var(--text-3); }
+.cal-lv { font-size: 12px; color: var(--text-3); }
+.cal-detalhe { position: relative; margin-top: 12px; padding: 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); animation: rise 0.35s var(--ease) both; }
+.cd-fechar { position: absolute; right: 8px; top: 8px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: var(--text-2); font: inherit; font-size: 24px; cursor: pointer; }
+.cd-fechar:hover { background: var(--surface); color: var(--text); }
+.cd-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-2); padding-right: 40px; }
+.cd-comp { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; color: var(--text); }
+.cd-comp i { width: 10px; height: 10px; border-radius: 3px; background: var(--cc); }
+.cd-placarbox { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; margin: 14px 0; }
+.cd-t { display: grid; justify-items: center; gap: 6px; text-align: center; min-width: 0; }
+.cd-t .crest, .cd-t .fm-nocrest { width: 56px; height: 56px; }
+.cd-t b { font-size: 14px; max-width: 100%; line-height: 1.2; overflow-wrap: normal; word-break: normal; hyphens: none; }
+.cd-bar.zero i { background: color-mix(in srgb, var(--text-3) 35%, transparent) !important; }
+.cd-meio { display: grid; justify-items: center; gap: 4px; text-align: center; }
+.cd-placar { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+.cd-placar i { font-style: normal; color: var(--text-3); margin: 0 6px; font-size: 22px; }
+.cd-placar.vivo, .cd-meio .vivo { color: var(--loss); }
+.cd-hora { font-size: 26px; font-weight: 900; }
+.cd-meio small { font-size: 12px; color: var(--text-3); }
+.cd-meio .fm-res { width: auto; height: auto; padding: 3px 8px; font-size: 11px; line-height: 1.25; white-space: normal; max-width: 112px; text-align: center; }
+.cd-gols { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: start; margin-bottom: 12px; }
+.cd-gols ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 13px; text-align: right; }
+.cd-gols ul.dir { text-align: left; }
+.cd-gols b { color: var(--text-3); font-weight: 700; font-size: 12px; }
+.cd-gols .rk-card { margin-right: 4px; vertical-align: -1px; }
+.cd-bola { font-size: 14px; opacity: 0.7; }
+.cd-stats { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cd-stats li { display: grid; grid-template-columns: 52px minmax(0, 1fr) 52px; align-items: center; gap: 8px; }
+.cd-v { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 14px; }
+.cd-stats li .cd-v:last-child { text-align: right; }
+.cd-r { display: grid; gap: 4px; text-align: center; font-size: 12px; color: var(--text-2); }
+.cd-bar { display: flex; height: 6px; border-radius: 99px; overflow: hidden; background: var(--line); gap: 2px; }
+.cd-bar i:first-child { width: var(--ph); background: var(--ch); }
+.cd-bar i:last-child { flex: 1; background: var(--ca); }
+.cd-info { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-3); margin-top: 12px; }
+.cd-info b { color: var(--text-2); }
+.cd-nada { color: var(--text-3); font-size: 13px; text-align: center; margin: 6px 0 12px; }
+.cd-sec h5 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+.cd-fatos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; }
+.cd-fatos li { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+.cd-fatos span { color: var(--text-2); }
+.cd-link { display: inline-flex; margin-top: 12px; font-weight: 800; font-size: 13px; color: var(--ink); padding: 10px 0; }
+@media (max-width: 560px) {
+  .cal-grade { gap: 2px; }
+  .cal-w { font-size: 11px; letter-spacing: 0; }
+  .cal-d { min-height: 54px; padding: 2px; border-radius: 8px; }
+  .cal-j { min-height: 40px; padding: 2px 1px; border-left-width: 2px; }
+  .cal-j .crest, .cal-j .fm-nocrest { width: 20px; height: 20px; }
+  .cal-x { font-size: 11px; letter-spacing: -0.03em; }
+  .cal-l { grid-template-columns: 44px minmax(0, 1fr) auto 24px; gap: 8px; }
+  .cal-lv { grid-column: 2 / -1; font-size: 11px; margin-top: -4px; }
+  .cd-placar { font-size: 28px; }
+  .cd-t .crest, .cd-t .fm-nocrest { width: 44px; height: 44px; }
+  .cd-t b { font-size: 13px; }
+  .cd-placarbox { gap: 6px; }
+  .cd-stats li { grid-template-columns: 40px minmax(0, 1fr) 40px; }
+}
+@media (prefers-reduced-motion: reduce) { .cal-vivo { animation: none; } .cal-detalhe { animation: none; } }

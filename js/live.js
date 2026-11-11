@@ -735,7 +735,7 @@
         const comp = ev.competitions[0], me = comp.competitors.find((c) => c.team.id === espn), op = comp.competitors.find((c) => c.team.id !== espn);
         if (!me || !op) continue;
         const t = brt(ev.date), st = comp.status.type.state;
-        const e = { id: ev.id, date: t.slice(0, 10), time: t.slice(11, 16), comp: LEAGUES[lg], stage: lg === "bra.1" ? "" : STAGE_PT[ev.seasonType?.name] || "",
+        const e = { id: ev.id, lg, date: t.slice(0, 10), time: t.slice(11, 16), comp: LEAGUES[lg], stage: lg === "bra.1" ? "" : STAGE_PT[ev.seasonType?.name] || "",
           home: me.homeAway === "home", opp: op.team.displayName, oppId: ESPN_CLUB[op.team.id] || null, oppLogo: op.team.logos?.[0]?.href, state: st, venue: comp.venue?.fullName };
         if (st === "pre" && comp.timeValid === false) e.time = null; // horário ainda não definido
         if (st === "in") Object.assign(e, { gf: scoreOf(me)[0], ga: scoreOf(op)[0], clock: clockOf(comp.status) });
@@ -763,8 +763,58 @@
     return p;
   };
 
+  /* ---------------- Estatísticas rápidas de um jogo (calendário do clube) ----------------
+     Com a API: /api/jogo. Sem ela: o resumo da ESPN direto do navegador (mesma leitura da API).
+     Guardadas por 1 min (jogo rolando) ou pela visita inteira (encerrado). */
+  const STATS_JOGO = [["possessionPct", "Posse de bola", "%"], ["totalShots", "Finalizações", ""], ["shotsOnTarget", "Finalizações no gol", ""],
+    ["wonCorners", "Escanteios", ""], ["foulsCommitted", "Faltas", ""], ["offsides", "Impedimentos", ""], ["saves", "Defesas do goleiro", ""],
+    ["passPct", "Passes certos", "%"], ["yellowCards", "Cartões amarelos", ""], ["redCards", "Cartões vermelhos", ""]];
+  const GOL_TIPOS = new Set(["goal", "penalty---scored", "own-goal", "goal---header", "goal---free-kick", "goal---volley"]);
+  const txt = (x, n = 60) => String(x || "").replace(/[<>]/g, "").slice(0, n);
+  function lerResumo(d, eid, lg) {
+    const comp = d.header?.competitions?.[0] || {}, lados = {};
+    (comp.competitors || []).forEach((c) => (lados[c.homeAway] = c));
+    const st = comp.status?.type || {}, times = {};
+    for (const t of d.boxscore?.teams || []) {
+      const side = t.team?.id === lados.home?.team?.id ? "home" : "away";
+      times[side] = Object.fromEntries((t.statistics || []).map((x) => [x.name, x.displayValue]));
+    }
+    const num = (v, u) => { const f = parseFloat(v); if (!Number.isFinite(f)) return null; return u === "%" ? Math.round(f <= 1 ? f * 100 : f) : Math.trunc(f); };
+    const stats = [];
+    for (const [k, rot, u] of STATS_JOGO) { const h = num(times.home?.[k], u), a = num(times.away?.[k], u); if (h != null && a != null) stats.push([rot, h, a, u]); }
+    const ida = { [lados.home?.team?.id]: "home", [lados.away?.team?.id]: "away" }, gols = [], vermelhos = [];
+    for (const k of d.keyEvents || []) {
+      const tipo = k.type?.type || "", q = (k.athletesInvolved || k.participants || [{}])[0] || {};
+      const it = { min: txt(k.clock?.displayValue, 10), nome: txt((q.athlete || q).displayName, 40), lado: ida[k.team?.id] || null };
+      if (GOL_TIPOS.has(tipo) || (k.scoringPlay && tipo.includes("goal"))) gols.push({ ...it, pen: tipo.includes("penalty"), contra: tipo === "own-goal" });
+      else if (tipo === "red-card") vermelhos.push(it);
+    }
+    const info = d.gameInfo || {}, v = info.venue || {}, sc = (c) => scoreOf(c || {})[0];
+    return { event: eid, lg, state: st.state, clock: st.state === "in" ? clockOf(comp.status) : null,
+      home: { club: ESPN_CLUB[lados.home?.team?.id] || null, nome: txt(lados.home?.team?.displayName), gols: sc(lados.home) },
+      away: { club: ESPN_CLUB[lados.away?.team?.id] || null, nome: txt(lados.away?.team?.displayName), gols: sc(lados.away) },
+      estadio: txt(v.fullName, 80) || null, cidade: txt(v.address?.city, 40) || null, publico: info.attendance || null,
+      arbitro: txt(info.officials?.[0]?.displayName) || null, stats, gols, vermelhos, fonte: "ESPN" };
+  }
+  const jogoCache = new Map();
+  function jogo(eid, lg) {
+    if (!/^\d{4,12}$/.test(String(eid)) || !LEAGUES[lg]) return Promise.resolve(null);
+    const k = `${eid}|${lg}`, hit = jogoCache.get(k);
+    if (hit && (hit.fim || Date.now() - hit.t < 60e3)) return hit.p;
+    const p = (async () => {
+      if (PD.LIVE) { const r = await fetch(`${API}/jogo?event=${eid}&lg=${encodeURIComponent(lg)}`, { cache: "no-store" }); if (r.ok) return r.json(); }
+      const d = await (await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${lg}/summary?event=${eid}`, { cache: "no-store" })).json();
+      return lerResumo(d, String(eid), lg);
+    })().catch(() => null);
+    const reg = { t: Date.now(), p, fim: false };
+    jogoCache.set(k, reg);
+    p.then((r) => { if (r && r.state === "post") reg.fim = true; if (!r) jogoCache.delete(k); });
+    return p;
+  }
+
   window.LIVE = {
     form: cachedForm,
+    jogo,
     mount(root) {
       streams.forEach((s) => s.close()); streams.clear();
       root.querySelectorAll("[data-mam]").forEach(mountMam);
