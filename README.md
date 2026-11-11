@@ -25,7 +25,7 @@ O site publicado no GitHub Pages se mantém atualizado sozinho:
 
 | O quê | Como |
 |---|---|
-| Placar ao vivo, intervalo, próximas rodadas, temporada dos clubes, minuto a minuto | o navegador consulta a ESPN direto (a cada 20 s durante os jogos) |
+| Placar ao vivo, intervalo, próximas rodadas, temporada dos clubes, minuto a minuto | o navegador consulta a ESPN direto (a cada 0,8 s com bola rolando; minuto a minuto a cada 4 s) |
 | Tabela, cartões, notícias, pendurados, lesões, minutagem, histórico | o **GitHub Actions** ([`.github/workflows/dados.yml`](.github/workflows/dados.yml)) roda `server/placar_api.py --snapshot` a cada 30 min e grava `js/live-data.js`, `js/player-stats.js` e `js/club-form.js` |
 
 Para atualizar na hora: aba **Actions** do repositório › **Atualizar dados** › **Run workflow**.
@@ -55,7 +55,7 @@ BASE=http://127.0.0.1:5173 node tests/mobile/simulacao.mjs
 |---|---|
 | **Faixa de notícias** | Logo abaixo do menu, de ponta a ponta da tela, em todas as páginas, como a tarja dos telejornais: o bloco do PLACAR. com a hora, a **manchete principal** em cima (troca a cada 8 s; a barrinha embaixo dela marca o tempo até a próxima) e a **fita** com as outras passando embaixo (para com o mouse em cima, com o foco do teclado ou no botão de pausa; cada notícia abre a matéria). A fita anda em qualquer aparelho, pela Web Animations API: com as animações do aparelho desligadas (Windows, iPhone, Android) ela só anda mais devagar, e não fica presa parada depois de um toque no celular ou de abrir uma matéria em outra aba. As principais notícias do futebol das últimas 24 h nos portais configurados (ge, UOL, ESPN, Lance!, Gazeta Esportiva e Terra), sem repetir o mesmo fato e no máximo 3 por portal, com o escudo dos clubes citados. **Atualiza a cada 30 min**, sozinha, sem recarregar a página. |
 | **Sobre o projeto** | Além do cartão e das decisões técnicas, a seção **"Como o site funciona"**: números do projeto, caminho dos dados (fontes → coleta → arquivos → navegador), ritmo das atualizações, testes por área, o que foi construído em ordem e de que é feito o código. |
-| **Ao vivo** | Rodada agrupada por dia, navegação entre rodadas, favoritos, próximo jogo e artilharia. **Placar em tempo real** mesmo sem a API (no GitHub Pages também): com jogo perto do horário ou rolando, o navegador consulta o placar da ESPN a cada 12 s. **A página não se redesenha**: só o que mudou (placar, minuto, tabela, artilharia) é trocado no lugar, com um pulo discreto no número; a animação do topo, a rolagem e a ficha aberta continuam como estão. As **próximas rodadas** entram sozinhas pelo calendário da ESPN (agrupadas por data, já que a ESPN não informa o número da rodada; jogos adiados aparecem marcados), e o site passa para a rodada seguinte quando a atual termina. |
+| **Ao vivo** | Rodada agrupada por dia, navegação entre rodadas, favoritos, próximo jogo e artilharia. **Placar em tempo real** mesmo sem a API (no GitHub Pages também): com jogo perto do horário ou rolando, o navegador consulta o placar da ESPN a cada 0,8 s (veja "Placar ao vivo: atraso" abaixo). **A página não se redesenha**: só o que mudou (placar, minuto, tabela, artilharia) é trocado no lugar, com um pulo discreto no número; a animação do topo, a rolagem e a ficha aberta continuam como estão. As **próximas rodadas** entram sozinhas pelo calendário da ESPN (agrupadas por data, já que a ESPN não informa o número da rodada; jogos adiados aparecem marcados), e o site passa para a rodada seguinte quando a atual termina. |
 | **Clubes** | 20 páginas no tema de cada clube. O topo, de ponta a ponta da tela, junta a **cena animada do clube** (o urubu voando sobre o Rio, a Via Láctea até o Cruzeiro do Sul, o galo cantando em BH…) com o **"GOL!" do clube no placar de transmissão**: a cena termina exatamente onde o escudo salta no placar, e então vêm o placar 0 · 0, a faixa com a sigla, o escudo saltando e o GOL! com o símbolo do clube no lugar do "O" (a raposa do Cruzeiro, o urubu do Flamengo, a Estrela Solitária do Botafogo, o gorro do Saci do Inter…). Depois o placar vira 1 · 0 e a frase do clube aparece embaixo. O **relógio do placar** para na **goleada mais simbólica de cada torcida**, com os gols do clube no lugar das horas e os do adversário no dos minutos (Cruzeiro **06:01** = 6 × 1 no Atlético-MG em 2011; Corinthians 11:00 = 11 × 0 no Santos em 1920; Grêmio 10:00 = 10 × 0 no Inter em 1909…), e uma legenda ao lado diz qual foi. Pesquisado nas páginas de cada clássico na Wikipédia, nos sites dos clubes, ge, Lance!, Terra e Gazeta Esportiva. Toque no topo para ver o gol de novo. **Nos jogos ao vivo**, quando um clube marca, o GOL! dele aparece por cima de qualquer página, com quem marcou, o placar e o minuto do jogo (toque para abrir a partida). Com a aba em segundo plano ou a tela do celular apagada, o gol espera você voltar (até 10 min). **Últimas notícias** do clube: só manchetes que falam dele (nome ou apelido no título, sem "ex-Clube"). |
 | **Partidas do clube** | A temporada inteira de cada clube, mês a mês: todos os jogos e placares já disputados (com pênaltis) e os jogos por vir com o horário de Brasília; quando a CBF/Conmebol ainda não marcou o horário, aparece **"A definir"**. Filtro por competição (Brasileirão, Copa do Brasil, Libertadores, Sul-Americana, Recopa, Supercopa e estaduais cobertos pela ESPN: Carioca, Paulistão, Mineiro e Gauchão) e resumo de vitórias, empates, derrotas e gols. |
 | **Retrospecto** | Na visão geral de cada clube: **últimos 5 jogos** (V/E/D, placar, pênaltis, casa ou fora) e **próximos 5**, em todas as competições (Brasileirão, Copa do Brasil, Libertadores e Sul-Americana). Sem a API, a página busca a agenda atualizada direto da ESPN. |
@@ -136,6 +136,45 @@ Eles ganham o selo "base".
 1. Crie as chaves no [portal de desenvolvedores do X](https://developer.x.com) (o plano gratuito não permite leitura) e/ou num app da [Meta for Developers](https://developers.facebook.com) ligado a uma conta profissional do Instagram.
 2. Cadastre-as em *Settings → Secrets and variables → Actions* com os nomes `X_BEARER_TOKEN`, `IG_USER_ID` e `IG_ACCESS_TOKEN`.
 3. O robô passa a usá-las sozinho. As chaves nunca ficam no código.
+
+## Placar ao vivo: atraso
+
+O gol aparecia, em média, 6 s depois de estar na ESPN (até 12 s), nunca aparecia em jogo sem horário marcado e, com a aba em segundo plano, podia levar 1 min. Medido com o mesmo jogo simulado nas duas versões (`tests/mobile/latencia.mjs`):
+
+| Caso (14 gols) | Antes | Agora |
+|---|---|---|
+| Jogo com horário: atraso médio | 5,6 s | 0,39 s (93% menor) |
+| Jogo com horário: pior caso | 11,0 s | 1,4 s |
+| Jogo só com a data | não aparecia | 0,5 s em média |
+| Aba em segundo plano | até 1 min | a cada 3 s |
+| Dados com bola rolando | ~20 KB/min | ~280 KB/min (4 KB a cada 0,8 s) |
+
+O que mudou:
+- **Consulta a cada 0,8 s com bola rolando** (antes 12 s). A ESPN guarda o placar por 1 a 2 s (`Cache-Control: max-age=1-2`), então perguntar mais vezes não traz nada novo. A resposta do dia tem uns 4 KB comprimida.
+- **Relógio num Worker** (`js/relogio.js`): com a aba escondida, o navegador espaça os timers da página para 1 vez por minuto, mas não os de um Worker. Escondida, a consulta é a cada 3 s, e o som do gol toca na hora.
+- **Economia de dados**: com "economia de dados" ligada ou internet 2G/3G, a cada 4 s.
+- **Jogo sem horário** (só a data, comum nas últimas rodadas) entra no placar em tempo real no dia do jogo.
+- **Alerta antes do resto**: o GOL! aparece primeiro e a página é atualizada no quadro seguinte.
+- **Minuto a minuto** a cada 4 s (antes 20 s) e na hora em que o placar muda.
+- Com o Worker da API-Football ligado, Worker e ESPN são consultados ao mesmo tempo.
+
+O que fica fora do alcance do site: o tempo que a própria ESPN leva para registrar o gol depois do lance. Monitorar o Instagram dos clubes não resolveria: a API do Instagram não avisa quando outra conta publica (a busca de contas comerciais tem limite de consultas por hora) e os clubes postam o gol depois do replay, em geral mais tarde que a ESPN. Fontes com atraso de poucos segundos depois do lance são pagas (por exemplo API-Football em plano pago, já suportada pelo Worker, ou provedores de dados oficiais).
+
+## Simulador da tabela
+
+Na aba **Simulador** (`#/simulador`), o usuário dá o placar dos jogos que faltam e vê a classificação mudar na hora, com setas de quem subiu ou caiu e os pontos ganhos no palpite.
+- Só entram jogos que ainda não começaram. Os que estão rolando já contam na tabela com o placar de agora.
+- Rodada por rodada ou **Todas** (até o fim do campeonato). Botões rápidos: vitória, empate, "Mandantes vencem", "Tudo empate" e "Limpar".
+- Mesma conta da tabela ao vivo: pontos, vitórias, saldo e gols pró.
+- Os palpites ficam guardados no aparelho.
+- **Próxima temporada**: os jogos vêm da mesma fonte do placar (ESPN). Quando a tabela de 2027 for divulgada e os jogos ganharem data, eles aparecem no simulador sozinhos. As páginas do ge.globo, da CazéTV e do site da ESPN não são lidas, porque os termos de uso desses sites não permitem copiar o conteúdo.
+
+## Sons
+
+Gerados no navegador com Web Audio (`js/sons.js`), sem arquivos de áudio:
+- **Gol**: 5 s de festa do clube que marcou, com torcida, surdo, caixa e uma fanfarra de metais. Cada clube tem a sua fanfarra, composta para o site (melodia, tom e andamento próprios). Os hinos dos clubes têm autor e gravação protegidos pela Lei 9.610/98, por isso não estão no site. Quem tiver a licença do instrumental pode pôr o arquivo em `media/hinos/<id do clube>.mp3` e o id em `hinos` no `js/config.js`: aí toca o instrumental, cortado em 5 s com final suave.
+- **Apito do árbitro** ao entrar no "Bora pro jogo", nas estatísticas do clube e nos rankings.
+- **Botão de som** no topo, que o site lembra. O navegador só deixa tocar som depois do primeiro toque na página.
 
 ## Cenas dos clubes com a cidade de verdade
 
@@ -239,6 +278,11 @@ node tests/mobile/partidas.mjs                     # temporada de cada clube (to
 node tests/mobile/rodadas.mjs                      # próximas rodadas e jogos adiados
 node tests/mobile/retrospecto.mjs                  # últimos 5 e próximos 5 de cada clube
 node tests/mobile/sem-servidor.mjs                 # site funcionando só com os arquivos (GitHub Pages)
+node tests/mobile/busca.mjs                        # busca: só clubes que começam com o que foi digitado (A a Z e começos de nome, PC e celular)
+node tests/mobile/simulador.mjs                    # simulador: só jogos que faltam, conta da tabela, botões, palpites guardados, 320 px a tablet
+node tests/mobile/sons.mjs                         # sons: apito nas entradas certas, gol com o som do clube, botão de som, 20 fanfarras diferentes
+node tests/mobile/latencia.mjs                     # atraso do placar ao vivo: versão anterior x atual, com e sem horário marcado
+node tests/mobile/demo-video.mjs                   # vídeo de demonstração das novidades, com som (tests/mobile/out/demo-novidades.mp4)
 ```
 
 ## Segurança

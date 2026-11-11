@@ -20,6 +20,7 @@ const PAGES = [
   ["clube", "#/clube/flamengo"],
   ["elenco", "#/clube/flamengo/elenco"],
   ["tabela", "#/tabela"],
+  ["simulador", "#/simulador"],
   ["bora", "#/bora-pro-jogo/flamengo/palmeiras"],
   ["partida", "#/partida/bragantino-x-santos-r34"],
   ["sobre", "#/sobre"],

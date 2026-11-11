@@ -34,7 +34,7 @@ async function cenario(L, nome, opts) {
   p.on("dialog", (d) => { erros.push(`${nome}: abriu uma caixa de diálogo (${d.message()})`); d.dismiss(); });
 
   // 1) páginas normais: nenhuma violação da política de segurança (nada legítimo foi bloqueado)
-  for (const rota of ["#/", "#/clubes", "#/clube/flamengo", "#/clube/cruzeiro/elenco", "#/tabela", "#/bora-pro-jogo", "#/sobre"]) {
+  for (const rota of ["#/", "#/clubes", "#/clube/flamengo", "#/clube/cruzeiro/elenco", "#/tabela", "#/simulador", "#/bora-pro-jogo", "#/sobre"]) {
     await p.goto(`${BASE}/?s=${Date.now()}${rota}`, { waitUntil: "load" });
     await p.waitForTimeout(900);
   }

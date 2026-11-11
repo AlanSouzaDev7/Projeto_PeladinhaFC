@@ -6,7 +6,7 @@
 import { chromium, webkit, devices } from "playwright";
 const BASE = process.env.BASE || "http://127.0.0.1:5173";
 const ROTAS = ["#/", "#/clubes", "#/clube/cruzeiro", "#/clube/cruzeiro/elenco", "#/clube/cruzeiro/partidas", "#/clube/cruzeiro/estatisticas",
-  "#/clube/flamengo", "#/clube/atletico-mg", "#/clube/sao-paulo/partidas", "#/tabela", "#/tabela/gols", "#/tabela/amarelos", "#/tabela/vitorias",
+  "#/clube/flamengo", "#/clube/atletico-mg", "#/clube/sao-paulo/partidas", "#/tabela", "#/simulador", "#/tabela/gols", "#/tabela/amarelos", "#/tabela/vitorias",
   "#/partida/cruzeiro-x-palmeiras-r35", "#/partida/bragantino-x-santos-r34", "#/bora-pro-jogo", "#/bora-pro-jogo/cruzeiro/atletico-mg", "#/sobre"];
 const TELAS = process.env.SO === "cel"
   ? [["390", chromium, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }]]

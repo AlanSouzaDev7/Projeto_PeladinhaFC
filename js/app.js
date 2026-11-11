@@ -142,6 +142,10 @@
   }
   // jogo do clube que já entrou na conta da classificação ao vivo: placar (do ponto de vista do clube) e minuto
   function vivoChip(v, curto = false) {
+    if (v.sim) {
+      const r = v.dp === 3 * v.n ? "w" : v.dp === 0 ? "l" : "d";
+      return `<span class="live-chip sim ${r}" title="Simulado: ${v.res.join("; ")}">+${v.dp}${curto ? "" : ` pt${v.dp === 1 ? "" : "s"}`}</span>`;
+    }
     const res = v.gf > v.ga ? "w" : v.gf < v.ga ? "l" : "d";
     return `<span class="live-chip ${res}${v.fim ? " fim" : ""}" title="${v.fim ? "Encerrado, ainda fora da tabela oficial" : "Jogo em andamento"}: ${v.gf} x ${v.ga} contra o ${byId[v.op].name}">${v.fim ? "" : `<i aria-hidden="true"></i>`}${v.gf}-${v.ga}${curto ? "" : ` ${byId[v.op].short}`}${v.fim ? " · fim" : v.clock ? ` · ${v.clock}` : ""}</span>`;
   }
@@ -1184,6 +1188,169 @@
       </div>`;
   }
 
+  /* ==========================================================================
+     Simulador da tabela: o usuário dá o placar dos jogos que faltam e vê a classificação mudar.
+     Entram só os jogos que ainda não começaram (os que estão rolando já contam na tabela com o placar de agora).
+     Os jogos vêm da mesma fonte do placar (ESPN): quando a tabela de 2027 sair e os jogos ganharem data,
+     eles aparecem aqui sozinhos. Os palpites ficam guardados no aparelho.
+     ========================================================================== */
+  const simPalpites = () => store.get("simulador", {});
+  function simJogos() {
+    const out = [];
+    for (const [rd, lista] of Object.entries(window.PD.FIXTURES || {})) {
+      for (const g of lista) {
+        const st = g[8] && g[8].state;
+        if (st === "in" || st === "post" || (g[2] != null && !(g[8] && g[8].state === "pre"))) continue;
+        out.push({ k: `${g[0]}-x-${g[1]}`, rd: +rd, home: g[0], away: g[1], date: g[4], time: g[5], adiado: g[9] === "adiado" });
+      }
+    }
+    const quando = (j) => (j.date ? Date.parse(`${j.date}T${j.time || "23:59"}:00-03:00`) : Infinity);
+    return out.filter((j) => byId[j.home] && byId[j.away]).sort((a, b) => a.rd - b.rd || quando(a) - quando(b));
+  }
+  // classificação com os palpites: mesma conta da tabela ao vivo (pontos, vitórias, saldo, gols pró)
+  function simTabela(jogos, palp) {
+    const base = state.standings;
+    const rows = base.map((r) => ({ ...r, vivo: null, mov: 0, n: 0, dp: 0, res: [] })), by = Object.fromEntries(rows.map((r) => [r.id, r]));
+    let n = 0;
+    for (const j of jogos) {
+      const pl = palp[j.k];
+      if (!pl || pl[0] == null || pl[1] == null) continue;
+      n++;
+      for (const [me, op, gf, ga] of [[j.home, j.away, pl[0], pl[1]], [j.away, j.home, pl[1], pl[0]]]) {
+        const r = by[me];
+        if (!r) continue;
+        const pts = gf > ga ? 3 : gf === ga ? 1 : 0;
+        r.p += pts; r.dp += pts; r.j++; r.w += +(gf > ga); r.d += +(gf === ga); r.l += +(gf < ga); r.gf += gf; r.ga += ga; r.n++;
+        r.res.push(`${gf} x ${ga} contra o ${byId[op].name}`);
+      }
+    }
+    const ordem = Object.fromEntries(base.map((r, i) => [r.id, i]));
+    rows.sort((x, y) => y.p - x.p || y.w - x.w || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || ordem[x.id] - ordem[y.id]);
+    rows.forEach((r, i) => {
+      r.sg = r.gf - r.ga; r.pct = r.j ? Math.floor((r.p / (r.j * 3)) * 100) : 0;
+      r.mov = ordem[r.id] - i; r.pos = i + 1;
+      if (r.n) r.vivo = { sim: true, n: r.n, dp: r.dp, res: r.res };
+    });
+    return { rows, n };
+  }
+  function simTabelaHTML(jogos, palp) {
+    const { rows, n } = simTabela(jogos, palp);
+    return { n, html: standingsTable(rows).replace(/com os jogos de agora/g, "com os placares simulados") };
+  }
+  function simRodadas(jogos) { return [...new Set(jogos.map((j) => j.rd))]; }
+  function simLinha(j, palp) {
+    const h = byId[j.home], a = byId[j.away], pl = palp[j.k] || [];
+    const v = (x) => (x == null ? "" : x);
+    const res = pl[0] == null || pl[1] == null ? "" : pl[0] > pl[1] ? "h" : pl[0] < pl[1] ? "a" : "e";
+    const quando = j.date ? `${dayName(j.date)}${j.time ? ` · ${j.time}` : " · horário a definir"}` : "Data a definir";
+    return `<li class="sim-j ${res ? `tem r-${res}` : ""}" data-k="${j.k}" style="${matchVars(j)}">
+      <span class="sim-when">${quando}${j.adiado ? ` · <em>adiado</em>` : ""}</span>
+      <span class="sim-t h"><b title="${h.name}">${h.abbr}</b>${crest(h, 34)}</span>
+      <span class="sim-placar">
+        <input type="number" inputmode="numeric" min="0" max="19" step="1" placeholder="–" value="${v(pl[0])}" data-lado="0" aria-label="Gols do ${h.name} contra o ${a.name}">
+        <i aria-hidden="true">×</i>
+        <input type="number" inputmode="numeric" min="0" max="19" step="1" placeholder="–" value="${v(pl[1])}" data-lado="1" aria-label="Gols do ${a.name} contra o ${h.name}">
+      </span>
+      <span class="sim-t a">${crest(a, 34)}<b title="${a.name}">${a.abbr}</b></span>
+      <span class="sim-rap" role="group" aria-label="Resultado rápido de ${h.abbr} x ${a.abbr}">
+        <button type="button" data-rap="h" class="${res === "h" ? "on" : ""}" aria-label="Vitória do ${h.name} (1 x 0)">${h.short}</button>
+        <button type="button" data-rap="e" class="${res === "e" ? "on" : ""}" aria-label="Empate (1 x 1)">Empate</button>
+        <button type="button" data-rap="a" class="${res === "a" ? "on" : ""}" aria-label="Vitória do ${a.name} (0 x 1)">${a.short}</button>
+      </span>
+    </li>`;
+  }
+  function pageSim(sel) {
+    const jogos = simJogos(), palp = simPalpites();
+    if (!jogos.length) {
+      return `<div class="page-head"><div><div class="eyebrow">Brasileirão Série A · simulador</div><h1>Simulador da tabela</h1>
+        <p>Não há jogos por disputar agora. Quando a tabela da próxima temporada for divulgada e os jogos ganharem data, eles aparecem aqui para você simular.</p></div></div>`;
+    }
+    const rds = simRodadas(jogos), todas = sel === "todas";
+    const rd = todas ? null : rds.includes(+sel) ? +sel : rds[0];
+    const vis = todas ? jogos : jogos.filter((j) => j.rd === rd);
+    const chips = rds.map((r) => `<a class="chip ${r === rd ? "on" : ""}" href="#/simulador/${r}">${r}ª rodada</a>`).join("") + `<a class="chip ${todas ? "on" : ""}" href="#/simulador/todas">Todas (${jogos.length})</a>`;
+    let lista = "", rdAtual = null;
+    for (const j of vis) {
+      if (todas && j.rd !== rdAtual) { rdAtual = j.rd; lista += `<li class="sim-rd">${j.rd}ª rodada</li>`; }
+      lista += simLinha(j, palp);
+    }
+    const t = simTabelaHTML(todas ? jogos : vis, palp);
+    return `<div class="page-head"><div><div class="eyebrow">Brasileirão Série A · simulador</div><h1>Simulador da tabela</h1>
+        <p>Dê o placar dos jogos que faltam e veja onde cada clube ficaria. Só entram jogos que ainda não começaram${temAoVivo() ? "; os que estão rolando já contam com o placar de agora" : ""}.</p></div></div>
+      <div class="chips sim-chips">${chips}</div>
+      <div class="sim-grid" data-sim="${todas ? "todas" : rd}">
+        <div class="card sim-jogos">
+          <div class="card-h">${todas ? `Todos os jogos que faltam` : `Jogos da ${rd}ª rodada`}<small>${vis.length} jogo${vis.length > 1 ? "s" : ""}</small></div>
+          <div class="sim-atalhos">
+            <button type="button" class="chip" data-sim-auto="casa">Mandantes vencem</button>
+            <button type="button" class="chip" data-sim-auto="empate">Tudo empate</button>
+            <button type="button" class="chip" data-sim-auto="limpa">Limpar ${todas ? "tudo" : "rodada"}</button>
+          </div>
+          <ol class="sim-list">${lista}</ol>
+          <p class="sim-nota">Jogos e datas: ESPN, a mesma fonte do placar. Os placares que você der ficam guardados só neste aparelho.</p>
+        </div>
+        <div class="card sim-tab-card">
+          <div class="card-h">Classificação simulada<small data-sim-n>${t.n ? `${t.n} jogo${t.n > 1 ? "s" : ""} simulado${t.n > 1 ? "s" : ""}` : "dê um placar ao lado"}</small></div>
+          <div class="sim-tab" data-sim-tabela>${t.html}</div>${legend}
+        </div>
+      </div>`;
+  }
+  function simBind(root) {
+    const grid = $(".sim-grid", root);
+    if (!grid) return;
+    const sel = grid.dataset.sim, todas = sel === "todas";
+    const jogosDaVista = () => { const js = simJogos(); return todas ? js : js.filter((j) => j.rd === +sel); };
+    const salva = (palp) => store.set("simulador", palp);
+    function atualiza() {
+      const palp = simPalpites(), tab = $("[data-sim-tabela]", grid);
+      // FLIP: cada clube desliza da posição antiga para a nova
+      const antes = new Map($$("tbody tr", tab).map((tr) => [$("td.club a", tr).getAttribute("href"), tr.getBoundingClientRect().top]));
+      const t = simTabelaHTML(jogosDaVista(), palp);
+      tab.innerHTML = t.html;
+      tab.classList.add("sem-entrada");
+      $("[data-sim-n]", grid).textContent = t.n ? `${t.n} jogo${t.n > 1 ? "s" : ""} simulado${t.n > 1 ? "s" : ""}` : "dê um placar ao lado";
+      if (reduced) return;
+      $$("tbody tr", tab).forEach((tr) => {
+        const y0 = antes.get($("td.club a", tr).getAttribute("href")), dy = y0 == null ? 0 : y0 - tr.getBoundingClientRect().top;
+        if (Math.abs(dy) > 1) tr.animate([{ transform: `translateY(${dy}px)`, background: "color-mix(in srgb, var(--accent) 18%, transparent)" }, { transform: "none", background: "transparent" }], { duration: 650, easing: "cubic-bezier(.22,1,.36,1)" });
+      });
+    }
+    function pintaLinha(li, pl) {
+      const res = !pl || pl[0] == null || pl[1] == null ? "" : pl[0] > pl[1] ? "h" : pl[0] < pl[1] ? "a" : "e";
+      li.classList.toggle("tem", !!res);
+      ["h", "a", "e"].forEach((x) => li.classList.toggle(`r-${x}`, res === x));
+      $$("[data-rap]", li).forEach((b) => b.classList.toggle("on", b.dataset.rap === res));
+    }
+    function grava(li) {
+      const palp = simPalpites(), [ih, ia] = $$("input", li);
+      const num = (i) => { if (i.value === "") return null; const v = Math.max(0, Math.min(19, Math.floor(+i.value))); if (String(v) !== i.value) i.value = v; return Number.isFinite(v) ? v : null; };
+      const pl = [num(ih), num(ia)];
+      if (pl[0] == null && pl[1] == null) delete palp[li.dataset.k]; else palp[li.dataset.k] = pl;
+      salva(palp); pintaLinha(li, pl); atualiza();
+    }
+    grid.addEventListener("input", (e) => { const li = e.target.closest(".sim-j"); if (li && e.target.matches("input")) grava(li); });
+    grid.addEventListener("focusin", (e) => { if (e.target.matches(".sim-j input")) e.target.select?.(); });
+    grid.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-rap]"), auto = e.target.closest("[data-sim-auto]");
+      if (b) {
+        const li = b.closest(".sim-j"), [ih, ia] = $$("input", li), x = b.dataset.rap;
+        [ih.value, ia.value] = x === "h" ? ["1", "0"] : x === "a" ? ["0", "1"] : ["1", "1"];
+        grava(li);
+      }
+      if (auto) {
+        const palp = simPalpites(), modo = auto.dataset.simAuto;
+        $$(".sim-j", grid).forEach((li) => {
+          const [ih, ia] = $$("input", li);
+          if (modo === "limpa") { ih.value = ia.value = ""; delete palp[li.dataset.k]; pintaLinha(li, null); return; }
+          if (ih.value !== "" && ia.value !== "") return; // não apaga o que já foi dado
+          [ih.value, ia.value] = modo === "casa" ? ["1", "0"] : ["1", "1"];
+          palp[li.dataset.k] = [+ih.value, +ia.value]; pintaLinha(li, palp[li.dataset.k]);
+        });
+        salva(palp); atualiza();
+      }
+    });
+  }
+
   function pageAbout() {
     const skills = [["HTML semântico & acessibilidade", 92], ["CSS moderno (grid, color-mix, view transitions)", 95], ["JavaScript (ES2022, sem framework)", 90], ["Visualização de dados com SVG", 86], ["Design de interface & motion", 88]];
     return `<div class="about">
@@ -1240,12 +1407,12 @@
       ["Fontes", "ESPN · CBF · Google Notícias · API-Football (opcional)", ["placar e lances", "tabela e súmulas", "manchetes"]],
       ["Coleta", "server/placar_api.py · robô do GitHub Actions", ["a cada 30 min", "filtra, cruza e confere", "nunca raspa site que proíbe"]],
       ["Arquivos", "js/live-data.js · player-stats.js · heatmaps.js · raio-x.js", ["o site funciona sem servidor", "GitHub Pages"]],
-      ["Navegador", "js/live.js · ticker.js · app.js", ["placar ao vivo a cada 12 s", "tabela e artilharia ao vivo", "troca só o que mudou"]],
+      ["Navegador", "js/live.js · ticker.js · app.js", ["placar ao vivo a cada 0,8 s", "tabela e artilharia ao vivo", "troca só o que mudou"]],
     ];
     // de quanto em quanto tempo cada coisa se atualiza (escala logarítmica: de segundos a horas)
-    const ritmo = [["Faixa: troca a manchete", 8], ["Placar e minuto ao vivo", 12], ["Tabela da ESPN (rodada)", 120], ["Manchetes do futebol", 1800], ["Arbitragem nas manchetes", 1800], ["Departamento médico", 1800], ["Notícias de cada clube", 1800], ["Tabela, artilharia e súmulas", 1800], ["Elencos", 21600]];
+    const ritmo = [["Faixa: troca a manchete", 8], ["Placar ao vivo", 0.8], ["Minuto a minuto", 4], ["Tabela da ESPN (rodada)", 120], ["Manchetes do futebol", 1800], ["Arbitragem nas manchetes", 1800], ["Departamento médico", 1800], ["Notícias de cada clube", 1800], ["Tabela, artilharia e súmulas", 1800], ["Elencos", 21600]];
     const fmt = (s) => (s < 60 ? `${s} s` : s < 3600 ? `${s / 60} min` : `${s / 3600} h`);
-    const lmin = Math.log(5), lmax = Math.log(30000), pos = (s) => ((Math.log(s) - lmin) / (lmax - lmin)) * 100;
+    const lmin = Math.log(0.6), lmax = Math.log(30000), pos = (s) => ((Math.log(s) - lmin) / (lmax - lmin)) * 100;
     // o que foi construído, na ordem
     const fases = [
       ["Base", "20 clubes com tema próprio, tabela, rodada, partidas e o campinho do elenco"],
@@ -1318,7 +1485,9 @@
       r.page === "partida" ? pageMatch(r.id) :
       r.page === "tabela" ? (r.id ? pageRanking(r.id) : pageTable()) :
       r.page === "bora-pro-jogo" ? LINEUP.pageBora(r.id, r.tab) :
+      r.page === "simulador" ? pageSim(r.id) :
       r.page === "sobre" ? pageAbout() : pageNotFound();
+  let ultimoApito = null;
   function render() {
     const r = parse();
     state.route = r;
@@ -1328,7 +1497,11 @@
     stamp(view);
     const navKey = r.page === "" || r.page === "partida" ? "home" : r.page === "clube" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    document.title = club ? `${club.name} — Placar` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — Placar` : r.page === "partida" ? "Partida — Placar" : r.page === "bora-pro-jogo" ? "Bora pro jogo — Placar" : "Placar — Futebol Brasileiro";
+    // apito do árbitro ao entrar nas estatísticas (do clube ou rankings) e no "Bora pro jogo" (só na entrada)
+    const apitoKey = r.page === "bora-pro-jogo" ? "bora" : r.page === "clube" && r.tab === "estatisticas" && club ? `est:${r.id}` : r.page === "tabela" && RANKINGS[r.id] ? "rank" : null;
+    if (apitoKey && apitoKey !== ultimoApito) window.SONS?.apito();
+    ultimoApito = apitoKey;
+    document.title = club ? `${club.name} — Placar` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — Placar` : r.page === "partida" ? "Partida — Placar" : r.page === "bora-pro-jogo" ? "Bora pro jogo — Placar" : r.page === "simulador" ? "Simulador da tabela — Placar" : "Placar — Futebol Brasileiro";
     enhance();
   }
 
@@ -1496,6 +1669,7 @@
     LINEUP.mount(view);
     window.DRONE?.mount(view);
     escudosEntram(view);
+    if (state.route.page === "simulador") simBind(view);
     LIVE.mount(view);
     featSwipe($("[data-feature]", view));
     scorerCards(view);
@@ -1712,7 +1886,11 @@
     const q = norm(input.value.trim());
     sel = 0;
     if (!q) return results.classList.remove("open");
-    const hits = CLUBS.filter((c) => norm([c.name, c.abbr, c.city, c.stadium, c.nick, c.uf].join(" ")).includes(q)).slice(0, 8);
+    // só clubes cujo nome começa com o que foi digitado ("f": Flamengo e Fluminense; antes, "f" achava o Athletico
+    // pelo apelido "Furacão" e qualquer clube com "f" na cidade ou no estádio). Vale o nome e a forma curta
+    // ("atletico-mg", "vasco"), sem acento e sem diferença de maiúsculas; em ordem alfabética.
+    const hits = CLUBS.filter((c) => [c.name, c.abbr].some((n) => norm(n).startsWith(q)))
+      .sort((x, y) => x.name.localeCompare(y.name, "pt-BR")).slice(0, 8);
     results.innerHTML = hits.length ? hits.map((c, i) => `<a href="#/clube/${c.id}" class="${i === 0 ? "sel" : ""}">${crest(c, 32)}<b>${c.name}</b><small>${c.stadium}</small></a>`).join("") : `<div class="empty" style="padding:16px">Nenhum clube encontrado.</div>`;
     results.classList.add("open");
   });
@@ -1749,10 +1927,14 @@
     const before = sig();
     const antes = new Map(state.matches.map((m) => [m.id, m]));
     state.matches = realMatches(ROUND);
-    golsAoVivo(antes);
+    const anunciou = golsAoVivo(antes);
     state.standings = buildStandings();
     // troca só o que mudou (o minuto a minuto, o topo do clube e a montagem do time continuam onde estão)
-    if (sig() !== before && ["", "clube", "tabela", "partida"].includes(state.route.page) && state.route.tab !== "elenco") patchView();
+    if (sig() !== before && ["", "clube", "tabela", "partida"].includes(state.route.page) && state.route.tab !== "elenco") {
+      // com gol: o alerta GOL! aparece primeiro e o resto da página é atualizado no quadro seguinte
+      // (a atualização leva ~0,3 s no PC e mais no celular; antes, o alerta só aparecia depois dela)
+      if (anunciou) requestAnimationFrame(() => setTimeout(patchView, 0)); else patchView();
+    }
   };
   // foto do ídolo que não carregou: o card volta ao visual sem foto (sem script embutido no HTML)
   document.addEventListener("error", (e) => {
@@ -1765,7 +1947,8 @@
      A primeira atualização só serve de base (não anuncia gols que já tinham saído antes de abrir o site). */
   let golBase = false;
   function golsAoVivo(antes) {
-    if (!golBase) { golBase = true; return; }
+    if (!golBase) { golBase = true; return false; }
+    let n = 0;
     for (const m of state.matches) {
       const o = antes.get(m.id);
       if (!o || m.status !== "progress" || o.hs == null || o.as == null || m.hs == null) continue;
@@ -1774,9 +1957,10 @@
       const link = `#/partida/${m.id}`, relogio = m.clock || "AO VIVO";
       // quem marcou (se a fonte já trouxer): o último gol a favor do clube
       const autor = (cid) => { const x = [...m.gols].reverse().find((q) => q[2] === cid); return x && x[1] ? `${x[1]}${x[3] ? " (contra)" : x[4] ? " (pênalti)" : ""} · ` : ""; };
-      if (m.hs > o.hs) GOALBUG.alerta({ club: h, de: o.hs, para: m.hs, outro: m.as, relogio, texto: autor(h.id) + placar, link });
-      if (m.as > o.as) GOALBUG.alerta({ club: a, de: o.as, para: m.as, outro: m.hs, relogio, texto: autor(a.id) + placar, link });
+      if (m.hs > o.hs) { n++; GOALBUG.alerta({ club: h, de: o.hs, para: m.hs, outro: m.as, relogio, texto: autor(h.id) + placar, link }); }
+      if (m.as > o.as) { n++; GOALBUG.alerta({ club: a, de: o.as, para: m.as, outro: m.hs, relogio, texto: autor(a.id) + placar, link }); }
     }
+    return n > 0;
   }
   setInterval(() => {
     refresh();

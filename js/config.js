@@ -8,4 +8,7 @@
 window.PLACAR_CONFIG = {
   aoVivo: "",
   intervalo: 15,
+  /* hinos: ids dos clubes com o instrumental do hino LICENCIADO em media/hinos/<id>.mp3 (ex.: ["cruzeiro"]).
+     Vazio: o gol toca a fanfarra própria de cada clube (js/sons.js). */
+  hinos: [],
 };

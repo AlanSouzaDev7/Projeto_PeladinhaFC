@@ -181,17 +181,24 @@
 
   /* ---------------- Placar em tempo real ----------------
      Funciona com ou sem a API: enquanto houver jogo perto do horário ou em andamento (de qualquer rodada,
-     inclusive adiados), o navegador consulta o placar da ESPN a cada 20 s e atualiza a página. */
+     inclusive adiados), o navegador consulta o placar da ESPN (a cada 1 s com bola rolando; ritmo em "Ritmo do placar") e atualiza a página. */
   // jogo que precisa de placar ao vivo: começa em até 15 min, está rolando ou acabou há pouco sem resultado final
   const needsLive = (g, now) => {
     const k = kickOf(g), st = g[8] && g[8].state;
-    return k && st !== "post" && now > k - 15 * 60e3 && now < k + 3 * 3600e3;
+    if (st === "post") return false;
+    if (st === "in") return true;
+    // sem horário marcado (só a data): o dia inteiro, até a ESPN informar a situação. Antes esses jogos nunca
+    // entravam no placar em tempo real e o resultado só aparecia com o vigia, mais de 2 h depois.
+    if (!k) return !!g[4] && g[2] == null && g[4] === brt(new Date(now).toISOString()).slice(0, 10);
+    return now > k - 15 * 60e3 && now < k + 3 * 3600e3;
   };
 
   // placar de um dia na ESPN: atualiza os jogos encontrados; true = algo mudou
   async function espnDia(day, games, skip = new Set()) {
     const sb = await scoreboard(`?dates=${day}`);
-    if (!sb) return false;
+    return sb ? espnAplica(sb, games, skip) : false;
+  }
+  function espnAplica(sb, games, skip = new Set()) {
     let changed = false;
     for (const ev of sb.events || []) {
       const comp = ev.competitions[0], { s: side, h, a } = sides(ev);
@@ -215,6 +222,9 @@
     if (!need.length) return false;
     let changed = false;
     // 1) API-Football pelo Worker: os jogos que ela trouxer não são sobrescritos pela ESPN
+    // Worker e ESPN são consultados ao mesmo tempo (antes, a ESPN só era chamada depois da resposta do Worker)
+    const espnDias = [...new Set(need.map((g) => g[4].replace(/-/g, "")))];
+    const boardsP = Promise.all(espnDias.map((d) => scoreboard(`?dates=${d}`)));
     const covered = new Set(), px = await proxyGames();
     for (const p of px?.games || []) {
       const g = games.find((x) => x[0] === p.home && x[1] === p.away);
@@ -227,8 +237,8 @@
       if (JSON.stringify(g) !== before) changed = true;
     }
     // 2) ESPN para o que faltou
-    const days = [...new Set(need.filter((g) => !covered.has(g)).map((g) => g[4].replace(/-/g, "")))];
-    for (const day of days) if (await espnDia(day, games, covered)) changed = true;
+    const boards = await boardsP;
+    boards.forEach((sb) => { if (sb && espnAplica(sb, games, covered)) changed = true; });
     if (changed) {
       if (!PD.LIVE) PD.ROUND = currentRound(); // rodada terminou: passa para a próxima
       window.dispatchEvent(new Event("placar:data"));
@@ -452,15 +462,56 @@
   addEventListener("pageshow", (e) => e.persisted && vigiar("página restaurada"));
   window.PD_BOOT?.then(() => vigiar("abertura"));
 
-  // com o Worker: consulta logo depois que ele tiver placar novo (entre 2 s e o intervalo configurado)
-  const proxyDelay = (next) => (next == null ? PROXY_MS : Math.min(PROXY_MS, Math.max(2000, next + 700)));
+  /* Ritmo do placar em tempo real. Antes: a cada 12 s, e com a aba em segundo plano o navegador espaçava
+     para 1 vez por minuto (o gol aparecia, em média, 6 s depois de estar na ESPN, e até 1 min com a aba escondida).
+     Agora, com bola rolando, consulta a cada 0,8 s: a ESPN guarda o placar por 1 a 2 s (Cache-Control: max-age=1-2),
+     então o placar novo aparece em menos de 1 s depois de chegar lá. A resposta do dia tem uns 4 KB (comprimida).
+       - aba escondida: a cada 3 s (o som do gol continua tocando na hora);
+       - economia de dados ligada ou internet 2G/3G: a cada 4 s;
+       - nos 15 min antes do apito (ou jogo sem horário no dia): a cada 5 s;
+       - nenhum jogo perto: a cada 1 min.
+     O relógio roda num Worker (js/relogio.js): com a aba em segundo plano, o navegador espaça os timers da página
+     para 1 vez por minuto, mas não os de um Worker. */
+  const RITMO = { vivo: 800, escondido: 3000, economia: 4000, antes: 5000, parado: 60000 };
+  const economia = () => { const c = navigator.connection; return !!(c && (c.saveData || /(^|-)(2g|3g)$/.test(c.effectiveType || ""))); };
+  function ritmo(r) {
+    if (!r) return RITMO.parado;
+    const vivo = allGames().some((g) => g[8] && g[8].state === "in");
+    const base = !vivo ? RITMO.antes : document.hidden ? RITMO.escondido : economia() ? RITMO.economia : RITMO.vivo;
+    // com o Worker: consulta logo depois que ele tiver placar novo (a ESPN segue no ritmo acima como reserva)
+    return r.proxy && r.next != null ? Math.min(base, Math.max(1000, r.next + 300)) : base;
+  }
+  const espera = (() => {
+    let w = null, n = 0;
+    const pend = new Map();
+    try {
+      w = new Worker("js/relogio.js");
+      w.onmessage = (e) => { const f = pend.get(e.data); pend.delete(e.data); f && f(); };
+      w.onerror = () => { w = null; pend.forEach((f) => f()); pend.clear(); };
+    } catch { w = null; }
+    return (ms) => new Promise((res) => {
+      if (!w) return setTimeout(res, ms);
+      const id = ++n; pend.set(id, res); w.postMessage({ id, ms });
+    });
+  })();
+  let acorda = null;
+  PD.ritmo = { RITMO, consultas: 0, ultima: null, intervalo: null };
   (async function loop() {
     await window.PD_BOOT;
-    lembrar();
-    const r = await pollScores().catch(() => false);
-    if (await tabelaFresca()) window.dispatchEvent(new Event("placar:data"));
-    setTimeout(loop, !r ? 60000 : r.proxy ? proxyDelay(r.next) : 12000);
+    for (;;) {
+      lembrar();
+      const t0 = Date.now();
+      const r = await pollScores().catch(() => false);
+      PD.ritmo.consultas++; PD.ritmo.ultima = t0;
+      if (await tabelaFresca()) window.dispatchEvent(new Event("placar:data"));
+      const ms = ritmo(r);
+      PD.ritmo.intervalo = ms;
+      // a aba voltou a aparecer: não espera o resto do intervalo (que pode ser de 1 min)
+      await Promise.race([espera(Math.max(0, ms - (Date.now() - t0))), new Promise((res) => (acorda = res))]);
+      acorda = null;
+    }
   })();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && acorda) acorda(); });
 
   /* ---------------- Minuto a minuto ---------------- */
   const ICO = { goal: "⚽", "yellow-card": "🟨", "red-card": "🟥", substitution: "🔁", status: "⏱", panorama: "📊" };
@@ -610,7 +661,7 @@
     const kick = +el.dataset.kick || 0, soon = n.state === "pre" && kick && Date.now() > kick - 15 * 60e3;
     if (n.state !== "in" && !(soon && !PD.LIVE)) return;
     if (!PD.LIVE) {
-      // sem a API: com o Worker, atualiza junto com cada resposta dele; com a ESPN, a cada 20 s
+      // sem a API: com o Worker, atualiza junto com cada resposta dele; com a ESPN, a cada 4 s
       let busy = false;
       const tick = async () => {
         if (!el.isConnected) return stop();
@@ -630,9 +681,11 @@
         add(p.lines, true);
         if (p.state === "post") stop();
       };
-      const timer = setInterval(tick, 20000); // reserva: ESPN, ou Worker que parou de responder
-      const stop = () => { clearInterval(timer); window.removeEventListener("placar:proxy", tick); };
+      // ESPN: a cada 4 s com a página à vista (antes 20 s) e na hora em que o placar muda (gol visto no placar do dia)
+      const timer = setInterval(() => { if (!document.hidden) tick(); }, 4000);
+      const stop = () => { clearInterval(timer); window.removeEventListener("placar:proxy", tick); window.removeEventListener("placar:data", tick); };
       if (PROXY) window.addEventListener("placar:proxy", tick);
+      window.addEventListener("placar:data", tick);
       streams.add({ close: stop });
       return;
     }
