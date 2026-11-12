@@ -7,7 +7,7 @@
 import { chromium } from "playwright";
 const BASE = process.env.BASE || "http://127.0.0.1:5174";
 const ROTAS = ["#/", "#/clubes", "#/clube/cruzeiro", "#/clube/cruzeiro/elenco", "#/clube/cruzeiro/partidas", "#/clube/cruzeiro/estatisticas", "#/clube/flamengo",
-  "#/clube/atletico-mg", "#/clube/sao-paulo/partidas", "#/clube/internacional/estatisticas", "#/tabela", "#/simulador", "#/simulador/todas", "#/jogador/216098-cruzeiro", "#/jogador/216098-cruzeiro/ultimos", "#/jogador/216098-cruzeiro/comparar/297070-cruzeiro", "#/clube/cruzeiro/comparar/palmeiras", "#/tabela/gols", "#/tabela/amarelos", "#/partida/bragantino-x-santos-r34",
+  "#/clube/atletico-mg", "#/clube/sao-paulo/partidas", "#/clube/internacional/estatisticas", "#/tabela", "#/simulador", "#/simulador/todas", "#/jogador/216098-cruzeiro", "#/jogador/216098-cruzeiro/ultimos", "#/jogador/216098-cruzeiro/comparar/297070-cruzeiro", "#/clube/cruzeiro/comparar/palmeiras", "#/copa/libertadores", "#/copa/libertadores/classificacao", "#/copa/libertadores/chave", "#/copa/sul-americana/rankings", "#/copa/copa-do-brasil/jogos", "#/copa/paulistao", "#/copa/estaduais", "#/tabela/gols", "#/tabela/amarelos", "#/partida/bragantino-x-santos-r34",
   "#/bora-pro-jogo", "#/bora-pro-jogo/cruzeiro/atletico-mg", "#/sobre"];
 if (process.env.CLUBES) ROTAS.splice(0, ROTAS.length, ...["athletico-pr", "atletico-mg", "bahia", "botafogo", "bragantino", "chapecoense", "corinthians", "coritiba", "cruzeiro", "flamengo",
   "fluminense", "gremio", "internacional", "mirassol", "palmeiras", "remo", "santos", "sao-paulo", "vasco", "vitoria"].map((c) => `#/clube/${c}${process.env.ABA ? "/" + process.env.ABA : ""}`));

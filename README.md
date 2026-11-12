@@ -171,6 +171,15 @@ Na aba **Simulador** (`#/simulador`), o usuário dá o placar dos jogos que falt
 - Os palpites ficam guardados no aparelho.
 - **Próxima temporada**: os jogos vêm da mesma fonte do placar (ESPN). Quando a tabela de 2027 for divulgada e os jogos ganharem data, eles aparecem no simulador sozinhos. As páginas do ge.globo, da CazéTV e do site da ESPN não são lidas, porque os termos de uso desses sites não permitem copiar o conteúdo.
 
+## Outras competições: Libertadores, Sul-Americana, Copa do Brasil e estaduais
+
+Uma **barra de competições** no topo do Brasileirão e de cada competição leva de uma a outra sem sair do site: mesmo desenho, mesmas abas, mesmo jeito de navegar; o que muda é a cara do torneio.
+- **Identidade de cada competição**: cores do site, fundo, emblema e uma **abertura animada** própria, que toca ao trocar de competição (a completa na primeira vez da visita; depois, a rápida; nada com "reduzir movimento"). Libertadores em preto e dourado, com um feixe de luz sobre a taça; Sul-Americana em azul profundo cortado por faixas de luz; Copa do Brasil em verde e amarelo, com o chaveamento se fechando; cada estadual com as cores da bandeira do estado. Tudo desenhado para o site: nenhum logo, vinheta ou música oficial.
+- **Abas**: visão geral (fase atual, linha do tempo das fases na ordem real e com as datas, próximos jogos e últimos resultados, artilharia, brasileiros na competição e a situação de cada um, "como funciona" e notícias), classificação (grupos com as zonas de classificação e a classificação geral de todos os jogos), mata-mata (chave das oitavas à final na ordem do caminho até a final, ida e volta somadas, pênaltis; as fases anteriores em listas), jogos (por fase e data), rankings (artilharia, mais gols, melhor ataque, melhor defesa, mais amarelos e vermelhos), clubes (todos os participantes, com a página de cada um na competição), **simulador** (placar dos jogos que faltam, grupos e mata-mata recalculados) e **Bora pro jogo** no clima da competição (os clubes da Série A que estão nela).
+- **Copa do Brasil**: mata-mata desde a 1ª fase; o "como funciona" sai dos próprios jogos (jogo único ou ida e volta em cada fase).
+- **Estaduais**: Paulistão, Carioca, Mineiro e Gauchão (os que a ESPN cobre com jogos, gols e cartões). Campeão só aparece pela fase chamada "Final" (finais de taças secundárias não coroam ninguém).
+- **Dados**: o robô monta `js/competicoes/<id>.js` a cada 30 min a partir do placar do dia da ESPN (dias que já passaram ficam guardados; os próximos são relidos de 12 em 12 h), as tabelas dos grupos da ESPN e as manchetes do Google Notícias (só título, veículo, data e link). No dia de jogo, a página atualiza o placar direto da ESPN a cada 30 s. API: `GET /api/competicao/<id>`.
+
 ## Jogadores: página, mapa de calor real, fotos e comparativos
 
 - **Página de cada jogador** (`#/jogador/<id>-<clube>`, por exemplo `#/jogador/216098-cruzeiro`, o Matheus Pereira): foto, camisa, posição, idade e clube; números da temporada por competição; por 90 minutos; e as abas **Últimos 10** (jogo a jogo: minutos, gols, assistências, finalizações, ações com bola, passes, desarmes, interceptações, dribles e cartões, mais o mapa dos 10 jogos), **Temporada** (todos os jogos, por mês, com filtro de competição), **Mapa de calor** (temporada e últimos 10, com o tanto de ações em cada terço e faixa do campo) e **Comparar** (qualquer outro jogador, números por 90 minutos e os dois mapas lado a lado).
@@ -309,6 +318,8 @@ node tests/mobile/partidas.mjs                     # temporada de cada clube (to
 node tests/mobile/rodadas.mjs                      # próximas rodadas e jogos adiados
 node tests/mobile/calendario.mjs                   # calendário dos 20 clubes: dias e meses, placar e local, competições, estatísticas ao clicar, celular
 python -X utf8 tests/calendario_api.py             # API do calendário: estatísticas de um jogo real e jogos da API-Football (estadual, pênaltis, adiado)
+node tests/mobile/competicoes.mjs                  # competições: dados (gols, chave, artilharia), 8 abas de cada uma, tema, abertura, simulador, Bora pro jogo, celular
+python -X utf8 tests/competicoes_api.py            # API das competições: fases, pontos corridos x mata-mata, ida e volta e pênaltis, campeão, rota
 node tests/mobile/jogadores.mjs                    # jogadores: mapa de calor com orientação certa, fotos, busca, histórico, página, comparativos, 20 clubes, escudos dos estaduais
 python -X utf8 tests/jogadores_api.py              # API dos jogadores: escala das coordenadas, homônimos, transferências, fotos, rosto, em alta e elenco de hora em hora
 node tests/mobile/sem-servidor.mjs                 # site funcionando só com os arquivos (GitHub Pages)

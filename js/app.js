@@ -894,7 +894,7 @@
     });
     let n = 0;
 
-    return `<div class="layout">
+    return `${COPA.barra("brasileirao")}<div class="layout">
       <aside class="left sticky">
         <div class="card">
           <div class="card-h">Favoritos <small>${favClubs.length}</small></div>
@@ -1322,7 +1322,7 @@
   }
 
   function pageTable() {
-    return `<div class="page-head"><div><div class="eyebrow">Brasileirão Série A · ${ROUND}ª rodada</div><h1>Classificação</h1><p data-live="aviso">${temAoVivo() ? `<span class="pill">Ao vivo</span> Com os placares dos jogos em andamento; a tabela oficial é de ${REAL.updated}.` : `Classificação oficial, atualizada em ${REAL.updated}.`}</p></div></div>
+    return `${COPA.barra("brasileirao")}<div class="page-head"><div><div class="eyebrow">Brasileirão Série A · ${ROUND}ª rodada</div><h1>Classificação</h1><p data-live="aviso">${temAoVivo() ? `<span class="pill">Ao vivo</span> Com os placares dos jogos em andamento; a tabela oficial é de ${REAL.updated}.` : `Classificação oficial, atualizada em ${REAL.updated}.`}</p></div></div>
       ${leagueStats()}
       <div class="grid-2" style="margin-top:16px">
         <div class="card">${standingsTable(state.standings)}${legend}${sourceNote}</div>
@@ -1638,17 +1638,33 @@
       r.page === "bora-pro-jogo" ? LINEUP.pageBora(r.id, r.tab) :
       r.page === "simulador" ? pageSim(r.id) :
       r.page === "jogador" ? JOGADOR.page(r.id, r.tab, r.extra) :
+      r.page === "copa" ? COPA.page(r.id, r.tab, r.extra) :
       r.page === "sobre" ? pageAbout() : pageNotFound();
+  /* competição em tela: Brasileirão (o site de sempre) ou Libertadores, Sul-Americana, Copa do Brasil e estaduais
+     (js/copa.js). Trocar de competição troca as cores do site e toca a abertura animada da competição; o Bora pro jogo
+     aberto a partir de uma competição fica no clima dela. */
+  let compAtual = "brasileirao";
+  function competicaoDa(r) {
+    if (r.page === "copa") return r.id || "libertadores";
+    if (r.page === "bora-pro-jogo") { try { const t = sessionStorage.getItem("placar:tema-bora"); if (t && COPA.C[t]) return t; } catch { /* ok */ } }
+    if (r.page !== "bora-pro-jogo") { try { sessionStorage.removeItem("placar:tema-bora"); } catch { /* ok */ } }
+    return "brasileirao";
+  }
   function render() {
     const r = parse();
     state.route = r;
     const club = r.page === "clube" ? byId[r.id] : null;
-    applyTheme(club);
+    const comp = competicaoDa(r), fam = COPA.familia(comp === "brasileirao" ? "" : comp);
+    applyTheme(club || COPA.tema(comp));
+    if (fam === "brasileirao") delete root.dataset.comp; else root.dataset.comp = COPA.C[comp]?.tipo === "estadual" ? `est-${COPA.C[comp].uf.toLowerCase()}` : fam;
+    const antes = compAtual;
+    compAtual = COPA.C[comp]?.tipo === "estadual" ? comp : fam;
+    if (antes !== compAtual) COPA.intro(comp === "brasileirao" ? "brasileirao" : comp);
     view.innerHTML = pageHTML(r);
     stamp(view);
-    const navKey = r.page === "" || r.page === "partida" ? "home" : r.page === "clube" || r.page === "jogador" ? "clubes" : r.page;
+    const navKey = r.page === "" || r.page === "partida" || r.page === "copa" ? "home" : r.page === "clube" || r.page === "jogador" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    document.title = club ? `${club.name} — Placar` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — Placar` : r.page === "partida" ? "Partida — Placar" : r.page === "bora-pro-jogo" ? "Bora pro jogo — Placar" : r.page === "simulador" ? "Simulador da tabela — Placar" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — Placar` : "Placar — Futebol Brasileiro";
+    document.title = club ? `${club.name} — Placar` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — Placar` : r.page === "partida" ? "Partida — Placar" : r.page === "bora-pro-jogo" ? "Bora pro jogo — Placar" : r.page === "simulador" ? "Simulador da tabela — Placar" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — Placar` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "Placar — Futebol Brasileiro";
     enhance();
   }
 
@@ -1818,6 +1834,7 @@
     escudosEntram(view);
     if (state.route.page === "simulador") simBind(view);
     if (state.route.page === "jogador") JOGADOR.mount(view);
+    COPA.mount(view); // página de competição; nas outras, só centraliza a barra de competições
     // fotos dos jogadores (licença livre, Wikimedia Commons) nas listas de estatísticas; o nome abre a página do jogador
     if (state.route.page === "clube" && $("[data-pid]", view)) HEATMAP.carregaClube(state.route.id).then((D) => {
       $$("[data-pid]", view).forEach((el) => {

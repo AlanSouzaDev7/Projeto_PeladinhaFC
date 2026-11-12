@@ -24,6 +24,7 @@ Rotas
   GET /api/elenco-temporada ?club=id      jogadores do clube: temporada por competição, cada jogo, mapa de calor (lances) e foto
   GET /api/jogador/<id>[-<clube>]         um jogador (o mesmo formato, com o clube)
   GET /api/em-alta                        clubes e jogadores mais buscados nas últimas 24 h (só contagens, nada pessoal)
+  GET /api/competicao/<id>                Libertadores, Sul-Americana, Copa do Brasil e estaduais: fases, jogos, grupos, chave, artilharia
   POST /api/busca          {"t":"c"|"j","id":...}   conta uma busca (a única rota que aceita escrita; corpo de até 200 bytes)
   GET /api/jogadores       [?club=id]     pendurados, sequência de jogos, lesionados e minutagem dos reservas
 
@@ -666,7 +667,16 @@ def match_stats(eid, lg):
 # Jogadores (server/jogadores.py): temporada, cada jogo, mapa de calor com os lances e fotos livres
 # ---------------------------------------------------------------------------
 import jogadores as JOG  # noqa: E402
+import competicoes as COMP  # noqa: E402
 JOG.P = sys.modules[__name__]
+COMP.P = sys.modules[__name__]
+
+
+def update_competicoes():
+    d = COMP.atualizar()
+    with lock:
+        state["competicoes"] = d
+    log("competições (Libertadores, Sul-Americana, Copa do Brasil e estaduais) atualizadas")
 
 
 def squads_atuais():
@@ -2231,7 +2241,7 @@ def write_snapshot():
         elenco_novo = update_squads_horario()
     except Exception as ex:
         log("falha em elenco", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes)]
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
             fn()
@@ -2257,6 +2267,10 @@ def write_snapshot():
         jg = state.get("jogadores")
     if jg:
         JOG.gravar_js(jg)
+    with lock:
+        cp = state.get("competicoes")
+    if cp:
+        COMP.gravar_js(cp)
     if elenco_novo:
         try:
             gravar_elenco()
@@ -2876,6 +2890,12 @@ class Handler(SimpleHTTPRequestHandler):
                 except Exception as ex:
                     log("jogo", eid, ex)
                     return self.send_json({"ok": False, "message": "estatísticas indisponíveis"}, 502)
+            if len(parts) == 3 and parts[1] == "competicao":
+                if parts[2] not in COMP.COMPETICOES:
+                    return self.send_json({"ok": False, "message": "competição desconhecida"}, 404)
+                with lock:
+                    cpd = (state.get("competicoes") or {}).get(parts[2])
+                return self.send_json(cpd) if cpd else self.send_json({"ok": False, "message": "carregando dados"}, 503)
             if parts[1:] == ["em-alta"]:
                 return self.send_json(em_alta())
             if len(parts) == 3 and parts[1] == "jogador":
@@ -2993,6 +3013,7 @@ def main():
     every(iv.get("departamento_medico", 60), update_dm)
     every(iv.get("retrospecto", 30), update_form)
     every(iv.get("jogadores_temporada", 60), update_jogadores)
+    every(iv.get("competicoes", 15), update_competicoes)
     threading.Thread(target=live_loop, daemon=True).start()
     log(f"PLACAR no ar: http://{'localhost' if HOST in ('127.0.0.1', 'localhost') else HOST}:{port}")
     srv = ThreadingHTTPServer((HOST, port), Handler)

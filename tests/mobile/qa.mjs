@@ -20,7 +20,7 @@ const PAGES = [
   ["inicio", "#/"], ["clubes", "#/clubes"],
   ["clube", "#/clube/flamengo"], ["partidas", "#/clube/cruzeiro/partidas"], ["elenco", "#/clube/vasco/elenco"],
   ["estatist", "#/clube/palmeiras/estatisticas"], ["clube-tab", "#/clube/gremio/tabela"],
-  ["tabela", "#/tabela"], ["rank-gols", "#/tabela/gols"], ["rank-amarelos", "#/tabela/amarelos"], ["simulador", "#/simulador"], ["simul-todas", "#/simulador/todas"], ["jogador", "#/jogador/216098-cruzeiro"], ["jog-calor", "#/jogador/216098-cruzeiro/calor"], ["comparar", "#/clube/cruzeiro/comparar/atletico-mg"],
+  ["tabela", "#/tabela"], ["rank-gols", "#/tabela/gols"], ["rank-amarelos", "#/tabela/amarelos"], ["simulador", "#/simulador"], ["simul-todas", "#/simulador/todas"], ["jogador", "#/jogador/216098-cruzeiro"], ["jog-calor", "#/jogador/216098-cruzeiro/calor"], ["comparar", "#/clube/cruzeiro/comparar/atletico-mg"], ["liberta", "#/copa/libertadores"], ["liberta-chave", "#/copa/libertadores/chave"], ["cdb", "#/copa/copa-do-brasil"], ["estaduais", "#/copa/estaduais"],
   ["partida-fim", "#/partida/bragantino-x-santos-r34"], ["partida-futura", "#/partida/flamengo-x-gremio-r34"],
   ["bora", "#/bora-pro-jogo/flamengo/palmeiras"], ["sobre", "#/sobre"], ["404", "#/nao-existe"],
 ];

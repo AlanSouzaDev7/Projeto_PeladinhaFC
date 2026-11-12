@@ -3145,3 +3145,196 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .foto-c { position: relative; display: block; border-radius: 50%; overflow: hidden; box-sizing: border-box; }
 .foto-c .foto-p { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; display: block; }
 .foto-r { position: absolute; max-width: none; max-height: none; object-fit: fill; display: block; }
+
+/* ==========================================================================
+   Outras competições (js/copa.js): barra de competições, temas, abertura animada e página
+   ========================================================================== */
+/* barra de competições: a mesma no Brasileirão e nas outras */
+.cp-bar { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 4px 0 18px; padding: 6px; border-radius: 16px; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 80%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.cp-bar::-webkit-scrollbar { display: none; }
+.cp-bar-i { flex: 1 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 6px 14px; border-radius: 11px; color: var(--text-2); font-weight: 800; font-size: 13.5px; white-space: nowrap; transition: background 0.25s, color 0.25s, transform 0.2s; }
+.cp-bar-i .cp-emb { color: var(--cpc); flex: none; }
+.cp-bar-i:hover { color: var(--text); background: color-mix(in srgb, var(--cpc) 12%, transparent); }
+.cp-bar-i.on { color: var(--on-accent); background: var(--accent); box-shadow: 0 6px 18px -8px var(--accent); }
+.cp-bar-i.on .cp-emb { color: currentColor; }
+
+/* temas: o fundo do site ganha a luz e as cores da competição (as cores de destaque vêm do applyTheme) */
+:root[data-comp] body { transition: background-color 0.6s; }
+:root[data-comp="libertadores"] body { background-image: radial-gradient(1200px 520px at 80% -10%, rgb(201 162 74 / 0.22), transparent 60%), radial-gradient(900px 500px at -10% 30%, rgb(241 223 166 / 0.08), transparent 60%); }
+:root[data-comp="libertadores"]:not([data-theme="light"]) { --bg: #08080a; --bg-2: #0d0d10; --surface: #15140f; --surface-2: #1d1b15; --surface-3: #27241b; --line: #2f2b20; --line-soft: #221f17; }
+:root[data-comp="sul-americana"] body { background-image: radial-gradient(1100px 520px at 85% -10%, rgb(47 123 220 / 0.26), transparent 60%), radial-gradient(900px 480px at -5% 40%, rgb(127 211 255 / 0.1), transparent 60%); }
+:root[data-comp="sul-americana"]:not([data-theme="light"]) { --bg: #050d1f; --bg-2: #081428; --surface: #0c1a33; --surface-2: #11223f; --surface-3: #182c4f; --line: #1d3359; --line-soft: #152747; }
+:root[data-comp="copa-do-brasil"] body { background-image: radial-gradient(1100px 520px at 85% -10%, rgb(19 165 81 / 0.24), transparent 60%), radial-gradient(800px 420px at -5% 35%, rgb(255 210 63 / 0.1), transparent 60%); }
+:root[data-comp="copa-do-brasil"]:not([data-theme="light"]) { --bg: #04130c; --bg-2: #071a11; --surface: #0b2318; --surface-2: #102d1f; --surface-3: #163a29; --line: #1b452f; --line-soft: #143525; }
+:root[data-comp^="est-"] body, :root[data-comp="estaduais"] body { background-image: radial-gradient(1000px 480px at 85% -10%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%); }
+
+/* topo da competição (como o topo do Brasileirão, com a cara do torneio) */
+.cp-topo { position: relative; overflow: hidden; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 22px; padding: 26px; border-radius: 22px; border: 1px solid var(--line); margin-bottom: 14px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 22%, var(--surface)), var(--surface) 55%); }
+.cp-topo::after { content: ""; position: absolute; inset: -40% -10% auto auto; width: 60%; height: 200%; background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.07) 50%, transparent 60%); transform: translateX(-120%); animation: cpBrilho 5s 0.6s ease-in-out infinite; pointer-events: none; }
+@keyframes cpBrilho { 0%, 55% { transform: translateX(-120%); } 85%, 100% { transform: translateX(160%); } }
+.cp-topo-emb { color: var(--accent); filter: drop-shadow(0 6px 18px color-mix(in srgb, var(--accent) 40%, transparent)); animation: cpEntra 0.8s var(--ease) both; }
+.cp-topo h1 { margin: 2px 0 4px; font: 900 clamp(32px, 5.4vw, 64px) / 0.95 var(--font-display); font-stretch: 75%; text-transform: uppercase; letter-spacing: 0.01em; animation: cpEntra 0.8s 0.08s var(--ease) both; }
+.cp-lema { margin: 0; color: var(--text-2); font-weight: 600; }
+.cp-topo-fase { display: grid; justify-items: end; gap: 6px; text-align: right; }
+.cp-topo-fase small { color: var(--text-3); font-size: 12px; }
+.cp-fase-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; font-weight: 900; background: var(--accent); color: var(--on-accent); font-size: 14px; }
+.cp-fase-pill i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: livePulse 1.4s ease-in-out infinite; }
+.cp-fase-pill.fim { background: var(--surface-3); color: var(--text); }
+@keyframes cpEntra { from { opacity: 0; transform: translateY(14px) scale(0.96); } to { opacity: 1; transform: none; } }
+/* linha do tempo das fases, na ordem real */
+.cp-linha { list-style: none; margin: 0 0 16px; padding: 4px 2px 10px; display: flex; gap: 0; overflow-x: auto; scrollbar-width: thin; }
+.cp-f { position: relative; flex: 1 0 112px; display: grid; justify-items: center; gap: 3px; text-align: center; padding-top: 18px; font-size: 12px; }
+.cp-f::before { content: ""; position: absolute; top: 6px; left: 0; right: 0; height: 3px; background: var(--line); }
+.cp-f:first-child::before { left: 50%; } .cp-f:last-child::before { right: 50%; }
+.cp-f i { position: absolute; top: 0; width: 15px; height: 15px; border-radius: 50%; background: var(--surface-3); border: 2px solid var(--line); z-index: 1; }
+.cp-f b { font-weight: 800; color: var(--text-2); white-space: nowrap; }
+.cp-f small { color: var(--text-3); font-size: 11px; white-space: nowrap; }
+.cp-f.feita::before, .cp-f.atual::before { background: color-mix(in srgb, var(--accent) 70%, var(--line)); }
+.cp-f.feita i { background: var(--accent); border-color: var(--accent); }
+.cp-f.atual i { background: var(--bg); border-color: var(--accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 25%, transparent); animation: livePulse 1.6s ease-in-out infinite; }
+.cp-f.atual b { color: var(--text); }
+.cp-grid > div { display: grid; gap: 16px; align-content: start; }
+.cp-grid .card { margin: 0; }
+/* jogos */
+.cp-jogos { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cp-dia { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); padding: 10px 2px 2px; }
+.cp-j { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto minmax(0, 1fr) minmax(0, 0.8fr); align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); }
+.cp-j.in { box-shadow: inset 3px 0 0 var(--live); }
+.cp-j-q { display: grid; line-height: 1.2; } .cp-j-q small { color: var(--text-3); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-t { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text); font-weight: 700; }
+.cp-t.casa { justify-content: flex-end; text-align: right; }
+.cp-t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cp-t .crest { flex: none; }
+.cp-t.ven b { color: var(--text); } .cp-j.post .cp-t:not(.ven) b { color: var(--text-2); }
+.cp-meio { display: grid; justify-items: center; min-width: 64px; }
+.cp-placar { font: 900 20px var(--font-display); font-variant-numeric: tabular-nums; } .cp-placar i { font-style: normal; color: var(--text-3); margin: 0 4px; font-size: 14px; }
+.cp-placar.vivo { color: var(--live); } .cp-meio small { font-size: 10.5px; color: var(--text-3); } .cp-meio small.vivo { color: var(--live); }
+.cp-hora { font-size: 13px; color: var(--text-2); }
+.cp-j-l { font-size: 11.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* mata-mata */
+.cp-chave-g { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.cp-c { display: grid; gap: 2px; padding: 8px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+.cp-c-t { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 3px 4px; border-radius: 8px; color: var(--text); font-weight: 700; }
+.cp-c-t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-c-t > span { font: 900 16px var(--font-display); font-variant-numeric: tabular-nums; }
+.cp-c-t > span small { font-size: 11px; color: var(--text-3); margin-left: 3px; }
+.cp-c-t.ven { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.cp-c-t.per { opacity: 0.6; }
+.cp-c-q { font-size: 10.5px; color: var(--text-3); padding: 2px 4px 0; }
+.cp-bracket { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 14px; overflow-x: auto; padding-bottom: 6px; }
+.cp-col h4 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); text-align: center; }
+.cp-col.atual h4 { color: var(--ink); }
+.cp-col-in { display: flex; flex-direction: column; justify-content: space-around; gap: 10px; height: calc(100% - 26px); }
+.cp-antes > summary { cursor: pointer; list-style: none; }
+.cp-antes > summary::-webkit-details-marker { display: none; }
+.cp-antes > summary::after { content: "▾"; margin-left: auto; color: var(--text-3); }
+.cp-antes[open] > summary::after { content: "▴"; }
+/* grupos, rankings, clubes */
+.cp-grupos { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-bottom: 12px; }
+.cp-grupos .card { margin: 0; }
+.cp-ranks { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 16px; }
+.cp-ranks .card { margin: 0; }
+.cp-rank .rank-row { grid-template-columns: 28px minmax(0, 1fr) 80px 54px; }
+.cp-rank .rk-bar i { background: var(--accent); }
+.cp-clubes, .cp-br { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.cp-clubes a, .cp-br a { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 10px; align-items: center; padding: 10px; border-radius: 12px; background: var(--surface-2); color: var(--text); }
+.cp-clubes .crest, .cp-br .crest { grid-row: span 2; }
+.cp-clubes b, .cp-br b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-sit { font-size: 11.5px; font-weight: 700; color: var(--text-3); }
+.cp-sit.vivo { color: var(--win); } .cp-sit.camp { color: var(--gold); } .cp-sit.fim { color: var(--text-3); }
+.cp-como { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13.5px; color: var(--text-2); }
+.cp-news { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cp-news a { display: grid; gap: 2px; color: var(--text); } .cp-news b { font-size: 13.5px; } .cp-news small { color: var(--text-3); font-size: 11.5px; }
+.cp-camp-in { display: flex; align-items: center; gap: 16px; position: relative; }
+.cp-camp-in small { display: block; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold); }
+.cp-camp-in b { font: 900 34px var(--font-display); font-stretch: 75%; text-transform: uppercase; }
+.cp-taca { margin-left: auto; font-size: 44px; filter: drop-shadow(0 6px 14px rgb(245 197 66 / 0.5)); }
+.cp-cl-in { display: flex; align-items: center; gap: 16px; margin-top: 8px; } .cp-cl-in h2 { margin: 0 0 4px; font: 900 32px var(--font-display); font-stretch: 75%; text-transform: uppercase; }
+.cp-cl-link { display: inline-block; margin-top: 6px; font-weight: 800; font-size: 13px; color: var(--ink); padding: 8px 0; }
+.cp-chips { margin-bottom: 10px; } .cp-chips .chip { font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.cp-sim-h { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+.cp-bora p { color: var(--text-2); margin-top: 0; }
+.cp-bora-sel { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.cp-bora-sel select { height: 46px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; font-weight: 700; min-width: 0; flex: 1 1 160px; }
+.cp-bora-ir { display: inline-flex; align-items: center; min-height: 46px; padding: 0 18px; border-radius: 12px; background: var(--accent); color: var(--on-accent); font-weight: 900; }
+.cp-bora-lista { display: flex; flex-wrap: wrap; gap: 8px; }
+.cp-bora-j { display: inline-flex; gap: 6px; align-items: center; min-height: 40px; }
+.cp-bora-j small { color: var(--text-3); }
+/* estaduais */
+.cp-est-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin-bottom: 12px; }
+.cp-est-card { position: relative; overflow: hidden; display: grid; justify-items: start; gap: 4px; padding: 22px 18px 18px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--text); transition: transform 0.25s var(--ease), box-shadow 0.25s; }
+.cp-est-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px -14px var(--e1); }
+.cp-est-faixa { position: absolute; inset: 0 0 auto 0; height: 7px; background: linear-gradient(90deg, var(--e1) 0 40%, var(--e2) 40% 70%, var(--e3) 70%); }
+.cp-est-card .cp-emb { color: var(--e1); }
+.cp-est-card b { font: 900 28px var(--font-display); font-stretch: 75%; text-transform: uppercase; }
+.cp-est-card small { color: var(--text-3); } .cp-est-card em { font-style: normal; font-weight: 800; font-size: 13px; color: var(--text-2); margin-top: 6px; }
+@media (max-width: 760px) {
+  .cp-topo { grid-template-columns: auto minmax(0, 1fr); padding: 18px; gap: 14px; }
+  .cp-topo-emb .cp-emb { width: 56px; height: 56px; }
+  .cp-topo-fase { grid-column: 1 / -1; justify-items: start; text-align: left; }
+  .cp-j { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; padding: 8px; }
+  .cp-j-q { grid-column: 1 / -1; grid-row: 1; display: flex; gap: 6px; }
+  .cp-j-l { display: none; }
+  .cp-t { font-size: 13px; gap: 6px; }
+  .cp-bar-i { padding: 6px 10px; font-size: 12.5px; }
+  .cp-grupos, .cp-ranks { grid-template-columns: minmax(0, 1fr); }
+  .cp-rank .rank-row { grid-template-columns: 24px minmax(0, 1fr) 54px 44px; }
+}
+
+/* abertura animada de cada competição (desenho próprio do site; toca ao trocar de competição) */
+.cp-intro { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; overflow: hidden; pointer-events: auto; animation: cpiSai 2.3s var(--ease) forwards; }
+.cp-intro.curta { animation-duration: 0.9s; }
+.cpi-fundo { position: absolute; inset: 0; }
+.cpi-luz { position: absolute; inset: -30%; opacity: 0; animation: cpiLuz 1.6s 0.1s var(--ease) forwards; }
+.cpi-linhas { position: absolute; inset: 0; }
+.cpi-linhas b { position: absolute; left: -20%; width: 140%; height: 2px; top: calc(14% + var(--i) * 12%); transform: translateX(-100%) rotate(-8deg); opacity: 0.7; animation: cpiLinha 1.1s calc(0.08s * var(--i)) var(--ease) forwards; }
+.cpi-centro { position: relative; display: grid; justify-items: center; gap: 10px; text-align: center; padding: 0 16px; }
+.cpi-emb { width: clamp(76px, 14vw, 120px); height: auto; opacity: 0; transform: scale(0.6); animation: cpiEmb 0.9s 0.15s var(--ease-bounce) forwards; }
+.cpi-emb path, .cpi-emb circle { stroke-dasharray: 200; stroke-dashoffset: 200; animation: cpiTraco 1.2s 0.2s ease forwards; }
+.cpi-txt { display: flex; flex-wrap: wrap; justify-content: center; font: 900 clamp(34px, 8vw, 92px) / 0.95 var(--font-display); font-stretch: 75%; letter-spacing: 0.04em; }
+.cpi-txt i { font-style: normal; display: inline-block; opacity: 0; transform: translateY(40%) skewY(6deg); animation: cpiLetra 0.6s calc(0.35s + var(--i) * 0.035s) var(--ease) forwards; }
+.cpi-sub { font: 700 clamp(13px, 2vw, 17px) var(--font-label); letter-spacing: 0.22em; text-transform: uppercase; opacity: 0; animation: cpiSub 0.6s 0.9s var(--ease) forwards; }
+.cp-intro.curta .cpi-luz, .cp-intro.curta .cpi-emb, .cp-intro.curta .cpi-txt i, .cp-intro.curta .cpi-sub, .cp-intro.curta .cpi-linhas b { animation-delay: 0s !important; animation-duration: 0.45s; }
+@keyframes cpiSai { 0%, 78% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+@keyframes cpiLuz { to { opacity: 1; } }
+@keyframes cpiLinha { to { transform: translateX(10%) rotate(-8deg); opacity: 0; } }
+@keyframes cpiEmb { to { opacity: 1; transform: none; } }
+@keyframes cpiTraco { to { stroke-dashoffset: 0; } }
+@keyframes cpiLetra { to { opacity: 1; transform: none; } }
+@keyframes cpiSub { to { opacity: 0.85; } }
+/* Libertadores: noite, ouro e um feixe de luz sobre a taça */
+.cp-intro.liber .cpi-fundo { background: radial-gradient(70% 60% at 50% 45%, #1c160a, #050505 70%); }
+.cp-intro.liber .cpi-luz { background: conic-gradient(from 200deg at 50% 40%, transparent 0 40%, rgb(240 205 120 / 0.28) 46%, transparent 52% 100%); }
+.cp-intro.liber .cpi-linhas b { background: linear-gradient(90deg, transparent, #e9c66d, transparent); }
+.cp-intro.liber .cpi-emb { color: #e9c66d; filter: drop-shadow(0 0 22px rgb(233 198 109 / 0.6)); }
+.cp-intro.liber .cpi-txt { background: linear-gradient(180deg, #fff3cf, #d7a944 55%, #8a6420); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cp-intro.liber .cpi-txt i { color: transparent; background: inherit; -webkit-background-clip: text; background-clip: text; }
+.cp-intro.liber .cpi-sub { color: #e9d7a6; }
+/* Sul-Americana: azul profundo cortado por faixas de luz */
+.cp-intro.sula .cpi-fundo { background: linear-gradient(135deg, #03122c, #0b2b63 55%, #041530); }
+.cp-intro.sula .cpi-luz { background: repeating-linear-gradient(115deg, transparent 0 60px, rgb(127 211 255 / 0.12) 60px 64px); }
+.cp-intro.sula .cpi-linhas b { background: linear-gradient(90deg, transparent, #7fd3ff, transparent); height: 3px; }
+.cp-intro.sula .cpi-emb { color: #7fd3ff; filter: drop-shadow(0 0 18px rgb(127 211 255 / 0.55)); }
+.cp-intro.sula .cpi-txt { color: #fff; text-shadow: 0 0 24px rgb(127 211 255 / 0.5); }
+.cp-intro.sula .cpi-sub { color: #bfe6ff; }
+/* Copa do Brasil: o chaveamento se fechando até o centro */
+.cp-intro.cdb .cpi-fundo { background: radial-gradient(70% 60% at 50% 50%, #0d4b2a, #031a0f 75%); }
+.cp-intro.cdb .cpi-luz { background: linear-gradient(90deg, transparent 0 18%, rgb(255 210 63 / 0.18) 18% 19%, transparent 19% 81%, rgb(255 210 63 / 0.18) 81% 82%, transparent 82%), linear-gradient(0deg, transparent 0 30%, rgb(255 210 63 / 0.12) 30% 31%, transparent 31% 69%, rgb(255 210 63 / 0.12) 69% 70%, transparent 70%); }
+.cp-intro.cdb .cpi-linhas b { background: linear-gradient(90deg, transparent, #ffd23f, transparent); }
+.cp-intro.cdb .cpi-emb { color: #ffd23f; }
+.cp-intro.cdb .cpi-txt { color: #ffd23f; text-shadow: 0 4px 0 #0a2a5e; }
+.cp-intro.cdb .cpi-sub { color: #d9f5e4; }
+/* estaduais: as faixas da bandeira do estado */
+.cp-intro.est .cpi-fundo { background: #0b0f17; }
+.cp-intro.est .cpi-luz { background: linear-gradient(100deg, var(--e1, #d6202f) 0 33%, var(--e2, #fff) 33% 66%, var(--e3, #111) 66%); opacity: 0; animation: cpiFaixas 0.9s 0.05s var(--ease) forwards; inset: 0; }
+@keyframes cpiFaixas { from { opacity: 0.9; clip-path: inset(0 100% 0 0); } to { opacity: 0.22; clip-path: inset(0 0 0 0); } }
+.cp-intro.est .cpi-linhas b { background: rgb(255 255 255 / 0.5); }
+.cp-intro.est .cpi-emb, .cp-intro.est .cpi-txt, .cp-intro.est .cpi-sub { color: #fff; }
+.cp-intro.uf-sp { --e1: #d6202f; --e2: #f5f5f5; --e3: #111; } .cp-intro.uf-rj { --e1: #2b6fd6; --e2: #f5f5f5; --e3: #0b2e6b; }
+.cp-intro.uf-mg { --e1: #f5f5f5; --e2: #d1202f; --e3: #8a0f18; } .cp-intro.uf-rs { --e1: #1e9e4a; --e2: #d62828; --e3: #f4c430; }
+/* volta ao Brasileirão */
+.cp-intro.bra .cpi-fundo { background: radial-gradient(70% 60% at 50% 45%, #18245a, #070a14 70%); }
+.cp-intro.bra .cpi-linhas b { background: linear-gradient(90deg, transparent, #8a9bff, transparent); }
+.cp-intro.bra .cpi-emb, .cp-intro.bra .cpi-sub { color: #c7d0ff; } .cp-intro.bra .cpi-txt { color: #fff; }
+@media (prefers-reduced-motion: reduce) { .cp-intro { display: none; } .cp-topo::after, .cp-f.atual i, .cp-fase-pill i { animation: none; } }

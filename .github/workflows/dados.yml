@@ -47,6 +47,7 @@ jobs:
             server/cache/fotos-jogadores.json
             server/cache/wikidata-clubes.json
             server/cache/rostos.json
+            server/cache/comp-*.json
           key: partidas-${{ github.run_id }}
           restore-keys: partidas-
 
@@ -71,7 +72,7 @@ jobs:
         run: |
           git config user.name "placar-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add js/live-data.js js/player-stats.js js/club-form.js js/heatmaps.js js/departamento-medico.js js/raio-x.js js/jogadores/ js/squads.js
+          git add js/live-data.js js/player-stats.js js/club-form.js js/heatmaps.js js/departamento-medico.js js/raio-x.js js/jogadores/ js/squads.js js/competicoes/
           if git diff --cached --quiet; then
             echo "Nada novo."
           else

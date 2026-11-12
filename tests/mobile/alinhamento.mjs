@@ -8,7 +8,7 @@ import { writeFileSync } from "node:fs";
 
 const BASE = process.env.BASE || "http://127.0.0.1:5173";
 const OUT = new URL("./out/", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
-const PAGES = ["#/", "#/clubes", "#/clube/flamengo", "#/clube/flamengo/partidas", "#/clube/flamengo/elenco", "#/clube/flamengo/estatisticas", "#/clube/flamengo/tabela", "#/tabela", "#/simulador", "#/jogador/216098-cruzeiro", "#/clube/flamengo/comparar", "#/bora-pro-jogo/flamengo/palmeiras", "#/sobre", "#/tabela/gols", "#/partida/cruzeiro-x-flamengo-r34"];
+const PAGES = ["#/", "#/clubes", "#/clube/flamengo", "#/clube/flamengo/partidas", "#/clube/flamengo/elenco", "#/clube/flamengo/estatisticas", "#/clube/flamengo/tabela", "#/tabela", "#/simulador", "#/jogador/216098-cruzeiro", "#/clube/flamengo/comparar", "#/copa/libertadores", "#/copa/copa-do-brasil/chave", "#/bora-pro-jogo/flamengo/palmeiras", "#/sobre", "#/tabela/gols", "#/partida/cruzeiro-x-flamengo-r34"];
 
 function audit() {
   const sel = "button, a.btn, .chip, .tab, .icon-btn, [role=button], .round-nav a, .feat-nav button, .bottom-nav a, .pill, .lu-forms button, select";
