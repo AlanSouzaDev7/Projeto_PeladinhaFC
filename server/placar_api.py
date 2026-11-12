@@ -688,6 +688,17 @@ def update_competicoes():
     log("competições (Libertadores, Sul-Americana, Copa do Brasil, estaduais e Séries B, C e D) atualizadas")
 
 
+def update_fontes_elenco():
+    """A cada rodada do robô, mais algumas buscas no TheSportsDB (cadastro, posição e fotos privadas), até cobrir
+    todos os elencos; com tudo coberto, só revalida quem passou do prazo (21 dias; 7 para quem não foi achado)."""
+    with lock:
+        mc = state.get("mercado") or {}
+    if not mc:
+        return
+    FE.atualizar({cid: [(j["id"], j["nome"]) for j in d["elenco"]] + [(e["id"], e["nome"], e.get("clube"), e.get("clubeEspn")) for e in d["emprestados"]]
+                  for cid, d in mc.items()}, max_buscas=int(os.environ.get("TSDB_POR_RODADA", "30")), fotos=os.environ.get("FOTOS_PRIVADAS", "1") != "0")
+
+
 def update_mercado():
     """Janela de transferências: elenco e emprestados de cada clube (todo dia) e o mercado global (cache de 7 dias por time)."""
     with lock:
@@ -2320,7 +2331,7 @@ def write_snapshot():
         elenco_novo = update_squads_horario()
     except Exception as ex:
         log("falha em elenco", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado), ("fontes do elenco", update_fontes_elenco)]
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
             fn()

@@ -126,11 +126,19 @@ def af_elenco(cid):
 def noticias_escalacao(cid):
     """Manchetes de escalação da última semana (só títulos) do clube."""
     nome = (P.HEADLINE_NAMES.get(cid) or [cid])[0]
+    c = _ler()
+    guard = (c.get("escalacao") or {}).get(cid)
+    if guard and time.time() - guard.get("t", 0) < 6 * 3600:  # cache de 6 h: o robô grava a cada 30 min
+        return guard.get("titulos", [])
     try:
-        return [it["title"] for it in P.news_query(f'"{nome}" escalação OR escalado OR titular when:7d')]
+        tit = [it["title"] for it in P.news_query(f'"{nome}" escalação OR escalado OR titular when:7d')]
     except Exception as ex:
         P.log("fontes: notícias de escalação", cid, ex)
-        return []
+        return (guard or {}).get("titulos", [])
+    c = _ler()
+    c.setdefault("escalacao", {})[cid] = {"t": time.time(), "titulos": tit[:40]}
+    _gravar(c)
+    return tit
 
 
 def atualizar(clube_jogadores, max_buscas=60, fotos=True):
