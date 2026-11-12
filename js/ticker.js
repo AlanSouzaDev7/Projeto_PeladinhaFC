@@ -30,7 +30,7 @@
     const top = items.slice(0, 5);
     const fita = items.map((x) => `<a class="tk-item" href="${esc(window.SEG ? SEG.url(x.link) : "#")}" target="_blank" rel="noopener noreferrer">${escudos(x)}<b>${esc(x.title)}</b><small>${esc(x.source)} · ${hora(x.ts)}</small></a>`).join('<i class="tk-sep" aria-hidden="true"></i>');
     el.innerHTML = `
-      <div class="tk-tag" aria-hidden="true"><b>PLACAR<i></i></b><span>Futebol agora</span><time class="tk-clock"></time></div>
+      <div class="tk-tag" aria-hidden="true"><b>PLACAR<i></i>TV</b><span>Futebol agora</span><time class="tk-clock"></time></div>
       <div class="tk-body">
         <div class="tk-head" aria-live="polite">${top.map((x, i) => `<a class="tk-h${i === cur % top.length ? " on" : ""}" href="${esc(window.SEG ? SEG.url(x.link) : "#")}" target="_blank" rel="noopener noreferrer" ${i === cur % top.length ? "" : 'tabindex="-1" aria-hidden="true"'}>
             <b>${esc(x.title)}</b><small>${esc(x.source)} · ${ha(x.ts)}</small></a>`).join("")}${top.length > 1 ? '<i class="tk-prog" aria-hidden="true"></i>' : ""}</div>

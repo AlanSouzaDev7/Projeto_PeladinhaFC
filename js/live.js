@@ -645,7 +645,7 @@
     if (!n && !id) { list.innerHTML = `<li class="mam-empty">A narração começa com a bola rolando.</li>`; return; }
     if (!n || !n.lines) { list.innerHTML = `<li class="mam-empty">Narração indisponível agora.</li>`; return; }
     let fonte = n.source;
-    if (src && fonte) src.textContent = `lances: ${fonte} · narração: PLACAR`;
+    if (src && fonte) src.textContent = `lances: ${fonte} · narração: Placar.TV`;
     top.innerHTML = head(n);
     paintMarks(n);
     const seen = new Set();
@@ -674,7 +674,7 @@
         if (p.source !== fonte) {
           // trocou de fonte no meio do jogo (ex.: limite da API-Football): redesenha a lista inteira
           fonte = p.source; seen.clear(); list.innerHTML = "";
-          if (src) src.textContent = `lances: ${fonte} · narração: PLACAR`;
+          if (src) src.textContent = `lances: ${fonte} · narração: Placar.TV`;
           add(p.lines, false);
         }
         const empty = list.querySelector(".mam-empty"); if (empty) empty.remove();

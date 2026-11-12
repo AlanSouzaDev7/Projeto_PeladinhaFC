@@ -357,7 +357,7 @@
     return `<div class="card rx" data-rx>
       <div class="card-h">Raio-X ${rxDo(club)}<small>Brasileirão · ${c.jogos} jogos · ${c.pontos} pontos (${rxN(c.aprov, 0)}%)</small></div>
       ${top}<div class="rx-grid">${faixas}${aneis}${liga}${placar}${seqs}${sabia}${indiv}</div>
-      <div class="source">Números calculados pelo PLACAR a partir das ${SEG.esc(all.fonte || "súmulas da ESPN")} · posição entre os 20 clubes ao lado de cada número · atualizado em ${SEG.esc(all.updated)}</div></div>
+      <div class="source">Números calculados pelo Placar.TV a partir das ${SEG.esc(all.fonte || "súmulas da ESPN")} · posição entre os 20 clubes ao lado de cada número · atualizado em ${SEG.esc(all.updated)}</div></div>
       ${torcidaHTML(id)}`;
   }
 
@@ -377,7 +377,7 @@
     return `<div class="card rx-torcida reveal"><div class="card-h">Estatística feita pela torcida<small>créditos</small></div>
       <div class="card-b">${lista}
         ${gerais.length ? `<h5 class="rx-sub">Cobrem todos os clubes</h5><ul class="rx-pages">${gerais.map((p) => perfil(p, true)).join("")}</ul>` : ""}
-        <p class="rx-credit">Torcedores que estudam o clube a fundo e publicam análises, recordes e curiosidades. O que eles publicam pertence a eles: aqui ficam o perfil, as reportagens que citaram a página e, quando a API oficial do X está ligada, as publicações com link para o original. Os números do Raio-X acima são calculados pelo PLACAR, no mesmo espírito.</p></div></div>`;
+        <p class="rx-credit">Torcedores que estudam o clube a fundo e publicam análises, recordes e curiosidades. O que eles publicam pertence a eles: aqui ficam o perfil, as reportagens que citaram a página e, quando a API oficial do X está ligada, as publicações com link para o original. Os números do Raio-X acima são calculados pelo Placar.TV, no mesmo espírito.</p></div></div>`;
   }
 
   // anima o Raio-X quando aparece na tela (contadores, barras, anéis); sem animação: já no valor final
@@ -1136,7 +1136,7 @@
           <div class="card"><div class="card-h">Informações</div><div class="card-b" style="display:grid;gap:10px">
             ${info.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--text-2)">${k}</span><b style="text-align:right"${k === "Situação" ? " data-situacao" : ""}>${v}</b></div>`).join("")}
           </div>${arb ? arbitragemHTML(arb) : ""}${m.status === "pending" ? `<div class="source">O resultado deste jogo ainda não foi lançado no site.</div>` : ""}</div>
-          ${m.espn || (LIVE.proxy() && m.status !== "ft") ? `<div class="card mam" data-mam="${m.espn || ""}" data-h="${m.home}" data-a="${m.away}" data-kick="${m.kick || ""}"><div class="card-h">Minuto a minuto <small class="mam-src">lances: ${LIVE.proxy() ? "API-Football" : "ESPN"} · narração: PLACAR</small></div>
+          ${m.espn || (LIVE.proxy() && m.status !== "ft") ? `<div class="card mam" data-mam="${m.espn || ""}" data-h="${m.home}" data-a="${m.away}" data-kick="${m.kick || ""}"><div class="card-h">Minuto a minuto <small class="mam-src">lances: ${LIVE.proxy() ? "API-Football" : "ESPN"} · narração: Placar.TV</small></div>
             <div class="mam-top"></div><ul class="mam-list"><li class="mam-empty">Carregando a narração…</li></ul></div>` : ""}
           <div class="card"><div class="card-h">Comparação no campeonato <small>${REAL.source} · ${REAL.updated}</small></div><div class="card-b">${compareHTML(m)}</div></div>
         </div>
@@ -1538,7 +1538,7 @@
       <div>
         <div class="eyebrow">Sobre o projeto</div>
         <h1 class="display">Um placar<br/>com alma de arquibancada</h1>
-        <p style="color:var(--text-2);font-size:16px;max-width:640px">O PLACAR. é um estudo de interface para plataformas de resultados esportivos: a densidade de informação das listas de partidas, o cuidado com gráficos de desempenho e, acima de tudo, a identidade de cada clube brasileiro aplicada à interface.</p>
+        <p style="color:var(--text-2);font-size:16px;max-width:640px">O Placar.TV é um estudo de interface para plataformas de resultados esportivos: a densidade de informação das listas de partidas, o cuidado com gráficos de desempenho e, acima de tudo, a identidade de cada clube brasileiro aplicada à interface.</p>
         <div class="card reveal" style="margin-top:22px"><div class="card-h">Habilidades em campo</div><div class="card-b">
           ${skills.map(([s, v]) => `<div class="skill"><header><span>${s}</span><span>${v}</span></header><div class="bar"><i data-w="${v}"></i></div></div>`).join("")}
         </div></div>
@@ -1600,7 +1600,7 @@
     const codigo = [["Interface (JS)", 3200, "var(--accent)"], ["Cenas e GOL! (JS)", 1570, "#e0182a"], ["Estilos (CSS)", 2370, "#13a37a"], ["Servidor (Python)", 1500, "#f0a020"]];
     const cTot = codigo.reduce((a, c) => a + c[1], 0);
     return `<section class="docs" aria-labelledby="docs-h">
-      <div class="docs-head"><div class="eyebrow">Por dentro do PLACAR.</div><h2 id="docs-h" class="docs-title">Como o site funciona</h2>
+      <div class="docs-head"><div class="eyebrow">Por dentro do Placar.TV</div><h2 id="docs-h" class="docs-title">Como o site funciona</h2>
         <p>Um resumo do que foi construído, de onde vêm os dados e com que frequência eles chegam à tela.</p></div>
       <div class="docs-kpis">${kpis.map(([n, t, s], i) => `<div class="dk" style="--i:${i}"><b data-count="${n}">${n}</b><span>${t}</span><small>${s}</small></div>`).join("")}</div>
 
@@ -1684,7 +1684,7 @@
     stamp(view);
     const navKey = r.page === "" || r.page === "partida" || r.page === "copa" ? "home" : r.page === "clube" || r.page === "jogador" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    document.title = club ? `${club.name} — Placar` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — Placar` : r.page === "partida" ? "Partida — Placar" : r.page === "bora-pro-jogo" ? "Bora pro jogo — Placar" : r.page === "simulador" ? "Simulador da tabela — Placar" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — Placar` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "Placar — Futebol Brasileiro";
+    document.title = club ? `${club.name} — O Placar.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — O Placar.TV` : r.page === "partida" ? "Partida — O Placar.TV" : r.page === "bora-pro-jogo" ? "Bora pro jogo — O Placar.TV" : r.page === "simulador" ? "Simulador da tabela — O Placar.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — O Placar.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "O Placar.TV — Futebol Brasileiro";
     enhance();
   }
 

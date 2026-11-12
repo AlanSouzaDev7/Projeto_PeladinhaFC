@@ -587,11 +587,11 @@
     });
   }
   const titulo = (id, aba, extra) => {
-    if (id === "estaduais") return "Estaduais — Placar";
+    if (id === "estaduais") return "Estaduais — O Placar.TV";
     const c = C[id];
-    if (!c) return "Competição — Placar";
+    if (!c) return "Competição — O Placar.TV";
     const D = window.COMPETICOES?.[id], t = aba === "clube" && D ? D.geral.find((r) => r.id === decodeURIComponent(extra || "")) : null;
-    return `${t ? `${t.nome} na ` : ""}${c.longo} — Placar`;
+    return `${t ? `${t.nome} na ` : ""}${c.longo} — O Placar.TV`;
   };
 
   window.COPA = { C, ESTADUAIS, SERIES, page, mount, barra, faixa, tema, intro, familia, titulo, carrega, emblema };

@@ -160,7 +160,7 @@
       ${D.emprestados.length ? `<div class="card jt-tab-card"><div class="card-h">Emprestados a outros clubes <small>${D.emprestados.length} · reintegre quem você quer de volta</small></div>
         <div class="jt-scroll"><table class="table jt-tabela">${cab}<tbody>${D.emprestados.map((j) => linhaJogador(cid, { ...j, fora: true }, e, k)).join("")}</tbody></table></div></div>` : ""}
       <div class="jt-seguir"><a class="jt-btn" href="#/clube/${cid}/mercado/reforcos">Ir aos reforços</a></div>
-      <p class="source">Elenco: ESPN. Emprestados: Wikipédia em inglês${D.fonteEmprestimos ? ` (<a href="${esc(window.SEG.url(D.fonteEmprestimos))}" target="_blank" rel="noopener noreferrer" style="color:var(--ink)">artigo do clube</a>, CC BY-SA 4.0)` : ""}. Valores e salários são estimativas do PLACAR, calculadas pela idade, posição, minutos jogados e força do time; não há fonte pública e permitida desses números. Atualizado em ${esc(D.updated)}.</p>`;
+      <p class="source">Elenco: ESPN. Emprestados: Wikipédia em inglês${D.fonteEmprestimos ? ` (<a href="${esc(window.SEG.url(D.fonteEmprestimos))}" target="_blank" rel="noopener noreferrer" style="color:var(--ink)">artigo do clube</a>, CC BY-SA 4.0)` : ""}. Valores e salários são estimativas do Placar.TV, calculadas pela idade, posição, minutos jogados e força do time; não há fonte pública e permitida desses números. Atualizado em ${esc(D.updated)}.</p>`;
   }
 
   /* ---------- reforços: mercado global, filtros à moda das tabelas de transferências ---------- */
@@ -209,7 +209,7 @@
         <div class="card jt-tab-card"><div class="card-h">Mercado global <small>${L.length.toLocaleString("pt-BR")} jogadores · ${Object.keys(G.ligas).length} ligas</small></div>
           <div class="jt-scroll"><table class="table jt-tabela"><thead><tr><th>Jogador</th><th>Pos.</th><th class="hide-sm">Idade</th><th class="hide-sm">Nac.</th><th>Valor · salário</th><th></th></tr></thead><tbody>${linhas || `<tr><td colspan="6"><div class="empty" style="padding:24px">Nenhum jogador com esses filtros.</div></td></tr>`}</tbody></table></div>
           ${L.length > f.n ? `<button type="button" class="jt-mais" data-jt-mais>Mostrar mais ${Math.min(25, L.length - f.n)}</button>` : ""}
-          <p class="source">Elencos de ${Object.keys(G.ligas).length} ligas pela ESPN (atualizados toda semana). Valores e salários: estimativa do PLACAR. ${esc(G.updated || "")}</p></div>
+          <p class="source">Elencos de ${Object.keys(G.ligas).length} ligas pela ESPN (atualizados toda semana). Valores e salários: estimativa do Placar.TV. ${esc(G.updated || "")}</p></div>
         <div class="jt-seguir"><a class="jt-btn sec" href="#/clube/${cid}/mercado/elenco">Voltar ao elenco</a><a class="jt-btn" href="#/clube/${cid}/mercado/escalacao">Montar a escalação</a></div>
       </div></div>`;
   }
@@ -329,7 +329,7 @@
     // rodapé
     x.fillStyle = "rgba(0,0,0,.4)"; x.fillRect(0, H - 96, W, 96);
     x.fillStyle = "#fff"; x.font = F(700, 30); x.fillText(`${k.real ? "Caixa" : "Gasto"} ${k.real ? eur(k.caixa) : eur(k.gasto)}   ·   Folha ${brl(k.folha)}/mês   ·   ${k.elencoFinal.length} jogadores`, 64, H - 38);
-    x.textAlign = "right"; x.font = F(800, 34); x.fillText("PLACAR.", W - 64, H - 38); x.textAlign = "left";
+    x.textAlign = "right"; x.font = F(800, 34); x.fillText("O PLACAR.TV", W - 64, H - 38); x.textAlign = "left";
   }
   function rr(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
   // PDF de uma página com a imagem JPEG do cartaz (montado à mão: sem biblioteca externa)
@@ -447,7 +447,7 @@
       if ("jtPdf" in d && cv) { baixa(pdfDeJpeg(cv.toDataURL("image/jpeg", 0.92), cv.width, cv.height), `elenco-${cid}-2027.pdf`); if (msg) msg.textContent = "Cartaz em PDF baixado."; return; }
       if ("jtLink" in d) {
         const url = `${location.origin}${location.pathname}#/clube/${cid}/mercado/${codifica(D, e, contas(cid, D, e, G))}`;
-        const texto = `Montei o ${byId[cid].name} de 2027 na janela de transferências do PLACAR. Monte o seu!`;
+        const texto = `Montei o ${byId[cid].name} de 2027 na janela de transferências do Placar.TV. Monte o seu!`;
         try {
           if (navigator.share) {
             const b = cv ? await new Promise((r) => cv.toBlob(r, "image/png")) : null, file = b ? new File([b], `elenco-${cid}.png`, { type: "image/png" }) : null;
