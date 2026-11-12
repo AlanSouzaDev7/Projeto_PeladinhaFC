@@ -86,5 +86,47 @@ ok(P.contar_busca("c", "nao-existe") is False, "em alta: id desconhecido não co
 top = P.em_alta()["itens"]
 ok(top[0]["id"] == "216098-cruzeiro" and top[1]["id"] == "cruzeiro", "em alta: o mais buscado primeiro")
 
+# ---------- fotos do Flickr (API oficial, simulada) ----------
+import time as _t
+ANO = _t.strftime("%Y")
+LIC = {"stat": "ok", "licenses": {"license": [
+    {"id": 0, "name": "All Rights Reserved"}, {"id": 1, "name": "Attribution-NonCommercial-ShareAlike License"}, {"id": 2, "name": "Attribution-NonCommercial License"},
+    {"id": 3, "name": "Attribution-NonCommercial-NoDerivs License"}, {"id": 4, "name": "Attribution License"}, {"id": 5, "name": "Attribution-ShareAlike License"},
+    {"id": 6, "name": "Attribution-NoDerivs License"}, {"id": 7, "name": "No known copyright restrictions"}, {"id": 9, "name": "Public Domain Dedication (CC0)"},
+    {"id": 10, "name": "Public Domain Mark"}, {"id": 16, "name": "CC BY-ND 4.0"}]}}
+def ph(i, titulo, lic, data, tags="", url=True):
+    return {"id": str(i), "owner": "123@N04", "ownername": "Fotógrafo do Clube", "title": titulo, "license": str(lic), "datetaken": f"{data} 16:00:00", "tags": tags,
+            **({"url_z": f"https://live.staticflickr.com/65535/{i}_abc_z.jpg"} if url else {})}
+chamadas = []
+def flickr_get(url, headers=None, timeout=20):
+    chamadas.append(url)
+    if "licenses.getInfo" in url:
+        return json.dumps(LIC).encode()
+    return json.dumps({"stat": "ok", "photos": {"photo": [
+        ph(1, "Kaio Jorge comemora", 0, f"{ANO}-05-01"),                 # todos os direitos reservados: não
+        ph(2, "Treino do Cruzeiro", 4, f"{ANO}-05-02"),                   # sem o nome do jogador: não
+        ph(3, "Kaio Jorge", 4, f"{int(ANO) - 1}-11-20"),                  # temporada passada: não
+        ph(4, "Gol de Kaio Jorge", 6, f"{ANO}-06-01"),                    # sem derivações: não
+        ph(5, "Cruzeiro x Bahia", 2, f"{ANO}-07-10", tags="kaiojorge kaio jorge cruzeiro"),  # nome nas etiquetas, CC BY-NC: sim
+        ph(6, "Kaio Jorge", 4, f"{ANO}-08-01"),
+    ]}}).encode()
+os.environ.pop("FLICKR_API_KEY", None)
+P.get = flickr_get
+ok(J.licencas_flickr() == {} and not chamadas, "Flickr sem a chave: nenhuma consulta")
+os.environ["FLICKR_API_KEY"] = "chave-de-teste"
+lic = J.licencas_flickr()
+ok(set(lic) == {"1", "2", "4", "5", "7", "9", "10"}, f"licenças aceitas: Creative Commons com atribuição, CC0 e domínio público; fora: todos os direitos reservados e sem derivações ({sorted(lic)})")
+fl = J.fotos_flickr("cruzeiro", [[19, "Kaio Jorge", "F", 24, "555"]], lic)
+f5 = fl.get("555", {})
+ok(f5.get("url", "").endswith("5_abc_z.jpg"), "escolhe a primeira foto válida: desta temporada, licença livre, nome do jogador (no título ou nas etiquetas)")
+ok(f5.get("autor") == "Fotógrafo do Clube" and f5.get("licenca") == "CC BY-NC" and f5.get("fonte") == "Flickr" and f5.get("pagina") == "https://www.flickr.com/photos/123%40N04/5",
+   f"crédito completo: autor, licença, Flickr e link da foto ({f5.get('licenca')}, {f5.get('pagina')})")
+busca = [u for u in chamadas if "photos.search" in u][0]
+ok(f"min_taken_date={ANO}-01-01" in busca and "license=" in busca and "%220%22" not in busca, "a busca já pede só fotos da temporada e só as licenças aceitas")
+os.environ["FLICKR_SEM_NC"] = "1"
+ok(set(J.licencas_flickr()) == {"4", "5", "7", "9", "10"}, "FLICKR_SEM_NC=1 tira as não comerciais")
+os.environ.pop("FLICKR_SEM_NC", None)
+os.environ.pop("FLICKR_API_KEY", None)
+
 print("\nOK" if not falhas else f"\n{len(falhas)} falha(s)")
 sys.exit(1 if falhas else 0)

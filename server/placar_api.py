@@ -2563,7 +2563,7 @@ HOST = os.environ.get("HOST", "127.0.0.1")
 ORIGENS = {o.strip().rstrip("/") for o in os.environ.get(
     "ORIGENS", "https://alansouzadev7.github.io,http://localhost:8000,http://127.0.0.1:8000").split(",") if o.strip()}
 CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
-       "img-src 'self' data: blob: https://a.espncdn.com https://*.wikimedia.org https://*.wikipedia.org; "
+       "img-src 'self' data: blob: https://a.espncdn.com https://*.wikimedia.org https://*.wikipedia.org https://live.staticflickr.com; "
        "connect-src 'self' https://site.web.api.espn.com https://site.api.espn.com https://*.workers.dev; media-src 'self' blob:; manifest-src 'self'; "
        "worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 SEC_HEADERS = {

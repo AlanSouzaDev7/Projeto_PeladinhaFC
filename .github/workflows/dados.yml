@@ -59,6 +59,8 @@ jobs:
           # opcional: com a chave da API-Football, o calendário dos clubes ganha os torneios que a ESPN não cobre
           # (estaduais do PR, BA, SC e PA, Copa do Nordeste, Copa Verde, Fifa)
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          # opcional: fotos dos jogadores da temporada no Flickr (API oficial; só fotos com licença livre)
+          FLICKR_API_KEY: ${{ secrets.FLICKR_API_KEY }}
 
       - name: Publicar se algo mudou
         run: |

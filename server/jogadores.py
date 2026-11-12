@@ -6,8 +6,11 @@ Fontes
   (sports.core.api.espn.com .../plays), um registro por ação, com o jogador e o ponto do campo (x: 0 = o próprio gol,
   100 = o gol adversário; y: lado). É a base do mapa de calor: cada ação do jogador é um ponto no campo.
 - Minutos, gols, assistências, finalizações e cartões de cada jogo: súmulas da ESPN (as mesmas do resto do site).
-- Fotos: Wikimedia Commons (licença livre, com autor e licença), achadas pelo Wikidata e conferidas com o elenco da ESPN
-  pelo nome e pelo ano de nascimento. As fotos oficiais dos clubes têm direitos autorais e não são usadas.
+- Fotos: primeiro o Flickr, pela API oficial (chave FLICKR_API_KEY): fotos da temporada atual com licença que permite o uso
+  (Creative Commons com atribuição ou domínio público), com o nome do jogador no título ou nas etiquetas, com crédito ao
+  fotógrafo e link para a foto. "Todos os direitos reservados" (o padrão do Flickr) não entra: crédito não substitui a licença.
+  Sem foto no Flickr (ou sem a chave), o Wikimedia Commons (licença livre, achada pelo Wikidata e conferida pelo nome e
+  pelo ano de nascimento).
 - Opta (Stats Perform): os termos do site optaplayerstats.statsperform.com proíbem usar o conteúdo em outro site sem
   autorização escrita, e o site bloqueia acesso automático. Com uma licença da API oficial do Opta, os dados entram
   por `fonte_opta()`, no mesmo formato.
@@ -275,20 +278,110 @@ def fotos_clube(cid, elenco):
     return {aid: info[t] for aid, t in arqs.items() if t in info}
 
 
+# ---------------------------------------------------------------------------
+# Fotos do Flickr (API oficial; só licenças que permitem o uso, só da temporada atual)
+# ---------------------------------------------------------------------------
+FLICKR_API = "https://api.flickr.com/services/rest/"
+NOME_CURTO = {"atletico-mg": "Atlético Mineiro", "athletico-pr": "Athletico Paranaense", "sao-paulo": "São Paulo", "vasco": "Vasco", "bragantino": "Bragantino"}
+
+
+def _flickr(metodo, **params):
+    chave = os.environ.get("FLICKR_API_KEY", "").strip()
+    if not chave:
+        return None
+    q = {"method": metodo, "api_key": chave, "format": "json", "nojsoncallback": 1, **params}
+    d = json.loads(P.get(FLICKR_API + "?" + urllib.parse.urlencode(q), headers=UA, timeout=30))
+    if d.get("stat") != "ok":
+        raise ValueError(f"Flickr: {d.get('message') or d.get('stat')}")
+    return d
+
+
+def licencas_flickr():
+    """{id: nome} das licenças que permitem usar a foto com crédito: Creative Commons com atribuição (inclusive não comercial;
+    o site é um portfólio sem fins comerciais), CC0 e domínio público. Ficam de fora "todos os direitos reservados" e as
+    "sem derivações" (o site recorta a foto num círculo). FLICKR_SEM_NC=1 tira também as não comerciais."""
+    d = _flickr("flickr.photos.licenses.getInfo")
+    ok = {}
+    for l in (d or {}).get("licenses", {}).get("license", []):
+        nome = l.get("name") or ""
+        if re.search(r"NoDerivs|No Derivative|NoDerivatives|All Rights Reserved", nome, re.I):
+            continue
+        if os.environ.get("FLICKR_SEM_NC") == "1" and re.search(r"NonCommercial", nome, re.I):
+            continue
+        if re.search(r"Attribution|Public Domain|No known copyright|CC0", nome, re.I):
+            ok[str(l["id"])] = nome
+    return ok
+
+
+def _sigla_licenca(nome):
+    n = nome or ""
+    if re.search(r"Public Domain Dedication|CC0", n, re.I):
+        return "CC0"
+    if re.search(r"Public Domain Mark|No known copyright", n, re.I):
+        return "Domínio público"
+    partes = ["CC BY"] + (["NC"] if re.search(r"NonCommercial", n, re.I) else []) + (["SA"] if re.search(r"ShareAlike", n, re.I) else [])
+    ver = re.search(r"(\d\.\d)", n)
+    return "-".join(partes).replace("CC BY-", "CC BY-") + (f" {ver.group(1)}" if ver else "")
+
+
+def fotos_flickr(cid, elenco, licencas):
+    """{id ESPN: foto} com a melhor foto da temporada de cada jogador no Flickr (licença livre, nome no título ou etiquetas)."""
+    if not licencas:
+        return {}
+    clube = NOME_CURTO.get(cid) or (P.CLUBS[cid].get("busca") or cid)
+    ano = time.strftime("%Y")
+    out = {}
+    for num, nome, pos, idade, aid in elenco:
+        if not aid or not nome or len(nome) < 3:
+            continue
+        try:
+            d = _flickr("flickr.photos.search", text=f'"{nome}" {clube}', license=",".join(licencas), min_taken_date=f"{ano}-01-01",
+                        media="photos", content_types=0, safe_search=1, sort="relevance", per_page=15,
+                        extras="license,owner_name,url_n,url_m,url_z,date_taken,tags")
+        except Exception as ex:
+            P.log("Flickr", cid, nome, ex)
+            continue
+        alvo = set(_norm(nome))
+        for ph in (d or {}).get("photos", {}).get("photo", []):
+            txt = set(_norm(ph.get("title", ""))) | set(_norm(ph.get("tags", "")))
+            url = ph.get("url_z") or ph.get("url_m") or ph.get("url_n")
+            # o nome inteiro do jogador no título ou nas etiquetas; foto desta temporada; licença conferida de novo
+            if not url or not alvo <= txt or str(ph.get("license")) not in licencas or not str(ph.get("datetaken", "")).startswith(ano):
+                continue
+            if not re.match(r"^https://live\.staticflickr\.com/", url):
+                continue
+            out[str(aid)] = {"url": url, "autor": P.clean_text(ph.get("ownername") or "autor no Flickr", 80), "licenca": _sigla_licenca(licencas[str(ph["license"])]),
+                             "pagina": f"https://www.flickr.com/photos/{urllib.parse.quote(str(ph.get('owner', '')))}/{int(ph['id'])}", "fonte": "Flickr",
+                             "data": str(ph.get("datetaken", ""))[:10]}
+            break
+        time.sleep(0.4)  # bem abaixo do limite da API (3.600 consultas por hora)
+    return out
+
+
 def atualizar_fotos(squads):
-    """Uma vez por semana (as fotos quase não mudam)."""
+    """Uma vez por semana (as fotos quase não mudam). Flickr (temporada atual) primeiro; sem ele, Wikimedia Commons."""
     cache = _ler("fotos-jogadores.json")
-    if cache.get("v") == FOTOS_VERSAO and cache.get("quando", 0) > time.time() - 7 * 86400 and cache.get("clubes"):
+    com_flickr = bool(os.environ.get("FLICKR_API_KEY", "").strip())
+    if cache.get("v") == FOTOS_VERSAO and cache.get("flickr") == com_flickr and cache.get("quando", 0) > time.time() - 7 * 86400 and cache.get("clubes"):
         return cache["clubes"]
+    try:
+        licencas = licencas_flickr() if com_flickr else {}
+    except Exception as ex:
+        P.log("Flickr (licenças)", ex)
+        licencas = {}
     out = {}
     for cid in P.CLUBS:
         try:
-            out[cid] = fotos_clube(cid, squads.get(cid, []))
+            out[cid] = {k: dict(v, fonte=v.get("fonte") or "Wikimedia Commons") for k, v in fotos_clube(cid, squads.get(cid, [])).items()}
         except Exception as ex:
             P.log("fotos", cid, ex)
             out[cid] = (cache.get("clubes") or {}).get(cid, {})
+        try:
+            out[cid].update(fotos_flickr(cid, squads.get(cid, []), licencas))  # a do Flickr (desta temporada) vale mais
+        except Exception as ex:
+            P.log("fotos (Flickr)", cid, ex)
         time.sleep(1)
-    _gravar("fotos-jogadores.json", {"v": FOTOS_VERSAO, "quando": time.time(), "clubes": out})
+    _gravar("fotos-jogadores.json", {"v": FOTOS_VERSAO, "flickr": com_flickr, "quando": time.time(), "clubes": out})
     return out
 
 
@@ -379,10 +472,10 @@ def montar(squads, todas, lan, fotos):
                     del r["antes"]
             if fotos.get(cid, {}).get(str(aid)):
                 f = fotos[cid][str(aid)]
-                r["foto"] = dict(f, url=str(f.get("url") or "").split("?")[0])  # sem os parâmetros de rastreamento do Commons
+                r["foto"] = dict(f, url=str(f.get("url") or "").split("?")[0], fonte=f.get("fonte") or "Wikimedia Commons")  # sem os parâmetros de rastreamento do Commons
             jog[str(aid)] = r
         clubes[cid] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "club": cid, "grade": [GX, GY], "campos": CAMPOS_JOGO,
-                       "fontes": {"lances": "ESPN (lances com coordenadas)", "sumulas": "ESPN", "fotos": "Wikimedia Commons"}, "jogadores": jog}
+                       "fontes": {"lances": "ESPN (lances com coordenadas)", "sumulas": "ESPN", "fotos": "Flickr (licença livre, temporada atual) e Wikimedia Commons"}, "jogadores": jog}
     return clubes
 
 
