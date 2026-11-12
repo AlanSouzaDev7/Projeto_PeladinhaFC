@@ -81,18 +81,27 @@
     if (!base.length) return "?";
     return (base.length === 1 ? base[0].slice(0, 3) : base[0][0] + base[1][0] + (base[2] ? base[2][0] : "")).toUpperCase().slice(0, 3);
   }
-  function iniCrest(nome, size = 28) {
+  // escudo desenhado: escudo clássico em duas cores (as do clube, se o Wikidata tiver; senão, um par tirado do nome),
+  // faixa diagonal e as iniciais em letra de camisa
+  function iniCrest(nome, size = 28, cores = null) {
     let h = 0; for (const ch of String(nome || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    const cor = `hsl(${h % 360} 48% 36%)`, cor2 = `hsl(${(h >> 9) % 360} 55% 62%)`, ini = iniciais(nome);
-    const shape = "M20 1.5 L38 6 V21 C38 33.5 30.5 41 20 45 C9.5 41 2 33.5 2 21 V6 Z";
-    return `<svg class="crest crest-ini" width="${size}" height="${size}" viewBox="0 -1 40 48" role="img" aria-label="${esc(nome)} (escudo indisponível)">
-      <path d="${shape}" fill="${cor}"/><path d="M2 30 C12 25 28 25 38 30 V34 C28 29 12 29 2 34 Z" fill="${cor2}" opacity=".55"/>
+    const ok = (c) => typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c);
+    const cs = Array.isArray(cores) ? cores.filter(ok) : [];
+    const cor = cs[0] && lum(cs[0]) < 0.85 ? cs[0] : cs[1] && lum(cs[1]) < 0.85 ? cs[1] : `hsl(${h % 360} 52% 34%)`;
+    const cor2 = cs.find((c) => c !== cor) || `hsl(${(h >> 9) % 360} 60% 60%)`;
+    const txt = lum(cor.startsWith("#") ? cor : "#333333") > 0.55 ? "#111" : "#fff", ini = iniciais(nome);
+    const id = `ic${++uid}`, shape = "M20 1.5 L38 6 V21 C38 33.5 30.5 41 20 45 C9.5 41 2 33.5 2 21 V6 Z";
+    return `<svg class="crest crest-ini" width="${size}" height="${size}" viewBox="0 -1 40 48" role="img" aria-label="${esc(nome)} (escudo desenhado pelo site)">
+      <defs><clipPath id="${id}"><path d="${shape}"/></clipPath></defs>
+      <g clip-path="url(#${id})"><rect width="40" height="48" fill="${cor}"/><path d="M-4 34 L44 14 V22 L-4 42 Z" fill="${cor2}"/><rect width="40" height="22" fill="#fff" opacity=".08"/></g>
       <path d="${shape}" fill="none" stroke="${cor2}" stroke-width="2.2"/>
-      <text x="20" y="${ini.length > 2 ? 23.5 : 24.5}" text-anchor="middle" font-family="Archivo, sans-serif" font-weight="900" font-size="${ini.length > 2 ? 10.5 : 13}" font-stretch="75%" fill="#fff">${esc(ini)}</text></svg>`;
+      <text x="20" y="${ini.length > 2 ? 22.5 : 23.5}" text-anchor="middle" font-family="var(--font-label), sans-serif" font-weight="800" font-size="${ini.length > 2 ? 11 : 13.5}" fill="${txt}" paint-order="stroke" stroke="${cor}" stroke-width="1.2">${esc(ini)}</text></svg>`;
   }
-  function crestOutro(nome, logo, size = 28) {
-    if (logo && /^https:\/\/a\.espncdn\.com\//.test(logo)) return `<img class="crest" src="${esc(logo)}" alt="Escudo do ${esc(nome)}" width="${size}" height="${size}" loading="lazy" decoding="async" data-nome="${esc(nome)}" data-size="${size}"/>`;
-    return iniCrest(nome, size);
+  // imagens aceitas: ESPN, Wikimedia Commons (só livres) e API-Football
+  const LOGO_OK = /^https:\/\/(a\.espncdn\.com|upload\.wikimedia\.org\/wikipedia\/commons|media\.api-sports\.io)\//;
+  function crestOutro(nome, logo, size = 28, cores = null) {
+    if (logo && LOGO_OK.test(logo)) return `<img class="crest" src="${esc(logo)}" alt="Escudo do ${esc(nome)}" width="${size}" height="${size}" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-nome="${esc(nome)}" data-size="${size}"/>`;
+    return iniCrest(nome, size, cores);
   }
   // se a imagem não carregar (sem internet, link quebrado), troca pelo escudo desenhado
   document.addEventListener("error", (e) => {
@@ -117,7 +126,7 @@
         <rect x="0" y="13" width="40" height="13" fill="${lum(a) > 0.8 ? "#111" : "rgba(0,0,0,.55)"}"/>
         <rect width="40" height="46" fill="url(#${id}g)"/></g>
       <path d="${shape}" fill="none" stroke="${edge}" stroke-width="2.4"/>
-      <text x="20" y="23.4" text-anchor="middle" font-family="Archivo, sans-serif" font-weight="900" font-size="10" font-stretch="75%" fill="#fff" letter-spacing=".4">${club.short}</text>
+      <text x="20" y="23.4" text-anchor="middle" font-family="Saira, sans-serif" font-weight="900" font-size="10" font-stretch="75%" fill="#fff" letter-spacing=".4">${club.short}</text>
     </svg>`;
   }
 

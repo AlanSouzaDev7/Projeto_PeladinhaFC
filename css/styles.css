@@ -5,19 +5,20 @@
    ========================================================================== */
 
 :root {
-  --bg: #0b0f17;
-  --bg-2: #0f1520;
-  --surface: #141b28;
-  --surface-2: #1a2333;
-  --surface-3: #222d40;
-  --line: #243045;
-  --line-soft: #1c2638;
-  --text: #e8edf6;
-  --text-2: #9aa6bb;
-  --text-3: #7f8ca3; /* contraste ≥ 4,5:1 sobre os cartões */
-  --brand: #4f6bff;
-  --brand-2: #8a9bff;
-  --live: #ff3b5c;
+  --bg: #0c1117;
+  --bg-2: #10161e;
+  --surface: #151c25;
+  --surface-2: #1b2430;
+  --surface-3: #232e3c;
+  --line: #2a3544;
+  --line-soft: #202a37;
+  --text: #edf1f6;
+  --text-2: #a2adbd;
+  --text-3: #8592a5; /* contraste ≥ 4,5:1 sobre os cartões */
+  --brand: #00a859;   /* verde do Brasileirão 2026 */
+  --brand-2: #ffd200; /* amarelo-ouro */
+  --brand-3: #0a2a66; /* azul-marinho */
+  --live: #ff3352;
   --win: #19c37d;
   --draw: #8b95a7;
   --loss: #ff4d5e;
@@ -27,10 +28,10 @@
   --radius-sm: 9px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --font: "Archivo", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Archivo", "Arial Narrow", -apple-system, Roboto, sans-serif;
+  --font: "Saira", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Saira", "Arial Narrow", -apple-system, Roboto, sans-serif;
   /* letra de placar de transmissão: cabeçalhos dos cards, chamadas, rótulos e números das listas */
-  --font-label: "Barlow Condensed", "Archivo", "Arial Narrow", sans-serif;
+  --font-label: "Saira Condensed", "Saira", "Arial Narrow", sans-serif;
   --header-h: 64px;
 
   /* cores do clube ativo (sobrescritas via JS nas páginas de clube) */
@@ -38,23 +39,25 @@
   --c2: #ffffff;
   --c3: var(--brand-2);
   --on-c1: #ffffff;
-  --accent: #4b66f3;
+  --accent: #00813f;
+  --zona-acesso: #1f9d55;
+  --zona-queda: #d12a3c;
   --on-accent: #ffffff;
-  --ink: #8a9bff; /* texto de destaque (o app recalcula para cada tema e clube) */
+  --ink: #3fd68a; /* texto de destaque (o app recalcula para cada tema e clube) */
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  --bg: #eef1f6;
-  --bg-2: #e6eaf1;
+  --bg: #eef1f5;
+  --bg-2: #e5e9ef;
   --surface: #ffffff;
-  --surface-2: #f4f6fa;
-  --surface-3: #e9edf4;
-  --line: #dbe1ea;
-  --line-soft: #e8ecf2;
-  --text: #121826;
-  --text-2: #4e5a6e;
-  --text-3: #5b6679; /* contraste ≥ 5:1 sobre o fundo claro */
+  --surface-2: #f5f7fa;
+  --surface-3: #eaeef3;
+  --line: #dde2e9;
+  --line-soft: #e9edf2;
+  --text: #121821;
+  --text-2: #4c5768;
+  --text-3: #5a6577; /* contraste ≥ 5:1 sobre o fundo claro */
   --win: #0b7f4e;
   --draw: #5d6779;
   --loss: #c8283a;
@@ -3338,3 +3341,190 @@ main.view { min-height: calc(100vh - var(--header-h)); min-height: calc(100dvh -
 .cp-intro.bra .cpi-linhas b { background: linear-gradient(90deg, transparent, #8a9bff, transparent); }
 .cp-intro.bra .cpi-emb, .cp-intro.bra .cpi-sub { color: #c7d0ff; } .cp-intro.bra .cpi-txt { color: #fff; }
 @media (prefers-reduced-motion: reduce) { .cp-intro { display: none; } .cp-topo::after, .cp-f.atual i, .cp-fase-pill i { animation: none; } }
+
+
+/* ==========================================================================
+   IDENTIDADE 2026 — redesenho no modelo dos apps de placar (lista densa, três colunas, cabeçalho enxuto)
+   Fonte: Saira (texto e interface) e Saira Condensed (placares, cabeçalhos, números) — uma família, duas larguras.
+   O elemento marcante é a FAIXA DA COMPETIÇÃO: campo de cor do torneio com faixas diagonais de grafismo de TV,
+   emblema grande e nome em condensada pesada. Todo o resto fica quieto e regular.
+   Raios por hierarquia: seções 16 px, controles 10 px, chips/pílulas 999 px, linhas de lista 0.
+   ========================================================================== */
+body { font-family: var(--font); font-size: 14px; letter-spacing: 0; }
+.backdrop { opacity: .55; }
+
+/* ---------- cabeçalho ---------- */
+.header { height: 60px; gap: 18px; background: color-mix(in srgb, var(--surface) 86%, transparent); border-bottom: 1px solid var(--line-soft); }
+.header .nav a { font-weight: 600; font-size: 14px; border-radius: 10px; }
+.header .nav a.active { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+.header .search { border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line-soft); }
+.logo-word { font-family: var(--font-label); font-weight: 800; letter-spacing: .02em; font-size: 24px; }
+:root { --header-h: 60px; }
+
+/* ---------- cartões, cabeçalhos de cartão, abas ---------- */
+.card { border-radius: 16px; background: var(--surface); border: 1px solid var(--line-soft); box-shadow: 0 1px 0 rgb(0 0 0 / .04); }
+:root[data-theme="light"] .card { box-shadow: 0 1px 2px rgb(16 24 40 / .06); }
+.card-h { font: 700 15px/1.15 var(--font-label); letter-spacing: .01em; text-transform: none; padding: 13px 16px; }
+.card-h small { font: 500 13px var(--font); letter-spacing: 0; }
+.tabs { gap: 2px; }
+.tab { font-weight: 600; border-radius: 999px; }
+.chip { border-radius: 999px; font-weight: 600; }
+.chip.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+
+/* ---------- lista de jogos: linha compacta (hora/estado | times | placar | ★) ---------- */
+.match { grid-template-columns: 52px 1fr 30px 30px; padding: 7px 14px; min-height: 58px; }
+.match .team { font-weight: 600; font-size: 14px; gap: 10px; }
+.match .crest { width: 20px; height: 20px; object-fit: contain; }
+.match .time { font: 600 13px var(--font-label); color: var(--text-3); }
+.match .time.live { color: var(--live); }
+.match .score { font: 800 16px/1.3 var(--font-label); font-variant-numeric: tabular-nums; }
+.match::before { width: 3px; border-radius: 0 3px 3px 0; }
+.day-h { font: 700 12.5px var(--font-label); letter-spacing: .02em; color: var(--text-2); padding: 7px 14px; }
+.league-h { font: 700 14px var(--font-label); }
+.league-h .cp-emb { flex: none; }
+.side-list a { font-weight: 600; gap: 10px; }
+.side-list a .cp-emb { flex: none; }
+.round-nav b { font: 800 19px var(--font-label); letter-spacing: .01em; }
+.table th { font: 700 12px var(--font-label); letter-spacing: .03em; }
+.table td.pts, .table .pts { font-family: var(--font-label); font-weight: 800; font-size: 15px; }
+.pos { font-family: var(--font-label); font-weight: 700; border-radius: 7px; }
+.pos.lib { background: var(--zona-acesso); }
+.pos.rel { background: var(--zona-queda); color: #fff; }
+
+/* ---------- trilho de competições ---------- */
+.cp-bar { gap: 6px; margin: 2px 0 12px; padding: 5px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line-soft); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.cp-bar-i { flex: 1 0 auto; gap: 9px; min-height: 42px; padding: 5px 16px 5px 6px; border-radius: 999px; font: 600 14px var(--font); color: var(--text-2); }
+.cp-bar-i .cp-emb { width: 30px; height: 30px; padding: 4px; border-radius: 50%; background: color-mix(in srgb, var(--cpc2) 85%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--cpc) 55%, transparent); transition: transform .35s var(--ease-bounce); }
+.cp-bar-i:hover { background: color-mix(in srgb, var(--cpc) 12%, transparent); color: var(--text); }
+.cp-bar-i:hover .cp-emb { transform: rotate(-8deg) scale(1.06); }
+.cp-bar-i.on { color: #fff; background: linear-gradient(115deg, var(--cpc2), color-mix(in srgb, var(--cpc) 70%, var(--cpc2))); box-shadow: 0 6px 20px -10px var(--cpc), inset 0 0 0 1px color-mix(in srgb, var(--cpc) 50%, transparent); }
+.cp-bar-i.on span { font-weight: 700; }
+.cp-bar-i.on .cp-emb { background: rgb(255 255 255 / .1); box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .35); }
+
+/* ---------- faixa da competição (o elemento marcante) ---------- */
+.cpx-faixa { --e1: var(--brand); --e2: #062a1a; --e3: var(--brand-2);
+  position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px;
+  margin: 0 0 16px; padding: 16px 20px; min-height: 104px; border-radius: 16px; color: #fff;
+  background: linear-gradient(105deg, var(--e2) 0%, color-mix(in srgb, var(--e2) 60%, var(--e1)) 55%, var(--e1) 130%); }
+.cpx-campo { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+/* três faixas diagonais (cor principal, secundária e uma linha fina), como a vinheta de uma transmissão */
+.cpx-campo i { position: absolute; top: -40%; bottom: -40%; transform: skewX(-24deg); }
+.cpx-campo i:nth-child(1) { right: 6%; width: 22%; background: linear-gradient(180deg, color-mix(in srgb, var(--e1) 80%, transparent), color-mix(in srgb, var(--e1) 30%, transparent)); opacity: .55; }
+.cpx-campo i:nth-child(2) { right: 25%; width: 7%; background: var(--e3); opacity: .9; }
+.cpx-campo i:nth-child(3) { right: 34%; width: 2px; background: rgb(255 255 255 / .45); }
+.cpx-faixa::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(120% 140% at 0% 0%, rgb(255 255 255 / .14), transparent 45%); }
+.cpx-emb { width: 72px; height: 72px; display: grid; place-items: center; border-radius: 18px; background: rgb(0 0 0 / .22); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .16); }
+.cpx-emb .cp-emb { width: 58px; height: 58px; filter: drop-shadow(0 4px 10px rgb(0 0 0 / .35)); }
+.cpx-txt { min-width: 0; }
+.cpx-txt small { display: block; font: 600 13px var(--font); opacity: .82; }
+.cpx-txt h1 { margin: 0; font: 800 clamp(28px, 4vw, 44px)/.95 var(--font-label); letter-spacing: -.005em; font-style: italic; text-shadow: 0 2px 18px rgb(0 0 0 / .3); overflow-wrap: anywhere; }
+.cpx-txt .cp-lema { margin: 4px 0 0; font-size: 13.5px; opacity: .85; }
+.cpx-lado { display: grid; justify-items: end; gap: 10px; }
+.cpx-lado .cp-topo-fase { display: grid; justify-items: end; gap: 4px; }
+.cpx-lado .cp-topo-fase small { color: rgb(255 255 255 / .82); font-size: 12.5px; }
+.cpx-faixa .cp-fase-pill { background: rgb(0 0 0 / .32); color: #fff; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .22); font: 700 13.5px var(--font-label); letter-spacing: .02em; }
+.cpx-faixa .cp-fase-pill i { background: var(--e3); }
+.cpx-series { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgb(0 0 0 / .3); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .16); }
+.cpx-series a { padding: 6px 12px; border-radius: 999px; font: 700 13.5px var(--font-label); letter-spacing: .02em; color: rgb(255 255 255 / .8); white-space: nowrap; transition: background .2s, color .2s; }
+.cpx-series a:hover { color: #fff; background: rgb(255 255 255 / .1); }
+.cpx-series a.on { background: var(--e3); color: var(--e2); }
+/* a Libertadores e a Sul-Americana usam a 3ª cor como brilho, não como pílula clara */
+.cpx-libertadores .cpx-campo i:nth-child(2) { background: linear-gradient(180deg, #f1dfa6, var(--e1)); }
+.cpx-faixa:hover .cpx-emb .cp-emb { animation: cpxBalanca .7s var(--ease-bounce); }
+@keyframes cpxBalanca { 30% { transform: rotate(-7deg) scale(1.05); } 65% { transform: rotate(4deg); } }
+/* a faixa entra deslizando a cor quando se troca de competição (só a cor: o conteúdo já está lá) */
+.cpx-faixa::before { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: linear-gradient(105deg, var(--e3), var(--e1)); transform: translateX(-102%) skewX(-18deg); transform-origin: left; }
+.view-enter .cpx-faixa::before, .cpx-faixa.varre::before { animation: cpxVarre .62s cubic-bezier(.7, 0, .2, 1) both; }
+@keyframes cpxVarre { 0% { transform: translateX(-102%) skewX(-18deg); } 48% { transform: translateX(0) skewX(-18deg); } 100% { transform: translateX(110%) skewX(-18deg); } }
+
+/* ---------- abertura animada (sobre a página; recolhe para a faixa) ---------- */
+.cpx-intro { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; overflow: hidden; cursor: pointer; color: #fff; }
+.cpx-i-fundo { position: absolute; inset: 0; background: linear-gradient(105deg, var(--e2), color-mix(in srgb, var(--e2) 55%, var(--e1))); animation: cpxIFundo .5s cubic-bezier(.7, 0, .2, 1) both; }
+@keyframes cpxIFundo { from { clip-path: polygon(0 0, 0 0, -20% 100%, -20% 100%); } to { clip-path: polygon(0 0, 120% 0, 100% 100%, -20% 100%); } }
+.cpx-i-faixas { position: absolute; inset: 0; }
+.cpx-i-faixas i { position: absolute; top: -20%; bottom: -20%; transform: skewX(-24deg) translateX(-140vw); animation: cpxIFaixa .9s cubic-bezier(.2, .8, .2, 1) both; }
+.cpx-i-faixas i:nth-child(1) { right: 12%; width: 26vw; background: color-mix(in srgb, var(--e1) 75%, transparent); animation-delay: .08s; }
+.cpx-i-faixas i:nth-child(2) { right: 36%; width: 8vw; background: var(--e3); animation-delay: .16s; }
+.cpx-i-faixas i:nth-child(3) { right: 46%; width: 3px; background: rgb(255 255 255 / .6); animation-delay: .24s; }
+@keyframes cpxIFaixa { to { transform: skewX(-24deg) translateX(0); } }
+.cpx-i-centro { position: relative; display: grid; justify-items: center; gap: 14px; transition: transform .42s cubic-bezier(.6, 0, .2, 1), opacity .42s; }
+.cpx-i-emb .cp-emb { width: clamp(120px, 18vw, 180px); height: clamp(120px, 18vw, 180px); filter: drop-shadow(0 10px 30px rgb(0 0 0 / .45)); animation: cpxIEmb .7s cubic-bezier(.2, .9, .25, 1.2) .18s both; }
+.cpx-i-emb .cp-emb > * { stroke-dasharray: 220; stroke-dashoffset: 220; animation: cpxIRisco .7s ease-out .2s forwards; }
+@keyframes cpxIEmb { from { transform: scale(.4) rotate(-14deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes cpxIRisco { to { stroke-dashoffset: 0; } }
+.cpx-i-nome { display: grid; justify-items: center; overflow: hidden; }
+.cpx-i-nome b { font: 800 italic clamp(40px, 8vw, 92px)/.95 var(--font-label); letter-spacing: -.01em; animation: cpxINome .55s cubic-bezier(.2, .8, .2, 1) .42s both; text-shadow: 0 4px 30px rgb(0 0 0 / .35); }
+.cpx-i-nome small { font: 600 clamp(14px, 2vw, 18px) var(--font); opacity: .85; animation: cpxINome .5s cubic-bezier(.2, .8, .2, 1) .55s both; }
+@keyframes cpxINome { from { transform: translateY(110%); opacity: 0; } to { transform: none; opacity: 1; } }
+.cpx-intro.sai .cpx-i-fundo, .cpx-intro.sai .cpx-i-faixas { animation: cpxISai .42s cubic-bezier(.6, 0, .2, 1) forwards; }
+.cpx-intro.sai .cpx-i-nome { opacity: 0; transition: opacity .2s; }
+.cpx-intro.sai .cpx-i-centro { transform: translate(var(--dx, 0), var(--dy, 0)) scale(var(--s, .6)); opacity: .0; transition-delay: 0s, .25s; }
+@keyframes cpxISai { to { clip-path: polygon(120% 0, 120% 0, 100% 100%, 100% 100%); } }
+/* versão rápida (competição já vista na visita): só a varredura de cor */
+.cpx-intro.curta .cpx-i-centro { display: none; }
+.cpx-intro.curta .cpx-i-faixas i { animation-duration: .45s; animation-delay: 0s; }
+
+/* ---------- aviso de gol (séries e copas, placar da ESPN) ---------- */
+.cpx-gol { position: fixed; z-index: 120; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px; padding: 10px 18px 10px 12px; border-radius: 16px; color: #fff;
+  background: linear-gradient(105deg, #0d1218, color-mix(in srgb, var(--e1) 70%, #0d1218)); box-shadow: 0 18px 40px -16px rgb(0 0 0 / .6), inset 0 0 0 1px rgb(255 255 255 / .12);
+  transform: translateX(-50%); animation: cpxGol .5s cubic-bezier(.2, .9, .25, 1.2) both; }
+.cpx-gol b { display: block; font: 800 18px var(--font-label); }
+.cpx-gol small { font-size: 13px; opacity: .85; }
+.cpx-gol.sai { animation: cpxGolSai .5s ease-in forwards; }
+@keyframes cpxGol { from { transform: translate(-50%, 140%); } to { transform: translate(-50%, 0); } }
+@keyframes cpxGolSai { to { transform: translate(-50%, 160%); opacity: 0; } }
+
+/* ---------- temas das séries do Brasileirão (Série A = padrão verde e amarelo) ---------- */
+:root[data-comp="serie-b"] body { background-image: radial-gradient(1100px 520px at 85% -10%, rgb(47 111 228 / .2), transparent 60%); }
+:root[data-comp="serie-c"] body { background-image: radial-gradient(1100px 520px at 85% -10%, rgb(18 163 122 / .2), transparent 60%); }
+:root[data-comp="serie-d"] body { background-image: radial-gradient(1100px 520px at 85% -10%, rgb(217 71 43 / .18), transparent 60%); }
+
+/* ---------- avisos e clubes por série ---------- */
+.cp-aviso p { margin: 0; padding: 14px 16px 16px; color: var(--text-2); line-height: 1.55; }
+.cl-series { display: flex; gap: 8px; margin: 0 0 16px; overflow-x: auto; scrollbar-width: none; }
+.cl-series::-webkit-scrollbar { display: none; }
+.cl-series a { flex: 1 0 auto; display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line-soft); font: 700 15px var(--font-label); color: var(--text-2); white-space: nowrap; }
+.cl-series a small { font: 600 12px var(--font); color: var(--text-3); margin-left: 2px; }
+.cl-series a .cp-emb { width: 32px; height: 32px; padding: 3px; border-radius: 50%; background: var(--surface-2); }
+.cl-series a.on { color: var(--on-accent); background: var(--accent); border-color: transparent; }
+.cl-series a.on small { color: inherit; opacity: .8; }
+.cl-serie { list-style: none; margin: 0; padding: 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.cl-serie a { display: grid; justify-items: center; gap: 6px; padding: 16px 10px 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line-soft); text-align: center; transition: transform .25s var(--ease), border-color .25s, background .25s;
+  animation: rise .45s var(--ease) both; animation-delay: calc(var(--i, 0) * 22ms); }
+.cl-serie a .crest { width: 56px; height: 56px; object-fit: contain; transition: transform .45s var(--ease-bounce); }
+.cl-serie a b { font: 700 15px/1.15 var(--font-label); }
+.cl-serie a small { color: var(--text-3); font-size: 12px; }
+.cl-serie a:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.cl-serie a:hover .crest { transform: scale(1.12) rotate(-4deg); }
+
+/* ---------- escudos: aparecem com uma mola curta ao carregar (imagens) ---------- */
+img.crest { animation: crestIn .45s cubic-bezier(.2, .9, .25, 1.25) both; }
+@keyframes crestIn { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
+.crest-ini text { font-family: var(--font-label); }
+
+/* ---------- celular ---------- */
+@media (max-width: 760px) {
+  .cpx-faixa { grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 14px; min-height: 0; }
+  .cpx-emb { width: 56px; height: 56px; border-radius: 14px; }
+  .cpx-emb .cp-emb { width: 44px; height: 44px; }
+  .cpx-txt h1 { font-size: 30px; }
+  .cpx-txt .cp-lema { display: none; }
+  .cpx-lado { grid-column: 1 / -1; justify-items: stretch; }
+  .cpx-lado .cp-topo-fase { justify-items: start; grid-auto-flow: column; justify-content: start; align-items: center; gap: 10px; }
+  .cpx-series { width: 100%; justify-content: space-between; }
+  .cpx-series a { flex: 1; text-align: center; padding: 7px 4px; }
+  .cp-bar-i { padding: 4px 12px 4px 4px; font-size: 13px; }
+  .cp-bar-i .cp-emb { width: 28px; height: 28px; }
+  .cpx-campo i:nth-child(1) { right: -6%; width: 30%; }
+  .cpx-campo i:nth-child(2) { right: 18%; }
+  .cpx-campo i:nth-child(3) { right: 28%; }
+  .cl-serie { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); padding: 10px; gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpx-faixa::before, img.crest, .cl-serie a { animation: none !important; }
+}
+
+/* números grandes: a Saira tem ascendente e descendente mais altos que a fonte anterior; com altura de linha 1, a caixa
+   do texto passava por cima do rótulo vizinho. 1,5 cobre a caixa inteira da fonte (1,57 em). */
+.kpi b, .podium-step b, .dk b, .jg-k b, .jg-p90 b, .jg-cmp b, .idol h4 { line-height: 1.5; }
+.kpi b { margin-top: 0; }

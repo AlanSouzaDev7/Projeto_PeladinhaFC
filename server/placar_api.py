@@ -96,7 +96,7 @@ MAX_BYTES = 15 * 1024 * 1024   # nenhuma resposta de fonte de dados passa disso
 def get(url, timeout=20, headers=None):
     if not str(url).startswith("https://"):
         raise ValueError("só endereços https")
-    req = urllib.request.Request(url, headers={"User-Agent": "placar-portfolio/1.0", "Accept-Encoding": "gzip", **(headers or {})})
+    req = urllib.request.Request(url, headers={"User-Agent": "PlacarBot/1.0", "Accept-Encoding": "gzip", **(headers or {})})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         if not r.geturl().startswith("https://"):
             raise ValueError("redirecionado para endereço sem https")
@@ -670,13 +670,17 @@ import jogadores as JOG  # noqa: E402
 import competicoes as COMP  # noqa: E402
 JOG.P = sys.modules[__name__]
 COMP.P = sys.modules[__name__]
+import escudos as ESC  # noqa: E402
+import wiki_series as WIKI  # noqa: E402
+ESC.P = sys.modules[__name__]
+WIKI.P = sys.modules[__name__]
 
 
 def update_competicoes():
     d = COMP.atualizar()
     with lock:
         state["competicoes"] = d
-    log("competições (Libertadores, Sul-Americana, Copa do Brasil e estaduais) atualizadas")
+    log("competições (Libertadores, Sul-Americana, Copa do Brasil, estaduais e Séries B, C e D) atualizadas")
 
 
 def squads_atuais():
@@ -2673,7 +2677,7 @@ HOST = os.environ.get("HOST", "127.0.0.1")
 ORIGENS = {o.strip().rstrip("/") for o in os.environ.get(
     "ORIGENS", "https://alansouzadev7.github.io,http://localhost:8000,http://127.0.0.1:8000").split(",") if o.strip()}
 CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
-       "img-src 'self' data: blob: https://a.espncdn.com https://*.wikimedia.org https://*.wikipedia.org https://live.staticflickr.com; "
+       "img-src 'self' data: blob: https://a.espncdn.com https://*.wikimedia.org https://*.wikipedia.org https://live.staticflickr.com https://media.api-sports.io; "
        "connect-src 'self' https://site.web.api.espn.com https://site.api.espn.com https://*.workers.dev; media-src 'self' blob:; manifest-src 'self'; "
        "worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 SEC_HEADERS = {

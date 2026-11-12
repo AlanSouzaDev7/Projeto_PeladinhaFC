@@ -85,7 +85,7 @@
     for (let k = 0.04; k <= 1; k += 0.04) { const x = toward(c, t, k); if (worst(x) >= min) return toHex(x); }
     return dark ? "#111111" : "#ffffff";
   }
-  const BRAND = "#4b66f3"; // azul do PLACAR. um tom mais firme para botões com texto branco (4,7:1)
+  const BRAND = "#00a859"; // verde do Brasileirão 2026 (o legible() escurece o tom para o texto branco dos botões)
   function applyTheme(club) {
     const c = club ? club.colors : null, light = root.dataset.theme === "light";
     root.style.setProperty("--c1", c ? c[0] : "var(--brand)");
@@ -98,9 +98,9 @@
     root.style.setProperty("--accent", acc);
     root.style.setProperty("--on-accent", on);
     // texto de destaque (links, rótulos): legível sobre o fundo e os cartões do tema
-    root.style.setProperty("--ink", legible(club ? display(club) : light ? "#435bdc" : "#8a9bff", light ? ["#eef1f6", "#ffffff"] : ["#141b28", "#0b0f17"], 4.6));
+    root.style.setProperty("--ink", legible(club ? display(club) : light ? "#007a42" : "#3fd68a", light ? ["#eef1f5", "#ffffff"] : ["#151c25", "#0c1117"], 4.6));
     root.style.setProperty("--logo-spot", c ? c[1] : "var(--live)");
-    $('meta[name="theme-color"]').content = c ? c[0] : "#0b0f17";
+    $('meta[name="theme-color"]').content = c ? c[0] : light ? "#ffffff" : "#0c1117";
   }
 
   /* ==========================================================================
@@ -894,7 +894,7 @@
     });
     let n = 0;
 
-    return `${COPA.barra("brasileirao")}<div class="layout">
+    return `${COPA.barra("brasileirao")}${COPA.faixa("brasileirao", { fase: `<span class="cp-fase-pill"><i></i>${round}ª rodada</span><small>20 clubes · 38 rodadas</small>` })}<div class="layout">
       <aside class="left sticky">
         <div class="card">
           <div class="card-h">Favoritos <small>${favClubs.length}</small></div>
@@ -903,8 +903,14 @@
         <div class="card">
           <div class="card-h">Competições</div>
           <div class="side-list">
-            <a href="#/tabela">${flagBR}Brasileirão Série A<span class="count">20</span></a>
-            <a href="#/clubes">${flagBR}Todos os clubes<span class="count">20</span></a>
+            <a href="#/tabela">${COPA.emblema("brasileirao", 22)}Brasileirão Série A<span class="count">20</span></a>
+            <a href="#/copa/serie-b">${COPA.emblema("serie-b", 22)}Brasileirão Série B<span class="count">20</span></a>
+            <a href="#/copa/serie-c">${COPA.emblema("serie-c", 22)}Brasileirão Série C<span class="count">20</span></a>
+            <a href="#/copa/serie-d">${COPA.emblema("serie-d", 22)}Brasileirão Série D<span class="count">96</span></a>
+            <a href="#/copa/libertadores">${COPA.emblema("libertadores", 22)}Libertadores</a>
+            <a href="#/copa/sul-americana">${COPA.emblema("sul-americana", 22)}Sul-Americana</a>
+            <a href="#/copa/copa-do-brasil">${COPA.emblema("copa-do-brasil", 22)}Copa do Brasil</a>
+            <a href="#/copa/estaduais">${COPA.emblema("estaduais", 22)}Estaduais</a>
           </div>
         </div>
         <div class="card">
@@ -930,7 +936,7 @@
           </div>
           <div class="league-h">${flagBR}<span>BRASIL: Série A <small>· ${round}ª rodada</small></span><a href="#/tabela">Tabela ›</a></div>
           <div id="match-list">${groups.length ? groups.map((g) => `<div class="day-h">${dayName(g.date)}</div>${g.items.map((m) => matchRow(m, n++)).join("")}`).join("") : `<div class="empty">Nenhuma partida neste filtro.</div>`}</div>
-          <div class="source">Jogos e resultados: ge.globo · tabela: CBF</div>
+          <div class="source">Jogos, resultados e tabela: ESPN</div>
         </div>
       </section>
 
@@ -946,7 +952,16 @@
     </div>`;
   }
 
+  // abas das séries na página de clubes (a Série A tem os cartões temáticos; B, C e D, a grade de escudos)
+  const SERIES_CL = [["", "Série A", 20], ["serie-b", "Série B", 20], ["serie-c", "Série C", 20], ["serie-d", "Série D", 96]];
+  const seriesTabs = (cur) => `<nav class="cl-series" aria-label="Séries do Brasileirão">${SERIES_CL.map(([id, nome, n]) => `<a href="#/clubes${id ? `/${id}` : ""}" class="${id === cur ? "on" : ""}"${id === cur ? ' aria-current="page"' : ""}>${COPA.emblema(id || "brasileirao", 26)}<span>${nome}</span><small>${n}</small></a>`).join("")}</nav>`;
   function pageClubs() {
+    const sid = state.route?.id;
+    if (COPA.SERIES.includes(sid)) {
+      const c = COPA.C[sid];
+      return `<div class="page-head"><div><div class="eyebrow">Brasileirão · ${c.nome}</div><h1>Clubes da<br/>${c.nome}</h1><p>${c.lema}. Toque num clube para ver a campanha dele na competição.</p></div></div>
+        ${seriesTabs(sid)}<div class="card" data-clubes-serie="${sid}"><div class="empty" style="padding:40px">Carregando os clubes da ${c.nome}…</div></div>`;
+    }
     const regions = { Todos: null, Sudeste: ["SP", "RJ", "MG"], Sul: ["PR", "RS", "SC"], "Norte/Nordeste": ["BA", "PA"] };
     const cur = state.region || "Todos";
     const list = CLUBS.filter((c) => !regions[cur] || regions[cur].includes(c.uf));
@@ -954,6 +969,7 @@
         <div><div class="eyebrow">Brasileirão · ${CLUBS.length} clubes</div><h1>Escolha seu<br/>clube</h1><p>Cada clube ganha uma página própria com as cores da camisa e uma aparição animada do escudo, inspirada no que ele significa.</p></div>
         <div class="chips">${Object.keys(regions).map((r) => `<button class="chip ${r === cur ? "on" : ""}" data-region="${r}">${r}</button>`).join("")}</div>
       </div>
+      ${seriesTabs("")}
       <div class="clubs">${list.map((c, i) => `
         <a class="club-card" href="#/clube/${c.id}" style="${clubVars(c)};--i:${i}" data-tilt>
           <div class="kit-bg" style="background:${kitBg(c)}"></div>
@@ -1529,7 +1545,7 @@
           <div><b>Tema por clube</b><p>Variáveis CSS trocadas em tempo real; cada página veste as cores e o padrão da camisa titular.</p></div>
           <div><b>Transições de página</b><p>Cortina com as listras do clube e View Transitions API com elemento compartilhado (escudo).</p></div>
           <div><b>Gráficos em SVG</b><p>Pontos de todos os clubes, comparação entre adversários e escalação no campo, sem bibliotecas.</p></div>
-          <div><b>Dados reais</b><p>Classificação e artilharia da CBF, jogos e resultados do ge.globo; a situação de cada jogo muda sozinha pelo relógio.</p></div>
+          <div><b>Dados reais</b><p>Jogos, resultados, classificação e artilharia da ESPN, atualizados pelo robô; no dia de jogo, o placar ao vivo vem direto da ESPN.</p></div>
           <div><b>Escudos oficiais com reserva</b><p>Escudos da Wikimedia; se a imagem não carregar, entra um escudo desenhado a partir das cores do clube.</p></div>
           <div><b>Acessível e responsivo</b><p>Navegação por teclado (atalho /), tema claro/escuro, respeito a <i>reduced motion</i> e layout mobile.</p></div>
         </div></div>
@@ -1656,11 +1672,14 @@
     const club = r.page === "clube" ? byId[r.id] : null;
     const comp = competicaoDa(r), fam = COPA.familia(comp === "brasileirao" ? "" : comp);
     applyTheme(club || COPA.tema(comp));
-    if (fam === "brasileirao") delete root.dataset.comp; else root.dataset.comp = COPA.C[comp]?.tipo === "estadual" ? `est-${COPA.C[comp].uf.toLowerCase()}` : fam;
+    const serie = COPA.SERIES.includes(comp);
+    if (fam === "brasileirao" && !serie) delete root.dataset.comp; else root.dataset.comp = serie ? comp : COPA.C[comp]?.tipo === "estadual" ? `est-${COPA.C[comp].uf.toLowerCase()}` : fam;
     const antes = compAtual;
-    compAtual = COPA.C[comp]?.tipo === "estadual" ? comp : fam;
+    compAtual = COPA.C[comp]?.tipo === "estadual" || serie ? comp : fam;
     if (antes !== compAtual) COPA.intro(comp === "brasileirao" ? "brasileirao" : comp);
     view.innerHTML = pageHTML(r);
+    // a cor da nova competição varre a faixa uma vez (a classe sai no fim, para a animação não se repetir)
+    if (antes !== compAtual) { const fx = view.querySelector(".cpx-faixa"); if (fx) { fx.classList.add("varre"); setTimeout(() => fx.classList.remove("varre"), 700); } }
     stamp(view);
     const navKey = r.page === "" || r.page === "partida" || r.page === "copa" ? "home" : r.page === "clube" || r.page === "jogador" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));

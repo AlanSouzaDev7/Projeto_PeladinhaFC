@@ -29,7 +29,15 @@ COMPETICOES = {
     "carioca": {"lg": "bra.camp.carioca", "nome": "Carioca", "tipo": "estadual", "uf": "RJ"},
     "mineiro": {"lg": "bra.camp.mineiro", "nome": "Mineiro", "tipo": "estadual", "uf": "MG"},
     "gauchao": {"lg": "bra.camp.gaucho", "nome": "Gauchão", "tipo": "estadual", "uf": "RS"},
+    # Brasileirão Séries B, C e D (a Série A tem o site principal). B: ESPN, com placar ao vivo; C e D: a ESPN não tem
+    # 2026, então classificação, participantes e artilharia vêm da Wikipédia e os jogos da API-Football (se houver chave)
+    "serie-b": {"lg": "bra.2", "nome": "Série B", "tipo": "liga", "zonas": [[1, 4, "acesso", "Acesso à Série A"], [17, 20, "queda", "Rebaixamento à Série C"]]},
+    "serie-c": {"lg": "bra.3", "nome": "Série C", "tipo": "liga", "wiki": "Campeonato Brasileiro de Futebol de {ano} - Série C", "af": 75,
+                "zonas": [[1, 8, "acesso", "2ª fase (briga pelo acesso)"], [19, 20, "queda", "Rebaixamento à Série D"]]},
+    "serie-d": {"lg": "bra.4", "nome": "Série D", "tipo": "liga", "wiki": "Campeonato Brasileiro de Futebol de {ano} - Série D", "af": 76,
+                "zonas": [[1, 4, "acesso", "Mata-mata (2ª fase)"]]},
 }
+SERIES = ("serie-b", "serie-c", "serie-d")
 SB = "https://site.api.espn.com/apis/site/v2/sports/soccer"
 ST = "https://site.web.api.espn.com/apis/v2/sports/soccer"
 
@@ -49,6 +57,8 @@ MATA = re.compile(r"stage$|round|playoff|16|quarter|semi|final", re.I)
 
 def fase_pt(slug_ou_rotulo):
     s = str(slug_ou_rotulo or "").strip().lower()
+    if re.match(r"^\d{4}-brasileiro-serie-[a-d]$", s):
+        return "Pontos corridos"
     if s in FASE_ESPECIAL:
         return FASE_ESPECIAL[s]
     if s in TACAS:
@@ -131,6 +141,9 @@ def jogo(ev, lg):
         elif "yellow card" in tipo:
             det.append({**base, "t": "amarelo"})
     if (lados.get("home") or {}).get("team") is None or (lados.get("away") or {}).get("team") is None:
+        return None
+    # jogos com adversário "a definir" (TBD) ainda não têm clubes: ficam de fora até a ESPN preencher
+    if any(re.match(r"^TBD( |$)", str((lados[k].get("team") or {}).get("displayName") or "")) for k in ("home", "away")):
         return None
     return {"id": ev["id"], "lg": lg, "data": data, "hora": hora if c.get("timeValid", True) is not False else None, "estado": st.get("state"),
             "relogio": P.clock_label(c.get("status") or {}) if st.get("state") == "in" else None,
@@ -373,9 +386,176 @@ def nome_grupo(n):
     return n.replace("Group", "Grupo")
 
 
+def rodadas(jogos):
+    """Rodada de cada jogo de pontos corridos: o n-ésimo jogo de cada clube (adiados entram na rodada de origem pela ordem)."""
+    cont = {}
+    for j in sorted(jogos, key=lambda j: (j["data"], j["hora"] or "99:99")):
+        a, b = j["casa"]["id"], j["fora"]["id"]
+        r = max(cont.get(a, 0), cont.get(b, 0)) + 1
+        cont[a] = cont.get(a, 0) + 1; cont[b] = cont.get(b, 0) + 1
+        j["rodada"] = r
+
+
+def af_jogos(cid, liga):
+    """Jogos da temporada pela API-Football (Séries C e D). Só com API_FOOTBALL_KEY; o plano gratuito não cobre 2026."""
+    if not os.environ.get("API_FOOTBALL_KEY", "").strip():
+        return []
+    cache = _ler(f"af-{cid}.json")
+    agora = time.time()
+    hoje = time.strftime("%Y-%m-%d", time.gmtime(agora - 3 * 3600))
+    vivo = any(j["data"] == hoje and j["estado"] != "post" for j in cache.get("jogos", []))
+    if cache.get("t", 0) > agora - (300 if vivo else 3 * 3600):
+        return cache.get("jogos", [])
+    try:
+        d = P.af_get(f"/fixtures?league={liga}&season={time.strftime('%Y')}")
+    except Exception as ex:
+        P.log("API-Football", cid, ex)
+        return cache.get("jogos", [])
+    out = []
+    for fx in (d or {}).get("response", []):
+        f, tm, g, sc = fx.get("fixture") or {}, fx.get("teams") or {}, fx.get("goals") or {}, fx.get("score") or {}
+        est = P.AF_ESTADO.get(((f.get("status") or {}).get("short") or ""), "pre")
+        if est is None:
+            continue
+        data, hora = _brt(f.get("date") or "")
+        rodada = str((fx.get("league") or {}).get("round") or "")
+        def lado(t, gols, pen, venceu):
+            nome = P.clean_text(t.get("name") or "", 40)
+            logo = t.get("logo") or ""
+            return {"id": f"af{t.get('id')}", "clube": None, "nome": nome, "abrev": nome[:3].upper(), "logo": logo if logo.startswith("https://media.api-sports.io/") else None,
+                    "gols": gols if est != "pre" else None, "pen": pen, "venceu": bool(venceu)}
+        pen = sc.get("penalty") or {}
+        fase = "Pontos corridos" if re.search(r"regular season", rodada, re.I) else P.clean_text(rodada, 30)
+        m = re.search(r"(\d+)$", rodada)
+        out.append({"id": f"af{f.get('id')}", "lg": c_lg(cid), "data": data, "hora": hora, "estado": est,
+                    "relogio": f"{(f.get('status') or {}).get('elapsed')}'" if est == "in" else None,
+                    "fase": fase, "faseNome": fase_pt(fase) if fase != "Pontos corridos" else fase, "mata": False, "grupo": None,
+                    "local": P.clean_text((f.get("venue") or {}).get("name") or "", 60) or None, "cidade": P.clean_text((f.get("venue") or {}).get("city") or "", 40) or None,
+                    "casa": lado(tm.get("home") or {}, g.get("home"), pen.get("home"), (tm.get("home") or {}).get("winner")),
+                    "fora": lado(tm.get("away") or {}, g.get("away"), pen.get("away"), (tm.get("away") or {}).get("winner")),
+                    "lances": [], "rodadaAF": int(m.group(1)) if m and fase == "Pontos corridos" else None})
+    out.sort(key=lambda j: (j["data"], j["hora"] or "99:99"))
+    _gravar(f"af-{cid}.json", {"t": agora, "jogos": out})
+    return out
+
+
+def c_lg(cid):
+    return COMPETICOES[cid]["lg"]
+
+
+def montar_wiki(cid):
+    """Séries C e D: participantes, classificação de cada fase e artilharia da Wikipédia; jogos da API-Football (com chave)."""
+    c = COMPETICOES[cid]
+    ano = time.strftime("%Y")
+    W = P.WIKI
+    try:
+        w = W.serie(c["wiki"].format(ano=ano))
+        _gravar(f"wiki-{cid}.json", w)
+    except Exception as ex:
+        P.log("Wikipédia", cid, ex)
+        w = _ler(f"wiki-{cid}.json") or {"participantes": [], "grupos": [], "artilharia": [], "fonte": None}
+    uf = {x["nome"]: x["uf"] for x in w.get("participantes", [])}
+    art = {x["nome"]: x.get("artigo") for x in w.get("participantes", [])}
+    def tid(nome):
+        return "w-" + P.norm_txt(nome).replace(" ", "-")
+    grupos = []
+    for g in w.get("grupos", []):
+        linhas = [{"id": tid(r["nome"]), "clube": None, "nome": r["nome"], "abrev": r["nome"][:3].upper(), "logo": None, "artigo": r.get("artigo") or art.get(r["nome"]),
+                   "uf": uf.get(r["nome"]), "pos": r["pos"], "p": r["p"], "j": r["j"], "v": r["v"], "e": r["e"], "d": r["d"], "gp": r["gp"], "gc": r["gc"],
+                   "ca": 0, "cv": 0, "nota": r.get("nota") or ""} for r in g["linhas"]]
+        grupos.append({"nome": nome_grupo(g["nome"]) if g["nome"].startswith("Grupo") else g["nome"], "linhas": linhas})
+    participantes = [{"id": tid(x["nome"]), "clube": None, "nome": x["nome"], "abrev": x["nome"][:3].upper(), "logo": None, "artigo": x.get("artigo"),
+                      "uf": x.get("uf"), "cidade": x.get("cidade")} for x in w.get("participantes", [])]
+    jogos = af_jogos(cid, c["af"]) if c.get("af") else []
+    if jogos:
+        rodadas([j for j in jogos if j["faseNome"] == "Pontos corridos"])
+    # 1ª fase = o grupo com mais clubes (Série C: os 20; Série D: os 16 grupos de 6, todos da 1ª fase)
+    if cid == "serie-c" and grupos:
+        grupos[0]["nome"] = "1ª fase"
+        for g in grupos[1:]:
+            g["nome"] = f"2ª fase · {g['nome']}"
+    geral = sorted([dict(r) for g in grupos for r in g["linhas"] if (cid != "serie-c" or g is grupos[0])],
+                   key=lambda r: (-r["p"], -r["v"], -(r["gp"] - r["gc"]), -r["gp"], r["nome"]))
+    for i, r in enumerate(geral):
+        r["pos"] = i + 1
+    artilheiros = [{"atleta": "", "nome": a["nome"], "time": tid(a["time"]), "clube": None, "timeNome": a["time"], "logo": None, "gols": a["gols"], "pen": 0, "jogos": None}
+                   for a in w.get("artilharia", [])][:30]
+    fases = [{"rotulo": g["nome"], "ini": "", "fim": "", "detalhe": "", "jogos": 0, "mata": False, "idaVolta": False} for g in grupos if not g["nome"].startswith("Grupo A") or g["nome"] == "Grupo A1"]
+    if cid == "serie-d":
+        fases = [{"rotulo": "1ª fase (16 grupos)", "ini": "", "fim": "", "detalhe": "", "jogos": 0, "mata": False, "idaVolta": False},
+                 {"rotulo": "Mata-mata", "ini": "", "fim": "", "detalhe": "", "jogos": 0, "mata": True, "idaVolta": True}]
+    fonte = w.get("fonte") or {}
+    return {"id": cid, "nome": c["nome"], "tipo": c["tipo"], "uf": None, "lg": c["lg"], "temporada": ano, "updated": time.strftime("%d/%m/%Y às %H:%M"),
+            "fases": fases, "faseAtual": fases[-1]["rotulo"] if fases else None, "encerrado": False, "campeao": None, "jogos": jogos, "grupos": grupos,
+            "chave": chave(jogos, fases) if jogos else [], "geral": geral, "artilharia": artilheiros, "participantes": participantes, "zonas": c.get("zonas"),
+            "noticias": noticias(f"Brasileirão {c['nome']}"), "aoVivo": bool(jogos),
+            "fonte": "Wikipédia (classificação, participantes e artilharia; CC BY-SA 4.0)" + (" · API-Football (jogos)" if jogos else ""),
+            "fonteUrl": fonte.get("url")}
+
+
+def escudos(d):
+    """Escudo de quem a ESPN não tem (Wikidata/Commons), igual em todas as listas da competição."""
+    E = getattr(P, "ESC", None)
+    if not E:
+        return
+    todos = []
+    for j in d.get("jogos", []):
+        todos += [j["casa"], j["fora"]]
+    for g in d.get("grupos", []):
+        todos += g["linhas"]
+    todos += d.get("geral", []) + d.get("participantes", [])
+    for ch in d.get("chave", []):
+        for x in ch["confrontos"]:
+            todos += [x["a"], x["b"]]
+    unicos = {}
+    for t in todos:
+        if not t.get("logo") and t.get("nome"):
+            u = unicos.setdefault(t["nome"], {"nome": t["nome"], "artigo": t.get("artigo"), "uf": t.get("uf") or d.get("uf"), "logo": None})
+            u["artigo"] = u["artigo"] or t.get("artigo")
+    if not unicos:
+        return
+    try:
+        E.completar(list(unicos.values()))
+    except Exception as ex:
+        P.log("escudos", d["id"], ex)
+        return
+    for t in todos:
+        u = unicos.get(t.get("nome"))
+        if u and not t.get("logo"):
+            if u.get("logo"):
+                t["logo"] = u["logo"]
+            if u.get("cores"):
+                t["cores"] = u["cores"]
+    for a in d.get("artilharia", []):
+        if not a.get("logo"):
+            u = unicos.get(a.get("timeNome"))
+            if u and u.get("logo"):
+                a["logo"] = u["logo"]
+
+
 def montar(cid):
+    d = montar_wiki(cid) if COMPETICOES[cid].get("wiki") and not jogos_espn(cid) else montar_espn(cid)
+    escudos(d)
+    return d
+
+
+def jogos_espn(cid):
+    """A ESPN tem jogos desta competição na temporada? (Séries C e D de 2026: não)"""
+    cache = _ler(f"comp-{cid}.json")
+    if cache.get("ano") == time.strftime("%Y") and any(x.get("jogos") for x in cache.get("dias", {}).values()):
+        return True
+    try:
+        sb = P.get_json(f"{SB}/{COMPETICOES[cid]['lg']}/scoreboard")
+        L = (sb.get("leagues") or [{}])[0]
+        return str((L.get("season") or {}).get("year")) == time.strftime("%Y") and bool(L.get("calendar"))
+    except Exception:
+        return False
+
+
+def montar_espn(cid):
     c = COMPETICOES[cid]
     jogos, fases = jogos_temporada(cid, c["lg"])
+    jogos = [j for j in jogos if not any(re.match(r"^TBD( |$)", j[k]["nome"] or "") for k in ("casa", "fora"))]
     for j in jogos:  # o nome da fase é traduzido aqui (o cache guarda o jogo como veio)
         j["faseNome"] = fase_pt(j["fase"])
         if j.get("grupo"):
@@ -422,10 +602,19 @@ def montar(cid):
         fin = final["confrontos"][-1]
         v = fin.get("vencedor")
         campeao = next(({k: t[k] for k in ("id", "clube", "nome", "logo")} for t in (fin["a"], fin["b"]) if t["id"] == v), None)
-    return {"id": cid, "nome": c["nome"], "tipo": c["tipo"], "uf": c.get("uf"), "lg": c["lg"], "temporada": time.strftime("%Y"),
+    if c["tipo"] == "liga":
+        rodadas([j for j in jogos if j["faseNome"] == "Pontos corridos"])
+        for j in jogos:
+            j["mata"] = False
+        for f in fases:
+            f["mata"] = False
+        for g in grupos:
+            g["nome"] = "Classificação"
+        ch = []
+    return {"id": cid, "nome": c["nome"], "tipo": c["tipo"], "uf": c.get("uf"), "lg": c["lg"], "temporada": time.strftime("%Y"), "zonas": c.get("zonas"), "aoVivo": True,
             "updated": time.strftime("%d/%m/%Y às %H:%M"), "fases": fases, "faseAtual": "Encerrado" if encerrado else fase_atual(fases, jogos),
             "encerrado": encerrado, "campeao": campeao, "jogos": jogos, "grupos": grupos, "chave": ch, "geral": classificar(jogos), "artilharia": artilharia(jogos),
-            "noticias": noticias({"libertadores": "Libertadores", "sul-americana": "Sul-Americana", "copa-do-brasil": "Copa do Brasil"}.get(cid, c["nome"])),
+            "noticias": noticias({"libertadores": "Libertadores", "sul-americana": "Sul-Americana", "copa-do-brasil": "Copa do Brasil", "serie-b": "Brasileirão Série B"}.get(cid, c["nome"])),
             "fonte": "ESPN (jogos, tabelas, gols e cartões) · Google Notícias (manchetes)"}
 
 

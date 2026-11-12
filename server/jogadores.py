@@ -299,14 +299,15 @@ def _flickr(metodo, **params):
 def licencas_flickr():
     """{id: nome} das licenças que permitem usar a foto com crédito: Creative Commons com atribuição (inclusive não comercial;
     o site é um portfólio sem fins comerciais), CC0 e domínio público. Ficam de fora "todos os direitos reservados" e as
-    "sem derivações" (o site recorta a foto num círculo). FLICKR_SEM_NC=1 tira também as não comerciais."""
+    "sem derivações" (o site recorta a foto num círculo). As "não comerciais" (NC) também ficam de fora: o PLACAR. é um
+    produto para apresentar a empresas; FLICKR_COM_NC=1 as aceita (uso estritamente não comercial)."""
     d = _flickr("flickr.photos.licenses.getInfo")
     ok = {}
     for l in (d or {}).get("licenses", {}).get("license", []):
         nome = l.get("name") or ""
         if re.search(r"NoDerivs|No Derivative|NoDerivatives|All Rights Reserved", nome, re.I):
             continue
-        if os.environ.get("FLICKR_SEM_NC") == "1" and re.search(r"NonCommercial", nome, re.I):
+        if os.environ.get("FLICKR_COM_NC") != "1" and re.search(r"NonCommercial", nome, re.I):
             continue
         if re.search(r"Attribution|Public Domain|No known copyright|CC0", nome, re.I):
             ok[str(l["id"])] = nome

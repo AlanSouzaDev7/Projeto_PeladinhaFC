@@ -48,6 +48,9 @@ jobs:
             server/cache/wikidata-clubes.json
             server/cache/rostos.json
             server/cache/comp-*.json
+            server/cache/escudos.json
+            server/cache/wiki-*.json
+            server/cache/af-*.json
           key: partidas-${{ github.run_id }}
           restore-keys: partidas-
 

@@ -326,7 +326,7 @@ HERO_SCENES.register("cruzeiro", (st) => {
         ctx.setLineDash([]);
         if (tLine > 0.6) { // nome da constelação escrito no céu
           ctx.fillStyle = `rgba(200,220,255,${(tLine - 0.6) * 2 * (1 - tFly)})`;
-          ctx.font = `700 ${Math.max(11, cs * 0.06)}px Archivo, sans-serif`; ctx.textAlign = "center";
+          ctx.font = `700 ${Math.max(11, cs * 0.06)}px Saira, sans-serif`; ctx.textAlign = "center";
           ctx.fillText("CRUZEIRO DO SUL", pts[4].x, pts[4].y + cs * 0.18);
         }
       }

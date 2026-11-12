@@ -55,6 +55,7 @@ ok(gd["vencedor"] == "3" and gd["pernas"] == 2, "semifinal decidida no placar so
 C.jogos_temporada = lambda cid, lg: (json.loads(json.dumps(jogos)), [])
 C.tabelas = lambda lg, js: []
 C.noticias = lambda nome: []
+C.escudos = lambda d: None  # sem rede: escudos do Wikidata ficam de fora do teste
 d = C.montar("paulistao")
 ok(d["encerrado"] and d["campeao"] and d["campeao"]["nome"] == "Beta", f"competição encerrada, campeão pela Final: {d['campeao']}")
 ok(not any(c["fase"] == "1ª fase" for c in d["chave"]), "fase de pontos corridos fora do mata-mata (cada clube joga 3 vezes nela)")
@@ -63,6 +64,26 @@ jogos2 = json.loads(json.dumps(jogos))
 jogos2[-1]["fase"] = "taca-rio---final"
 C.jogos_temporada = lambda cid, lg: (jogos2, [])
 ok(C.montar("carioca")["campeao"] is None, "final de taça secundária não coroa campeão")
+
+# Séries B, C e D
+ok(C.fase_pt("2026-brasileiro-serie-b") == "Pontos corridos", "fase das séries: pontos corridos")
+js = [J(20 + i, f"2026-0{3 + i // 2}-1{i % 2}", "2026-brasileiro-serie-b", T(1 + i % 2, "Alfa" if i % 2 == 0 else "Beta", 1), T(3 + i % 2, "Gama" if i % 2 == 0 else "Delta", 0)) for i in range(4)]
+C.rodadas(js)
+ok([j["rodada"] for j in js] == [1, 1, 2, 2], f"rodada de cada jogo pela ordem dos jogos de cada clube: {[j['rodada'] for j in js]}")
+W = P.WIKI
+html = """<h2 id="Participantes">Participantes</h2><table class="wikitable"><tr><th>Equipe</th><th>Cidade</th><th>Estado</th></tr>
+<tr><td><a href="/wiki/Ficheiro:Flag.svg">x</a> <a href="/wiki/Alfa_Futebol_Clube">Alfa</a></td><td>Natal</td><td>RN</td></tr></table>
+<h3>Grupo A</h3><table class="wikitable"><tr><th>Pos</th><th>Equipe</th><th>Pts</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>Classificação</th></tr>
+<tr><th>1</th><td><a href="/wiki/Alfa_Futebol_Clube">Alfa</a> (A)</td><td>7</td><td>3</td><td>2</td><td>1</td><td>0</td><td>5</td><td>1</td><td>+4</td><td>Próxima fase</td></tr></table>
+<table class="wikitable"><tr><th>Gols</th><th>Jogador</th><th>Equipe</th></tr><tr><td>4</td><td>Fulano</td><td><a href="/wiki/Alfa_Futebol_Clube">Alfa</a></td></tr></table>"""
+w = W.extrair(html)
+ok(w["participantes"] == [{"nome": "Alfa", "artigo": "Alfa Futebol Clube", "cidade": "Natal", "uf": "RN"}], f"Wikipédia: participantes ({w['participantes']})")
+g = w["grupos"][0]
+ok(g["nome"] == "Grupo A" and g["linhas"][0]["nome"] == "Alfa" and g["linhas"][0]["p"] == 7 and g["linhas"][0]["gp"] == 5, f"Wikipédia: classificação do grupo ({g})")
+ok(w["artilharia"] == [{"gols": 4, "nome": "Fulano", "time": "Alfa"}], f"Wikipédia: artilharia ({w['artilharia']})")
+E = P.ESC
+u = E.thumb("ABC FC (E) - RN.svg")
+ok(u.startswith("https://upload.wikimedia.org/wikipedia/commons/thumb/") and "/120px-" in u and u.endswith(".svg.png"), f"escudo do Commons em miniatura padrão de 120 px ({u})")
 
 # rota da API
 class Fake:

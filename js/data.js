@@ -3,7 +3,7 @@
    PLACAR — base de dados
    Fatos fixos dos clubes (cidade, fundação, estádio, apelido, cores) são reais.
    Tabela, partidas e estatísticas são SIMULADAS de forma determinística
-   (mesma semente = mesmos números), para fins de demonstração do portfólio.
+   (mesma semente = mesmos números), só como reserva: o robô troca tudo pelos dados reais da ESPN.
    ========================================================================== */
 
 /* kit: padrão da camisa titular
