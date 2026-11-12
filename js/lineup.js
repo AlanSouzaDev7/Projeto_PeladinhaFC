@@ -130,8 +130,13 @@
               return F[s.f].map(([role], i) => {
                 const p = map[s.xi[i]], [x, y] = pts[i], mw = Math.max(15, room[i]);
                 const nm = p ? (mw < 23 ? shortName(p.name, 9) : shortName(p.name)) : "vaga";
-                return `<div class="slot ${just("xi", i)}" data-slot="xi" data-i="${i}" style="left:${x}%;top:${y}%;--i:${i};--mw:${mw.toFixed(1)}cqw" title="${p ? `${p.name} · ${role}` : role}">
-                  <span class="tkw">${tok(p, c)}<i class="rl">${role}</i></span><span class="nm">${nm}</span></div>`;
+                // posição pelo ponto do campo (quem foi arrastado) e a comparação com a de origem do jogador
+                const cod = s.pos && s.pos[i] && window.CAMPO ? CAMPO.zona(x, y) : role;
+                const av = p && window.CAMPO ? CAMPO.avalia({ id: p.id, pos: p.pos, nome: p.name }, cod) : null;
+                const dica = av && av.tipo !== "igual" ? CAMPO.previa({ id: p.id, pos: p.pos, nome: p.name }, cod).html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").split(" Posição ")[0].trim() : "";
+                const marca = av && av.tipo !== "igual" ? CAMPO.selo(av).replace("cp-selo", "cp-selo rl-selo") : `<i class="rl">${cod}</i>`;
+                return `<div class="slot ${just("xi", i)}" data-slot="xi" data-i="${i}" style="left:${x}%;top:${y}%;--i:${i};--mw:${mw.toFixed(1)}cqw" title="${p ? `${p.name} · ${dica || (CAMPO?.NOME?.[cod] || cod)}` : role}">
+                  <span class="tkw">${tok(p, c)}${marca}</span><span class="nm">${nm}</span></div>`;
               }).join("");
             })()}
           </div>
@@ -514,6 +519,8 @@
   /* chamado depois de renderizar a página */
   function mount(root) {
     const lu = root.querySelector("[data-lineup]");
+    // posição de origem de cada jogador (súmulas): carrega e redesenha a escalação com os selos de troca de posição
+    if (lu && !window.HEATMAPS && window.HEATMAP?.load) window.HEATMAP.load().then(() => { const el = document.querySelector("[data-lineup]"); if (el) rerender(el); });
     if (lu) requestAnimationFrame(() => {
       const tabs = document.querySelector(".club-tabs");
       const off = (document.querySelector(".header")?.offsetHeight || 64) + (tabs?.offsetHeight || 0) + 8;

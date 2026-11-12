@@ -64,3 +64,15 @@ navegador ── │  Pages (site estático, CDN global, tráfego sem limite)   
 4. **Fonte licenciada** no lugar dos endpoints públicos da ESPN, antes de qualquer lançamento comercial.
 
 A migração depende de criar as contas no Cloudflare e no Supabase e de configurar as chaves. Isso cabe ao dono do projeto, porque envolve credenciais e cobrança.
+
+## Login opcional e escalações salvas (revisto em 12/11/2026)
+
+**Ainda não é obrigatório ter banco de dados**: tudo que o torcedor monta (janela de transferências, escalação do clube, simulador) fica no navegador dele (`localStorage`, uma chave por recurso, como `placar:janela-cruzeiro`) e o link de compartilhar carrega o elenco inteiro no endereço. Os dados públicos (elencos, jogos, finanças) seguem como arquivos estáticos gerados pelo robô, que é o jeito mais barato e rápido de servir.
+
+**O banco passa a ser necessário no dia em que entrar o login**, porque o login só tem sentido se a escalação salva aparecer em outro aparelho. O caminho recomendado continua sendo o **Supabase** (Postgres + Auth):
+- **Auth**: e-mail com link mágico e Google/Apple; login nunca obrigatório.
+- **Tabela `salvos`**: `usuario (uuid) · tipo ('janela' | 'escalacao' | 'simulador') · clube · dados (jsonb, o mesmo objeto que hoje vai para o localStorage) · atualizado_em`, chave única em `(usuario, tipo, clube)`.
+- **RLS** (row level security): cada usuário só lê e grava as próprias linhas; a chave pública (anon) do Supabase pode ficar no site.
+- **Sincronização**: sem login, nada muda (localStorage). Ao entrar, o que está no aparelho sobe para a conta (o mais novo vence, por `atualizado_em`) e, dali em diante, cada gravação local também vai para o Supabase.
+- **Elencos compartilhados**: o link curto atual continua; com login, dá para guardar o elenco com um id e ter página pública com o cartaz.
+- **Custo**: o plano gratuito do Supabase cobre dezenas de milhares de usuários com esse volume (alguns KB por escalação).

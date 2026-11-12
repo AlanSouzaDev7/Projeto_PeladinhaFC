@@ -31,13 +31,19 @@ for (const f of arquivos) {
   if (d.elenco.some((j) => !(j.valor > 0) || !(j.salario > 0))) prob.push("valor ou salário inválido");
   if (Math.abs(d.elenco.reduce((s, j) => s + j.salario, 0) - d.folhaMensal) > 1) prob.push("folha diferente da soma dos salários");
   if (d.elenco.some((j) => !"GDMA".includes(j.pos))) prob.push("posição desconhecida");
+  if (d.elenco.some((j) => !j.funcao)) prob.push("jogador sem posição de origem");
+  if (!d.financas?.folha?.valor || !d.financas?.cambio?.valor) prob.push("sem finanças (folha e câmbio)");
+  if (d.elenco.filter((j) => j.min > 0).length < 12) prob.push(`só ${d.elenco.filter((j) => j.min > 0).length} jogadores com minutos`);
   if (prob.length) erro(`${f}: ${prob.join("; ")}`);
 }
 const G = ler("global.js");
 if (G.jogadores.length < 3000 || Object.keys(G.times).length < 100) erro(`mercado global pequeno: ${G.jogadores.length} jogadores, ${Object.keys(G.times).length} times`);
 else ok(`${arquivos.length} clubes; mercado global com ${G.jogadores.length} jogadores de ${Object.keys(G.times).length} times em ${Object.keys(G.ligas).length} ligas`);
 const cz = ler("cruzeiro.js");
-ok(`Cruzeiro: ${cz.elenco.length} no elenco, ${cz.emprestados.length} emprestados fora, ${cz.elenco.filter((j) => j.emprestadoDe).length} chegaram emprestados`);
+ok(`Cruzeiro: ${cz.elenco.length} no elenco, ${cz.emprestados.length} emprestados fora, ${cz.elenco.filter((j) => j.emprestadoDe).length} chegaram emprestados; folha ${cz.financas.folha.valor} (${cz.financas.folha.fonte})`);
+for (const nome of ["Otávio", "Matheus Pereira", "Kaio Jorge"]) if (!cz.elenco.some((j) => j.nome.includes(nome))) erro(`Cruzeiro sem ${nome} no elenco`);
+const mins = new Set(cz.elenco.map((j) => j.min));
+if (mins.size < cz.elenco.length / 3) erro("minutos repetidos demais no elenco do Cruzeiro"); else ok(`minutos variados e reais (${mins.size} valores diferentes)`);
 
 async function abrir(opts, hash) {
   const ctx = await browser.newContext({ ...opts, locale: "pt-BR", colorScheme: "dark", permissions: ["clipboard-read", "clipboard-write"] });
@@ -47,7 +53,7 @@ async function abrir(opts, hash) {
   await page.goto(`${BASE}/?estatico&v=${Date.now()}${hash}`, { waitUntil: "load" });
   return { ctx, page, erros };
 }
-const painel = (page) => page.evaluate(() => Object.fromEntries([...document.querySelectorAll(".jt-placar > div")].map((d) => [d.querySelector("small").textContent, d.querySelector(".jt-flap").getAttribute("aria-label")])));
+const painel = (page) => page.evaluate(() => Object.fromEntries([...document.querySelectorAll(".jt-stat")].map((d) => [d.querySelector(".jt-stat-l").firstChild.textContent.trim(), +(d.querySelector(".jt-num")?.dataset.para ?? NaN)])));
 
 console.log("fluxo no PC (modo real)");
 {
@@ -59,7 +65,7 @@ console.log("fluxo no PC (modo real)");
   const vet = cz.elenco.find((j) => !j.emprestadoDe && j.idade >= 30) || cz.elenco[0];
   await page.click(`[data-jt-j="${vet.id}"] [data-jt-dec="liberar"]`);
   const p1 = await painel(page);
-  if (p1["Saídas"] !== "01" || p1["Caixa disponível"] === p0["Caixa disponível"]) erro(`liberar não mudou o painel: ${JSON.stringify(p0)} → ${JSON.stringify(p1)}`); else ok(`liberar ${vet.nome}: saídas ${p1["Saídas"]}, caixa ${p0["Caixa disponível"]} → ${p1["Caixa disponível"]}`);
+  if (p1["Saídas"] !== 1 || p1["Caixa disponível"] === p0["Caixa disponível"]) erro(`liberar não mudou o painel: ${JSON.stringify(p0)} → ${JSON.stringify(p1)}`); else ok(`liberar ${vet.nome}: saídas ${p1["Saídas"]}, caixa ${p0["Caixa disponível"]} → ${p1["Caixa disponível"]}`);
   // reforços
   await page.click('.jt-passos a[href$="/reforcos"]');
   if (!(await ateQue(page, () => document.querySelectorAll(".jt-mercado tbody tr").length > 5, null, 20000))) erro("mercado global não carregou");
@@ -69,31 +75,52 @@ console.log("fluxo no PC (modo real)");
   const semCaixa = await page.evaluate((id) => document.querySelector(`[data-jt-add="${id}"]`)?.disabled, caro[0]);
   if (semCaixa !== true) erro(`modo real: ${caro[1]} (€ ${caro[8]}) deveria ficar sem "Contratar"`); else ok(`modo real: ${caro[1]} caro demais, sem "Contratar"`);
   await page.fill('[data-jt-f="q"]', "");
+  await page.waitForTimeout(450); // a busca redesenha a lista depois de 180 ms
   await page.selectOption('[data-jt-f="nac"]', "bra");
   await page.selectOption('[data-jt-f="vMax"]', "5000000");
   await page.click('[data-jt-pos="M"]');
   await page.waitForTimeout(300);
   const lista = await page.evaluate(() => [...document.querySelectorAll(".jt-mercado tbody tr")].map((t) => t.innerText));
   if (lista.some((t) => !/MEI/.test(t))) erro("filtro de posição deixou passar outra posição");
-  const nome = await page.evaluate(() => { const b = document.querySelector("[data-jt-add]:not([disabled])"); const n = b.closest("tr").querySelector("b").textContent; b.click(); return n; });
-  await ateQue(page, () => document.querySelectorAll(".jt-passe").length === 1);
+  if (!(await ateQue(page, () => !!document.querySelector("[data-jt-add]:not([disabled])")))) erro(`nenhum meia brasileiro até € 5 mi contratável: ${(await page.evaluate(() => document.querySelector(".jt-mercado tbody")?.innerText.slice(0, 200)))}`);
+  const nome = await page.evaluate(() => { const b = document.querySelector("[data-jt-add]:not([disabled])"); const n = b.closest("tr").querySelector(".jt-quem div b").textContent; b.click(); return n; });
+  await ateQue(page, () => document.querySelectorAll(".jt-negocio").length === 1);
+  const carimbo = await page.locator(".jt-fechado").count();
   const p2 = await painel(page);
-  if (p2["Chegadas"] !== "01") erro("contratação não entrou no painel"); else ok(`contratado ${nome}: cartão de embarque e chegadas ${p2["Chegadas"]}`);
+  if (p2["Chegadas"] !== 1) erro("contratação não entrou no painel"); else ok(`contratado ${nome}: cartão do negócio, chegadas ${p2["Chegadas"]}`);
+  if (!carimbo) erro("sem o carimbo de negócio fechado"); else ok("carimbo de negócio fechado aparece");
   // escalação
   await page.click('.jt-passos a[href$="/escalacao"]');
-  await ateQue(page, () => document.querySelectorAll(".jt-slot").length === 11);
-  const tit = await page.locator(".jt-slot .jt-camisa").evaluateAll((xs) => xs.filter((x) => x.textContent !== "+").length);
+  await ateQue(page, () => document.querySelectorAll(".jt-ficha").length === 11);
+  const conta = () => page.evaluate(() => [...document.querySelectorAll(".jt-ficha")].filter((x) => !x.querySelector(".vazio")).length);
+  const tit = await conta();
   if (tit !== 11) erro(`escalação com ${tit} titulares`); else ok("escalação automática com 11 titulares");
+  const gol = await page.evaluate(() => document.querySelector('.jt-ficha[data-jt-slot="0"]').getAttribute("aria-label"));
+  if (!/Otávio/.test(gol)) erro(`goleiro titular deveria ser o Otávio (mais minutos): ${gol}`); else ok(`goleiro pelo uso real: ${gol}`);
+  const todos = await page.evaluate(() => document.querySelectorAll(".jt-ficha").length + document.querySelectorAll(".jt-res").length);
+  const elencoFinal = cz.elenco.length; // − o liberado + o reforço
+  if (todos !== elencoFinal) erro(`campo + banco + demais = ${todos}, mas o elenco tem ${elencoFinal}`); else ok(`todos os ${elencoFinal} jogadores disponíveis entre titulares, banco e demais`);
   await page.click('[data-jt-form="3-5-2"]');
-  const tit2 = await page.locator(".jt-slot .jt-camisa").evaluateAll((xs) => xs.filter((x) => x.textContent !== "+").length);
+  const tit2 = await conta();
   if (tit2 !== 11) erro(`3-5-2 com ${tit2} titulares`); else ok("trocar para 3-5-2 mantém 11 titulares");
-  await page.click('[data-jt-slot="10"]');
-  const reserva = await page.evaluate(() => { const b = document.querySelector("[data-jt-poe]"); return b?.querySelector("b").textContent; });
-  const cabe = await page.evaluate(() => document.querySelector("[data-jt-poe]")?.classList.contains("cabe"));
-  if (!cabe) erro("com a posição de ataque escolhida, o primeiro da lista não é atacante"); else ok("posição escolhida: quem joga nela aparece primeiro no banco");
-  await page.click("[data-jt-poe]");
-  const noCampo = await page.evaluate((n) => [...document.querySelectorAll(".jt-slot")].some((s) => s.getAttribute("aria-label").includes(n)), reserva);
-  if (!noCampo) erro(`trocar titular: ${reserva} não entrou`); else ok(`toque na posição e no jogador: ${reserva} entra no time`);
+  // arrastar: o meia (slot 8 no 4-2-3-1) para a ponta direita ganha o selo MEI → PD e a prévia
+  await page.click('[data-jt-form="4-2-3-1"]');
+  await page.waitForTimeout(300);
+  const fb = await page.locator('.jt-ficha[data-jt-slot="8"]').boundingBox(), cb = await page.locator("[data-jt-campo]").boundingBox();
+  await page.mouse.move(fb.x + fb.width / 2, fb.y + fb.height / 2); await page.mouse.down();
+  await page.mouse.move(cb.x + cb.width * 0.84, cb.y + cb.height * 0.32, { steps: 10 }); await page.mouse.up();
+  await page.waitForTimeout(400);
+  const mov = await page.evaluate(() => ({ selo: document.querySelector('.jt-ficha[data-jt-slot="8"] .cp-selo')?.textContent, previa: document.querySelector("[data-jt-previa]")?.innerText || "", pos: JSON.parse(localStorage.getItem("placar:janela-cruzeiro")).pos }));
+  if (!/PD/.test(mov.selo || "") || !mov.pos[8]) erro(`arrastar para a ponta: selo "${mov.selo}", posição ${JSON.stringify(mov.pos)}`); else ok(`arrastar para a ponta direita: selo "${mov.selo.replace(/\s+/g, " ")}"`);
+  if (!/ponta direita|PD/i.test(mov.previa)) erro("prévia da posição não apareceu"); else ok(`prévia: ${mov.previa.split("\n")[0].slice(0, 90)}`);
+  // trocar titular por reserva: arrastar o reserva para cima de um titular
+  const reserva = await page.evaluate(() => document.querySelector(".jt-res span:not(.jt-av) b").textContent);
+  const rb = await page.locator(".jt-res").first().boundingBox(), alvo = await page.locator('.jt-ficha[data-jt-slot="10"]').boundingBox();
+  await page.mouse.move(rb.x + 30, rb.y + rb.height / 2); await page.mouse.down();
+  await page.mouse.move(alvo.x + alvo.width / 2, alvo.y + alvo.height / 2, { steps: 12 }); await page.mouse.up();
+  await page.waitForTimeout(400);
+  const noCampo = await page.evaluate((n) => [...document.querySelectorAll(".jt-ficha")].some((s) => s.getAttribute("aria-label").includes(n)), reserva);
+  if (!noCampo) erro(`arrastar reserva para o campo: ${reserva} não entrou`); else ok(`reserva arrastado para cima do titular: ${reserva} entra no time`);
   // compartilhar
   await page.click('.jt-passos a[href$="/compartilhar"]');
   await ateQue(page, () => !!document.querySelector("[data-jt-cartaz]"));
@@ -122,6 +149,15 @@ console.log("fluxo no PC (modo real)");
   if (resumo !== resumo2) erro(`link não reabriu o mesmo elenco: ${resumo} × ${resumo2}`); else ok(`link reabre o mesmo elenco (${resumo2})`);
   if (apagou) erro("abrir o link de um amigo gravou por cima do elenco local"); else ok("abrir o link de um amigo não mexe no elenco local");
   await page.evaluate((m) => localStorage.setItem("placar:janela-cruzeiro", m), meu);
+  // desfazer tudo: dois toques (confirmação), volta ao elenco real
+  await page.goto(`${BASE}/?estatico#/clube/cruzeiro/mercado/elenco`);
+  await ateQue(page, () => !!document.querySelector("[data-jt-reset]"));
+  await page.click("[data-jt-reset]"); await page.click("[data-jt-reset]");
+  await page.waitForTimeout(300);
+  const zerado = await page.evaluate(() => JSON.parse(localStorage.getItem("placar:janela-cruzeiro")));
+  const p3 = await painel(page);
+  if (Object.keys(zerado.dec).length || zerado.chegadas.length || zerado.modo !== "real" || p3["Elenco"] !== cz.elenco.length) erro(`desfazer tudo: ${JSON.stringify(zerado).slice(0, 120)}`); else ok(`desfazer tudo: decisões e reforços desfeitos, elenco real de ${p3["Elenco"]}`);
+  await page.evaluate((m) => localStorage.setItem("placar:janela-cruzeiro", m), meu);
   if (erros.length) erro(`erros de JavaScript: ${[...new Set(erros)].join(" | ")}`);
   await ctx.close();
 }
@@ -135,8 +171,17 @@ console.log("modo manager");
   const caros = await page.evaluate(() => [...document.querySelectorAll("[data-jt-add]")].slice(0, 5).map((b) => b.disabled));
   if (caros.some(Boolean)) erro("modo manager bloqueou contratação"); else ok("modo manager: os mais caros do mundo podem ser contratados");
   for (let i = 0; i < 3; i++) await page.click("[data-jt-add]:not(.ja)");
-  const n = await page.locator(".jt-passe").count(), alerta = await page.locator(".jt-alertas").count();
+  const n = await page.locator(".jt-negocio").count(), alerta = await page.locator(".jt-alertas").count();
   if (n !== 3 || alerta) erro(`manager: ${n} reforços e ${alerta} alertas`); else ok("manager: 3 estrelas contratadas, sem alerta de orçamento");
+  await page.waitForTimeout(2000);
+  await page.click("[data-jt-caixa]");
+  await page.fill("[data-jt-caixa-v]", "500"); await page.press("[data-jt-caixa-v]", "Enter");
+  await page.waitForTimeout(300);
+  const cx = await page.evaluate(() => JSON.parse(localStorage.getItem("placar:janela-flamengo")).caixa);
+  if (cx !== 500e6) erro(`manager: caixa editado = ${cx}`); else ok("manager: caixa editado para € 500 mi");
+  await page.click("[data-jt-trocar]"); await page.click('[data-jt-modo="real"]');
+  const editavel = await page.locator("[data-jt-caixa]").count();
+  if (editavel) erro("modo real deixou editar o caixa"); else ok("modo real: caixa não é editável");
   if (erros.length) erro(`erros de JavaScript: ${[...new Set(erros)].join(" | ")}`);
   await ctx.close();
 }
@@ -151,7 +196,7 @@ console.log("celular 360");
     await page.waitForTimeout(2500);
     const r = await page.evaluate(() => {
       const vw = document.documentElement.clientWidth, fora = [];
-      document.querySelectorAll(".jt *").forEach((el) => { if (el.closest(".jt-passos, .jt-banco")) return; const b = el.getBoundingClientRect(); if (b.width && (b.right > vw + 1 || b.left < -1)) fora.push(el.className || el.tagName); });
+      document.querySelectorAll(".jt *").forEach((el) => { if (el.closest(".jt-passos, .jt-banco, .jt-globo")) return; const b = el.getBoundingClientRect(); if (b.width && (b.right > vw + 1 || b.left < -1)) fora.push(el.className || el.tagName); });
       const seg = document.querySelector(".jt-seg"), sb = seg?.getBoundingClientRect();
       return { rolagem: document.documentElement.scrollWidth > vw + 1, fora: [...new Set(fora)].slice(0, 4), seg: sb ? sb.right <= vw + 1 : true };
     });

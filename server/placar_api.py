@@ -672,7 +672,10 @@ JOG.P = sys.modules[__name__]
 COMP.P = sys.modules[__name__]
 import escudos as ESC  # noqa: E402
 import mercado as MERC  # noqa: E402
-MERC.P = sys.modules[__name__]
+import fontes_elenco as FE  # noqa: E402
+import financas as FIN  # noqa: E402
+MERC.P = FE.P = FIN.P = sys.modules[__name__]
+MERC.FE, MERC.FIN = FE, FIN
 import wiki_series as WIKI  # noqa: E402
 ESC.P = sys.modules[__name__]
 WIKI.P = sys.modules[__name__]
@@ -693,6 +696,11 @@ def update_mercado():
         return
     cl = MERC.atualizar_clubes()
     g = MERC.atualizar_global()
+    for cid, d in cl.items():
+        try:
+            MERC.enriquecer(cid, d)
+        except Exception as ex:
+            log("mercado: enriquecer", cid, ex)
     with lock:
         state["mercado"] = cl
         state["mercado_global"] = MERC.global_compacto(g)
@@ -1377,26 +1385,76 @@ def scorer_profiles(matches, scorers, squads):
     return out, clubes, gols, sumulas
 
 
+def pos_pt(form, abbr):
+    """Sigla da ESPN (com a formação) -> posição em português: GOL, ZAG, LD, LE, ALD, ALE, VOL, MC, MD, ME, MEI, PD, PE, CA.
+    A mesma tabela está em js/campo.js (o campinho usa para dizer onde o jogador costuma jogar)."""
+    a = (abbr or "").upper()
+    tres = str(form or "").startswith(("3", "5"))
+    if a == "G":
+        return "GOL"
+    if a in ("CD", "CD-L", "CD-R", "SW", "D"):
+        return "ZAG"
+    if a == "LB":
+        return "ALE" if tres else "LE"
+    if a == "RB":
+        return "ALD" if tres else "LD"
+    if a == "DM":
+        return "VOL"
+    if a in ("CM", "CM-L", "CM-R", "M"):
+        return "VOL" if "-2-" in str(form or "") else "MC"
+    if a == "AM":
+        return "MEI"
+    if a == "AM-L":
+        return "PE"
+    if a == "AM-R":
+        return "PD"
+    f = str(form or "")
+    if a in ("LM", "RM"):
+        lado = "E" if a == "LM" else "D"
+        if tres:
+            return "AL" + lado
+        if f.startswith(("4-2-3", "4-2-2", "4-2-1")):
+            return "VOL"  # na ESPN, os dois volantes do 4-2-3-1 aparecem como LM/RM
+        if f.startswith(("4-3-", "4-1-2")):
+            return "MC"
+        return "M" + lado
+    if a == "LF":
+        return "PE"
+    if a == "RF":
+        return "PD"
+    if a in ("F", "CF", "CF-L", "CF-R", "RCF", "LCF", "SS"):
+        return "CA"
+    return None
+
+
 def position_profiles(matches):
     """Onde cada jogador atuou no Brasileirão: minutos em cada posição (formação + nº da posição + sigla da ESPN),
-    jogos, minutos, gols e finalizações. É a base do mapa de calor estimado do "Bora pro jogo"."""
+    jogos, minutos, gols e finalizações. É a base do mapa de calor estimado do "Bora pro jogo".
+    "s": por posição em português, [jogos, minutos, gols, assistências, jogos como titular]; "f": a posição de origem
+    (a de mais minutos). O campinho da janela de transferências usa isso para a prévia "como ele jogou ali"."""
     P = {}
     for m in (m for m in matches.values() if m.get("v", 1) >= 3):
         for rows in m["teams"].values():
             for row in rows:
                 pid, nm, starter, mins = row[:4]
-                g, sh, where = row[6], row[8], (row[11] if len(row) > 11 else None)
+                g, a, sh, where = row[6], row[7], row[8], (row[11] if len(row) > 11 else None)
                 if not mins:
                     continue
-                q = P.setdefault(pid, {"n": nm, "j": 0, "m": 0, "g": 0, "c": 0, "p": {}})
+                q = P.setdefault(pid, {"n": nm, "j": 0, "m": 0, "g": 0, "c": 0, "p": {}, "s": {}})
                 q["j"] += 1; q["m"] += mins; q["g"] += g; q["c"] += sh
                 if where:
                     key = f"{where[0]}|{where[1]}|{where[2]}"
                     q["p"][key] = q["p"].get(key, 0) + mins
+                    pt = pos_pt(where[0], where[2])
+                    if pt:
+                        s = q["s"].setdefault(pt, [0, 0, 0, 0, 0])
+                        s[0] += 1; s[1] += mins; s[2] += g; s[3] += a; s[4] += 1 if starter else 0
     # posições ordenadas pelos minutos; corta o que tem menos de 3% do tempo (ruído)
     for q in P.values():
         tot = sum(q["p"].values()) or 1
         q["p"] = [[k, v] for k, v in sorted(q["p"].items(), key=lambda x: -x[1]) if v / tot >= 0.03]
+        if q["s"]:
+            q["f"] = max(q["s"].items(), key=lambda x: x[1][1])[0]
     return P
 
 
@@ -2698,7 +2756,7 @@ HOST = os.environ.get("HOST", "127.0.0.1")
 ORIGENS = {o.strip().rstrip("/") for o in os.environ.get(
     "ORIGENS", "https://alansouzadev7.github.io,http://localhost:8000,http://127.0.0.1:8000").split(",") if o.strip()}
 CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
-       "img-src 'self' data: blob: https://a.espncdn.com https://*.wikimedia.org https://*.wikipedia.org https://live.staticflickr.com https://media.api-sports.io; "
+       "img-src 'self' data: blob: https://a.espncdn.com https://*.wikimedia.org https://*.wikipedia.org https://live.staticflickr.com https://media.api-sports.io https://r2.thesportsdb.com; "
        "connect-src 'self' https://site.web.api.espn.com https://site.api.espn.com https://*.workers.dev; media-src 'self' blob:; manifest-src 'self'; "
        "worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 SEC_HEADERS = {
