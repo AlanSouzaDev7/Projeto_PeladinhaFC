@@ -36,11 +36,16 @@ jobs:
         with:
           python-version: "3.12"
 
-      # súmulas dos jogos encerrados não mudam: guardar entre execuções evita baixar ~330 jogos toda vez
-      - name: Súmulas já baixadas
+      # súmulas e lances dos jogos encerrados não mudam: guardar entre execuções evita baixar ~650 jogos toda vez
+      - name: Súmulas, lances e fotos já baixados
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          path: server/cache/partidas.json
+          path: |
+            server/cache/partidas.json
+            server/cache/partidas-outras.json
+            server/cache/lances.json
+            server/cache/fotos-jogadores.json
+            server/cache/wikidata-clubes.json
           key: partidas-${{ github.run_id }}
           restore-keys: partidas-
 
@@ -59,7 +64,7 @@ jobs:
         run: |
           git config user.name "placar-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add js/live-data.js js/player-stats.js js/club-form.js js/heatmaps.js js/departamento-medico.js js/raio-x.js
+          git add js/live-data.js js/player-stats.js js/club-form.js js/heatmaps.js js/departamento-medico.js js/raio-x.js js/jogadores/
           if git diff --cached --quiet; then
             echo "Nada novo."
           else

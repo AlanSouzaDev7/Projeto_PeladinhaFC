@@ -91,4 +91,38 @@ await t("sem chave: erro claro", async () => {
   const [st, d] = await get("/ao-vivo", {});
   assert.equal(st, 503); assert.match(d.erro, /API_FOOTBALL_KEY/);
 });
+// ---------- em alta: contagem de buscas (KV simulado em memória) ----------
+{
+  const kv = new Map(), BUSCAS = { get: async (k, tipo) => (kv.has(k) ? (tipo === "json" ? JSON.parse(kv.get(k)) : kv.get(k)) : null), put: async (k, v) => kv.set(k, v) };
+  const mod = await import(`../worker/ao-vivo.mjs?buscas=${Date.now()}`);
+  const post = (corpo, envx = { BUSCAS }) => mod.default.fetch(new Request("https://w.test/busca", { method: "POST", body: typeof corpo === "string" ? corpo : JSON.stringify(corpo), headers: { "content-type": "text/plain" } }), envx);
+  await t("busca: sem KV configurado responde 503 (o site mostra Em destaque)", async () => {
+    assert.equal((await post({ t: "c", id: "cruzeiro" }, {})).status, 503);
+    assert.equal((await mod.default.fetch(new Request("https://w.test/em-alta"), {})).status, 503);
+  });
+  await t("busca: só ids de clube ou jogador; corpo grande ou estranho é recusado", async () => {
+    assert.equal((await post({ t: "c", id: "cruzeiro" })).status, 200);
+    assert.equal((await post({ t: "j", id: "216098-cruzeiro" })).status, 200);
+    assert.equal((await post({ t: "x", id: "cruzeiro" })).status, 400);
+    assert.equal((await post({ t: "c", id: "<script>" })).status, 400);
+    assert.equal((await post("nao é json")).status, 400);
+    assert.equal((await post({ t: "c", id: "a".repeat(300) })).status, 400);
+  });
+  await t("busca: outros métodos e rotas continuam recusados", async () => {
+    assert.equal((await mod.default.fetch(new Request("https://w.test/ao-vivo", { method: "POST", body: "{}" }), { BUSCAS })).status, 405);
+    assert.equal((await mod.default.fetch(new Request("https://w.test/busca", { method: "DELETE" }), { BUSCAS })).status, 405);
+  });
+  await t("em alta: os mais buscados primeiro, contando o que ainda não foi gravado", async () => {
+    for (let i = 0; i < 3; i++) await post({ t: "j", id: "216098-cruzeiro" });
+    const r = await mod.default.fetch(new Request("https://w.test/em-alta"), { BUSCAS });
+    const d = await r.json();
+    assert.equal(r.status, 200);
+    assert.equal(d.itens[0].t, "j"); assert.equal(d.itens[0].id, "216098-cruzeiro");
+    assert.ok(d.itens.some((x) => x.t === "c" && x.id === "cruzeiro"));
+    assert.match(r.headers.get("cache-control"), /max-age=300/);
+  });
+  await t("em alta: grava no KV no máximo 1 vez por minuto (economiza gravações)", async () => {
+    assert.ok([...kv.keys()].filter((k) => k.startsWith("h:")).length <= 1);
+  });
+}
 console.log(`\n${ok} testes do Worker passaram`);

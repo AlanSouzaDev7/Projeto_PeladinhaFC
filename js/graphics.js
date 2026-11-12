@@ -69,9 +69,35 @@
     const src = size <= 56 ? club.logo.replace("/330px-", "/120px-") : club.logo;
     return `<img class="crest" src="${src}" alt="Escudo do ${club.name}" width="${size}" height="${size}" loading="lazy" decoding="async" data-club="${club.id}" data-size="${size}"${vt ? " data-vt" : ""}${style}/>`;
   }
+  /* ---------- escudo de outro time (adversário fora da Série A: estaduais, copas, Libertadores) ----------
+     Com o escudo da ESPN, a imagem; sem ele (a ESPN não tem o de muitos times pequenos: Pouso Alegre, Betim,
+     Noroeste, Maricá...) ou se a imagem falhar, um escudo desenhado com as iniciais do time e uma cor própria. */
+  const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  const PEQ = new Set(["ec", "fc", "sc", "ac", "cr", "ca", "aa", "ad", "ce", "cs", "de", "do", "da", "dos", "das", "e", "clube", "esporte", "esportivo", "futebol", "club", "sport", "atletico"]);
+  function iniciais(nome) {
+    const w = String(nome || "?").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9 -]/g, " ").split(/[\s-]+/).filter(Boolean);
+    const fortes = w.filter((x) => !PEQ.has(x.toLowerCase()));
+    const base = fortes.length ? fortes : w;
+    if (!base.length) return "?";
+    return (base.length === 1 ? base[0].slice(0, 3) : base[0][0] + base[1][0] + (base[2] ? base[2][0] : "")).toUpperCase().slice(0, 3);
+  }
+  function iniCrest(nome, size = 28) {
+    let h = 0; for (const ch of String(nome || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const cor = `hsl(${h % 360} 48% 36%)`, cor2 = `hsl(${(h >> 9) % 360} 55% 62%)`, ini = iniciais(nome);
+    const shape = "M20 1.5 L38 6 V21 C38 33.5 30.5 41 20 45 C9.5 41 2 33.5 2 21 V6 Z";
+    return `<svg class="crest crest-ini" width="${size}" height="${size}" viewBox="0 -1 40 48" role="img" aria-label="${esc(nome)} (escudo indisponível)">
+      <path d="${shape}" fill="${cor}"/><path d="M2 30 C12 25 28 25 38 30 V34 C28 29 12 29 2 34 Z" fill="${cor2}" opacity=".55"/>
+      <path d="${shape}" fill="none" stroke="${cor2}" stroke-width="2.2"/>
+      <text x="20" y="${ini.length > 2 ? 23.5 : 24.5}" text-anchor="middle" font-family="Archivo, sans-serif" font-weight="900" font-size="${ini.length > 2 ? 10.5 : 13}" font-stretch="75%" fill="#fff">${esc(ini)}</text></svg>`;
+  }
+  function crestOutro(nome, logo, size = 28) {
+    if (logo && /^https:\/\/a\.espncdn\.com\//.test(logo)) return `<img class="crest" src="${esc(logo)}" alt="Escudo do ${esc(nome)}" width="${size}" height="${size}" loading="lazy" decoding="async" data-nome="${esc(nome)}" data-size="${size}"/>`;
+    return iniCrest(nome, size);
+  }
   // se a imagem não carregar (sem internet, link quebrado), troca pelo escudo desenhado
   document.addEventListener("error", (e) => {
     const img = e.target;
+    if (img instanceof HTMLImageElement && img.dataset.nome != null && img.classList.contains("crest")) { img.outerHTML = iniCrest(img.dataset.nome, +img.dataset.size || 28); return; }
     if (!(img instanceof HTMLImageElement) || !img.dataset.club) return;
     const club = window.PD.byId[img.dataset.club];
     img.outerHTML = svgCrest(club, +img.dataset.size, img.hasAttribute("data-vt"));
@@ -116,5 +142,5 @@
   /* ---------- bandeira do Brasil (simplificada) ---------- */
   const flagBR = `<svg class="flag" viewBox="0 0 20 14"><rect width="20" height="14" fill="#009c3b"/><path d="M10 1.5 18.5 7 10 12.5 1.5 7z" fill="#ffdf00"/><circle cx="10" cy="7" r="3.1" fill="#002776"/></svg>`;
 
-  window.GFX = { crest, svgCrest, jersey, kitBg, kitRects, onColor, lum, shade, display, flagBR };
+  window.GFX = { crest, crestOutro, iniCrest, svgCrest, jersey, kitBg, kitRects, onColor, lum, shade, display, flagBR };
 })();

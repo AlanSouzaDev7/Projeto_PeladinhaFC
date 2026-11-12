@@ -79,8 +79,61 @@
     return loading;
   }
 
+  /* ---------- mapa de calor com os LANCES REAIS (js/jogadores/<clube>.js) ----------
+     Cada ação do jogador com coordenada (passe, desarme, cruzamento, finalização...) vem do feed de lances da ESPN,
+     somada numa grade de 24 x 16 e gravada em 62 níveis. Aqui cada célula vira uma mancha pequena no ponto exato. */
+  const NIV = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  function deGrade(txt, gx = 24, gy = 16) {
+    const blobs = [];
+    if (!txt) return blobs;
+    for (let k = 0; k < txt.length && k < gx * gy; k++) {
+      const v = NIV.indexOf(txt[k]);
+      if (v <= 0) continue;
+      const w = (v / 61) ** 2; // a gravação usa raiz quadrada: volta para a contagem
+      blobs.push([((k % gx) + 0.5) / gx * 100, (Math.floor(k / gx) + 0.5) / gy * 100, 100 / gx * 0.85, 100 / gy * 0.85, w]);
+    }
+    return blobs;
+  }
+  // zonas do campo (% das ações): terço defensivo / meio / ataque e esquerda / centro / direita
+  function zonas(txt, gx = 24, gy = 16) {
+    const t = [0, 0, 0], l = [0, 0, 0];
+    let s = 0;
+    for (let k = 0; k < (txt || "").length; k++) {
+      const v = NIV.indexOf(txt[k]);
+      if (v <= 0) continue;
+      const w = (v / 61) ** 2, x = k % gx, y = Math.floor(k / gx);
+      t[Math.min(2, Math.floor((x / gx) * 3))] += w; l[Math.min(2, Math.floor((y / gy) * 3))] += w; s += w;
+    }
+    const pc = (a) => a.map((v) => (s ? Math.round((v / s) * 100) : 0));
+    return { tercos: pc(t), lados: pc(l) };
+  }
+  // jogador com lances reais já carregados (de qualquer clube)
+  const real = (pid) => { const C = window.JOGADORES_CLUBE || {}; for (const k in C) { const j = C[k].jogadores?.[pid]; if (j && j.calor) return { j, grade: C[k].grade || [24, 16] }; } return null; };
+  function carregaClube(cid) {
+    if (!cid || !/^[a-z-]{2,20}$/.test(cid)) return Promise.resolve(null);
+    if (window.JOGADORES_CLUBE?.[cid]) return Promise.resolve(window.JOGADORES_CLUBE[cid]);
+    carregaClube.p = carregaClube.p || {};
+    if (carregaClube.p[cid]) return carregaClube.p[cid];
+    return (carregaClube.p[cid] = (async () => {
+      if (window.PD?.LIVE) {
+        try { const r = await fetch(`/api/elenco-temporada?club=${cid}`, { cache: "no-store" }); if (r.ok) { const d = await r.json(); window.SEG?.limpa(d); (window.JOGADORES_CLUBE = window.JOGADORES_CLUBE || {})[cid] = d; return d; } } catch { /* cai no arquivo */ }
+      }
+      await new Promise((res) => { const sc = document.createElement("script"); sc.src = `js/jogadores/${cid}.js`; sc.onload = sc.onerror = res; document.head.appendChild(sc); });
+      const d = window.JOGADORES_CLUBE?.[cid] || null;
+      if (d) window.SEG?.limpa(d);
+      return d;
+    })());
+  }
+
   // perfil do jogador: manchas somadas, posições em %, minutos; sem jogos, usa a função da escalação
   function profile(pid, fallbackRole) {
+    const R = real(pid);
+    if (R) {
+      const { j, grade } = R, z = zonas(j.calor, grade[0], grade[1]);
+      const roles = [["no terço de ataque", z.tercos[2] / 100], ["no meio-campo", z.tercos[1] / 100], ["no terço defensivo", z.tercos[0] / 100]].sort((a, b) => b[1] - a[1]);
+      const jogos = Object.values(j.comps || {}).reduce((t, c) => t + c.j, 0), min = Object.values(j.comps || {}).reduce((t, c) => t + c.min, 0), g = Object.values(j.comps || {}).reduce((t, c) => t + c.g, 0);
+      return { blobs: deGrade(j.calor, grade[0], grade[1]), roles, estimado: "lances", d: { j: jogos, m: min, g, lances: j.lances } };
+    }
     const d = window.HEATMAPS?.players?.[pid];
     const blobs = [], roles = {};
     let mins = 0;
@@ -155,11 +208,13 @@
   function summary(pr) {
     const top = pr.roles.slice(0, 3).map(([k, v]) => `<span><b>${Math.round(v * 100)}%</b> ${k}</span>`).join("");
     const d = pr.d;
-    const base = pr.estimado === "escalação"
+    const base = pr.estimado === "lances"
+      ? `${d.lances.toLocaleString("pt-BR")} ações com posição no campo em ${d.j} jogo${d.j === 1 ? "" : "s"} · ${d.m.toLocaleString("pt-BR")} min${d.g ? ` · ${d.g} gol${d.g === 1 ? "" : "s"}` : ""}`
+      : pr.estimado === "escalação"
       ? "Sem jogos no Brasileirão: mapa pela posição na escalação"
       : `${d.j} jogo${d.j === 1 ? "" : "s"} · ${d.m.toLocaleString("pt-BR")} min no Brasileirão${d.g ? ` · ${d.g} gol${d.g === 1 ? "" : "s"}` : ""}`;
     return { top, base };
   }
 
-  window.HEATMAP = { load, profile, paint, summary, roleOf, T };
+  window.HEATMAP = { load, profile, paint, summary, roleOf, T, deGrade, zonas, real, carregaClube };
 })();

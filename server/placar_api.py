@@ -21,6 +21,10 @@ Rotas
   GET /api/retrospecto     [?club=id]     últimos 5 e próximos 5 jogos de cada clube, em todas as competições
   GET /api/calendario      ?club=id [&mes=AAAA-MM]   calendário do clube: a temporada inteira (ou um mês), todas as competições
   GET /api/jogo            ?event=id_espn&lg=liga   estatísticas rápidas de um jogo (placar, gols, posse, finalizações...)
+  GET /api/elenco-temporada ?club=id      jogadores do clube: temporada por competição, cada jogo, mapa de calor (lances) e foto
+  GET /api/jogador/<id>[-<clube>]         um jogador (o mesmo formato, com o clube)
+  GET /api/em-alta                        clubes e jogadores mais buscados nas últimas 24 h (só contagens, nada pessoal)
+  POST /api/busca          {"t":"c"|"j","id":...}   conta uma busca (a única rota que aceita escrita; corpo de até 200 bytes)
   GET /api/jogadores       [?club=id]     pendurados, sequência de jogos, lesionados e minutagem dos reservas
 
 Gera também o arquivo do site sem a API (GitHub Pages):  python server/placar_api.py --snapshot
@@ -658,6 +662,85 @@ def match_stats(eid, lg):
     return out
 
 
+# ---------------------------------------------------------------------------
+# Jogadores (server/jogadores.py): temporada, cada jogo, mapa de calor com os lances e fotos livres
+# ---------------------------------------------------------------------------
+import jogadores as JOG  # noqa: E402
+JOG.P = sys.modules[__name__]
+
+
+def squads_atuais():
+    with lock:
+        sq = state.get("squads")
+    try:
+        src = open(os.path.join(ROOT, "js", "squads.js"), encoding="utf-8").read()
+        site = json.loads(src[src.index("window.SQUADS = ") + 16:src.index("window.SQUADS_LAST")].strip().rstrip(";"))
+    except Exception:
+        site = {}
+    if not sq:
+        return site
+    # quem está no arquivo do site e sumiu da lista da ESPN continua (com o número de camisa)
+    out = {cid: [list(r) for r in rows] for cid, rows in sq.items()}
+    for cid, rows in site.items():
+        ids = {str(r[4]) for r in out.get(cid, []) if r[4]}
+        out.setdefault(cid, []).extend(list(r) for r in rows if r[4] and str(r[4]) not in ids)
+    return out
+
+
+def update_jogadores():
+    clubes = JOG.atualizar(squads_atuais(), load_matches())
+    with lock:
+        state["jogadores"] = clubes
+    log("jogadores (temporada, lances e fotos) atualizados")
+
+
+# ---------------------------------------------------------------------------
+# Em alta: o que mais se busca no site (só contagens por clube/jogador; nada de quem buscou)
+# ---------------------------------------------------------------------------
+BUSCA_HORAS = 24
+_buscas = {}  # hora (aaaammddhh) -> {"c:flamengo": n, "j:216098": n}
+
+
+def ids_validos():
+    ids = {"c:" + c for c in CLUBS}
+    for cid, rows in (squads_atuais() or {}).items():
+        ids.update("j:" + str(r[4]) for r in rows if r[4])
+        ids.update(f"j:{r[4]}-{cid}" for r in rows if r[4])  # chave do site: id da ESPN + clube
+    return ids
+
+
+_validos = {"t": 0, "ids": set()}
+
+
+def contar_busca(t, i):
+    if time.time() - _validos["t"] > 3600:
+        _validos.update(t=time.time(), ids=ids_validos())
+    k = f"{t}:{i}"
+    if k not in _validos["ids"]:
+        return False
+    h = time.strftime("%Y%m%d%H", time.gmtime())
+    with lock:
+        b = _buscas.setdefault(h, {})
+        b[k] = b.get(k, 0) + 1
+        for velha in sorted(_buscas)[:-BUSCA_HORAS]:
+            _buscas.pop(velha, None)
+    return True
+
+
+def em_alta(n=8):
+    agora = time.time()
+    peso = {}
+    with lock:
+        horas = dict(_buscas)
+    for h, b in horas.items():
+        idade = (agora - calendar.timegm(time.strptime(h, "%Y%m%d%H"))) / 3600
+        f = 0.5 ** (idade / 6)  # meia-vida de 6 h: o que se busca agora pesa mais
+        for k, v in b.items():
+            peso[k] = peso.get(k, 0) + v * f
+    top = sorted(peso.items(), key=lambda x: -x[1])[:n]
+    return {"updated": time.strftime("%d/%m/%Y às %H:%M"), "horas": BUSCA_HORAS, "itens": [{"t": k[0], "id": k[2:], "peso": round(v, 2)} for k, v in top]}
+
+
 def update_form():
     out = {}
     for cid in CLUBS:
@@ -894,11 +977,11 @@ MATCH_VERSION = 4  # 2: gols, assistências, finalizações e pênaltis · 3: po
 #                   4: números do time (posse, passes, finalizações...), placar e minuto de cada gol, para o Raio-X
 
 
-def match_extract(eid):
+def match_extract(eid, lg="bra.1"):
     """Resumo de um jogo encerrado: para cada time, quem jogou, quanto tempo, cartões, gols e finalizações.
     Linha: [id, nome, titular, minutos, amarelos, vermelhos, gols, assistências, finalizações, no alvo, gols de pênalti,
             posição: [formação, nº da posição (1–11), sigla da ESPN]] — quem entrou herda a posição de quem saiu"""
-    d = get_json(f"{ESPN}/site/v2/sports/soccer/bra.1/summary?event={eid}")
+    d = get_json(f"{ESPN}/site/v2/sports/soccer/{lg}/summary?event={eid}")
     pens, subs = {}, []
     for k in d.get("keyEvents", []):
         if k.get("scoringPlay") and "penalty" in (k.get("type") or {}).get("type", "") and k.get("participants"):
@@ -936,6 +1019,7 @@ def match_extract(eid):
                          int(st.get("totalShots", 0)), int(st.get("shotsOnTarget", 0)), pens.get(aid, 0), pos.get(aid)])
         out["teams"][r["team"]["id"]] = rows
     out.update(match_box(d))
+    out["nomes"] = {str(c["team"]["id"]): clean_text(c["team"].get("displayName") or "", 40) for c in d["header"]["competitions"][0].get("competitors", [])}
     return out
 
 
@@ -2056,7 +2140,7 @@ def write_snapshot():
             state.update({k: old[k] for k in ("fixtures", "round") if old.get(k)})
         except Exception as ex:
             log("base anterior ignorada", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores)]
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
             fn()
@@ -2078,6 +2162,10 @@ def write_snapshot():
         write_js("departamento-medico.js", "DM", dm, "departamento médico da temporada (quem está e quem já passou). Fontes: imprensa nacional e local, sites oficiais, setoristas e súmulas da ESPN")
     if form:
         write_js("club-form.js", "CLUB_FORM", form, "temporada de cada clube, últimos 5 e próximos 5 jogos. Fonte: ESPN")
+    with lock:
+        jg = state.get("jogadores")
+    if jg:
+        JOG.gravar_js(jg)
     if positions and positions.get("players"):
         write_js("heatmaps.js", "HEATMAPS", positions, "posições de cada jogador no Brasileirão (minutos por posição), base do mapa de calor estimado. Fonte: escalações da ESPN")
 
@@ -2593,7 +2681,30 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
-    do_POST = do_PUT = do_DELETE = do_PATCH = do_TRACE = do_CONNECT = refuse
+    def do_POST(self):
+        """Só /api/busca: conta uma busca (clube ou jogador conhecido). Corpo JSON de até 200 bytes, sem cookies nem dados pessoais."""
+        if not self.guard():
+            return
+        if urllib.parse.urlparse(self.path).path != "/api/busca":
+            return self.refuse()
+        if not allow(self.client_address[0], "busca", 30):
+            return self.send_json({"ok": False, "message": "muitas buscas"}, 429)
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            n = -1
+        if n <= 0 or n > 200:
+            return self.send_json({"ok": False, "message": "corpo inválido"}, 400)
+        try:
+            d = json.loads(self.rfile.read(n).decode("utf-8"))
+            t, i = d.get("t"), str(d.get("id"))
+        except Exception:
+            return self.send_json({"ok": False, "message": "corpo inválido"}, 400)
+        if t not in ("c", "j") or not re.fullmatch(r"[a-z0-9-]{1,30}", i):
+            return self.send_json({"ok": False, "message": "busca inválida"}, 400)
+        return self.send_json({"ok": contar_busca(t, i)}, 200)
+
+    do_PUT = do_DELETE = do_PATCH = do_TRACE = do_CONNECT = refuse
 
     def do_GET(self):
         if not self.guard():
@@ -2669,6 +2780,26 @@ class Handler(SimpleHTTPRequestHandler):
                 except Exception as ex:
                     log("jogo", eid, ex)
                     return self.send_json({"ok": False, "message": "estatísticas indisponíveis"}, 502)
+            if parts[1:] == ["em-alta"]:
+                return self.send_json(em_alta())
+            if len(parts) == 3 and parts[1] == "jogador":
+                # "216098" ou "216098-cruzeiro" (a ESPN às vezes usa o mesmo número para homônimos de clubes diferentes)
+                m = re.fullmatch(r"(\d{1,12})(?:-([a-z-]{2,20}))?", parts[2])
+                if not m or (m.group(2) and m.group(2) not in CLUBS):
+                    return self.send_json({"ok": False, "message": "jogador inválido"}, 400)
+                aid, so = m.group(1), m.group(2)
+                with lock:
+                    jg = state.get("jogadores") or {}
+                for cid, d in jg.items():
+                    if (not so or cid == so) and aid in d.get("jogadores", {}):
+                        return self.send_json({"updated": d["updated"], "club": cid, "grade": d["grade"], "campos": d["campos"], "fontes": d["fontes"], "id": aid, **d["jogadores"][aid]})
+                return self.send_json({"ok": False, "message": "jogador não encontrado"}, 404)
+            if parts[1:] == ["elenco-temporada"]:
+                if not club:
+                    return self.send_json({"ok": False, "message": "informe o clube (?club=id)"}, 400)
+                with lock:
+                    d = (state.get("jogadores") or {}).get(club)
+                return self.send_json(d) if d else self.send_json({"ok": False, "message": "carregando dados"}, 503)
             if parts[1:] == ["jogadores"]:
                 with lock:
                     pl = state.get("players")
@@ -2765,6 +2896,7 @@ def main():
     every(iv.get("jogadores", 60), update_players)
     every(iv.get("departamento_medico", 60), update_dm)
     every(iv.get("retrospecto", 30), update_form)
+    every(iv.get("jogadores_temporada", 60), update_jogadores)
     threading.Thread(target=live_loop, daemon=True).start()
     log(f"PLACAR no ar: http://{'localhost' if HOST in ('127.0.0.1', 'localhost') else HOST}:{port}")
     srv = ThreadingHTTPServer((HOST, port), Handler)

@@ -175,18 +175,70 @@ export async function aoVivo(env, now = Date.now()) {
   return { source: "API-Football", updated: new Date(now).toISOString(), proximo, restantes, games: jogos };
 }
 
+/* ---------------- Em alta: o que mais se busca no site ----------------
+   POST /busca {"t":"c"|"j","id":...} conta uma busca; GET /em-alta devolve os mais buscados nas últimas 24 h.
+   Só contagens por clube/jogador, nada de quem buscou. Guardado no Workers KV (binding BUSCAS, opcional: sem ele,
+   as rotas respondem 503 e o site mostra "Em destaque"). Para não gastar o limite de gravações do KV, cada instância
+   junta as contagens na memória e grava no máximo uma vez por minuto, por hora (chave h:AAAAMMDDHH).
+   A lista é guardada por 5 min no cache da Cloudflare: muita gente abrindo a busca não vira muita leitura no KV. */
+const BUSCA_OK = /^(c:[a-z-]{2,20}|j:\d{1,12}(-[a-z-]{2,20})?)$/;
+let pendente = {}, gravadoEm = 0;
+const horaUTC = (t = Date.now()) => new Date(t).toISOString().slice(0, 13).replace(/[-T]/g, "");
+async function gravaBuscas(env) {
+  if (!env.BUSCAS || Date.now() - gravadoEm < 60e3 || !Object.keys(pendente).length) return;
+  gravadoEm = Date.now();
+  const k = `h:${horaUTC()}`, soma = pendente;
+  pendente = {};
+  const atual = (await env.BUSCAS.get(k, "json")) || {};
+  for (const [id, n] of Object.entries(soma)) atual[id] = (atual[id] || 0) + n;
+  await env.BUSCAS.put(k, JSON.stringify(atual), { expirationTtl: 2 * 86400 });
+}
+async function emAlta(env) {
+  const agora = Date.now(), peso = {};
+  const horas = Array.from({ length: 24 }, (_, i) => horaUTC(agora - i * 3600e3));
+  const dados = await Promise.all(horas.map((h) => env.BUSCAS.get(`h:${h}`, "json")));
+  dados.forEach((b, i) => { for (const [k, v] of Object.entries(b || {})) peso[k] = (peso[k] || 0) + v * 0.5 ** (i / 6); }); // meia-vida de 6 h
+  for (const [k, v] of Object.entries(pendente)) peso[k] = (peso[k] || 0) + v;
+  const itens = Object.entries(peso).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => ({ t: k[0], id: k.slice(2), peso: +v.toFixed(2) }));
+  return { updated: new Date(agora).toISOString(), horas: 24, itens };
+}
+export const _busca = { BUSCA_OK, horaUTC, reset: () => { pendente = {}; gravadoEm = 0; } };
+
 /* ---------------- Worker ---------------- */
 export default {
   async fetch(req, env) {
-    const cors = { "access-control-allow-origin": env.ORIGEM || "*", "access-control-allow-methods": "GET, OPTIONS", "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
+    const cors = { "access-control-allow-origin": env.ORIGEM || "*", "access-control-allow-methods": "GET, POST, OPTIONS", "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
       "vary": "Origin", "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "no-referrer",
       "content-security-policy": "default-src 'none'; frame-ancestors 'none'", "cross-origin-resource-policy": "cross-origin" };
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     const json = (d, status = 200) => new Response(JSON.stringify(d), { status, headers: cors });
-    // só leitura: qualquer outro método é recusado; endereço comprido demais também
-    if (req.method !== "GET" && req.method !== "HEAD") return new Response(null, { status: 405, headers: { ...cors, allow: "GET, HEAD, OPTIONS" } });
     if (req.url.length > 512) return json({ erro: "endereço longo demais" }, 414);
     const path = new URL(req.url).pathname.replace(/\/+$/, "");
+    // a única escrita: contar uma busca (corpo de até 200 bytes, só ids de clube ou jogador)
+    if (req.method === "POST" && path === "/busca") {
+      if (!env.BUSCAS) return json({ erro: "contagem de buscas não configurada" }, 503);
+      if (+(req.headers.get("content-length") || 0) > 200) return json({ erro: "corpo inválido" }, 400);
+      const txt = await req.text();
+      if (!txt || txt.length > 200) return json({ erro: "corpo inválido" }, 400);
+      let d;
+      try { d = JSON.parse(txt); } catch { return json({ erro: "corpo inválido" }, 400); }
+      const k = `${d && d.t}:${d && d.id}`;
+      if (!BUSCA_OK.test(k)) return json({ erro: "busca inválida" }, 400);
+      pendente[k] = Math.min(1e6, (pendente[k] || 0) + 1);
+      await gravaBuscas(env);
+      return json({ ok: true });
+    }
+    // fora isso, só leitura: qualquer outro método é recusado
+    if (req.method !== "GET" && req.method !== "HEAD") return new Response(null, { status: 405, headers: { ...cors, allow: "GET, HEAD, POST, OPTIONS" } });
+    if (path === "/em-alta") {
+      if (!env.BUSCAS) return json({ erro: "contagem de buscas não configurada", itens: [] }, 503);
+      const cache = typeof caches !== "undefined" ? caches.default : null, chave = new Request(new URL("/em-alta", req.url).toString());
+      const hit = cache && (await cache.match(chave));
+      if (hit) return hit;
+      const r = new Response(JSON.stringify(await emAlta(env)), { headers: { ...cors, "cache-control": "public, max-age=300" } });
+      if (cache) await cache.put(chave, r.clone());
+      return r;
+    }
     if (path === "/saude") return json({ ok: !!env.API_FOOTBALL_KEY, restantes, esgotado: Date.now() < bloqueadoAte });
     if (path !== "/ao-vivo") return json({ erro: "rota desconhecida" }, 404);
     if (!env.API_FOOTBALL_KEY) return json({ erro: "chave API_FOOTBALL_KEY não configurada", games: [] }, 503);

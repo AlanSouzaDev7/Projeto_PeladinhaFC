@@ -15,3 +15,9 @@ LISTA_SEGUNDOS = "1800"
 RESERVA = "2"
 
 # a chave NÃO fica aqui: rode  npx wrangler secret put API_FOOTBALL_KEY
+
+# opcional: contagem de buscas para o "Em alta" da busca do site (só contagens por clube/jogador).
+# Crie com  npx wrangler kv namespace create BUSCAS  e cole o id abaixo (sem isso, o site mostra "Em destaque").
+# [[kv_namespaces]]
+# binding = "BUSCAS"
+# id = "COLE_O_ID_AQUI"

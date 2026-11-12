@@ -24,15 +24,16 @@ for (const [nome, opts] of [["PC", { viewport: { width: 1366, height: 800 } }], 
   for (const q of consultas) {
     await input.fill("");
     await input.fill(q);
-    const vistos = await page.evaluate(() => [...document.querySelectorAll("#search-results a b")].map((b) => b.textContent));
+    // só os clubes (os jogadores aparecem numa seção própria, conferida em tests/mobile/jogadores.mjs)
+    const vistos = await page.evaluate(() => [...document.querySelectorAll('#search-results a[data-busca^="c|"] b')].map((b) => b.textContent));
     const exp = esperado(q);
-    if (JSON.stringify(vistos) !== JSON.stringify(exp)) falhas.push(`${nome} "${q}": viu ${JSON.stringify(vistos)}, esperava ${JSON.stringify(exp)}`);
-    const vazio = await page.locator("#search-results .empty").count();
-    if (!exp.length && !vazio) falhas.push(`${nome} "${q}": sem o aviso "Nenhum clube encontrado"`);
+    if (JSON.stringify(vistos) !== JSON.stringify(exp.slice(0, 6))) falhas.push(`${nome} "${q}": viu ${JSON.stringify(vistos)}, esperava ${JSON.stringify(exp)}`);
+    const r = await page.evaluate(() => ({ itens: document.querySelectorAll("#search-results a").length, vazio: document.querySelectorAll("#search-results .empty").length }));
+    if (!r.itens && !r.vazio) falhas.push(`${nome} "${q}": sem resultado e sem o aviso "Nenhum clube ou jogador encontrado"`);
     conferidas++;
   }
   await input.fill("f");
-  const f = await page.evaluate(() => [...document.querySelectorAll("#search-results a b")].map((b) => b.textContent));
+  const f = await page.evaluate(() => [...document.querySelectorAll('#search-results a[data-busca^="c|"] b')].map((b) => b.textContent));
   if (f.join() !== "Flamengo,Fluminense") falhas.push(`${nome}: "f" deu ${f.join(", ")}`);
   // Enter abre o primeiro resultado
   await input.press("Enter");

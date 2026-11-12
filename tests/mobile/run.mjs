@@ -21,6 +21,7 @@ const PAGES = [
   ["elenco", "#/clube/flamengo/elenco"],
   ["tabela", "#/tabela"],
   ["simulador", "#/simulador"],
+  ["jogador", "#/jogador/216098-cruzeiro"],
   ["bora", "#/bora-pro-jogo/flamengo/palmeiras"],
   ["partida", "#/partida/bragantino-x-santos-r34"],
   ["sobre", "#/sobre"],

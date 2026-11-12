@@ -450,17 +450,19 @@
       cv.classList.add("on");
       const { top, base } = HEATMAP.summary(pr);
       card.style.setProperty("--tc", display(c));
-      card.innerHTML = `<div class="hc-head"><span class="hc-n" style="background:${display(c)};color:${onColor(display(c))}">${s.p?.n ?? "–"}</span><div><b>${s.p ? s.p.name : s.role}</b><small>${crest(c, 18)} ${c.abbr} · ${s.role} na escalação</small></div></div>
+      const foto = s.p && HEATMAP.real(s.p.id)?.j.foto;
+      card.innerHTML = `<div class="hc-head">${foto ? `<span class="hc-foto" style="--tc:${display(c)}"><img src="${SEG.esc(foto.url)}" alt="" loading="lazy" referrerpolicy="no-referrer" /><i style="background:${display(c)};color:${onColor(display(c))}">${s.p?.n ?? ""}</i></span>` : `<span class="hc-n" style="background:${display(c)};color:${onColor(display(c))}">${s.p?.n ?? "–"}</span>`}<div><b>${s.p ? s.p.name : s.role}</b><small>${crest(c, 18)} ${c.abbr} · ${s.role} na escalação</small></div></div>
         <div class="hc-roles">${top}</div><div class="hc-meta">${base}</div>
         <div class="hc-scale" aria-hidden="true"><i></i><span>menos</span><span>mais tempo</span></div>
-        <div class="hc-src">Mapa de calor estimado: posições em que jogou (escalações da ESPN), pesadas pelos minutos</div>`;
+        <div class="hc-src">${pr.estimado === "lances" ? "Mapa de calor com os lances reais da temporada (cada passe, desarme, cruzamento e finalização com posição no campo; fonte: ESPN)" : "Mapa de calor estimado: posições em que jogou (escalações da ESPN), pesadas pelos minutos"}</div>`;
       // o cartão fica do lado oposto ao calor (no celular, fica em cima do campo)
       const W = pr.blobs.reduce((t, b) => t + b[4], 0) || 1, cx = pr.blobs.reduce((t, b) => t + b[0] * b[4], 0) / W;
       card.classList.toggle("right", (side === "a" ? cx : 100 - cx) < 50);
       card.hidden = false;
       requestAnimationFrame(() => card.classList.add("on"));
     };
-    if (window.HEATMAPS) draw(); else HEATMAP.load().then(draw);
+    // lances reais do clube (js/jogadores/<clube>.js); enquanto não chegam (ou sem eles), o mapa estimado
+    Promise.all([HEATMAP.carregaClube(cid), window.HEATMAPS ? null : HEATMAP.load()]).then(draw);
   }
   function hideHeat(root) {
     const field = root.querySelector(".board");

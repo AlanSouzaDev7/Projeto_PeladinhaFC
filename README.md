@@ -170,11 +170,29 @@ Na aba **Simulador** (`#/simulador`), o usuário dá o placar dos jogos que falt
 - Os palpites ficam guardados no aparelho.
 - **Próxima temporada**: os jogos vêm da mesma fonte do placar (ESPN). Quando a tabela de 2027 for divulgada e os jogos ganharem data, eles aparecem no simulador sozinhos. As páginas do ge.globo, da CazéTV e do site da ESPN não são lidas, porque os termos de uso desses sites não permitem copiar o conteúdo.
 
+## Jogadores: página, mapa de calor real, fotos e comparativos
+
+- **Página de cada jogador** (`#/jogador/<id>-<clube>`, por exemplo `#/jogador/216098-cruzeiro`, o Matheus Pereira): foto, camisa, posição, idade e clube; números da temporada por competição; por 90 minutos; e as abas **Últimos 10** (jogo a jogo: minutos, gols, assistências, finalizações, ações com bola, passes, desarmes, interceptações, dribles e cartões, mais o mapa dos 10 jogos), **Temporada** (todos os jogos, por mês, com filtro de competição), **Mapa de calor** (temporada e últimos 10, com o tanto de ações em cada terço e faixa do campo) e **Comparar** (qualquer outro jogador, números por 90 minutos e os dois mapas lado a lado).
+- **Mapa de calor com os lances reais**: cada ação do jogador com posição no campo (passe, desarme, cruzamento, drible, corte, duelo aéreo, finalização) vem do feed de lances da ESPN e vira um ponto no campo. Antes, o mapa era estimado pela posição na escalação; agora a página do jogador e o "Bora pro jogo" usam os lances (o estimado fica só para quem não tem lances). Conferido com posições conhecidas: goleiros concentram as ações perto do próprio gol, atacantes perto do gol adversário, laterais-direitos à direita e laterais-esquerdos à esquerda. Em parte dos jogos a ESPN grava as coordenadas de 0 a 1 em vez de 0 a 100: o robô detecta a escala de cada jogo.
+- **Fotos**: com licença livre, do **Wikimedia Commons**, sempre com autor e licença na página. Cada foto é achada pelo Wikidata e conferida com o elenco da ESPN pelo nome **e pelo ano de nascimento** (homônimo com outro ano não leva a foto). As fotos oficiais dos clubes têm direitos autorais e não são usadas. Hoje 246 jogadores têm foto; os outros aparecem com o número da camisa nas cores do clube.
+- **Homônimos**: a ESPN às vezes usa o mesmo número para dois jogadores de clubes diferentes (os dois Matheus Pereira, do Cruzeiro e do Corinthians). Por isso o endereço leva o clube, e cada clube mostra só os jogos do seu jogador.
+- **Opta**: o site [optaplayerstats.statsperform.com](https://optaplayerstats.statsperform.com/) não pode ser usado como fonte: os termos da Stats Perform proíbem usar o conteúdo em outro site sem autorização escrita, e o site bloqueia acesso automático. Com um contrato da API oficial do Opta, os dados entram por `fonte_opta()` em `server/jogadores.py`, no mesmo formato.
+- **Comparativo de clubes**: na aba **Comparar** de cada clube (`#/clube/<id>/comparar/<outro>`), qualquer clube da Série A: tabela do Brasileirão lado a lado, aproveitamento em casa e fora, temporada em todas as competições, últimos 5, confrontos na temporada e artilheiros.
+- **API**: `GET /api/elenco-temporada?club=<id>` (todos os jogadores do clube) e `GET /api/jogador/<id>[-<clube>]`. No site sem servidor, o robô grava `js/jogadores/<clube>.js` a cada 30 min, baixado só nas páginas de jogador, nas estatísticas do clube e no "Bora pro jogo".
+
+## Busca: jogadores, histórico e em alta
+
+- Clubes pelo começo do nome; **jogadores** pelo começo do nome ou de um sobrenome ("pereira" acha o Matheus Pereira). A lista de jogadores vem do elenco já carregado: buscar não baixa nada.
+- **Histórico**: as últimas buscas abertas aparecem ao clicar no campo, com o botão "Limpar". Fica só neste aparelho (`localStorage`, até 10).
+- **Em alta**: os clubes e jogadores mais buscados nas últimas 24 h por todo mundo (só contagens por clube/jogador, nada de quem buscou). Para não pesar com muita gente: cada aparelho conta cada item no máximo uma vez a cada 6 h, num envio pequeno e assíncrono (`sendBeacon`); a lista fica guardada 5 min. Funciona com a API (`POST /api/busca`, a única rota que aceita escrita, com corpo de até 200 bytes e limite por endereço; `GET /api/em-alta`) ou com o Worker da Cloudflare (Workers KV, binding `BUSCAS`, opcional; cada instância grava no máximo uma vez por minuto). Sem nenhum dos dois, a lista vira **"Em destaque agora"**: jogos de hoje, artilheiros e o líder.
+
 ## Calendário: API e fontes
 
 - **API** (`server/placar_api.py`): `GET /api/calendario?club=<id>[&mes=AAAA-MM]` devolve a temporada do clube (ou um mês) com competição, fase, data e hora de Brasília, adversário, mando, local, placar e pênaltis. `GET /api/jogo?event=<id da ESPN>&lg=<liga>` devolve as estatísticas rápidas de um jogo, guardadas por 1 min com bola rolando e 6 h depois do fim.
 - **Sempre atualizado**: o robô do GitHub grava a temporada de todos os clubes a cada 30 min (`js/club-form.js`) e, ao abrir o clube, o navegador busca a agenda atualizada direto na ESPN. As estatísticas vêm na hora do resumo da ESPN.
 - **Competições**: a ESPN traz Brasileirão, Copa do Brasil, Libertadores, Sul-Americana, Recopa, Supercopa, Carioca, Paulistão, Mineiro e Gauchão. Ela não cobre os estaduais do Paraná, da Bahia, de Santa Catarina e do Pará, nem a Copa do Nordeste e a Copa Verde. Esses entram pela **API-Football** quando a chave `API_FOOTBALL_KEY` estiver configurada no servidor ou nos segredos do GitHub (Settings › Secrets › Actions). Sem a chave, o calendário mostra o que a ESPN tem.
+
+**Escudos dos adversários**: a ESPN não tem o escudo de muitos times pequenos dos estaduais e copas (Pouso Alegre, Betim, Noroeste, Maricá...). No calendário e na aba Partidas, esses times ganham um escudo desenhado com as iniciais e uma cor própria, o mesmo que entra se a imagem da ESPN falhar.
 
 ## Som do gol
 
@@ -224,9 +242,9 @@ A auditoria (`tests/auditoria.py`) confere que pontos e gols do Raio-X fecham co
 
 A escala oficial (árbitro, assistentes, quarto árbitro e VAR) é publicada pela CBF, mas os termos de uso do site da CBF não permitem reutilizar os dados sem autorização. Por isso a API **monitora os veículos de comunicação**: a cada 30 min, para cada jogo dos próximos 8 dias, busca no Google Notícias as manchetes sobre a arbitragem daquele confronto (só título, fonte, data e link) publicadas depois do último jogo dos dois clubes. Quando o título traz o nome do árbitro ("Fulano apita…", "CBF escala Fulano…", "com Fulano no apito"), o nome aparece na página do jogo com quantas manchetes confirmam. Um nome só vale se estiver na **lista de árbitros** que a própria API aprende com esse tipo de manchete, para não confundir com jogador, técnico ou dirigente. Enquanto nenhum veículo publicou o nome no título, a página mostra "Ainda não noticiado" e as manchetes da arbitragem, com o link para a escala oficial na CBF.
 
-## Mapa de calor dos jogadores (estimado)
+## Mapa de calor dos jogadores
 
-Nenhum site oficial publica o mapa de calor de cada jogador do Brasileirão: os das transmissões (Premiere, SporTV, ESPN) vêm de empresas de rastreamento contratadas pelas emissoras, e sites como SofaScore e FotMob proíbem copiar os dados. Por isso o mapa do "Bora pro jogo" é **estimado com dados reais**: as escalações da ESPN dizem, em cada jogo do campeonato, a formação, o número da posição e a sigla de cada titular, e quem entrou no lugar de quem. O servidor soma os minutos de cada jogador em cada posição ([`js/heatmaps.js`](js/heatmaps.js), 721 jogadores) e o site ([`js/heatmap.js`](js/heatmap.js)) desenha a área típica de movimentação de cada função, pesada por esses minutos — quem finaliza muito ganha mais calor na área. A leitura de cada sigla depende da formação (no 4-2-3-1 da ESPN, "LM/RM" são os volantes; no 4-3-3, os meias por dentro).
+O mapa da página do jogador e do "Bora pro jogo" usa os **lances reais** com posição no campo (feed de lances da ESPN; veja "Jogadores" acima). Quem não tem lances registrados (jogador que ainda não entrou em campo, ou estaduais sem cobertura lance a lance) fica com o mapa **estimado** de antes: as posições em que atuou nas escalações, pesadas pelos minutos. O cartão do mapa diz qual dos dois está na tela. Sites como SofaScore e FotMob proíbem copiar os dados, e o Opta exige contrato: nada vem deles.
 
 ## Identidade visual
 
@@ -290,6 +308,8 @@ node tests/mobile/partidas.mjs                     # temporada de cada clube (to
 node tests/mobile/rodadas.mjs                      # próximas rodadas e jogos adiados
 node tests/mobile/calendario.mjs                   # calendário dos 20 clubes: dias e meses, placar e local, competições, estatísticas ao clicar, celular
 python -X utf8 tests/calendario_api.py             # API do calendário: estatísticas de um jogo real e jogos da API-Football (estadual, pênaltis, adiado)
+node tests/mobile/jogadores.mjs                    # jogadores: mapa de calor com orientação certa, fotos, busca, histórico, página, comparativos, 20 clubes, escudos dos estaduais
+python -X utf8 tests/jogadores_api.py              # API dos jogadores: escala das coordenadas, homônimos, transferências, fotos pelo ano de nascimento, em alta
 node tests/mobile/sem-servidor.mjs                 # site funcionando só com os arquivos (GitHub Pages)
 node tests/mobile/busca.mjs                        # busca: só clubes que começam com o que foi digitado (A a Z e começos de nome, PC e celular)
 node tests/mobile/simulador.mjs                    # simulador: só jogos que faltam, conta da tabela, botões, palpites guardados, 320 px a tablet
