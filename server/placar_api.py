@@ -687,6 +687,92 @@ def squads_atuais():
     return out
 
 
+# ---------------------------------------------------------------------------
+# Elenco no site sem servidor (js/squads.js): o robô baixa da ESPN uma vez por hora
+# (o robô roda a cada 30 min; o elenco só é baixado quando a última gravação tem mais de 55 min)
+# ---------------------------------------------------------------------------
+SQUADS_FILE = os.path.join(ROOT, "js", "squads.js")
+ELENCO_MINUTOS = 55
+ELENCO_MINIMO = 15  # lista da ESPN com menos jogadores que isso é falha da fonte: o clube fica com a lista anterior
+
+
+def _ler_squads_js():
+    try:
+        src = open(SQUADS_FILE, encoding="utf-8").read()
+        sq = json.loads(src[src.index("window.SQUADS = ") + 16:src.index("window.SQUADS_LAST")].strip().rstrip(";"))
+        last = json.loads(src[src.index("window.SQUADS_LAST = ") + 21:src.index("window.SQUADS_META")].strip().rstrip(";"))
+        meta = json.loads(src[src.index("window.SQUADS_META = ") + 21:].strip().rstrip(";"))
+        return sq, last, meta
+    except Exception:
+        return {}, {}, {}
+
+
+def update_squads_horario():
+    """Baixa o elenco da ESPN se a gravação em js/squads.js tiver mais de 55 min (no robô de 30 em 30 min: 1 vez por hora)."""
+    _, _, meta = _ler_squads_js()
+    if time.time() - float(meta.get("quando") or 0) < ELENCO_MINUTOS * 60:
+        log("elenco: gravado há menos de 1 hora, fica como está")
+        return False
+    update_squads()
+    return True
+
+
+def _compacto(sq):
+    """Um clube por bloco e um jogador por linha: legível e sem espaço sobrando (o arquivo carrega em toda página)."""
+    blocos = []
+    for cid, rows in sq.items():
+        linhas = ",".join("\n  " + json.dumps(r, ensure_ascii=False, separators=(",", ":")) for r in rows)
+        blocos.append(f"\n{json.dumps(cid)}:[{linhas}]")
+    return "{" + ",".join(blocos) + "\n}"
+
+
+def gravar_elenco():
+    """Grava js/squads.js com o elenco da ESPN + quem jogou pelo clube nos últimos 45 dias e sumiu da lista da ESPN
+    (a ESPN às vezes tira da lista quem continua jogando, como no caso dos dois Matheus Pereira)."""
+    with lock:
+        novo, last, jg = state.get("squads"), state.get("last") or {}, state.get("jogadores") or {}
+    if not novo:
+        return False
+    antigo, last_antigo, _ = _ler_squads_js()
+    limite = time.strftime("%Y-%m-%d", time.localtime(time.time() - 45 * 86400))
+    out = {}
+    for cid in CLUBS:
+        rows = [list(r) for r in novo.get(cid, [])]
+        if len(rows) < ELENCO_MINIMO and antigo.get(cid):
+            log("elenco:", cid, f"só {len(rows)} jogadores na ESPN; fica a lista anterior")
+            rows = [list(r) for r in antigo[cid]]
+        ids = {str(r[4]) for r in rows if r[4]}
+        d = (jg.get(cid) or {}).get("jogadores") or {}
+        recentes = {aid for aid, j in d.items() if any(str(x[1] or "") >= limite for x in j.get("jogos", []))}
+        for r in antigo.get(cid, []):  # quem estava no arquivo e jogou há pouco pelo clube continua, com o número de camisa
+            if r[4] and str(r[4]) not in ids and str(r[4]) in recentes:
+                rows.append(list(r)); ids.add(str(r[4]))
+        for aid in sorted(recentes - ids):  # jogou há pouco e não está em lista nenhuma
+            j = d[aid]
+            rows.append([j.get("num"), j.get("n"), j.get("pos") or "M", j.get("idade"), aid]); ids.add(aid)
+        out[cid] = rows
+    for cid in CLUBS:
+        if cid not in last and cid in last_antigo:
+            last[cid] = last_antigo[cid]
+    agora = time.time()
+    meta = {"source": "ESPN", "updated": time.strftime("%d/%m/%Y às %H:%M"), "quando": round(agora)}
+    txt = ("/* ==========================================================================\n"
+           f"   PLACAR — elencos reais da temporada {time.strftime('%Y')}\n"
+           f"   Fonte: ESPN (site.api.espn.com), atualizado em {meta['updated']} pelo robô (uma vez por hora).\n"
+           "   Linha: [número da camisa, nome, posição (G goleiro · D defensor · M meio-campo · F atacante), idade, id ESPN]\n"
+           "   Número null = ainda sem numeração no cadastro. Quem jogou pelo clube nos últimos 45 dias e sumiu da lista da ESPN continua.\n"
+           "   SQUADS_LAST: escalação titular e reservas do último jogo de cada clube, tirada da súmula da partida na ESPN.\n"
+           "   ========================================================================== */\n"
+           "window.SQUADS = " + _compacto(clean_deep(out)) + ";\n"
+           "window.SQUADS_LAST = " + json.dumps(clean_deep(last), ensure_ascii=False, separators=(",", ":")) + ";\n"
+           "window.SQUADS_META = " + json.dumps(meta, ensure_ascii=False) + ";\n")
+    tmp = SQUADS_FILE + ".tmp"
+    open(tmp, "w", encoding="utf-8", newline="\n").write(txt)
+    os.replace(tmp, SQUADS_FILE)
+    log("gravado", SQUADS_FILE, f"({sum(len(v) for v in out.values())} jogadores)")
+    return True
+
+
 def update_jogadores():
     clubes = JOG.atualizar(squads_atuais(), load_matches())
     with lock:
@@ -2140,6 +2226,11 @@ def write_snapshot():
             state.update({k: old[k] for k in ("fixtures", "round") if old.get(k)})
         except Exception as ex:
             log("base anterior ignorada", ex)
+    elenco_novo = False
+    try:
+        elenco_novo = update_squads_horario()
+    except Exception as ex:
+        log("falha em elenco", ex)
     steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores)]
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
@@ -2166,6 +2257,11 @@ def write_snapshot():
         jg = state.get("jogadores")
     if jg:
         JOG.gravar_js(jg)
+    if elenco_novo:
+        try:
+            gravar_elenco()
+        except Exception as ex:
+            log("falha ao gravar o elenco", ex)
     if positions and positions.get("players"):
         write_js("heatmaps.js", "HEATMAPS", positions, "posições de cada jogador no Brasileirão (minutos por posição), base do mapa de calor estimado. Fonte: escalações da ESPN")
 

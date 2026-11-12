@@ -27,6 +27,7 @@ O site publicado no GitHub Pages se mantém atualizado sozinho:
 |---|---|
 | Placar ao vivo, intervalo, próximas rodadas, temporada dos clubes, minuto a minuto | o navegador consulta a ESPN direto (a cada 0,8 s com bola rolando; minuto a minuto a cada 4 s) |
 | Tabela, cartões, notícias, pendurados, lesões, minutagem, histórico | o **GitHub Actions** ([`.github/workflows/dados.yml`](.github/workflows/dados.yml)) roda `server/placar_api.py --snapshot` a cada 30 min e grava `js/live-data.js`, `js/player-stats.js` e `js/club-form.js` |
+| Elenco (busca de jogadores, números de camisa, prancheta) | o mesmo robô baixa o elenco da ESPN **uma vez por hora** (quando a última gravação tem mais de 55 min) e grava `js/squads.js`; quem jogou pelo clube nos últimos 45 dias e sumiu da lista da ESPN continua, e uma lista da ESPN com menos de 15 jogadores (falha da fonte) não apaga o clube |
 
 Para atualizar na hora: aba **Actions** do repositório › **Atualizar dados** › **Run workflow**.
 
@@ -309,7 +310,7 @@ node tests/mobile/rodadas.mjs                      # próximas rodadas e jogos a
 node tests/mobile/calendario.mjs                   # calendário dos 20 clubes: dias e meses, placar e local, competições, estatísticas ao clicar, celular
 python -X utf8 tests/calendario_api.py             # API do calendário: estatísticas de um jogo real e jogos da API-Football (estadual, pênaltis, adiado)
 node tests/mobile/jogadores.mjs                    # jogadores: mapa de calor com orientação certa, fotos, busca, histórico, página, comparativos, 20 clubes, escudos dos estaduais
-python -X utf8 tests/jogadores_api.py              # API dos jogadores: escala das coordenadas, homônimos, transferências, fotos pelo ano de nascimento, em alta
+python -X utf8 tests/jogadores_api.py              # API dos jogadores: escala das coordenadas, homônimos, transferências, fotos, rosto, em alta e elenco de hora em hora
 node tests/mobile/sem-servidor.mjs                 # site funcionando só com os arquivos (GitHub Pages)
 node tests/mobile/busca.mjs                        # busca: só clubes que começam com o que foi digitado (A a Z e começos de nome, PC e celular)
 node tests/mobile/simulador.mjs                    # simulador: só jogos que faltam, conta da tabela, botões, palpites guardados, 320 px a tablet

@@ -142,5 +142,35 @@ fot = {"cruzeiro": {"1": {"url": "https://upload.wikimedia.org/x.jpg"}}}
 ok(J.rostos_fotos(fot) is fot and "rosto" not in fot["cruzeiro"]["1"], "rosto: sem a OpenCV, as fotos seguem sem recorte (nada quebra)")
 J._detectores = antes
 
+# ---------- elenco: robô baixa da ESPN uma vez por hora ----------
+import tempfile, time as _tm
+tmp = os.path.join(tempfile.mkdtemp(), "squads.js")
+P.SQUADS_FILE = tmp
+baixou = []
+P.update_squads = lambda: baixou.append(1)
+P.state["squads"] = None
+ok(P.update_squads_horario() is True and baixou, "elenco: sem arquivo gravado, baixa")
+def grava_meta(quando):
+    open(tmp, "w", encoding="utf-8").write('window.SQUADS = {"cruzeiro":[]};\nwindow.SQUADS_LAST = {};\nwindow.SQUADS_META = ' + json.dumps({"quando": quando}) + ";\n")
+grava_meta(_tm.time() - 20 * 60); baixou.clear()
+ok(P.update_squads_horario() is False and not baixou, "elenco: gravado há 20 min, não baixa (robô de 30 em 30 min = 1 vez por hora)")
+grava_meta(_tm.time() - 61 * 60); baixou.clear()
+ok(P.update_squads_horario() is True and baixou, "elenco: gravado há 61 min, baixa de novo")
+# gravação: ESPN + quem jogou há pouco e sumiu da lista; lista da ESPN quebrada não apaga o clube
+hoje = _tm.strftime("%Y-%m-%d")
+antigo = {c: [[i, f"J{i}", "M", 20, f"{c}{i}"] for i in range(20)] for c in P.CLUBS}
+antigo["cruzeiro"].append([10, "Matheus Pereira", "M", None, "216098"])
+open(tmp, "w", encoding="utf-8").write("window.SQUADS = " + json.dumps(antigo) + ";\nwindow.SQUADS_LAST = {};\nwindow.SQUADS_META = {};\n")
+espn = {c: [list(r) for r in antigo[c][:20]] for c in P.CLUBS}
+espn["flamengo"] = espn["flamengo"][:3]  # falha da fonte
+P.state.update(squads=espn, last={}, jogadores={"cruzeiro": {"jogadores": {"216098": {"n": "Matheus Pereira", "num": 10, "jogos": [["1", hoje]]},
+                                                                            "999": {"n": "Novato", "num": None, "pos": "F", "idade": 18, "jogos": [["2", hoje]]}}}})
+P.gravar_elenco()
+sq, _, meta = P._ler_squads_js()
+ok(any(r[4] == "216098" and r[0] == 10 for r in sq["cruzeiro"]), "elenco: quem jogou há pouco pelo clube e sumiu da lista da ESPN continua, com o número")
+ok(any(r[4] == "999" for r in sq["cruzeiro"]), "elenco: quem jogou há pouco e não estava em lista nenhuma entra")
+ok(len(sq["flamengo"]) == 20, "elenco: lista da ESPN com poucos jogadores (falha da fonte) não apaga o clube")
+ok(meta.get("quando") and abs(meta["quando"] - _tm.time()) < 60, "elenco: horário da gravação guardado para a regra de 1 hora")
+
 print("\nOK" if not falhas else f"\n{len(falhas)} falha(s)")
 sys.exit(1 if falhas else 0)
