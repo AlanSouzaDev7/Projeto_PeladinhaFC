@@ -96,7 +96,7 @@ MAX_BYTES = 15 * 1024 * 1024   # nenhuma resposta de fonte de dados passa disso
 def get(url, timeout=20, headers=None):
     if not str(url).startswith("https://"):
         raise ValueError("só endereços https")
-    req = urllib.request.Request(url, headers={"User-Agent": "PlacarBot/1.0", "Accept-Encoding": "gzip", **(headers or {})})
+    req = urllib.request.Request(url, headers={"User-Agent": "Placar/1.0", "Accept-Encoding": "gzip", **(headers or {})})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         if not r.geturl().startswith("https://"):
             raise ValueError("redirecionado para endereço sem https")
@@ -671,6 +671,8 @@ import competicoes as COMP  # noqa: E402
 JOG.P = sys.modules[__name__]
 COMP.P = sys.modules[__name__]
 import escudos as ESC  # noqa: E402
+import mercado as MERC  # noqa: E402
+MERC.P = sys.modules[__name__]
 import wiki_series as WIKI  # noqa: E402
 ESC.P = sys.modules[__name__]
 WIKI.P = sys.modules[__name__]
@@ -681,6 +683,21 @@ def update_competicoes():
     with lock:
         state["competicoes"] = d
     log("competições (Libertadores, Sul-Americana, Copa do Brasil, estaduais e Séries B, C e D) atualizadas")
+
+
+def update_mercado():
+    """Janela de transferências: elenco e emprestados de cada clube (todo dia) e o mercado global (cache de 7 dias por time)."""
+    with lock:
+        ult = state.get("mercado_t", 0)
+    if time.time() - ult < 20 * 3600 and state.get("mercado"):
+        return
+    cl = MERC.atualizar_clubes()
+    g = MERC.atualizar_global()
+    with lock:
+        state["mercado"] = cl
+        state["mercado_global"] = MERC.global_compacto(g)
+        state["mercado_t"] = time.time()
+    log(f"mercado: {len(cl)} clubes e {len(state['mercado_global']['jogadores'])} jogadores no mercado global")
 
 
 def squads_atuais():
@@ -2245,7 +2262,7 @@ def write_snapshot():
         elenco_novo = update_squads_horario()
     except Exception as ex:
         log("falha em elenco", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado)]
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
             fn()
@@ -2275,6 +2292,10 @@ def write_snapshot():
         cp = state.get("competicoes")
     if cp:
         COMP.gravar_js(cp)
+    with lock:
+        mc = state.get("mercado")
+    if mc:
+        MERC.gravar_js(mc, MERC._ler("mercado-global.json"))
     if elenco_novo:
         try:
             gravar_elenco()
@@ -2900,6 +2921,16 @@ class Handler(SimpleHTTPRequestHandler):
                 with lock:
                     cpd = (state.get("competicoes") or {}).get(parts[2])
                 return self.send_json(cpd) if cpd else self.send_json({"ok": False, "message": "carregando dados"}, 503)
+            if len(parts) == 3 and parts[1] == "mercado":
+                if parts[2] not in CLUBS:
+                    return self.send_json({"ok": False, "message": "clube desconhecido"}, 404)
+                with lock:
+                    md = (state.get("mercado") or {}).get(parts[2])
+                return self.send_json(md) if md else self.send_json({"ok": False, "message": "carregando dados"}, 503)
+            if parts[1:] == ["mercado-global"]:
+                with lock:
+                    mg = state.get("mercado_global")
+                return self.send_json(mg) if mg else self.send_json({"ok": False, "message": "carregando dados"}, 503)
             if parts[1:] == ["em-alta"]:
                 return self.send_json(em_alta())
             if len(parts) == 3 and parts[1] == "jogador":
@@ -3018,6 +3049,7 @@ def main():
     every(iv.get("retrospecto", 30), update_form)
     every(iv.get("jogadores_temporada", 60), update_jogadores)
     every(iv.get("competicoes", 15), update_competicoes)
+    every(iv.get("mercado", 60), update_mercado)
     threading.Thread(target=live_loop, daemon=True).start()
     log(f"PLACAR no ar: http://{'localhost' if HOST in ('127.0.0.1', 'localhost') else HOST}:{port}")
     srv = ThreadingHTTPServer((HOST, port), Handler)

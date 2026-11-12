@@ -171,6 +171,17 @@ Na aba **Simulador** (`#/simulador`), o usuário dá o placar dos jogos que falt
 - Os palpites ficam guardados no aparelho.
 - **Próxima temporada**: os jogos vêm da mesma fonte do placar (ESPN). Quando a tabela de 2027 for divulgada e os jogos ganharem data, eles aparecem no simulador sozinhos. As páginas do ge.globo, da CazéTV e do site da ESPN não são lidas, porque os termos de uso desses sites não permitem copiar o conteúdo.
 
+## Janela de transferências
+
+Aba **Janela** na página de cada clube da Série A (`#/clube/<id>/mercado`): o torcedor vira diretor de futebol e monta o elenco da próxima temporada, com cara de painel de aeroporto nas cores do clube (o placar da janela em letras de virar: saídas, chegadas, tamanho do elenco, caixa e folha).
+- **Dois modos**: *real* (orçamento estimado em 8% do valor do elenco, vendas e empréstimos entram no caixa, folha até 10% acima da atual, elenco de pelo menos 22 e aviso de mais de 9 estrangeiros entre os titulares) e *manager* (sem orçamento e sem limite: qualquer jogador do mundo).
+- **1. Elenco**: cada jogador com idade, nacionalidade, minutos na temporada, valor e salário; decisão em um toque: fica, empresta ou libera. Quem chegou emprestado: fica emprestado, compra ou devolve. Quem está emprestado a outro clube (com destino e data de volta): segue fora, reintegra ou vende. Atalhos: liberar quem tem 34+, emprestar a base sem minutos.
+- **2. Reforços**: o mercado global (elencos de 17 ligas: Brasileirão A e B, Premier League, LaLiga, Serie A, Bundesliga, Ligue 1, Portugal, Holanda, Turquia, Arábia Saudita, MLS, México, Argentina, Colômbia, Uruguai e Chile), em tabela com busca por nome, posição, liga, nacionalidade, idade, valor máximo e ordenação. Cada contratação vira um cartão de embarque (de onde vem, para onde vai).
+- **3. Escalação**: seis formações, escalação automática e troca de titular com um toque na posição e outro no jogador (quem joga na posição aparece primeiro).
+- **4. Compartilhar**: cartaz 1080 × 1350 (formato de story) com o escudo, a escalação no campo, chegadas e saídas, caixa e folha; download em **PNG** ou **PDF** (montado no próprio navegador, sem biblioteca externa) e um **link** que abre o mesmo elenco para os amigos (decisões, reforços, formação e titulares num código curto no endereço), com o botão de compartilhar do celular quando existe.
+- **Dados** (`server/mercado.py`, API `/api/mercado/<clube>` e `/api/mercado-global`, arquivos `js/mercado/`): elenco, idade, posição, nacionalidade e lesões pela **ESPN**; última transferência de cada jogador pela ESPN; emprestados (para fora e para dentro) pelo artigo do clube na **Wikipédia em inglês** (CC BY-SA 4.0); minutos pela base do próprio PLACAR. Clubes atualizados todo dia; o mercado global, uma vez por semana por time.
+- **Valores e salários são estimativas do PLACAR**, sempre mostradas como tal: o **Transfermarkt não é usado**, porque os termos de uso dele (cláusula 11.1) proíbem acessar ou copiar o conteúdo com robôs, e não existe fonte pública e permitida de salários. A fórmula considera idade (auge entre 24 e 27 anos), posição, liga, força do time na tabela e minutos jogados (nos clubes da Série A). Com um provedor licenciado (API-Football, Sportmonks, Opta), basta trocar `valor_estimado()` pelo valor dele.
+
 ## Identidade visual 2026
 
 O site segue o modelo dos apps de placar: lista densa de jogos, três colunas no computador, barra de navegação embaixo no celular, tema claro e escuro.
@@ -335,6 +346,8 @@ node tests/mobile/partidas.mjs                     # temporada de cada clube (to
 node tests/mobile/rodadas.mjs                      # próximas rodadas e jogos adiados
 node tests/mobile/calendario.mjs                   # calendário dos 20 clubes: dias e meses, placar e local, competições, estatísticas ao clicar, celular
 python -X utf8 tests/calendario_api.py             # API do calendário: estatísticas de um jogo real e jogos da API-Football (estadual, pênaltis, adiado)
+node tests/mobile/janela.mjs                       # janela de transferências: dados, modos real e manager, elenco, reforços, escalação, cartaz PNG/PDF, link, celular
+python -X utf8 tests/mercado_api.py                # API do mercado: valor e salário estimados, emprestados da Wikipédia, rotas
 node tests/mobile/competicoes.mjs                  # competições: dados (gols, chave, artilharia), 8 abas de cada uma, tema, abertura, simulador, Bora pro jogo, celular
 python -X utf8 tests/competicoes_api.py            # API das competições: fases, pontos corridos x mata-mata, ida e volta e pênaltis, campeão, rota
 node tests/mobile/jogadores.mjs                    # jogadores: mapa de calor com orientação certa, fotos, busca, histórico, página, comparativos, 20 clubes, escudos dos estaduais
