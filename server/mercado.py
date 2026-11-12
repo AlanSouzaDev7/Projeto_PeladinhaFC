@@ -25,6 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 P = None  # módulo placar_api
 FE = None  # server/fontes_elenco.py (ligado pelo placar_api)
 FIN = None  # server/financas.py
+VERSAO = 2  # sobe quando o formato do elenco muda (o robô relê o cache antigo)
 
 SB = "https://site.api.espn.com/apis/site/v2/sports/soccer"
 CORE = "https://sports.core.api.espn.com/v2/sports/soccer"
@@ -438,7 +439,7 @@ def elenco_clube(cid, ultimas=None, emp_cache=None):
             if ov:
                 reg["temporada"] = ov
         fora.append(reg)
-    return {"clube": cid, "updated": time.strftime("%d/%m/%Y às %H:%M"), "elenco": elenco, "emprestados": fora,
+    return {"v": VERSAO, "clube": cid, "updated": time.strftime("%d/%m/%Y às %H:%M"), "elenco": elenco, "emprestados": fora,
             "eurBrl": EUR_BRL, "fonteEmprestimos": emp.get("fonte")}, ultimas
 
 

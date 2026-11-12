@@ -703,7 +703,9 @@ def update_mercado():
     """Janela de transferências: elenco e emprestados de cada clube (todo dia) e o mercado global (cache de 7 dias por time)."""
     with lock:
         ult = state.get("mercado_t", 0)
-    if time.time() - ult < 20 * 3600 and state.get("mercado"):
+    mc = state.get("mercado") or {}
+    # cache feito por uma versão anterior do código (sem o elenco conferido): relê já
+    if time.time() - ult < 20 * 3600 and mc and all((d or {}).get("v", 1) >= MERC.VERSAO for d in mc.values()):
         return
     cl = MERC.atualizar_clubes()
     g = MERC.atualizar_global()
