@@ -149,7 +149,7 @@ def atualizar(clube_jogadores, max_buscas=60, fotos=True):
     buscas = 0
     agora = time.time()
     for cid, jogs in clube_jogadores.items():
-        nomes_clube = (P.HEADLINE_NAMES.get(cid) or [cid])[:1]
+        nomes_clube = (P.HEADLINE_NAMES.get(cid) or [cid])[:2]  # "Atlético-MG" e "Atlético Mineiro"
         for item in jogs:
             aid, nome, extra = item[0], item[1], list(item[2:])
             r = tsdb.get(aid)

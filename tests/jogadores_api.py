@@ -114,7 +114,7 @@ os.environ.pop("FLICKR_API_KEY", None)
 P.get = flickr_get
 ok(J.licencas_flickr() == {} and not chamadas, "Flickr sem a chave: nenhuma consulta")
 os.environ["FLICKR_API_KEY"] = "chave-de-teste"
-os.environ["FLICKR_COM_NC"] = "1"  # com as não comerciais (uso não comercial); o padrão as tira (abaixo)
+# padrão (uso pessoal do dono): com as não comerciais; MODO_VENDA=1 as tira (abaixo)
 lic = J.licencas_flickr()
 ok(set(lic) == {"1", "2", "4", "5", "7", "9", "10"}, f"licenças aceitas: Creative Commons com atribuição, CC0 e domínio público; fora: todos os direitos reservados e sem derivações ({sorted(lic)})")
 fl = J.fotos_flickr("cruzeiro", [[19, "Kaio Jorge", "F", 24, "555"]], lic)
@@ -124,8 +124,9 @@ ok(f5.get("autor") == "Fotógrafo do Clube" and f5.get("licenca") == "CC BY-NC" 
    f"crédito completo: autor, licença, Flickr e link da foto ({f5.get('licenca')}, {f5.get('pagina')})")
 busca = [u for u in chamadas if "photos.search" in u][0]
 ok(f"min_taken_date={ANO}-01-01" in busca and "license=" in busca and "%220%22" not in busca, "a busca já pede só fotos da temporada e só as licenças aceitas")
-os.environ.pop("FLICKR_COM_NC", None)
-ok(set(J.licencas_flickr()) == {"4", "5", "7", "9", "10"}, "padrão (produto comercial): sem as não comerciais")
+os.environ["MODO_VENDA"] = "1"
+ok(set(J.licencas_flickr()) == {"4", "5", "7", "9", "10"}, "MODO_VENDA=1 (antes de vender): sem as não comerciais")
+os.environ.pop("MODO_VENDA", None)
 os.environ.pop("FLICKR_API_KEY", None)
 
 # ---------- rosto centrado (OpenCV) ----------

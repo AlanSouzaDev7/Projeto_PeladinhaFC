@@ -49,7 +49,7 @@
     })());
   }
   const carregaGlobal = () => (prom.global = prom.global || carregaScript("js/mercado/global.js", () => window.MERCADO_GLOBAL).then(() => window.MERCADO_GLOBAL || null));
-  const carregaPosicoes = () => (prom.pos = prom.pos || carregaScript("js/heatmaps.js", () => window.HEATMAPS));
+  const carregaPosicoes = () => (prom.pos = prom.pos || Promise.all([carregaScript("js/heatmaps.js", () => window.HEATMAPS), carregaScript("js/escalacoes.js", () => window.ESCALACOES)]));
 
   /* ---------- números ---------- */
   const eur = (v) => (v == null ? "—" : `${v < 0 ? "−" : ""}€ ${Math.abs(v) >= 1e6 ? `${(Math.abs(v) / 1e6).toFixed(Math.abs(v) >= 1e8 ? 0 : 1).replace(".", ",")} mi` : `${Math.round(Math.abs(v) / 1e3)} mil`}`);
@@ -68,7 +68,7 @@
   const ler = (cid) => { try { return JSON.parse(localStorage.getItem(chave(cid)) || "null"); } catch { return null; } };
   const novo = () => ({ modo: null, dec: {}, chegadas: [], form: "4-2-3-1", esc: {}, pos: {}, caixa: null });
   function estado(cid) { const e = { ...novo(), ...(ler(cid) || {}) }; e.dec = e.dec || {}; e.chegadas = e.chegadas || []; e.esc = e.esc || {}; e.pos = e.pos || {}; if (!FORMACOES[e.form]) e.form = "4-2-3-1"; return e; }
-  function grava(cid, e) { try { localStorage.setItem(chave(cid), JSON.stringify(e)); } catch { /* sem armazenamento: vale só nesta visita */ } }
+  function grava(cid, e) { try { const { _ultimaAplicada, _tit, ...g } = e; localStorage.setItem(chave(cid), JSON.stringify(g)); } catch { /* sem armazenamento: vale só nesta visita */ } }
 
   const OPC = {
     elenco: [["fica", "Fica"], ["emprestar", "Empresta"], ["liberar", "Sai"]],
@@ -191,16 +191,21 @@
     const i0 = ETAPAS.findIndex(([k]) => k === etapa);
     return `<ol class="jt-passos" style="--p:${i0 / (ETAPAS.length - 1)}">${ETAPAS.map(([k, l], i) => `<li class="${k === etapa ? "on" : i < i0 ? "feito" : ""}"><a href="#/clube/${cid}/mercado/${k}"${k === etapa ? ' aria-current="step"' : ""}><b>${i + 1}</b><span>${l}</span></a></li>`).join("")}</ol>`;
   }
-  function escolhaModo(cid) {
-    const c = byId[cid];
-    return `<div class="jt-escolha"><h2>Como você quer montar o ${esc(c.name)}?</h2><p>Decida quem fica, quem sai e quem chega, escale o time e mande para os amigos montarem o deles.</p>
+  function escolhaModo(cid, e = {}) {
+    const c = byId[cid], ja = Object.keys(e.dec || {}).length || (e.chegadas || []).length;
+    return `<div class="jt-escolha"><h2>Como você quer montar o ${esc(c.name)}?</h2><p>${ja ? `Suas decisões continuam guardadas (${(e.chegadas || []).length} ${(e.chegadas || []).length === 1 ? "reforço" : "reforços"}, ${Object.keys(e.dec || {}).length} ${Object.keys(e.dec || {}).length === 1 ? "decisão" : "decisões"}). Escolha o modo para continuar.` : "Decida quem fica, quem sai e quem chega, escale o time e mande para os amigos montarem o deles."}</p>
       <div class="jt-escolha-g">
-        <button type="button" class="jt-cartao-modo" data-jt-modo="real"><b>Modo real</b><span>Com o caixa e a folha do clube: folha até 10% acima da atual, elenco entre 22 e o limite, até 9 estrangeiros entre os titulares. Para pensar como diretor de futebol.</span><em>Jogar no modo real</em></button>
-        <button type="button" class="jt-cartao-modo mg" data-jt-modo="manager"><b>Modo manager</b><span>Sem limite de contratações e com o caixa que você quiser: qualquer jogador do mundo, do jeito que você sonhar.</span><em>Jogar no modo manager</em></button>
+        <button type="button" class="jt-cartao-modo ${e.modo === "real" ? "atual" : ""}" data-jt-modo="real"><b>Modo real</b><span>Com o caixa e a folha do clube: folha até 10% acima da atual, elenco entre 22 e o limite, até 9 estrangeiros entre os titulares. Para pensar como diretor de futebol.</span><em>Jogar no modo real</em></button>
+        <button type="button" class="jt-cartao-modo mg ${e.modo === "manager" ? "atual" : ""}" data-jt-modo="manager"><b>Modo manager</b><span>Sem limite de contratações e com o caixa que você quiser: qualquer jogador do mundo, do jeito que você sonhar.</span><em>Jogar no modo manager</em></button>
       </div></div>`;
   }
 
   /* ---------- 1) elenco ---------- */
+  // ficha técnica: jogador do clube, ou emprestado a um clube da Série A (ficha no clube de destino)
+  function ficha(j, cid) {
+    if (j.fora) { const dest = j.lgClube === "bra.1" && j.espn ? Object.values(byId).find((c) => c.name && j.clubeEspn && (j.clubeEspn.includes(c.name) || c.name.includes(j.clubeEspn))) : null; return dest ? `#/jogador/${j.espn}-${dest.id}` : null; }
+    return /^\d+$/.test(j.id) && j.min ? `#/jogador/${j.id}-${cid}` : null;
+  }
   function cartaoJogador(cid, j, e, D) {
     const c = byId[cid], tipo = tipoDe(j), d = decisao(e, j), opc = OPC[tipo];
     const f = j.funcao || CP.origem(j), maxMin = Math.max(1, (D.jogosTime || 40) * 90);
@@ -222,7 +227,7 @@
     }
     return `<li class="jt-card d-${d}" data-jt-j="${esc(j.id)}">
       ${avatar(j, c)}
-      <div class="jt-card-txt"><b class="jt-nome">${esc(j.nome)}</b><span class="jt-sub">${sub}</span><span class="jt-uso">${uso}</span>${status ? `<span class="jt-sits">${status}</span>` : ""}</div>
+      <div class="jt-card-txt">${ficha(j, cid) ? `<a class="jt-nome" href="${ficha(j, cid)}" title="Ficha técnica: mapa de calor, jogos e notas">${esc(j.nome)}</a>` : `<b class="jt-nome">${esc(j.nome)}</b>`}<span class="jt-sub">${sub}</span><span class="jt-uso">${uso}</span>${status ? `<span class="jt-sits">${status}</span>` : ""}</div>
       <div class="jt-card-dir"><span class="jt-valor">${eur(j.valor)}<small>${brl(j.salario)}/mês</small></span>
         <div class="jt-seg" role="radiogroup" aria-label="Decisão sobre ${esc(j.nome)}">${opc.map(([v, l]) => `<button type="button" role="radio" aria-checked="${v === d}" class="${v === d ? "on" : ""} o-${v}" data-jt-dec="${v}">${l}</button>`).join("")}</div></div></li>`;
   }
@@ -329,7 +334,37 @@
     "3-4-3": [[50, 92], [25, 74], [50, 77], [75, 74], [10, 50], [38, 54], [62, 54], [90, 50], [18, 24], [50, 18], [82, 24]],
     "5-3-2": [[50, 92], [10, 66], [30, 75], [50, 78], [70, 75], [90, 66], [28, 50], [50, 54], [72, 50], [38, 22], [62, 22]],
     "4-1-4-1": [[50, 92], [15, 72], [38, 76], [62, 76], [85, 72], [50, 60], [16, 46], [38, 48], [62, 48], [84, 46], [50, 20]],
+    "3-4-2-1": [[50, 92], [25, 74], [50, 77], [75, 74], [10, 50], [38, 54], [62, 54], [90, 50], [30, 34], [70, 34], [50, 16]],
   };
+  /* escalação que o técnico mandou a campo no último jogo (súmula da ESPN, js/squads.js), posta na formação da janela:
+     cada titular vai para a posição da janela com a mesma sigla (VOL, PE...) ou, sem ela, para a mais perto */
+  // escalação anunciada para o jogo de hoje (ESPN, ou perfis oficiais no X e no Instagram): vale mais que a do último jogo
+  function anunciada(cid) {
+    const a = (window.ESCALACOES?.clubes || {})[cid], f = a?.fontes?.[0];
+    if (!a?.confirmada || !f || (a.t && Date.now() / 1000 - a.t > 6 * 3600)) return null;
+    return { formation: f.formacao, xi: f.xi, comp: a.jogo.comp, vs: a.jogo.adversario, home: a.jogo.casa, date: a.jogo.data, anunciada: a, fonte: f };
+  }
+  function ultimaEscalacao(cid, k) {
+    const an = anunciada(cid);
+    if (an && !(an.formation && window.LINEUP?.F?.[an.formation] && FORMACOES[an.formation])) {
+      // sem formação (publicação do clube): mantém a formação do último jogo e põe cada um na posição de origem
+      const ids = new Set(k.elencoFinal.map((j) => j.id)), xi = an.xi.map(([, id]) => id).filter((id) => ids.has(id));
+      if (xi.length >= 9) { const form = (window.SQUADS_LAST || {})[cid]?.formation; const f = FORMACOES[form] ? form : "4-2-3-1"; return { form: f, esc: autoEscala({ elencoFinal: k.elencoFinal.filter((j) => xi.includes(j.id)) }, f), jogo: an }; }
+    }
+    const L = an && an.formation ? an : (window.SQUADS_LAST || {})[cid], LF = window.LINEUP?.F?.[L?.formation];
+    if (!L || !LF || !FORMACOES[L.formation]) return null;
+    const ids = new Set(k.elencoFinal.map((j) => j.id)), porLugar = Object.fromEntries((L.xi || []).map(([n, id]) => [n, String(id)]));
+    const slots = FORMACOES[L.formation].map((p, i) => ({ i, cod: CP.zona(p[0], p[1]), x: p[0], y: p[1] })), usados = new Set(), esc2 = {};
+    LF.forEach(([papel, , l, dd, da, lugar]) => {
+      const id = porLugar[lugar];
+      if (!id || !ids.has(id)) return;
+      const y = 96 - ((dd + da) / 2) * 1.14;
+      const livre = slots.filter((s) => !usados.has(s.i));
+      const s = livre.find((s) => s.cod === papel) || livre.filter((s) => CP.SETOR[s.cod] === CP.SETOR[papel]).sort((a, b) => Math.hypot(a.x - l, a.y - y) - Math.hypot(b.x - l, b.y - y))[0] || livre.sort((a, b) => Math.hypot(a.x - l, a.y - y) - Math.hypot(b.x - l, b.y - y))[0];
+      if (s) { usados.add(s.i); esc2[s.i] = id; }
+    });
+    return Object.keys(esc2).length >= 7 ? { form: L.formation, esc: esc2, jogo: L } : null;
+  }
   const ptSlot = (e, i) => e.pos[i] || FORMACOES[e.form][i];
   const uso = (j) => (j.situacao?.st === "titular" ? 1e6 : 0) + (j.tit || 0) * 100 + (j.min || 0) / 10 + (j.reforco ? j.valor / 1e5 : 0);
   function autoEscala(k, form) {
@@ -343,14 +378,25 @@
     }
     return esc2;
   }
-  function escalacaoValida(e, k) {
+  function escalacaoValida(e, k, cid) {
+    if (!e.escManual && cid && !e._ultimaAplicada) {
+      const u = ultimaEscalacao(cid, k);
+      if (u) {
+        e.form = u.form; e.pos = {}; e.esc = u.esc; e._ultimaAplicada = true;
+        const usados = new Set(Object.values(u.esc)), falta = autoEscala({ elencoFinal: k.elencoFinal.filter((j) => !usados.has(j.id)) }, e.form);
+        FORMACOES[e.form].forEach((_, i) => { if (!e.esc[i] && falta[i]) e.esc[i] = falta[i]; });
+      }
+    }
     const ids = new Set(k.elencoFinal.map((j) => j.id)), esc2 = {};
     for (const [s, id] of Object.entries(e.esc)) if (ids.has(id) && +s < FORMACOES[e.form].length) esc2[s] = id;
     return Object.keys(esc2).length >= 11 ? esc2 : { ...autoEscala(k, e.form), ...esc2 };
   }
   function etapaEscalacao(cid, D, e, k) {
-    const c = byId[cid], esc2 = escalacaoValida(e, k), porId = new Map(k.elencoFinal.map((j) => [j.id, j]));
+    const c = byId[cid], esc2 = escalacaoValida(e, k, cid), porId = new Map(k.elencoFinal.map((j) => [j.id, j]));
     const titulares = new Set(Object.values(esc2)), sel = estadoSlot[cid];
+    const L = (window.SQUADS_LAST || {})[cid], an = anunciada(cid);
+    const origem = e.escManual ? "" : an ? `<p class="jt-ultima anunciada">Escalação anunciada para ${an.home ? `${esc(c.abbr)} x ${esc(an.vs)}` : `${esc(an.vs)} x ${esc(c.abbr)}`} (${esc(an.comp)}, ${data(an.date)}) · fonte: ${an.fonte.link ? `<a href="${esc(window.SEG.url(an.fonte.link))}" target="_blank" rel="noopener noreferrer">${esc(an.fonte.fonte)}</a>` : esc(an.fonte.fonte)}${an.anunciada.fontes.length > 1 ? ` e mais ${an.anunciada.fontes.length - 1}` : ""}</p>`
+      : L && ultimaEscalacao(cid, k) ? `<p class="jt-ultima">Escalação do último jogo: ${esc(L.comp)}, ${L.home ? `${esc(c.abbr)} ${esc(L.score.replace("-", " x "))} ${esc(L.vs)}` : `${esc(L.vs)} ${esc(L.score.split("-").reverse().join(" x "))} ${esc(c.abbr)}`} · ${data(L.date)} · ${esc(L.formation)}</p>` : "";
     const fora = k.elencoFinal.filter((j) => !titulares.has(j.id)).sort((a, b) => uso(b) - uso(a));
     const banco = fora.slice(0, 12), demais = fora.slice(12);
     const estr = [...titulares].map((id) => porId.get(id)).filter((j) => j && !brasileiro(j)).length;
@@ -360,7 +406,8 @@
     return `<div class="jt-esc">
       <div class="jt-bloco jt-campo-bloco">
         <div class="jt-bloco-h"><h3>Escalação</h3><span>arraste para qualquer ponto do campo; solte um reserva em cima de um titular para trocar</span></div>
-        <div class="jt-forms" role="group" aria-label="Formação">${Object.keys(FORMACOES).map((f) => `<button type="button" class="chip ${f === e.form ? "on" : ""}" data-jt-form="${f}">${f}</button>`).join("")}<button type="button" class="chip" data-jt-auto-esc>Escalar sozinho</button>${Object.keys(e.pos).length ? `<button type="button" class="chip" data-jt-alinha>Alinhar na formação</button>` : ""}</div>
+        <div class="jt-forms" role="group" aria-label="Formação">${Object.keys(FORMACOES).map((f) => `<button type="button" class="chip ${f === e.form ? "on" : ""}" data-jt-form="${f}">${f}</button>`).join("")}${L ? `<button type="button" class="chip" data-jt-ultima>Último jogo</button>` : ""}<button type="button" class="chip" data-jt-auto-esc>Escalar sozinho</button>${Object.keys(e.pos).length ? `<button type="button" class="chip" data-jt-alinha>Alinhar na formação</button>` : ""}</div>
+        ${origem}
         <div class="jt-campo" data-jt-campo style="--c1:${c.colors[0]};--c2:${c.colors[1]}">
           <div class="jt-palco"><div class="jt-grama"><svg viewBox="0 0 68 100" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.75)" stroke-width=".45"><rect x="2" y="2" width="64" height="96"/><line x1="2" y1="50" x2="66" y2="50"/><circle cx="34" cy="50" r="9.15"/><circle cx="34" cy="50" r=".6" fill="#fff"/><rect x="13.85" y="2" width="40.3" height="16.5"/><rect x="24.85" y="2" width="18.3" height="5.5"/><rect x="13.85" y="81.5" width="40.3" height="16.5"/><rect x="24.85" y="92.5" width="18.3" height="5.5"/><path d="M26.7 18.5a9.15 9.15 0 0 0 14.6 0M26.7 81.5a9.15 9.15 0 0 1 14.6 0"/></g><rect x="30.3" y="0.4" width="7.4" height="1.6" fill="rgba(255,255,255,.9)"/><rect x="30.3" y="98" width="7.4" height="1.6" fill="rgba(255,255,255,.9)"/></svg></div></div>
           <div class="jt-fichas">${FORMACOES[e.form].map((_, i) => {
@@ -432,7 +479,7 @@
     rr(x, 210, 206, e.modo === "manager" ? 210 : 160, 40, 20); x.fill();
     x.fillStyle = "#0b1220"; x.font = F(800, 24, "s"); x.fillText(e.modo === "manager" ? "MODO MANAGER" : "MODO REAL", 228, 234);
     // campo 3D com a escalação
-    const esc2 = escalacaoValida(e, k), porId = new Map(k.elencoFinal.map((j) => [j.id, j]));
+    const esc2 = escalacaoValida(e, k, cid), porId = new Map(k.elencoFinal.map((j) => [j.id, j]));
     const pw = 720, ph = 760, gm = CP.geometria(pw, ph), ox = (W - pw) / 2, oy = 300;
     const P = (u, v) => { const p = gm.tela(u, v); return { x: ox + p.x, y: oy + (p.y - gm.topo), s: p.s }; };
     const quad = (u0, v0, u1, v1) => { const a = P(u0, v0), b = P(u1, v0), cc = P(u1, v1), d = P(u0, v1); x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.lineTo(cc.x, cc.y); x.lineTo(d.x, d.y); x.closePath(); };
@@ -504,7 +551,7 @@
     const todos = [...D.elenco, ...D.emprestados.map((x) => ({ ...x, fora: true }))];
     const dec = todos.map((j) => LETRA[decisao(e, j)]).join("");
     const ch = e.chegadas.map((id) => (+id).toString(36)).join("-");
-    const esc2 = escalacaoValida(e, k), ordem = k.elencoFinal.map((j) => j.id);
+    const esc2 = escalacaoValida(e, k, D.clube), ordem = k.elencoFinal.map((j) => j.id);
     const tit = FORMACOES[e.form].map((_, i) => { const n = ordem.indexOf(esc2[i]); return n < 0 ? "zz" : n.toString(36).padStart(2, "0"); }).join("");
     return `v${e.modo === "manager" ? "m" : "r"}${Object.keys(FORMACOES).indexOf(e.form)}${dec}-${tit}${ch ? `-${ch}` : ""}`;
   }
@@ -529,8 +576,9 @@
   /* ---------- página ---------- */
   function page(cid, etapa) {
     const ver = /^v[mr]/.test(etapa || "");
+    const entrada = !ver && !etapa; // entrou pela aba Janela: pergunta o modo, sempre
     if (!ver && !ETAPAS.some(([k]) => k === etapa)) etapa = "elenco";
-    return `<div class="jt" data-jt="${cid}" data-jt-etapa="${esc(etapa)}"><div class="jt-bloco"><div class="empty" style="padding:40px">Abrindo a janela de transferências…</div></div></div>`;
+    return `<div class="jt" data-jt="${cid}" data-jt-etapa="${esc(etapa)}"${entrada ? " data-jt-entrada" : ""}><div class="jt-bloco"><div class="empty" style="padding:40px">Abrindo a janela de transferências…</div></div></div>`;
   }
   async function mount(root) {
     const el = root.querySelector("[data-jt]");
@@ -542,12 +590,12 @@
     if (!el.isConnected) return;
     if (!D) { el.innerHTML = `<div class="jt-bloco"><div class="empty" style="padding:40px">Os dados de mercado deste clube ainda não foram gerados.</div></div>`; return; }
     let e = ver ? decodifica(D, etapa) || estado(cid) : estado(cid);
-    let G = null, confirmaReset = 0;
+    let G = null, confirmaReset = 0, perguntar = el.hasAttribute("data-jt-entrada");
     const precisaGlobal = () => e.chegadas.length || etapa === "reforcos";
     const pinta = () => {
       const k = contas(cid, D, e, G);
       if (ver && e._tit) aplicaTitulares(e, k);
-      if (!e.modo && !ver) { el.innerHTML = painel(cid, D, { modo: "real", pos: {} }, k, G) + escolhaModo(cid); animaNumeros(el); return; }
+      if ((!e.modo || perguntar) && !ver) { el.innerHTML = painel(cid, D, { ...e, modo: e.modo || "real" }, k, G) + escolhaModo(cid, e); animaNumeros(el); return; }
       const corpo = ver || etapa === "compartilhar" ? etapaCompartilhar(cid, D, e, k, ver) : etapa === "reforcos" ? etapaReforcos(cid, D, e, k, G) : etapa === "escalacao" ? etapaEscalacao(cid, D, e, k) : etapaElenco(cid, D, e);
       const foco = document.activeElement?.dataset?.jtF;
       const mexeu = Object.keys(e.dec).length || e.chegadas.length || Object.keys(e.pos).length || e.caixa != null;
@@ -576,8 +624,8 @@
       if (!t || !el.contains(t)) return;
       if (t.closest(".jt-ficha") && arraste.moveu) return; // fim de um arraste, não é toque
       const d = t.dataset, k = () => contas(cid, D, e, G);
-      if (d.jtModo) { e.modo = d.jtModo; salva(); return pinta(); }
-      if ("jtTrocar" in d) { e.modo = null; salva(); return pinta(); }
+      if (d.jtModo) { if (d.jtModo !== e.modo && e.modo) e.caixa = null; e.modo = d.jtModo; perguntar = false; salva(); return pinta(); }
+      if ("jtTrocar" in d) { perguntar = true; return pinta(); }
       if ("jtFotosOff" in d) { try { localStorage.removeItem(FOTO_KEY); } catch { /* */ } return pinta(); }
       if ("jtReset" in d) {
         if (!confirmaReset) { confirmaReset = setTimeout(() => { confirmaReset = 0; if (el.isConnected) pinta(); }, 4000); return pinta(); }
@@ -604,14 +652,15 @@
         return;
       }
       if (d.jtDel) { e.chegadas = e.chegadas.filter((x) => x !== d.jtDel); salva(); return pinta(); }
-      if (d.jtForm) { e.form = d.jtForm; e.pos = {}; e.esc = autoEscala(k(), e.form); estadoSlot[cid] = null; salva(); return pinta(); }
-      if ("jtAutoEsc" in d) { e.esc = autoEscala(k(), e.form); e.pos = {}; estadoSlot[cid] = null; salva(); return pinta(); }
+      if (d.jtForm) { e.form = d.jtForm; e.pos = {}; e.esc = autoEscala(k(), e.form); e.escManual = true; estadoSlot[cid] = null; salva(); return pinta(); }
+      if ("jtAutoEsc" in d) { e.esc = autoEscala(k(), e.form); e.pos = {}; e.escManual = true; estadoSlot[cid] = null; salva(); return pinta(); }
+      if ("jtUltima" in d) { e.escManual = false; e._ultimaAplicada = false; estadoSlot[cid] = null; salva(); return pinta(); }
       if ("jtAlinha" in d) { e.pos = {}; salva(); return pinta(); }
       if (d.jtSlot != null) { estadoSlot[cid] = estadoSlot[cid] === +d.jtSlot ? null : +d.jtSlot; return pinta(); }
       if (d.jtPoe) {
         const s = estadoSlot[cid];
         if (s == null) { const msg = el.querySelector(".jt-campo"); msg?.classList.add("pisca"); setTimeout(() => msg?.classList.remove("pisca"), 700); return; }
-        e.esc = { ...escalacaoValida(e, k()), [s]: d.jtPoe }; salva(); pinta();
+        e.esc = { ...escalacaoValida(e, k(), cid), [s]: d.jtPoe }; e.escManual = true; salva(); pinta();
         return destaca(`[data-jt-slot="${s}"]`);
       }
       const msg = el.querySelector("[data-jt-msg]"), cv = el.querySelector("[data-jt-cartaz]");
@@ -628,7 +677,7 @@
         } catch { if (msg) msg.textContent = url; }
         return;
       }
-      if ("jtUsar" in d) { const k2 = contas(cid, D, e, G); const novoE = { ...e, esc: escalacaoValida(e, k2) }; delete novoE._tit; grava(cid, novoE); location.hash = `#/clube/${cid}/mercado/elenco`; }
+      if ("jtUsar" in d) { const k2 = contas(cid, D, e, G); const novoE = { ...e, esc: escalacaoValida(e, k2, cid), escManual: true }; delete novoE._tit; grava(cid, novoE); location.hash = `#/clube/${cid}/mercado/elenco`; }
     });
 
     /* arrastar no campo 3D: titular para qualquer ponto (posição livre) ou em cima de outro titular (troca);
@@ -638,7 +687,7 @@
       if (ev.button > 0 || ver) return;
       const ficha = ev.target.closest(".jt-ficha"), res = ev.target.closest(".jt-res");
       if (!ficha && !res) return;
-      const k = contas(cid, D, e, G), esc2 = escalacaoValida(e, k);
+      const k = contas(cid, D, e, G), esc2 = escalacaoValida(e, k, cid);
       const id = ficha ? esc2[+ficha.dataset.jtSlot] : res.dataset.jtPoe;
       if (!id) return;
       arraste.on = { ficha, res, id, x: ev.clientX, y: ev.clientY, pid: ev.pointerId, ativo: false, toque: ev.pointerType === "touch", t: Date.now() };
@@ -682,7 +731,7 @@
       $$(".jt-ficha.alvo", el).forEach((f) => f.classList.remove("alvo"));
       setTimeout(() => { arraste.moveu = false; }, 0);
       if (!ev || ev.type === "pointercancel") return;
-      const k = contas(cid, D, e, G), esc2 = escalacaoValida(e, k), campo = el.querySelector("[data-jt-campo]");
+      const k = contas(cid, D, e, G), esc2 = escalacaoValida(e, k, cid), campo = el.querySelector("[data-jt-campo]");
       const alvo = alvoFicha(ev.clientX, ev.clientY, a.ficha);
       let slotMexido = null;
       if (alvo) {
@@ -704,7 +753,7 @@
         if (melhor == null) return;
         esc2[melhor] = a.id; slotMexido = melhor;
       }
-      e.esc = esc2; estadoSlot[cid] = slotMexido; salva(); pinta();
+      e.esc = esc2; e.escManual = true; estadoSlot[cid] = slotMexido; salva(); pinta();
       destaca(`[data-jt-slot="${slotMexido}"]`);
     };
     el.addEventListener("pointerup", solta);
@@ -743,5 +792,5 @@
     el.addEventListener("error", (ev) => { const im = ev.target; if (im.tagName === "IMG" && im.parentNode?.classList.contains("foto")) { im.parentNode.classList.remove("foto"); im.remove(); } }, true);
   }
 
-  window.MERCADO_UI = { page, mount, carrega, codifica, decodifica, pdfDeJpeg, valor: eur, FORMACOES };
+  window.MERCADO_UI = { page, mount, carrega, codifica, decodifica, pdfDeJpeg, valor: eur, FORMACOES, fotosLigadas };
 })();

@@ -1136,6 +1136,7 @@
           <div class="card"><div class="card-h">Informações</div><div class="card-b" style="display:grid;gap:10px">
             ${info.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--text-2)">${k}</span><b style="text-align:right"${k === "Situação" ? " data-situacao" : ""}>${v}</b></div>`).join("")}
           </div>${arb ? arbitragemHTML(arb) : ""}${m.status === "pending" ? `<div class="source">O resultado deste jogo ainda não foi lançado no site.</div>` : ""}</div>
+          ${m.espn && m.status !== "pending" ? `<div class="card notas-partida" data-notas-partida="${m.espn}" data-h="${m.home}" data-a="${m.away}"><div class="card-h">Notas da partida <small>${m.status === "progress" ? "ao vivo, atualizadas durante o jogo" : "critérios do Placar.TV"}</small></div><div class="empty" style="padding:18px">Calculando as notas…</div></div>` : ""}
           ${m.espn || (LIVE.proxy() && m.status !== "ft") ? `<div class="card mam" data-mam="${m.espn || ""}" data-h="${m.home}" data-a="${m.away}" data-kick="${m.kick || ""}"><div class="card-h">Minuto a minuto <small class="mam-src">lances: ${LIVE.proxy() ? "API-Football" : "ESPN"} · narração: Placar.TV</small></div>
             <div class="mam-top"></div><ul class="mam-list"><li class="mam-empty">Carregando a narração…</li></ul></div>` : ""}
           <div class="card"><div class="card-h">Comparação no campeonato <small>${REAL.source} · ${REAL.updated}</small></div><div class="card-b">${compareHTML(m)}</div></div>
@@ -1854,6 +1855,7 @@
     escudosEntram(view);
     if (state.route.page === "simulador") simBind(view);
     if (state.route.page === "jogador") JOGADOR.mount(view);
+    JOGADOR.montaNotas?.(view); // notas da partida (página do jogo)
     COPA.mount(view); // página de competição; nas outras, só centraliza a barra de competições
     MERCADO_UI.mount(view); // janela de transferências (aba "Janela" do clube)
     // fotos dos jogadores (licença livre, Wikimedia Commons) nas listas de estatísticas; o nome abre a página do jogador

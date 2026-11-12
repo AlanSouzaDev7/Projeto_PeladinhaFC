@@ -90,5 +90,26 @@ s2 = P.FE.situacao([False, None, None, False, None], False, [], "Fulano")
 ok(s1["st"] == "titular" and s1["conf"] == 3 and s2["st"] == "reserva", f"situação: titular com 3 fontes ({s1['fontes']}); reserva ({s2['st']})")
 ok(P.FE.mesmo_nome("Fabrício Bruno", "Fabrício Bruno Soares de Faria") and not P.FE.mesmo_nome("Wesley", "Wesley Ribeiro Silva") is None and not P.FE.mesmo_nome("Lucas Silva", "Lucas Romero"), "nomes: completo bate, outro jogador não")
 
+# notas por jogo (critérios do Placar.TV)
+J = P.JOG
+base = {"min": 90, "g": 0, "a": 0, "ch": 0, "alvo": 0, "dribles": 0, "cruz": 0, "toques": 0, "desarmes": 0, "intercept": 0, "cortes": 0, "aereos": 0, "defesas": 0, "perdas": 0, "ca": 0, "cv": 0, "gf": 1, "ga": 1}
+ok(J.nota_jogo(base, "M") == 6.0 and J.nota_jogo({**base, "min": 8}, "M") is None, "nota: 6,0 sem nada de mais; menos de 10 min, sem nota")
+hat = J.nota_jogo({**base, "g": 3, "alvo": 4, "ch": 5, "gf": 3, "ga": 0}, "A")
+ok(9.0 <= hat <= 10.0, f"três gols numa vitória: nota alta ({hat})")
+gol, frango = J.nota_jogo({**base, "ga": 0, "gf": 1, "defesas": 6}, "G"), J.nota_jogo({**base, "ga": 4, "gf": 0, "perdas": 2}, "G")
+ok(gol > 7.5 and frango < 5.5, f"goleiro: sem sofrer gol com 6 defesas ({gol}) x 4 gols sofridos na derrota ({frango})")
+ok(J.nota_jogo({**base, "cv": 1, "gf": 0}, "D") < 5.0 and J.nota_jogo({**base, "g": 9, "alvo": 9, "ch": 9}, "A") == 10.0, "vermelho derruba; nota nunca passa de 10")
+jg = {"1": {"jogos": [["e1", 90, 7.5, 2, 0]]}, "2": {"jogos": [["e1", 30, 6.5, 2, 0]]}, "3": {"jogos": [["e1", 5, None, 2, 0]]}}
+nt = J.notas_time(jg, ["eid", "min", "nota", "gf", "ga"])
+ok(nt["e1"][0] == round(7.25 + 0.3, 1) and nt["e1"][1] == "1", f"nota do time: média pelos minutos + vitória, melhor em campo ({nt})")
+# escalação na publicação do clube
+el = [("1", ["cassio"]), ("2", ["fagner"]), ("3", ["fabricio bruno", "bruno"]), ("4", ["jonathan jesus", "jesus"]), ("5", ["kaio jorge", "jorge"])]
+ok(P.ESCL.xi_do_texto("ESCALADO! 🦊 Cássio; Fagner, Fabrício Bruno e Jonathan Jesus. Vamos!", el) == ["1", "2", "3", "4"], "publicação do clube: jogadores achados na ordem do texto")
+ok(P.ESCL.xi_do_texto("Kaio Jorge está fora", el) == ["5"], "sobrenome não conta duas vezes (Jorge = Kaio Jorge)")
+f = Fake("/api/escalacoes/nao-existe"); P.Handler.do_GET(f)
+ok(f.r[0] == 404, "rota: escalações de clube desconhecido = 404")
+f = Fake("/api/escalacoes/cruzeiro"); P.Handler.do_GET(f)
+ok(f.r[0] == 200 and "confirmada" in f.r[1], "rota: /api/escalacoes/cruzeiro")
+
 print("\nOK" if not falhas else f"\n{len(falhas)} falha(s)")
 sys.exit(1 if falhas else 0)

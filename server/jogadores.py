@@ -36,7 +36,66 @@ ACOES = {"Pass": "passes", "Cross": "cruz", "Tackle": "desarmes", "Attempted tac
          "Ball touch": "toques1", "Blocked Pass": "passesBloq", "Shot Off Target": "fin", "Shot On Target": "fin", "Shot Blocked": "fin",
          "Goal": "fin", "Foul": "faltas", "Throw In": "laterais", "Corner Awarded": "escanteios", "Free Kick": "faltasCob", "Offside": "impedimentos"}
 CAMPOS_JOGO = ["eid", "date", "comp", "opp", "home", "gf", "ga", "tit", "min", "g", "a", "ch", "alvo", "ca", "cv",
-               "toques", "passes", "cruz", "desarmes", "intercept", "cortes", "dribles", "aereos", "defesas", "perdas"]
+               "toques", "passes", "cruz", "desarmes", "intercept", "cortes", "dribles", "aereos", "defesas", "perdas", "nota", "vivo"]
+
+
+# ---------------------------------------------------------------------------
+# Nota do jogador e do time em cada jogo (critérios do Placar.TV, no espírito das notas dos apps de placar)
+#   Como o Sofascore e o FlashScore (que usa as notas do Opta), a nota vai de 3 a 10, parte de 6,0 e sobe ou desce
+#   com o que o jogador fez em campo, pesando a posição. Os pesos exatos deles não são públicos; os nossos estão aqui:
+#   - ataque: gol +1,0 (defensor e goleiro +1,2), assistência +0,6, finalização no alvo +0,15, fora +0,03,
+#     drible +0,08, cruzamento +0,03, participação com bola (ações) até +0,4;
+#   - defesa: desarme +0,12, interceptação +0,10, corte +0,06, duelo aéreo +0,05, defesa do goleiro +0,25;
+#     jogo sem sofrer gol (60+ min): goleiro +0,6, defensor +0,4; cada gol sofrido em campo: goleiro −0,35, defensor −0,15;
+#   - erros e disciplina: perda de bola −0,05, amarelo −0,3, vermelho −1,5;
+#   - resultado: vitória +0,2, derrota −0,2;
+#   - menos de 10 minutos em campo: sem nota (como nos apps).
+#   Nota do time: média das notas de quem jogou, pesada pelos minutos, + 0,3 na vitória e − 0,3 na derrota.
+# ---------------------------------------------------------------------------
+def nota_jogo(j, pos):
+    mins = j.get("min") or 0
+    if mins < 10:
+        return None
+    pos = (pos or "M")[:1]
+    n = 6.0
+    n += (j.get("g") or 0) * (1.2 if pos in "GD" else 1.0) + (j.get("a") or 0) * 0.6
+    alvo, ch = j.get("alvo") or 0, j.get("ch") or 0
+    n += max(0, alvo - (j.get("g") or 0)) * 0.15 + max(0, ch - alvo) * 0.03
+    n += (j.get("dribles") or 0) * 0.08 + (j.get("cruz") or 0) * 0.03 + min(0.4, (j.get("toques") or 0) * 0.006)
+    n += (j.get("desarmes") or 0) * 0.12 + (j.get("intercept") or 0) * 0.10 + (j.get("cortes") or 0) * 0.06 + (j.get("aereos") or 0) * 0.05
+    n += (j.get("defesas") or 0) * (0.25 if pos == "G" else 0)
+    ga = j.get("ga")
+    if ga is not None and pos in "GD":
+        sofridos = ga * min(1.0, mins / 90)
+        if ga == 0 and mins >= 60:
+            n += 0.6 if pos == "G" else 0.4
+        n -= sofridos * (0.35 if pos == "G" else 0.15)
+    n -= (j.get("perdas") or 0) * 0.05 + (j.get("ca") or 0) * 0.3 + (j.get("cv") or 0) * 1.5
+    gf = j.get("gf")
+    if gf is not None and ga is not None:
+        n += 0.2 if gf > ga else -0.2 if gf < ga else 0
+    return round(max(3.0, min(10.0, n)), 1)
+
+
+def notas_time(clube_jogadores, campos):
+    """{eid: [nota do time, id do melhor em campo, nota dele]} a partir das notas dos jogadores do clube."""
+    i_e, i_n, i_m, i_gf, i_ga = (campos.index(k) for k in ("eid", "nota", "min", "gf", "ga"))
+    por = {}
+    for aid, r in clube_jogadores.items():
+        for row in r.get("jogos") or []:
+            if row[i_n] is None:
+                continue
+            por.setdefault(row[i_e], []).append((aid, row[i_n], row[i_m], row[i_gf], row[i_ga]))
+    out = {}
+    for eid, xs in por.items():
+        peso = sum(m for _, _, m, _, _ in xs) or 1
+        media = sum(n * m for _, n, m, _, _ in xs) / peso
+        gf, ga = xs[0][3], xs[0][4]
+        if gf is not None and ga is not None:
+            media += 0.3 if gf > ga else -0.3 if gf < ga else 0
+        melhor = max(xs, key=lambda x: (x[1], x[2]))
+        out[eid] = [round(max(3.0, min(10.0, media)), 1), melhor[0], melhor[1]]
+    return out
 SOMA = ["j", "tit", "min", "g", "a", "ch", "alvo", "pen", "ca", "cv", "toques", "passes", "cruz", "desarmes", "intercept", "cortes", "dribles", "aereos", "defesas", "perdas", "jl"]
 NIVEIS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"  # 62 níveis por célula
 
@@ -106,14 +165,14 @@ def lances(eid, lg):
 # Jogos da temporada de cada clube (todas as competições)
 # ---------------------------------------------------------------------------
 def jogos_temporada():
-    """[(eid, lg, comp)] dos jogos encerrados dos 20 clubes, em todas as competições (do calendário do site)."""
+    """[(eid, lg, comp, ao_vivo)] dos jogos encerrados e em andamento dos 20 clubes, em todas as competições."""
     with P.lock:
         fm = (P.state.get("form") or {}).get("clubs") or {}
     vistos = {}
     for c in fm.values():
         for e in c.get("all", []):
-            if e.get("state") == "post" and e.get("lg") and re.fullmatch(r"\d{4,12}", str(e.get("id"))):
-                vistos[e["id"]] = (e["id"], e["lg"], e["comp"])
+            if e.get("state") in ("post", "in") and e.get("lg") and re.fullmatch(r"\d{4,12}", str(e.get("id"))):
+                vistos[e["id"]] = (e["id"], e["lg"], e["comp"], e.get("state") == "in")
     return sorted(vistos.values())
 
 
@@ -121,14 +180,17 @@ def atualizar_partidas(matches):
     """Baixa o que falta: súmulas das outras competições e lances de todos os jogos encerrados (em paralelo)."""
     outras, lan = _ler("partidas-outras.json"), _ler("lances.json")
     jogos = jogos_temporada()
-    falta_sum = [(e, lg, c) for e, lg, c in jogos if lg != "bra.1" and (e not in outras or outras[e].get("v", 0) < P.MATCH_VERSION)]
-    falta_lan = [(e, lg, c) for e, lg, c in jogos if e not in lan or lan[e].get("v", 0) < LANCES_VERSAO]
+    vivos = {e for e, _, _, v in jogos if v}
+    # ao vivo: relê a cada rodada; terminou depois de lido ao vivo: relê uma vez, com os números finais
+    precisa = lambda d, e, versao: e in vivos or e not in d or d[e].get("v", 0) < versao or d[e].get("vivo")
+    falta_sum = [(e, lg, c) for e, lg, c, _ in jogos if (lg != "bra.1" or e in vivos or (e in outras and outras[e].get("vivo"))) and precisa(outras, e, P.MATCH_VERSION)]
+    falta_lan = [(e, lg, c) for e, lg, c, _ in jogos if precisa(lan, e, LANCES_VERSAO)]
 
     def sumula(item):
         e, lg, comp = item
         try:
             m = P.match_extract(e, lg)
-            m.update(lg=lg, comp=comp)
+            m.update(lg=lg, comp=comp, vivo=e in vivos)
             return e, m
         except Exception as ex:
             P.log("súmula (outras)", e, ex)
@@ -137,7 +199,7 @@ def atualizar_partidas(matches):
     def jogo_lances(item):
         e, lg, _ = item
         try:
-            return e, {"v": LANCES_VERSAO, "p": lances(e, lg)}
+            return e, {"v": LANCES_VERSAO, "p": lances(e, lg), "vivo": e in vivos}
         except Exception as ex:
             P.log("lances", e, ex)
             return e, None
@@ -155,8 +217,8 @@ def atualizar_partidas(matches):
                     _gravar("lances.json", lan)  # não perde o trabalho se o robô parar no meio
     _gravar("partidas-outras.json", outras)
     _gravar("lances.json", lan)
-    P.log(f"jogadores: {len(falta_sum)} súmulas e {len(falta_lan)} jogos de lances baixados")
-    comp_de = {e: c for e, _, c in jogos}
+    P.log(f"jogadores: {len(falta_sum)} súmulas e {len(falta_lan)} jogos de lances baixados ({len(vivos)} ao vivo)")
+    comp_de = {e: c for e, _, c, _ in jogos}
     todas = {e: dict(m, comp="Brasileirão", lg="bra.1") for e, m in matches.items()}
     for e, m in outras.items():
         todas[e] = dict(m, comp=m.get("comp") or comp_de.get(e, "Outros"))
@@ -299,15 +361,15 @@ def _flickr(metodo, **params):
 def licencas_flickr():
     """{id: nome} das licenças que permitem usar a foto com crédito: Creative Commons com atribuição (inclusive não comercial;
     o site é um portfólio sem fins comerciais), CC0 e domínio público. Ficam de fora "todos os direitos reservados" e as
-    "sem derivações" (o site recorta a foto num círculo). As "não comerciais" (NC) também ficam de fora: o PLACAR. é um
-    produto para apresentar a empresas; FLICKR_COM_NC=1 as aceita (uso estritamente não comercial)."""
+    "sem derivações" (o site recorta a foto num círculo). As "não comerciais" (NC) entram enquanto o site é de uso
+    pessoal do dono; MODO_VENDA=1 (antes de vender ou apresentar o produto) ou FLICKR_SEM_NC=1 as tira."""
     d = _flickr("flickr.photos.licenses.getInfo")
     ok = {}
     for l in (d or {}).get("licenses", {}).get("license", []):
         nome = l.get("name") or ""
         if re.search(r"NoDerivs|No Derivative|NoDerivatives|All Rights Reserved", nome, re.I):
             continue
-        if os.environ.get("FLICKR_COM_NC") != "1" and re.search(r"NonCommercial", nome, re.I):
+        if (os.environ.get("MODO_VENDA") == "1" or os.environ.get("FLICKR_SEM_NC") == "1") and re.search(r"NonCommercial", nome, re.I):
             continue
         if re.search(r"Attribution|Public Domain|No known copyright|CC0", nome, re.I):
             ok[str(l["id"])] = nome
@@ -530,7 +592,7 @@ def montar(squads, todas, lan, fotos):
                         "g": g, "a": a, "ch": ch, "alvo": alvo, "pen": pen, "ca": ca, "cv": cv, "toques": c.get("toques", 0),
                         "passes": c.get("passes", 0), "cruz": c.get("cruz", 0), "desarmes": c.get("desarmes", 0), "intercept": c.get("intercept", 0),
                         "cortes": c.get("cortes", 0), "dribles": c.get("dribles", 0), "aereos": c.get("aereos", 0), "defesas": c.get("defesas", 0),
-                        "perdas": c.get("perdas", 0), "_g": L["g"], "_l": 1 if L["g"] else 0, "_cid": cid, "_nome": nome}
+                        "perdas": c.get("perdas", 0), "vivo": 1 if m.get("vivo") else 0, "_g": L["g"], "_l": 1 if L["g"] else 0, "_cid": cid, "_nome": nome}
                 por_jogador.setdefault(str(aid), []).append(jogo)
     # a ESPN às vezes usa o mesmo número para dois jogadores de clubes diferentes (homônimos) ou tira do elenco
     # quem ainda joga: cada clube leva quem está no elenco e quem jogou por ele na temporada
@@ -553,6 +615,7 @@ def montar(squads, todas, lan, fotos):
             outros = sorted((j for j in por_jogador.get(str(aid), []) if j["_cid"] != cid), key=lambda j: j["date"] or "")
             comps, grade, grade10 = {}, {}, {}
             for j in lista:
+                j["nota"] = nota_jogo(j, pos)
                 t = comps.setdefault(j["comp"], {k: 0 for k in SOMA})
                 t["j"] += 1
                 t["jl"] += j["_l"]
@@ -578,7 +641,8 @@ def montar(squads, todas, lan, fotos):
                 f = fotos[cid][str(aid)]
                 r["foto"] = dict(f, url=str(f.get("url") or "").split("?")[0], fonte=f.get("fonte") or "Wikimedia Commons")  # sem os parâmetros de rastreamento do Commons
             jog[str(aid)] = r
-        clubes[cid] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "club": cid, "grade": [GX, GY], "campos": CAMPOS_JOGO,
+        clubes[cid] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "club": cid, "grade": [GX, GY], "campos": CAMPOS_JOGO, "notasTime": notas_time(jog, CAMPOS_JOGO),
+                       "criteriosNota": "Placar.TV: parte de 6,0, de 3 a 10; gols, assistências, finalizações, dribles, desarmes, interceptações, cortes, duelos aéreos, defesas, jogo sem sofrer gol, gols sofridos, perdas de bola, cartões e resultado; sem nota com menos de 10 min",
                        "fontes": {"lances": "ESPN (lances com coordenadas)", "sumulas": "ESPN", "fotos": "Flickr (licença livre, temporada atual) e Wikimedia Commons"}, "jogadores": jog}
     return clubes
 

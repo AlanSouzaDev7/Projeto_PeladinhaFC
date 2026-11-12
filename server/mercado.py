@@ -453,7 +453,7 @@ def enriquecer(cid, d):
         noticias = FE.noticias_escalacao(cid) if FE and os.environ.get("PLACAR_OFFLINE") != "1" else []
     except Exception:
         noticias = []
-    fotos_ok = os.environ.get("FOTOS_PRIVADAS", "1") != "0"
+    fotos_ok = (os.environ.get("FOTOS_PRIVADAS", "1") != "0" and os.environ.get("MODO_VENDA") != "1")
     jogos_time = max([x["jogos"] for x in js.values()] + [1])
     for j in d["elenco"]:
         x = js.get(j["id"]) or {}
@@ -536,7 +536,7 @@ def atualizar_clubes(clubes=None):
     if FE:
         try:
             FE.atualizar({cid: [(j["id"], j["nome"]) for j in d["elenco"]] + [(e["id"], e["nome"], e.get("clube"), e.get("clubeEspn")) for e in d["emprestados"]] for cid, d in out.items()},
-                         fotos=os.environ.get("FOTOS_PRIVADAS", "1") != "0")
+                         fotos=(os.environ.get("FOTOS_PRIVADAS", "1") != "0" and os.environ.get("MODO_VENDA") != "1"))
         except Exception as ex:
             P.log("mercado: fontes do elenco", ex)
     if FIN:

@@ -157,6 +157,20 @@ console.log("fluxo no PC (modo real)");
   const zerado = await page.evaluate(() => JSON.parse(localStorage.getItem("placar:janela-cruzeiro")));
   const p3 = await painel(page);
   if (Object.keys(zerado.dec).length || zerado.chegadas.length || zerado.modo !== "real" || p3["Elenco"] !== cz.elenco.length) erro(`desfazer tudo: ${JSON.stringify(zerado).slice(0, 120)}`); else ok(`desfazer tudo: decisões e reforços desfeitos, elenco real de ${p3["Elenco"]}`);
+  // entrar pela aba Janela pergunta o modo de novo, mesmo já tendo escolhido (e marca o atual)
+  await page.goto(`${BASE}/?estatico#/clube/cruzeiro/mercado`);
+  const perg = await ateQue(page, () => !!document.querySelector("[data-jt-modo]"));
+  const atual = await page.evaluate(() => document.querySelector(".jt-cartao-modo.atual")?.dataset.jtModo);
+  if (!perg || atual !== "real") erro(`ao entrar na janela: pergunta=${perg}, modo atual=${atual}`); else ok("entrar na Janela sempre pergunta o modo (o atual vem marcado)");
+  await page.click('[data-jt-modo="manager"]');
+  await ateQue(page, () => !!document.querySelector(".jt-modo.mg"));
+  ok("trocar para o manager pela pergunta de entrada");
+  // escalação começa pela do último jogo do técnico
+  await page.goto(`${BASE}/?estatico#/clube/cruzeiro/mercado/escalacao`);
+  await ateQue(page, () => document.querySelectorAll(".jt-ficha").length === 11);
+  const fonte = await page.evaluate(() => document.querySelector(".jt-ultima")?.textContent || "");
+  const ultimo = await page.evaluate(() => { const L = window.SQUADS_LAST.cruzeiro; const ids = new Set(L.xi.map(([, id]) => String(id))); const nos = [...document.querySelectorAll(".jt-ficha")].map((f) => f.getAttribute("aria-label")); return { L: L.formation, n: ids.size, form: document.querySelector(".jt-forms .chip.on")?.textContent }; });
+  if (!/último jogo|anunciada/.test(fonte) || ultimo.form !== ultimo.L) erro(`escalação inicial: "${fonte}", formação ${ultimo.form} (último jogo: ${ultimo.L})`); else ok(`escalação inicial = a do técnico no último jogo (${ultimo.L}): ${fonte.slice(0, 80)}`);
   await page.evaluate((m) => localStorage.setItem("placar:janela-cruzeiro", m), meu);
   if (erros.length) erro(`erros de JavaScript: ${[...new Set(erros)].join(" | ")}`);
   await ctx.close();

@@ -674,7 +674,8 @@ import escudos as ESC  # noqa: E402
 import mercado as MERC  # noqa: E402
 import fontes_elenco as FE  # noqa: E402
 import financas as FIN  # noqa: E402
-MERC.P = FE.P = FIN.P = sys.modules[__name__]
+import escalacoes as ESCL  # noqa: E402
+MERC.P = FE.P = FIN.P = ESCL.P = sys.modules[__name__]
 MERC.FE, MERC.FIN = FE, FIN
 import wiki_series as WIKI  # noqa: E402
 ESC.P = sys.modules[__name__]
@@ -696,7 +697,18 @@ def update_fontes_elenco():
     if not mc:
         return
     FE.atualizar({cid: [(j["id"], j["nome"]) for j in d["elenco"]] + [(e["id"], e["nome"], e.get("clube"), e.get("clubeEspn")) for e in d["emprestados"]]
-                  for cid, d in mc.items()}, max_buscas=int(os.environ.get("TSDB_POR_RODADA", "30")), fotos=os.environ.get("FOTOS_PRIVADAS", "1") != "0")
+                  for cid, d in mc.items()}, max_buscas=int(os.environ.get("TSDB_POR_RODADA", "30")), fotos=(os.environ.get("FOTOS_PRIVADAS", "1") != "0" and os.environ.get("MODO_VENDA") != "1"))
+
+
+def update_escalacoes():
+    """Escalação anunciada do próximo jogo (ESPN; X e Instagram oficiais com as chaves): a cada rodada, e a cada 5 min no
+    servidor ao vivo (só consulta quem tem jogo em até 3 h ou rolando)."""
+    d = ESCL.atualizar()
+    with lock:
+        state["escalacoes"] = d
+    n = sum(1 for x in d.values() if x.get("confirmada"))
+    if n:
+        log(f"escalações anunciadas: {n} clubes")
 
 
 def update_mercado():
@@ -830,6 +842,14 @@ def update_jogadores():
     with lock:
         state["jogadores"] = clubes
     log("jogadores (temporada, lances e fotos) atualizados")
+
+
+def update_jogadores_ao_vivo():
+    """Com algum jogo dos 20 clubes em andamento: estatísticas, mapas de calor e notas refeitos (a cada 5 min no servidor;
+    a cada rodada de 30 min no robô do GitHub). Quando o jogo acaba, a próxima rodada relê tudo com os números finais."""
+    if not any(v for *_, v in JOG.jogos_temporada()):
+        return
+    update_jogadores()
 
 
 # ---------------------------------------------------------------------------
@@ -2333,7 +2353,7 @@ def write_snapshot():
         elenco_novo = update_squads_horario()
     except Exception as ex:
         log("falha em elenco", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado), ("fontes do elenco", update_fontes_elenco)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado), ("fontes do elenco", update_fontes_elenco), ("escalações anunciadas", update_escalacoes)]
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
             fn()
@@ -2365,8 +2385,11 @@ def write_snapshot():
         COMP.gravar_js(cp)
     with lock:
         mc = state.get("mercado")
+        escl = state.get("escalacoes")
     if mc:
         MERC.gravar_js(mc, MERC._ler("mercado-global.json"))
+    if escl is not None:
+        ESCL.gravar_js(escl)
     if elenco_novo:
         try:
             gravar_elenco()
@@ -2998,6 +3021,12 @@ class Handler(SimpleHTTPRequestHandler):
                 with lock:
                     md = (state.get("mercado") or {}).get(parts[2])
                 return self.send_json(md) if md else self.send_json({"ok": False, "message": "carregando dados"}, 503)
+            if len(parts) == 3 and parts[1] == "escalacoes":
+                if parts[2] not in CLUBS:
+                    return self.send_json({"ok": False, "message": "clube desconhecido"}, 404)
+                with lock:
+                    ed = (state.get("escalacoes") or {}).get(parts[2])
+                return self.send_json(ed or {"confirmada": False, "fontes": [], "message": "sem jogo nas próximas 3 h"})
             if parts[1:] == ["mercado-global"]:
                 with lock:
                     mg = state.get("mercado_global")
@@ -3119,8 +3148,10 @@ def main():
     every(iv.get("departamento_medico", 60), update_dm)
     every(iv.get("retrospecto", 30), update_form)
     every(iv.get("jogadores_temporada", 60), update_jogadores)
+    every(iv.get("jogadores_ao_vivo", 5), update_jogadores_ao_vivo)
     every(iv.get("competicoes", 15), update_competicoes)
     every(iv.get("mercado", 60), update_mercado)
+    every(iv.get("escalacoes", 5), update_escalacoes)
     threading.Thread(target=live_loop, daemon=True).start()
     log(f"PLACAR no ar: http://{'localhost' if HOST in ('127.0.0.1', 'localhost') else HOST}:{port}")
     srv = ThreadingHTTPServer((HOST, port), Handler)

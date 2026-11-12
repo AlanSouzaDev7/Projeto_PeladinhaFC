@@ -68,11 +68,13 @@
   function load(cid) {
     try {
       const s = JSON.parse(localStorage.getItem(KEY(cid)));
-      if (s && F[s.f] && s.xi.length === 11) return s;
+      // a edição vale até o próximo jogo: saiu escalação nova do técnico, ela volta a ser o ponto de partida
+      if (s && F[s.f] && s.xi.length === 11 && (!s.base || s.base === baseAtual(cid))) return s;
     } catch { /* sem armazenamento */ }
     return initial(cid);
   }
-  function save(cid, s) { try { localStorage.setItem(KEY(cid), JSON.stringify(s)); } catch { /* sem armazenamento */ } }
+  const baseAtual = (cid) => { const L = LAST[cid]; return L ? `${L.date}|${L.vs}` : ""; };
+  function save(cid, s) { try { localStorage.setItem(KEY(cid), JSON.stringify({ ...s, base: baseAtual(cid) })); } catch { /* sem armazenamento */ } }
   function reset(cid) { try { localStorage.removeItem(KEY(cid)); } catch { /* sem armazenamento */ } }
 
   /* trocar de formação mantendo os mesmos 11, encaixados pelo setor */
@@ -105,7 +107,7 @@
     const just = (a, i) => (ui.last && ui.last.some((x) => x.area === a && x.i === i) ? "just" : "");
     const list = ps.filter((p) => ui.filter === "all" || p.pos === ui.filter);
     const L = LAST[cid];
-    const fromMatch = L && JSON.stringify(s) === JSON.stringify(fromLastMatch(cid));
+    const fromMatch = L && !s.pos && JSON.stringify({ f: s.f, xi: s.xi, bench: s.bench }) === JSON.stringify(fromLastMatch(cid));
     const html = `<div class="lineup ${first ? "first" : ""}" data-lineup="${cid}">
       <div class="lu-bar">
         <div class="chips">${FORMS.map((f) => `<button class="chip ${f === s.f ? "on" : ""}" data-lu-form="${f}">${f}</button>`).join("")}</div>
@@ -538,5 +540,5 @@
     }
   }
 
-  window.LINEUP = { builder, pageBora, mount, load, players, FORMS, last: (cid) => LAST[cid] };
+  window.LINEUP = { builder, pageBora, mount, load, players, FORMS, F, last: (cid) => LAST[cid] };
 })();

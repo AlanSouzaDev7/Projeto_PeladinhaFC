@@ -138,7 +138,7 @@
         <div class="card"><div class="card-h">Temporada por competição <small>${D.updated ? `atualizado em ${esc(D.updated)}` : ""}</small></div>${tabela}</div>
         <div class="card"><div class="card-h">Por 90 minutos <small>todas as competições</small></div><ul class="jg-p90">${min ? por90 : `<li class="empty">Sem minutos em campo.</li>`}</ul></div>
         <div class="card"><div class="card-h">Últimos jogos <small><a href="#/jogador/${esc(p.key)}/ultimos" style="color:var(--ink)">ver os 10 ›</a></small></div>
-          <ul class="jg-ult">${ult.map((x) => `<li><span class="jg-d">${dm(x.date)}</span><span class="jg-o">${oppHTML(x.opp)}</span><span class="jg-s ${res(x)}">${x.gf ?? "–"}–${x.ga ?? "–"}</span><span class="jg-m">${x.min}'</span><span class="jg-ga">${x.g ? `⚽${x.g > 1 ? `×${x.g}` : ""}` : ""}${x.a ? ` 🅰${x.a > 1 ? `×${x.a}` : ""}` : ""}</span></li>`).join("") || `<li class="empty">Sem jogos.</li>`}</ul></div>
+          <ul class="jg-ult">${ult.map((x) => `<li><span class="jg-d">${dm(x.date)}</span><span class="jg-o">${oppHTML(x.opp)}</span><span class="jg-s ${res(x)}">${x.gf ?? "–"}–${x.ga ?? "–"}</span><span class="jg-m">${x.min}'</span>${notaHTML(x.nota, x.vivo)}<span class="jg-ga">${x.g ? `⚽${x.g > 1 ? `×${x.g}` : ""}` : ""}${x.a ? ` 🅰${x.a > 1 ? `×${x.a}` : ""}` : ""}</span></li>`).join("") || `<li class="empty">Sem jogos.</li>`}</ul></div>
       </div>
       <div>
         <div class="card"><div class="card-h">Mapa de calor <small>${j.lances ? `${j.lances.toLocaleString("pt-BR")} ações na temporada` : "sem lances registrados"}</small></div>
@@ -148,10 +148,14 @@
   }
 
   function linhaJogo(x, cols) {
-    return `<tr><td>${dm(x.date)}</td><td class="hide-sm">${esc(x.comp)}</td><td class="club"><span class="jg-o">${x.home ? "" : "@ "}${oppHTML(x.opp, 20)}</span></td><td><span class="jg-s ${res(x)}">${x.gf ?? "–"}–${x.ga ?? "–"}</span></td>${cols.map(([k, hide]) => `<td${hide ? ' class="hide-sm"' : ""}>${k === "min" ? `${x.min}'${x.tit ? "" : "<small> (entrou)</small>"}` : (x[k] ?? 0)}</td>`).join("")}</tr>`;
+    return `<tr><td>${dm(x.date)}</td><td class="hide-sm">${esc(x.comp)}</td><td class="club"><span class="jg-o">${x.home ? "" : "@ "}${oppHTML(x.opp, 20)}</span></td><td><span class="jg-s ${res(x)}">${x.gf ?? "–"}–${x.ga ?? "–"}</span></td>${cols.map(([k, hide]) => `<td${hide ? ' class="hide-sm"' : ""}>${k === "nota" ? notaHTML(x.nota, x.vivo) : k === "min" ? `${x.min}'${x.tit ? "" : "<small> (entrou)</small>"}` : (x[k] ?? 0)}</td>`).join("")}</tr>`;
   }
-  const COLS = [["min"], ["g"], ["a"], ["ch", 1], ["alvo", 1], ["toques", 1], ["passes", 1], ["desarmes", 1], ["intercept", 1], ["dribles", 1], ["ca", 1], ["cv", 1]];
-  const CAB = ["Min", "G", "A", "Fin.", "Alvo", "Ações", "Passes", "Desarm.", "Interc.", "Dribles", "CA", "CV"];
+  const COLS = [["nota"], ["min"], ["g"], ["a"], ["ch", 1], ["alvo", 1], ["toques", 1], ["passes", 1], ["desarmes", 1], ["intercept", 1], ["dribles", 1], ["ca", 1], ["cv", 1]];
+  const CAB = ["Nota", "Min", "G", "A", "Fin.", "Alvo", "Ações", "Passes", "Desarm.", "Interc.", "Dribles", "CA", "CV"];
+  /* nota de 3 a 10 com a cor dos apps de placar: vermelho (abaixo de 6), laranja, amarelo, verde, azul (8+) */
+  const corNota = (n) => (n == null ? "" : n >= 8 ? "n-top" : n >= 7 ? "n-boa" : n >= 6.5 ? "n-ok" : n >= 6 ? "n-med" : "n-ruim");
+  const notaHTML = (n, vivo) => (n == null ? `<span class="nota n-sem" title="Menos de 10 minutos em campo">–</span>` : `<span class="nota ${corNota(n)}${vivo ? " vivo" : ""}" title="${vivo ? "Ao vivo: muda durante o jogo" : "Nota do Placar.TV"}">${n.toFixed(1).replace(".", ",")}</span>`);
+  const mediaNota = (jogos) => { const xs = jogos.filter((x) => x.nota != null); return xs.length ? xs.reduce((t, x) => t + x.nota, 0) / xs.length : null; };
   const cab = (extra = "") => `<thead><tr><th>Data</th><th class="hide-sm">Competição</th><th>Adversário</th><th>Placar</th>${CAB.map((h, i) => `<th${COLS[i][1] ? ' class="hide-sm"' : ""}>${h}</th>`).join("")}${extra}</tr></thead>`;
 
   function ultimos(p, j, D) {
@@ -160,7 +164,8 @@
     const tot = (k) => jogos.reduce((t, x) => t + (x[k] || 0), 0), min = tot("min");
     const max = Math.max(1, ...jogos.map((x) => x.toques || 0));
     const barras = jogos.map((x) => `<li title="${dm(x.date)} · ${x.toques} ações · ${x.min} min"><i style="height:${Math.max(4, Math.round(((x.toques || 0) / max) * 100))}%"></i><span>${dm(x.date)}</span></li>`).join("");
-    return `<div class="kpis jg-kpis10">${[["Jogos", jogos.length], ["Minutos", min], ["Gols", tot("g")], ["Assistências", tot("a")]].map(([l, v]) => `<div class="kpi"><small>${l}</small><b>${v}</b><em>${l === "Minutos" ? `média de ${Math.round(min / jogos.length)} por jogo` : l === "Jogos" ? `${tot("tit")} como titular` : `${fmt(p90(v, min), 2)} por 90 min`}</em></div>`).join("")}</div>
+    const mn = mediaNota(jogos);
+    return `<div class="kpis jg-kpis10">${mn != null ? `<div class="kpi"><small>Nota média</small><b>${notaHTML(Math.round(mn * 10) / 10)}</b><em>nos últimos ${jogos.length} jogos</em></div>` : ""}${[["Jogos", jogos.length], ["Minutos", min], ["Gols", tot("g")], ["Assistências", tot("a")]].map(([l, v]) => `<div class="kpi"><small>${l}</small><b>${v}</b><em>${l === "Minutos" ? `média de ${Math.round(min / jogos.length)} por jogo` : l === "Jogos" ? `${tot("tit")} como titular` : `${fmt(p90(v, min), 2)} por 90 min`}</em></div>`).join("")}</div>
       <div class="grid-2 jg-grid">
         <div class="card"><div class="card-h">Jogo a jogo <small>do mais recente ao mais antigo</small></div>
           <div class="jg-tab-wrap"><table class="table jg-tab jg-jogos">${cab()}<tbody>${jogos.slice().reverse().map((x) => linhaJogo(x, COLS)).join("")}</tbody></table></div>
@@ -241,6 +246,14 @@
     }
     el.querySelector("[data-jg-av]").innerHTML = avatar(p, j, c, 132);
     el.querySelector("[data-jg-cred]").innerHTML = credito(j);
+    // modo privado do dono: a foto recortada com a camisa do clube (TheSportsDB, sem licença comercial)
+    if (window.MERCADO_UI?.fotosLigadas?.()) window.MERCADO_UI.carrega(p.cid).then((M) => {
+      const fp = M?.elenco?.find((x) => x.id === String(p.aid))?.fotoPrivada;
+      const av = el.querySelector("[data-jg-av]");
+      if (!fp || !av || !el.isConnected) return;
+      av.innerHTML = `<span class="jg-av foto-priv" style="--tc:${display(c)};width:132px;height:132px"><img src="${esc(window.SEG.url(fp))}" alt="Foto de ${esc(p.nome)}" referrerpolicy="no-referrer"></span>`;
+      el.querySelector("[data-jg-cred]").innerHTML = `<span class="jg-cred">Foto: TheSportsDB · visível só no modo privado</span>`;
+    });
     el.querySelector("[data-jg-kpis]").innerHTML = kpis(j);
     let J2 = null, D2 = null;
     const outro = el.dataset.extra && get(el.dataset.extra);
@@ -280,5 +293,27 @@
   let rz = 0;
   addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { const el = document.querySelector("[data-jogador]"); if (el) { const p = get(el.dataset.jogador), D = window.JOGADORES_CLUBE?.[p?.cid]; const j = D?.jogadores?.[p.aid]; const o = el.dataset.extra && get(el.dataset.extra); const D2 = o && window.JOGADORES_CLUBE?.[o.cid]; if (j) pintar(el, j, D, D2?.jogadores?.[o.aid], D2); } }, 200); });
 
-  window.JOGADOR = { indice, get, busca, page, mount, POS, avatar };
+  /* notas da partida: o time (nota coletiva) e cada jogador, para os dois clubes (página do jogo) */
+  async function montaNotas(root) {
+    const el = root.querySelector("[data-notas-partida]");
+    if (!el || el.dataset.ok) return;
+    el.dataset.ok = "1";
+    const eid = el.dataset.notasPartida, lados = [el.dataset.h, el.dataset.a];
+    const Ds = await Promise.all(lados.map((c) => HEATMAP.carregaClube(c)));
+    if (!el.isConnected) return;
+    const blocos = lados.map((cid, i) => {
+      const D = Ds[i], c = byId[cid];
+      if (!D || !D.campos?.includes("nota")) return "";
+      const linhas = Object.entries(D.jogadores || {}).map(([aid, r]) => { const row = (r.jogos || []).find((x) => String(x[0]) === String(eid)); return row ? { aid, r, x: jogoObj(D.campos, row) } : null; }).filter(Boolean)
+        .sort((a, b) => (b.x.tit - a.x.tit) || ((b.x.nota ?? 0) - (a.x.nota ?? 0)));
+      if (!linhas.length) return "";
+      const t = D.notasTime?.[eid];
+      return `<div class="np-time"><div class="np-cab">${crest(c, 26)}<b>${esc(c.name)}</b>${t ? `${notaHTML(t[0])}<small>nota do time</small>` : ""}</div>
+        <ul class="np-lista">${linhas.map(({ aid, r, x }) => `<li class="${t && t[1] === aid ? "melhor" : ""}"><a href="#/jogador/${aid}-${cid}">${esc(r.n)}</a><small>${x.min}'${x.tit ? "" : " (entrou)"}${x.g ? ` · ${x.g} ${x.g > 1 ? "gols" : "gol"}` : ""}${x.a ? ` · ${x.a} assist.` : ""}${t && t[1] === aid ? " · melhor em campo" : ""}</small>${notaHTML(x.nota, x.vivo)}</li>`).join("")}</ul></div>`;
+    }).filter(Boolean);
+    el.innerHTML = blocos.length ? `${el.querySelector(".card-h").outerHTML}<div class="np-grid">${blocos.join("")}</div><div class="source">${esc(Ds.find(Boolean)?.criteriosNota || "")}</div>`
+      : `${el.querySelector(".card-h").outerHTML}<div class="empty" style="padding:18px">As notas aparecem quando a súmula do jogo for lida (durante o jogo, a cada atualização; no fim, com os números finais).</div>`;
+  }
+
+  window.JOGADOR = { indice, get, busca, page, mount, POS, avatar, montaNotas };
 })();
