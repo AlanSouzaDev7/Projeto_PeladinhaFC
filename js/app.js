@@ -1824,7 +1824,7 @@
         const [aid] = el.dataset.pid.split("-"), j = D?.jogadores?.[aid];
         const nome = el.parentElement?.querySelector("b");
         if (nome && JOGADOR.get(el.dataset.pid) && !nome.closest("a")) nome.outerHTML = `<a class="ps-link" href="#/jogador/${el.dataset.pid}">${nome.outerHTML}</a>`;
-        if (j?.foto && !el.querySelector("img")) { el.classList.add("com-foto"); el.innerHTML = `<img src="${SEG.esc(j.foto.url)}" alt="" loading="lazy" referrerpolicy="no-referrer" /><i>${el.textContent}</i>`; el.title = `Foto: ${j.foto.autor} · ${j.foto.licenca} · ${j.foto.fonte === "Flickr" ? "Flickr" : "Wikimedia Commons"}`; }
+        if (j?.foto && !el.querySelector("img")) { el.classList.add("com-foto"); el.innerHTML = `<span class="foto-c">${window.GFX.fotoImg(j.foto)}</span><i>${el.textContent}</i>`; el.title = `Foto: ${j.foto.autor} · ${j.foto.licenca} · ${j.foto.fonte === "Flickr" ? "Flickr" : "Wikimedia Commons"}`; }
       });
     });
     LIVE.mount(view);

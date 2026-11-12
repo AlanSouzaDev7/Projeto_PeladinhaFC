@@ -65,7 +65,7 @@
   }
   const res = (j) => (j.gf == null || j.ga == null ? "" : j.gf > j.ga ? "V" : j.gf < j.ga ? "D" : "E");
   function avatar(p, j, c, n = 120) {
-    if (j?.foto?.url) return `<span class="jg-av" style="--tc:${display(c)};width:${n}px;height:${n}px"><img src="${esc(j.foto.url)}" alt="Foto de ${esc(p.nome)}" loading="lazy" referrerpolicy="no-referrer" /></span>`;
+    if (j?.foto?.url) return `<span class="jg-av" style="--tc:${display(c)};width:${n}px;height:${n}px">${window.GFX.fotoImg(j.foto, `Foto de ${p.nome}`)}</span>`;
     return `<span class="jg-av sem" style="--tc:${display(c)};width:${n}px;height:${n}px;background:${display(c)};color:${onColor(display(c))}"><b style="font-size:${Math.round(n * 0.38)}px">${p.num ?? ""}</b></span>`;
   }
   const fonteFoto = (f) => (f?.fonte === "Flickr" ? "Flickr" : "Wikimedia Commons");

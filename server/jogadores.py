@@ -386,6 +386,109 @@ def atualizar_fotos(squads):
 
 
 # ---------------------------------------------------------------------------
+# Rosto centrado: o círculo da foto é recortado em volta do rosto (OpenCV, detector de rostos que vem com ela)
+# Sem a OpenCV instalada, nada muda: o site usa o recorte padrão (um pouco acima do centro).
+# ---------------------------------------------------------------------------
+ROSTO_VERSAO = 2
+_detectores = None
+
+
+def _cv():
+    global _detectores
+    if _detectores is None:
+        try:
+            import cv2  # opencv-python-headless
+            base = cv2.data.haarcascades
+            cc = lambda n: cv2.CascadeClassifier(base + n)
+            _detectores = (cv2, cc("haarcascade_frontalface_default.xml"), cc("haarcascade_frontalface_alt2.xml"), cc("haarcascade_profileface.xml"),
+                           cc("haarcascade_eye.xml"))
+        except Exception as ex:
+            P.log("rosto: OpenCV indisponível", ex)
+            _detectores = False
+    return _detectores
+
+
+def _sobrepoe(a, b):
+    ax, ay, aw, ah = a; bx, by, bw, bh = b
+    ix, iy = max(0, min(ax + aw, bx + bw) - max(ax, bx)), max(0, min(ay + ah, by + bh) - max(ay, by))
+    return ix * iy / float(min(aw * ah, bw * bh) or 1) > 0.4
+
+
+def recorte_rosto(dados):
+    """[x, y, lado_x, lado_y] do quadrado em volta do rosto, em frações da imagem (ou None se não achar um rosto).
+    Um rosto só vale se for confirmado: olho achado dentro dele, ou dois detectores diferentes concordando
+    (evita recortar uma bola, uma placa ou a torcida desfocada)."""
+    d = _cv()
+    if not d:
+        return None
+    cv2, frontal, alt, perfil, olho = d
+    import numpy as np
+    img = cv2.imdecode(np.frombuffer(dados, np.uint8), cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        return None
+    H, W = img.shape[:2]
+    img = cv2.equalizeHist(img)
+    minimo = (max(18, W // 14), max(18, W // 14))
+    fr = [tuple(r) for r in frontal.detectMultiScale(img, 1.08, 5, minSize=minimo)]
+    al = [tuple(r) for r in alt.detectMultiScale(img, 1.08, 4, minSize=minimo)]
+    pe = [tuple(r) for r in perfil.detectMultiScale(img, 1.08, 5, minSize=minimo)]
+    esp = cv2.flip(img, 1)
+    pe += [(W - x - w, y, w, h) for x, y, w, h in perfil.detectMultiScale(esp, 1.08, 5, minSize=minimo)]
+
+    def olhos(r):
+        x, y, w, h = r
+        parte = img[y:y + int(h * 0.6), x:x + w]
+        return len(olho.detectMultiScale(parte, 1.1, 4, minSize=(max(6, w // 9), max(6, w // 9)))) if parte.size else 0
+    cand = []
+    for r in set(fr + al + pe):
+        votos = sum(1 for grupo in (fr, al, pe) if any(_sobrepoe(r, q) for q in grupo))
+        if votos >= 2 or olhos(r) >= 1:
+            cand.append(r)
+    if not cand:
+        return None
+    # o maior rosto confirmado (em foto com mais gente, o jogador costuma estar em primeiro plano)
+    x, y, w, h = max(cand, key=lambda r: r[2] * r[3])
+    lado = min(W, H, int(max(w, h) * 2.3))  # o rosto ocupa ~40% do círculo, com cabelo e queixo
+    cx, cy = x + w / 2, y + h / 2 + h * 0.08
+    x0 = min(max(0, cx - lado / 2), W - lado)
+    y0 = min(max(0, cy - lado / 2), H - lado)
+    return [round(x0 / W, 4), round(y0 / H, 4), round(lado / W, 4), round(lado / H, 4)]
+
+
+def rostos_fotos(fotos):
+    """Põe o recorte do rosto em cada foto (guardado por endereço: cada foto é analisada uma vez)."""
+    cache = _ler("rostos.json")
+    if cache.get("v") != ROSTO_VERSAO:
+        cache = {"v": ROSTO_VERSAO, "fotos": {}}
+    if not _cv():
+        return fotos
+    novos = 0
+    for cl in fotos.values():
+        for f in cl.values():
+            url = str(f.get("url") or "").split("?")[0]
+            if not url:
+                continue
+            if url not in cache["fotos"]:
+                try:
+                    cache["fotos"][url] = recorte_rosto(P.get(url, headers=UA, timeout=30)) or 0
+                except Exception as ex:
+                    P.log("rosto", url[-60:], ex)
+                    continue
+                novos += 1
+                time.sleep(0.2)
+            r = cache["fotos"][url]
+            if r:
+                f["rosto"] = r
+            else:
+                f.pop("rosto", None)
+    if novos:
+        _gravar("rostos.json", cache)
+        achados = sum(1 for v in cache["fotos"].values() if v)
+        P.log(f"rostos: {novos} fotos analisadas; rosto achado em {achados} de {len(cache['fotos'])}")
+    return fotos
+
+
+# ---------------------------------------------------------------------------
 # Montagem por clube
 # ---------------------------------------------------------------------------
 def _grade_txt(g):
@@ -493,6 +596,10 @@ def atualizar(squads, matches):
     except Exception as ex:
         P.log("fotos", ex)
         fotos = (_ler("fotos-jogadores.json").get("clubes")) or {}
+    try:
+        fotos = rostos_fotos(fotos)
+    except Exception as ex:
+        P.log("rostos", ex)
     return montar(squads, todas, lan, fotos)
 
 

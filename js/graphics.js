@@ -142,5 +142,17 @@
   /* ---------- bandeira do Brasil (simplificada) ---------- */
   const flagBR = `<svg class="flag" viewBox="0 0 20 14"><rect width="20" height="14" fill="#009c3b"/><path d="M10 1.5 18.5 7 10 12.5 1.5 7z" fill="#ffdf00"/><circle cx="10" cy="7" r="3.1" fill="#002776"/></svg>`;
 
-  window.GFX = { crest, crestOutro, iniCrest, svgCrest, jersey, kitBg, kitRects, onColor, lum, shade, display, flagBR };
+  /* ---------- foto de jogador num círculo, com o rosto no centro ----------
+     foto.rosto = [x, y, lado_x, lado_y]: o quadrado em volta do rosto (frações da imagem, achado pelo robô com a OpenCV).
+     A imagem é ampliada e deslocada para esse quadrado encher o círculo. Sem o rosto, recorte padrão (um pouco acima do centro). */
+  function fotoImg(foto, alt = "") {
+    const r = Array.isArray(foto?.rosto) && foto.rosto.length === 4 && foto.rosto.every((v) => Number.isFinite(v) && v >= 0 && v <= 1) && foto.rosto[2] > 0.05 && foto.rosto[3] > 0.05 ? foto.rosto : null;
+    // carregamento imediato: são poucas fotos por página, e o adiado (lazy) não dispara nos círculos pequenos das listas
+    const base = `src="${esc(foto.url)}" alt="${esc(alt)}" decoding="async" referrerpolicy="no-referrer"`;
+    if (!r) return `<img class="foto-p" ${base} />`;
+    const [x, y, sx, sy] = r, pc = (v) => `${(v * 100).toFixed(2)}%`;
+    return `<img class="foto-r" ${base} style="width:${pc(1 / sx)};height:${pc(1 / sy)};left:${pc(-x / sx)};top:${pc(-y / sy)}" />`;
+  }
+
+  window.GFX = { crest, crestOutro, iniCrest, fotoImg, svgCrest, jersey, kitBg, kitRects, onColor, lum, shade, display, flagBR };
 })();

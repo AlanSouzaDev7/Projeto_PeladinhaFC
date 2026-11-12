@@ -128,5 +128,19 @@ ok(set(J.licencas_flickr()) == {"4", "5", "7", "9", "10"}, "FLICKR_SEM_NC=1 tira
 os.environ.pop("FLICKR_SEM_NC", None)
 os.environ.pop("FLICKR_API_KEY", None)
 
+# ---------- rosto centrado (OpenCV) ----------
+try:
+    import cv2, numpy as np
+    vazio = cv2.imencode(".jpg", np.full((300, 220, 3), 90, np.uint8))[1].tobytes()  # gramado liso, sem rosto
+    ok(J.recorte_rosto(vazio) is None, "rosto: imagem sem rosto não ganha recorte (fica o padrão)")
+    ok(J.recorte_rosto(b"nao e imagem") is None, "rosto: arquivo que não é imagem não quebra")
+except ImportError:
+    print("(OpenCV não instalada: teste do rosto pulado)")
+antes = J._detectores
+J._detectores = False  # sem a OpenCV
+fot = {"cruzeiro": {"1": {"url": "https://upload.wikimedia.org/x.jpg"}}}
+ok(J.rostos_fotos(fot) is fot and "rosto" not in fot["cruzeiro"]["1"], "rosto: sem a OpenCV, as fotos seguem sem recorte (nada quebra)")
+J._detectores = antes
+
 print("\nOK" if not falhas else f"\n{len(falhas)} falha(s)")
 sys.exit(1 if falhas else 0)

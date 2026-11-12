@@ -184,8 +184,24 @@ console.log("20 clubes");
   // fotos e links nas estatísticas do Cruzeiro
   await page.goto(`${BASE}/?v=${Date.now()}#/clube/cruzeiro/estatisticas`);
   await ateQue(page, () => !!document.querySelector(".ps-link"), null, 10000);
-  const st = await page.evaluate(() => ({ links: document.querySelectorAll(".ps-link").length, fotos: document.querySelectorAll(".ps-n.com-foto img").length }));
+  await ateQue(page, () => [...document.querySelectorAll(".ps-n.com-foto img")].every((i) => i.complete), null, 10000);
+  const st = await page.evaluate(() => ({ links: document.querySelectorAll(".ps-link").length, fotos: document.querySelectorAll(".ps-n.com-foto img").length, abertas: [...document.querySelectorAll(".ps-n.com-foto img")].filter((i) => i.naturalWidth > 0).length }));
   if (!st.links) erro("estatísticas do Cruzeiro: nomes sem link para a página do jogador"); else ok(`estatísticas: ${st.links} nomes com link, ${st.fotos} com foto`);
+  if (st.abertas !== st.fotos) erro(`estatísticas: ${st.fotos - st.abertas} fotos não abriram no círculo`); else if (st.fotos) ok(`estatísticas: as ${st.fotos} fotos abrem no círculo`);
+  // rosto centrado: o quadrado do rosto enche o círculo
+  const rc = await page.evaluate(() => {
+    const D = window.JOGADORES_CLUBE.cruzeiro.jogadores, out = [];
+    document.querySelectorAll(".ps-n.com-foto").forEach((el) => {
+      const j = D[el.dataset.pid.split("-")[0]], img = el.querySelector("img"), c = el.querySelector(".foto-c");
+      if (!j?.foto?.rosto || !img) return;
+      const bi = img.getBoundingClientRect(), bc = c.getBoundingClientRect(), [x, y, sx, sy] = j.foto.rosto;
+      // centro do quadrado do rosto, na tela, contra o centro do círculo
+      const fx = bi.left + (x + sx / 2) * bi.width, fy = bi.top + (y + sy / 2) * bi.height;
+      out.push(Math.hypot(fx - (bc.left + bc.width / 2), fy - (bc.top + bc.height / 2)) / bc.width);
+    });
+    return out;
+  });
+  if (rc.some((d) => d > 0.02)) erro(`rosto fora do centro do círculo: ${rc.map((d) => d.toFixed(3))}`); else if (rc.length) ok(`rosto centrado no círculo (${rc.length} fotos, desvio máximo ${(Math.max(...rc) * 100).toFixed(1)}% do círculo)`);
   if (erros.length) erro(`erros de JavaScript: ${[...new Set(erros)].join(" | ")}`);
   if (!falhas.some((f) => /^[a-z-]+: /.test(f))) ok("20 clubes: jogador com mais minutos abre com mapa, comparativo com o rival com todas as linhas");
   await ctx.close();
