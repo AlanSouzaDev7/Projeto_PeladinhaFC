@@ -698,6 +698,15 @@ def update_fontes_elenco():
         return
     FE.atualizar({cid: [(j["id"], j["nome"]) for j in d["elenco"]] + [(e["id"], e["nome"], e.get("clube"), e.get("clubeEspn")) for e in d["emprestados"]]
                   for cid, d in mc.items()}, max_buscas=int(os.environ.get("TSDB_POR_RODADA", "30")), fotos=(os.environ.get("FOTOS_PRIVADAS", "1") != "0" and os.environ.get("MODO_VENDA") != "1"))
+    # as fotos achadas nesta rodada já entram no arquivo da janela (sem esperar o mercado ser relido no dia seguinte)
+    if os.environ.get("FOTOS_PRIVADAS", "1") != "0" and os.environ.get("MODO_VENDA") != "1":
+        fe = FE._ler()
+        with lock:
+            for d in mc.values():
+                for j in d.get("elenco", []) + d.get("emprestados", []):
+                    fp = FE.foto_privada(j["id"], fe)
+                    j["fotoPrivada"] = fp["url"] if fp else None
+                    j["fotoInfo"] = {k: v for k, v in fp.items() if k != "url" and v} if fp and fp["fonte"] != "TheSportsDB" else None
 
 
 def update_escalacoes():

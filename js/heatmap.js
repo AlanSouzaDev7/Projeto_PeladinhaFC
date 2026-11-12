@@ -118,7 +118,10 @@
       const E = await M.carrega(cid);
       for (const x of E?.elenco || []) {
         const j = d.jogadores?.[x.id];
-        if (j && x.fotoPrivada) j.foto = { url: x.fotoPrivada, autor: "TheSportsDB", licenca: "uso privado", fonte: "TheSportsDB", privada: true };
+        if (!j || !x.fotoPrivada) continue;
+        const fl = x.fotoInfo?.fonte === "Flickr";
+        j.foto = fl ? { url: x.fotoPrivada, autor: x.fotoInfo.autor || "autor no Flickr", pagina: x.fotoInfo.pagina, rosto: x.fotoInfo.rosto, licenca: "uso privado", fonte: "Flickr", privada: true, recorte: true }
+          : { url: x.fotoPrivada, autor: "TheSportsDB", licenca: "uso privado", fonte: "TheSportsDB", privada: true };
       }
     } catch { /* fica a foto livre */ }
     d._fotosPriv = true;

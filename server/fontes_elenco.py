@@ -104,6 +104,51 @@ def tsdb_jogador(nome, clube_nomes):
     return {}
 
 
+def flickr_jogador(nome, clube_nomes):
+    """Foto privada do Flickr (API oficial, chave FLICKR_API_KEY) para quem não tem o recorte do TheSportsDB.
+    Qualquer licença: é foto PRIVADA do dono (o site é de uso pessoal até a venda; MODO_VENDA=1 tira). Para valer,
+    a foto precisa ter o nome inteiro do jogador e o nome do clube no título ou nas etiquetas, ser dos últimos 3 anos e
+    ter um rosto achado (o círculo do site é recortado em volta do rosto). None = erro (tenta de novo); {} = não achou."""
+    J = P.JOG
+    if not os.environ.get("FLICKR_API_KEY", "").strip():
+        return None
+    ano = int(time.strftime("%Y"))
+    try:
+        d = J._flickr("flickr.photos.search", text=f'"{nome}" {clube_nomes[0]}', min_taken_date=f"{ano - 2}-01-01", media="photos",
+                      content_types=0, safe_search=1, sort="relevance", per_page=30,
+                      extras="license,owner_name,url_m,url_z,url_c,date_taken,tags")
+    except Exception as ex:
+        P.log("fontes: Flickr", nome, ex)
+        return None
+    alvo = set(J._norm(nome))
+    clubes = [set(J._norm(c)) for c in clube_nomes if c]
+    testadas = 0
+    for ph in (d or {}).get("photos", {}).get("photo", []):
+        txt = set(J._norm(ph.get("title", ""))) | set(J._norm(ph.get("tags", "")))
+        juntos = "".join(sorted(txt))
+        if not alvo or not alvo <= txt:
+            continue
+        if not any(c and (c <= txt or "".join(sorted(c)) in juntos) for c in clubes):
+            continue
+        url = ph.get("url_c") or ph.get("url_z") or ph.get("url_m")
+        if not url or not re.match(r"^https://live\.staticflickr\.com/", url):
+            continue
+        if testadas >= 6:
+            break
+        testadas += 1
+        try:
+            rosto = J.recorte_rosto(P.get(url, headers=J.UA, timeout=30))
+        except Exception as ex:
+            P.log("fontes: Flickr (rosto)", nome, ex)
+            rosto = None
+        if not rosto:
+            continue  # sem rosto achado não dá para centralizar o jogador no círculo
+        return {"url": url, "autor": P.clean_text(ph.get("ownername") or "autor no Flickr", 80), "rosto": rosto,
+                "pagina": f"https://www.flickr.com/photos/{urllib.parse.quote(str(ph.get('owner', '')))}/{int(ph['id'])}",
+                "data": str(ph.get("datetaken", ""))[:10]}
+    return {}
+
+
 def af_elenco(cid):
     """Elenco atual pela API-Football (com chave): {nome normalizado: {num, pos, foto}}."""
     if not os.environ.get("API_FOOTBALL_KEY", "").strip():
@@ -165,15 +210,53 @@ def atualizar(clube_jogadores, max_buscas=60, fotos=True):
             if not fotos and achado:
                 achado.pop("foto", None)
             tsdb[aid] = {"t": agora, "d": achado}
+    # Flickr: quem ficou sem o recorte do TheSportsDB (achado de novo em 30 dias; não achado, em 7)
+    fl = c.setdefault("flickr", {})
+    n_fl = achados = 0
+    if fotos and os.environ.get("FLICKR_API_KEY", "").strip():
+        limite = int(os.environ.get("FLICKR_POR_RODADA", "200"))
+        for cid, jogs in clube_jogadores.items():
+            nomes_clube = (P.HEADLINE_NAMES.get(cid) or [cid])[:2]
+            for item in jogs:
+                aid, nome = item[0], item[1]
+                if ((tsdb.get(aid) or {}).get("d") or {}).get("foto"):
+                    continue
+                r = fl.get(aid)
+                idade = agora - (r or {}).get("t", 0)
+                if r and (idade < 30 * 86400 if r.get("d") else idade < 7 * 86400):
+                    continue
+                if n_fl >= limite:
+                    break
+                n_fl += 1
+                # emprestado: procura também com o nome do clube onde ele está
+                achado = flickr_jogador(nome, nomes_clube + [x for x in item[2:] if x])
+                if achado is None:
+                    continue
+                achados += 1 if achado else 0
+                fl[aid] = {"t": agora, "d": achado}
+                time.sleep(0.4)  # bem abaixo do limite da API (3.600 consultas por hora)
     c["t"] = agora
     _gravar(c)
-    P.log(f"fontes do elenco: {buscas} buscas no TheSportsDB")
+    P.log(f"fontes do elenco: {buscas} buscas no TheSportsDB; {n_fl} no Flickr ({achados} fotos achadas)")
     return c
 
 
 def do_jogador(aid):
     r = (_ler().get("tsdb") or {}).get(str(aid)) or {}
     return r.get("d") or {}
+
+
+def foto_privada(aid, c=None):
+    """A foto privada que o site mostra: o recorte do TheSportsDB (com a camisa do clube) ou, sem ele, a do Flickr.
+    {"url", "fonte", "autor", "pagina", "rosto"} ou None."""
+    c = c if c is not None else _ler()
+    t = ((c.get("tsdb") or {}).get(str(aid)) or {}).get("d") or {}
+    if t.get("foto"):
+        return {"url": t["foto"], "fonte": "TheSportsDB"}
+    f = ((c.get("flickr") or {}).get(str(aid)) or {}).get("d") or {}
+    if f.get("url"):
+        return {"url": f["url"], "fonte": "Flickr", "autor": f.get("autor"), "pagina": f.get("pagina"), "rosto": f.get("rosto")}
+    return None
 
 
 def situacao(jogos_ult, xi_ult, noticias, nome, af=None):

@@ -3666,6 +3666,7 @@ img.crest { animation: crestIn .45s cubic-bezier(.2, .9, .25, 1.25) both; }
 .jt-av b { font: 900 calc(var(--t) * .44)/1 var(--jt-disp); letter-spacing: .01em; }
 .jt-av.foto { background: linear-gradient(180deg, color-mix(in srgb, var(--c1) 55%, #dfe6ef), var(--c1)); }
 .jt-av.foto img { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 8%; }
+.jt-av.foto.rosto img { inset: auto; max-width: none; max-height: none; object-fit: fill; }
 .jt-av.vazio { background: rgb(255 255 255 / .18); box-shadow: inset 0 0 0 2px rgb(255 255 255 / .55); color: #fff; }
 .jt-flag { width: 16px; height: 16px; object-fit: contain; vertical-align: middle; flex: none; }
 .jt-les { color: var(--live); }

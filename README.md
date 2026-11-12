@@ -211,9 +211,15 @@ O robô lia súmula e lances só de jogo encerrado. Agora os **jogos em andament
 - **X** (perfil oficial do clube, API oficial v2, `X_BEARER_TOKEN`) e **Instagram** (perfil oficial, Graph API Business Discovery, `IG_USER_ID` e `IG_ACCESS_TOKEN`): a publicação de escalação é cruzada com o elenco; com 9 ou mais jogadores citados, vale. Nada é raspado: sem as chaves, fica só a ESPN. Os perfis oficiais estão em `PERFIS` (confira antes de ligar as chaves).
 - Na janela de transferências e na escalação do clube, **a escalação anunciada vale mais que a do último jogo**; sem anúncio, o ponto de partida é **sempre a escalação do técnico no último jogo** (a edição do torcedor vale até o próximo jogo).
 
+## Fotos de todos os jogadores (varredura e Flickr)
+
+`python tests/fotos_varredura.py` confere a foto de **todos os jogadores** dos 20 elencos (e os emprestados não entram na conta) e diz qual o site mostra e por que falta: recorte com a camisa do clube (TheSportsDB), foto livre ou nenhuma (número da camisa). Com `--lista`, mostra cada um; `--falhar-se-faltar=20%` faz o teste falhar acima do limite.
+- **Ordem das fotos**: o recorte do TheSportsDB (mesmo estilo dos elencos do Cruzeiro e do Flamengo); sem ele, uma **foto privada do Flickr**; sem as duas, a foto livre (Wikimedia Commons / Flickr com licença); sem nenhuma, o número.
+- **Flickr** (`server/fontes_elenco.py`, `flickr_jogador`): só pela **API oficial**, com a chave `FLICKR_API_KEY` (segredo do repositório no GitHub). Qualquer licença, por ser foto privada do dono; só vale com o nome inteiro do jogador **e** o nome do clube no título ou nas etiquetas, dos últimos 3 anos, e com um **rosto achado** (o círculo é recortado em volta dele, já que a foto do Flickr é uma foto de jogo, não um recorte). Até 200 jogadores por rodada do robô; quem foi achado é revisto em 30 dias, quem não foi, em 7. A ficha mostra o fotógrafo com link para a foto no Flickr.
+
 ## Modo venda
 
-Enquanto o site é de uso pessoal do dono, ficam ligados dados sem licença comercial: fotos não comerciais do Flickr e as fotos privadas do TheSportsDB (ligadas por padrão em todo o site). **Antes de vender ou apresentar**: rode o robô com `MODO_VENDA=1` (tira as fotos não comerciais e as fotos privadas dos arquivos) e abra o site com `?privado=0`.
+Enquanto o site é de uso pessoal do dono, ficam ligados dados sem licença comercial: fotos não comerciais do Flickr e as fotos privadas do TheSportsDB e do Flickr (ligadas por padrão em todo o site). **Antes de vender ou apresentar**: rode o robô com `MODO_VENDA=1` (tira as fotos não comerciais e as fotos privadas dos arquivos) e abra o site com `?privado=0`.
 
 ## Identidade visual 2026
 

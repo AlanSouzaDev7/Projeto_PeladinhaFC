@@ -111,5 +111,28 @@ ok(f.r[0] == 404, "rota: escalações de clube desconhecido = 404")
 f = Fake("/api/escalacoes/cruzeiro"); P.Handler.do_GET(f)
 ok(f.r[0] == 200 and "confirmada" in f.r[1], "rota: /api/escalacoes/cruzeiro")
 
+# fotos privadas do Flickr (sem chave de verdade: a API é simulada)
+_fl, _rr, _get = P.JOG._flickr, P.JOG.recorte_rosto, P.get
+os.environ["FLICKR_API_KEY"] = "teste"
+fotos_fake = [
+    {"id": "1", "owner": "a@N0", "ownername": "Fã", "title": "Kaio Jorge comemora", "tags": "palmeiras", "url_c": "https://live.staticflickr.com/1/1_c.jpg", "datetaken": "2026-03-01"},
+    {"id": "2", "owner": "b@N0", "ownername": "Torcedor", "title": "Cruzeiro x Bahia", "tags": "kaiojorge kaio jorge", "url_c": "https://live.staticflickr.com/2/2_c.jpg", "datetaken": "2026-05-01"},
+    {"id": "3", "owner": "c@N0", "ownername": "Outro", "title": "Kaio Jorge Cruzeiro", "tags": "", "url_c": "https://exemplo.com/3.jpg", "datetaken": "2026-05-01"},
+]
+P.JOG._flickr = lambda metodo, **q: {"photos": {"photo": fotos_fake}}
+P.JOG.recorte_rosto = lambda dados: [0.2, 0.1, 0.3, 0.4]
+P.get = lambda url, **k: b""
+try:
+    r = P.FE.flickr_jogador("Kaio Jorge", ["Cruzeiro", "Cruzeiro EC"])
+    ok(r and r["url"].endswith("2_c.jpg") and r["rosto"] == [0.2, 0.1, 0.3, 0.4] and r["pagina"].endswith("/2"), f"Flickr: só vale com nome e clube no título/etiquetas e endereço do Flickr ({r})")
+    ok(P.FE.flickr_jogador("Matheus Pereira", ["Cruzeiro"]) == {}, "Flickr: nome que não aparece em nenhuma foto = não achado")
+    P.JOG.recorte_rosto = lambda dados: None
+    ok(P.FE.flickr_jogador("Kaio Jorge", ["Cruzeiro"]) == {}, "Flickr: sem rosto achado, a foto não entra")
+    fe = {"tsdb": {"9": {"d": {"foto": "https://r2.thesportsdb.com/x.png"}}, "8": {"d": {}}}, "flickr": {"9": {"d": {"url": "u9"}}, "8": {"d": {"url": "https://live.staticflickr.com/8.jpg", "autor": "Fã", "rosto": [0, 0, 1, 1]}}}}
+    ok(P.FE.foto_privada("9", fe)["fonte"] == "TheSportsDB" and P.FE.foto_privada("8", fe)["fonte"] == "Flickr" and P.FE.foto_privada("7", fe) is None, "foto privada: o recorte do TheSportsDB vale mais; sem ele, a do Flickr")
+finally:
+    P.JOG._flickr, P.JOG.recorte_rosto, P.get = _fl, _rr, _get
+    os.environ.pop("FLICKR_API_KEY", None)
+
 print("\nOK" if not falhas else f"\n{len(falhas)} falha(s)")
 sys.exit(1 if falhas else 0)

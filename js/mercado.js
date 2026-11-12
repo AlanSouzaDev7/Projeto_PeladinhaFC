@@ -128,6 +128,8 @@
   /* ---------- avatar: foto (modo privado) ou o número na camisa do clube ---------- */
   function avatar(j, c, tam = 44) {
     const foto = fotosLigadas() && j.fotoPrivada;
+    const r = j.fotoInfo?.rosto;
+    if (foto && r) { const [x, y, sx, sy] = r, pc = (v) => `${(v * 100).toFixed(2)}%`; return `<span class="jt-av foto rosto" style="--t:${tam}px"><img src="${esc(window.SEG.url(foto))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" style="width:${pc(1 / sx)};height:${pc(1 / sy)};left:${pc(-x / sx)};top:${pc(-y / sy)}"><b>${esc(j.num || POS_CURTO[j.pos] || "")}</b></span>`; }
     if (foto) return `<span class="jt-av foto" style="--t:${tam}px"><img src="${esc(window.SEG.url(foto))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"><b>${esc(j.num || POS_CURTO[j.pos] || "")}</b></span>`;
     return `<span class="jt-av" style="--t:${tam}px"><b>${esc(j.num || POS_CURTO[j.pos] || "")}</b></span>`;
   }
