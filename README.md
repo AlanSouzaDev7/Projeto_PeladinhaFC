@@ -192,7 +192,7 @@ Aba **Janela** na página de cada clube da Série A (`#/clube/<id>/mercado`): o 
   - **valor de mercado**: estimativa do Placar.TV (o Transfermarkt não é usado: os termos dele proíbem robôs).
   - O robô atualiza clubes e finanças todo dia (finanças a cada 6 h), o mercado global uma vez por semana por time e o TheSportsDB aos poucos (60 consultas por rodada, por causa do limite do plano gratuito).
 - **Site oficial dos clubes**: não é lido. O do Cruzeiro, por exemplo, não tem página nem API pública do elenco: carrega a lista de um banco de dados interno do aplicativo, e ler esse banco direto seria contornar o próprio site. Se o clube oferecer um feed ou API pública, ele entra como mais uma fonte em `server/fontes_elenco.py`.
-- **Fotos dos jogadores (modo privado)**: as fotos recortadas com a camisa do clube vêm do TheSportsDB e **não têm licença para uso comercial**. Por isso o site só as mostra no **modo privado do dono**: abra o site com `?privado=fotos` para ligar (fica salvo no navegador) e `?privado=0` para desligar; sem isso, cada jogador aparece com o número na cor do clube. **Antes de apresentar ou vender o produto**: desligue o modo privado e rode o robô com `MODO_VENDA=1` (ou `FOTOS_PRIVADAS=0`), que tira as fotos dos arquivos.
+- **Fotos dos jogadores (modo privado)**: as fotos recortadas com a camisa do clube vêm do TheSportsDB e **não têm licença para uso comercial**. Enquanto o site é de uso do dono, ficam **ligadas por padrão** e substituem a foto livre em todo o site (ficha do jogador, listas do elenco, cartão do mapa de calor, Janela); `?privado=0` desliga neste navegador e `?privado=fotos` liga de novo. **Antes de apresentar ou vender o produto**: desligue o modo privado e rode o robô com `MODO_VENDA=1` (ou `FOTOS_PRIVADAS=0`), que tira as fotos dos arquivos.
 
 ## Notas dos jogadores e do time
 
@@ -213,7 +213,7 @@ O robô lia súmula e lances só de jogo encerrado. Agora os **jogos em andament
 
 ## Modo venda
 
-Enquanto o site é de uso pessoal do dono, ficam ligados dados sem licença comercial: fotos não comerciais do Flickr e as fotos privadas do TheSportsDB (estas só aparecem com `?privado=fotos`). **Antes de vender ou apresentar**: rode o robô com `MODO_VENDA=1` (tira as fotos não comerciais e as fotos privadas dos arquivos) e abra o site com `?privado=0`.
+Enquanto o site é de uso pessoal do dono, ficam ligados dados sem licença comercial: fotos não comerciais do Flickr e as fotos privadas do TheSportsDB (ligadas por padrão em todo o site). **Antes de vender ou apresentar**: rode o robô com `MODO_VENDA=1` (tira as fotos não comerciais e as fotos privadas dos arquivos) e abra o site com `?privado=0`.
 
 ## Identidade visual 2026
 

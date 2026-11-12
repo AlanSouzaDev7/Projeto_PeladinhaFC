@@ -11,8 +11,8 @@
       quando ele não está acostumado e mostra como ele jogou ali.
    4) Compartilhar: cartaz em PNG ou PDF e um link que abre o mesmo elenco para os amigos.
    Modos: "real" (caixa e folha do clube, regras de elenco) e "manager" (sem limites; o caixa pode ser editado).
-   Fotos dos jogadores: só no modo privado do dono (sem licença comercial); abra o site com ?privado=fotos para ligar
-   e ?privado=0 para desligar. Antes de apresentar o produto, desligue.
+   Fotos dos jogadores: privadas do dono (sem licença comercial), ligadas por padrão; ?privado=0 desliga e
+   ?privado=fotos liga de novo. Antes de vender, rode o robô com MODO_VENDA=1 (tira as fotos dos arquivos).
    ========================================================================== */
 (() => {
   const { byId } = window.PD;
@@ -27,10 +27,12 @@
   const FOTO_KEY = "placar:fotos-privadas";
   try {
     const q = new URLSearchParams(location.search).get("privado");
-    if (q === "fotos") localStorage.setItem(FOTO_KEY, "1");
-    if (q === "0") localStorage.removeItem(FOTO_KEY);
+    if (q === "fotos" || q === "1") localStorage.removeItem(FOTO_KEY);
+    if (q === "0") localStorage.setItem(FOTO_KEY, "0");
   } catch { /* sem armazenamento */ }
-  const fotosLigadas = () => { try { return localStorage.getItem(FOTO_KEY) === "1"; } catch { return false; } };
+  // ligadas por padrão enquanto o site é de uso do dono (o robô com MODO_VENDA=1 tira as fotos dos arquivos);
+  // ?privado=0 desliga neste navegador e ?privado=fotos liga de novo
+  const fotosLigadas = () => { try { return localStorage.getItem(FOTO_KEY) !== "0"; } catch { return true; } };
 
   /* ---------- dados ---------- */
   const prom = {};

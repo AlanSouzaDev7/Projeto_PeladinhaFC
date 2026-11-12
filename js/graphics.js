@@ -158,7 +158,7 @@
     const r = Array.isArray(foto?.rosto) && foto.rosto.length === 4 && foto.rosto.every((v) => Number.isFinite(v) && v >= 0 && v <= 1) && foto.rosto[2] > 0.05 && foto.rosto[3] > 0.05 ? foto.rosto : null;
     // carregamento imediato: são poucas fotos por página, e o adiado (lazy) não dispara nos círculos pequenos das listas
     const base = `src="${esc(foto.url)}" alt="${esc(alt)}" decoding="async" referrerpolicy="no-referrer"`;
-    if (!r) return `<img class="foto-p" ${base} />`;
+    if (!r) return `<img class="foto-p${foto.privada ? " priv" : ""}" ${base} />`;
     const [x, y, sx, sy] = r, pc = (v) => `${(v * 100).toFixed(2)}%`;
     return `<img class="foto-r" ${base} style="width:${pc(1 / sx)};height:${pc(1 / sy)};left:${pc(-x / sx)};top:${pc(-y / sy)}" />`;
   }

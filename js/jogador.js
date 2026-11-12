@@ -65,11 +65,11 @@
   }
   const res = (j) => (j.gf == null || j.ga == null ? "" : j.gf > j.ga ? "V" : j.gf < j.ga ? "D" : "E");
   function avatar(p, j, c, n = 120) {
-    if (j?.foto?.url) return `<span class="jg-av" style="--tc:${display(c)};width:${n}px;height:${n}px">${window.GFX.fotoImg(j.foto, `Foto de ${p.nome}`)}</span>`;
+    if (j?.foto?.url) return `<span class="jg-av${j.foto.privada ? " foto-priv" : ""}" style="--tc:${display(c)};width:${n}px;height:${n}px">${window.GFX.fotoImg(j.foto, `Foto de ${p.nome}`)}</span>`;
     return `<span class="jg-av sem" style="--tc:${display(c)};width:${n}px;height:${n}px;background:${display(c)};color:${onColor(display(c))}"><b style="font-size:${Math.round(n * 0.38)}px">${p.num ?? ""}</b></span>`;
   }
   const fonteFoto = (f) => (f?.fonte === "Flickr" ? "Flickr" : "Wikimedia Commons");
-  const credito = (j) => (j?.foto ? `<a class="jg-cred" href="${esc(j.foto.pagina || "#")}" target="_blank" rel="noopener noreferrer">Foto: ${esc(j.foto.autor)} · ${esc(j.foto.licenca)} · ${fonteFoto(j.foto)}${j.foto.data ? ` · ${j.foto.data.split("-").reverse().join("/")}` : ""}</a>` : "");
+  const credito = (j) => (j?.foto?.privada ? `<span class="jg-cred">Foto: TheSportsDB · uso privado</span>` : j?.foto ?`<a class="jg-cred" href="${esc(j.foto.pagina || "#")}" target="_blank" rel="noopener noreferrer">Foto: ${esc(j.foto.autor)} · ${esc(j.foto.licenca)} · ${fonteFoto(j.foto)}${j.foto.data ? ` · ${j.foto.data.split("-").reverse().join("/")}` : ""}</a>` : "");
 
   /* ---------- mapa de calor (campo deitado, atacando para a direita) ---------- */
   const campoSVG = `<svg class="jg-campo-linhas" viewBox="0 0 105 68" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width=".45">
@@ -246,14 +246,6 @@
     }
     el.querySelector("[data-jg-av]").innerHTML = avatar(p, j, c, 132);
     el.querySelector("[data-jg-cred]").innerHTML = credito(j);
-    // modo privado do dono: a foto recortada com a camisa do clube (TheSportsDB, sem licença comercial)
-    if (window.MERCADO_UI?.fotosLigadas?.()) window.MERCADO_UI.carrega(p.cid).then((M) => {
-      const fp = M?.elenco?.find((x) => x.id === String(p.aid))?.fotoPrivada;
-      const av = el.querySelector("[data-jg-av]");
-      if (!fp || !av || !el.isConnected) return;
-      av.innerHTML = `<span class="jg-av foto-priv" style="--tc:${display(c)};width:132px;height:132px"><img src="${esc(window.SEG.url(fp))}" alt="Foto de ${esc(p.nome)}" referrerpolicy="no-referrer"></span>`;
-      el.querySelector("[data-jg-cred]").innerHTML = `<span class="jg-cred">Foto: TheSportsDB · visível só no modo privado</span>`;
-    });
     el.querySelector("[data-jg-kpis]").innerHTML = kpis(j);
     let J2 = null, D2 = null;
     const outro = el.dataset.extra && get(el.dataset.extra);

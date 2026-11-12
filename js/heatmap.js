@@ -109,19 +109,36 @@
   }
   // jogador com lances reais já carregados (de qualquer clube)
   const real = (pid) => { const C = window.JOGADORES_CLUBE || {}; for (const k in C) { const j = C[k].jogadores?.[pid]; if (j && j.calor) return { j, grade: C[k].grade || [24, 16] }; } return null; };
+  // fotos privadas do dono (TheSportsDB, recorte com a camisa do clube; sem licença comercial): quando ligadas,
+  // substituem a foto livre em todo o site (ficha, listas do elenco, cartão do mapa de calor)
+  async function comFotosPrivadas(cid, d) {
+    const M = window.MERCADO_UI;
+    if (!d || d._fotosPriv || !M?.fotosLigadas?.()) return d;
+    try {
+      const E = await M.carrega(cid);
+      for (const x of E?.elenco || []) {
+        const j = d.jogadores?.[x.id];
+        if (j && x.fotoPrivada) j.foto = { url: x.fotoPrivada, autor: "TheSportsDB", licenca: "uso privado", fonte: "TheSportsDB", privada: true };
+      }
+    } catch { /* fica a foto livre */ }
+    d._fotosPriv = true;
+    return d;
+  }
   function carregaClube(cid) {
     if (!cid || !/^[a-z-]{2,20}$/.test(cid)) return Promise.resolve(null);
-    if (window.JOGADORES_CLUBE?.[cid]) return Promise.resolve(window.JOGADORES_CLUBE[cid]);
     carregaClube.p = carregaClube.p || {};
     if (carregaClube.p[cid]) return carregaClube.p[cid];
     return (carregaClube.p[cid] = (async () => {
-      if (window.PD?.LIVE) {
-        try { const r = await fetch(`/api/elenco-temporada?club=${cid}`, { cache: "no-store" }); if (r.ok) { const d = await r.json(); window.SEG?.limpa(d); (window.JOGADORES_CLUBE = window.JOGADORES_CLUBE || {})[cid] = d; return d; } } catch { /* cai no arquivo */ }
+      let d = window.JOGADORES_CLUBE?.[cid] || null;
+      if (!d && window.PD?.LIVE) {
+        try { const r = await fetch(`/api/elenco-temporada?club=${cid}`, { cache: "no-store" }); if (r.ok) { d = await r.json(); window.SEG?.limpa(d); (window.JOGADORES_CLUBE = window.JOGADORES_CLUBE || {})[cid] = d; } } catch { /* cai no arquivo */ }
       }
-      await new Promise((res) => { const sc = document.createElement("script"); sc.src = `js/jogadores/${cid}.js`; sc.onload = sc.onerror = res; document.head.appendChild(sc); });
-      const d = window.JOGADORES_CLUBE?.[cid] || null;
-      if (d) window.SEG?.limpa(d);
-      return d;
+      if (!d) {
+        await new Promise((res) => { const sc = document.createElement("script"); sc.src = `js/jogadores/${cid}.js`; sc.onload = sc.onerror = res; document.head.appendChild(sc); });
+        d = window.JOGADORES_CLUBE?.[cid] || null;
+        if (d) window.SEG?.limpa(d);
+      }
+      return comFotosPrivadas(cid, d);
     })());
   }
 

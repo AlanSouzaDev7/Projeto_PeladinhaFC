@@ -3865,6 +3865,8 @@ a.jt-nome { color: var(--text); text-decoration: none; }
 a.jt-nome:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .jg-av.foto-priv { background: linear-gradient(180deg, color-mix(in srgb, var(--tc) 55%, #dfe6ef), var(--tc)); overflow: hidden; }
 .jg-av.foto-priv img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 8%; }
+.foto-c:has(.priv) { background: linear-gradient(180deg, color-mix(in srgb, var(--tc, #2a3a55) 55%, #dfe6ef), var(--tc, #2a3a55)); }
+.foto-c .foto-p.priv { object-position: 50% 8%; }
 
 /* notas (3 a 10) na ficha do jogador e na página do jogo */
 .nota { display: inline-grid; place-items: center; min-width: 34px; padding: 2px 6px; border-radius: 6px; font: 800 13px/1.4 var(--font); font-variant-numeric: tabular-nums; color: #fff; }
