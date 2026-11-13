@@ -191,6 +191,8 @@ try:
     ok(m == {"a": "u2", "b": "u1", "c": "https://x/DARLAN-scaled.png"}, f"casar: nome mais específico primeiro, número da camisa desempata, nome no arquivo vale mais ({m})")
     ok(F.casar([{"src": "n1", "alt": "", "txt": "12 NOV 2026 Gabriel Batista renova contrato"}], J) == {}, "casar: cartão de notícia não vale")
     ok(F.casar([{"src": "g1", "txt": "GABRIEL SOUZA"}, {"src": "g2", "txt": "GABRIEL LIMA"}], {"a": {"nome": "Gabriel"}}) == {}, "casar: na dúvida entre dois, fica sem foto")
+    ok(F.casar([{"src": "https://img.x/c_fill,w_400/2026/abc/isidro-pitta", "alt": ""}, {"src": "https://img.x/c_fill,w_1600/2026/abc/isidro-pitta", "alt": ""}],
+               {"p": {"nome": "Isidro Pitta"}}).get("p", "").endswith("/2026/abc/isidro-pitta"), "casar: a mesma foto em dois tamanhos não é empate")
     # o registro não conhece uma foto que já está no site (cache novo do robô) e a fonte dela sumiu: a foto fica
     c = F._ler(); c["j"].pop("1"); F._gravar(c)
     fe["tsdb"].pop("1")

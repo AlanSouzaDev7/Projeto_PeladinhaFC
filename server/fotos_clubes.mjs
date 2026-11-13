@@ -78,18 +78,21 @@ const COLETAR = () => {
   };
   const out = [];
   const vistos = new Set();
-  // fotos em <img> e em imagem de fundo (CSS): Palmeiras e Vitória, por exemplo, usam fundo
-  const comFundo = [...document.querySelectorAll("body *")].filter((e) => e.tagName !== "IMG" && getComputedStyle(e).backgroundImage.startsWith("url("));
-  for (const el of [...document.querySelectorAll("img"), ...comFundo]) {
+  // todos os elementos, inclusive os de dentro dos componentes (shadow DOM: Bragantino, por exemplo)
+  const todos = (raiz, lista = []) => { for (const e of raiz.querySelectorAll("*")) { lista.push(e); if (e.shadowRoot) todos(e.shadowRoot, lista); } return lista; };
+  const tudo = todos(document);
+  // fotos em <img> e em imagem de fundo (CSS): Palmeiras, Vitória e Grêmio, por exemplo, usam fundo
+  const comFundo = tudo.filter((e) => e.tagName !== "IMG" && getComputedStyle(e).backgroundImage.startsWith("url("));
+  for (const el of [...tudo.filter((e) => e.tagName === "IMG"), ...comFundo]) {
     const src = fonte(el);
-    if (!src || vistos.has(src) || /\.svg(\?|$)|logo|escudo|icon|sprite|banner|patrocin|parceir|bandeira|flag/i.test(src)) continue;
+    if (!src || vistos.has(src) || /\.svg(\?|$)|logo|escudo|icon|sprite|patrocin|parceir|bandeira|flag/i.test(src)) continue;
     const r = el.getBoundingClientRect();
     if (el.tagName === "IMG" && el.naturalWidth && (el.naturalWidth < 90 || el.naturalHeight < 90)) continue;
     if (r.width && r.width < 40) continue;
     vistos.add(src);
     const c = cartao(el);
     out.push({ src: new URL(src, location.href).href, alt: el.alt || el.title || c.getAttribute("aria-label") || c.closest("[aria-label]")?.getAttribute("aria-label") || "",
-      txt: (c.innerText || "").replace(/\s+/g, " ").trim().slice(0, 160), href: c.closest("a")?.href || c.querySelector("a")?.href || "" });
+      txt: (c.innerText || c.textContent || "").replace(/\s+/g, " ").trim().slice(0, 160), href: c.closest("a")?.href || c.querySelector("a")?.href || "" });
   }
   return out;
 };

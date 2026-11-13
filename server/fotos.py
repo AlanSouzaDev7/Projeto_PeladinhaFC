@@ -95,8 +95,11 @@ def baixar(url):
     arq = os.path.join(P.ROOT, "server", "cache", "fotos-clubes-img", hashlib.sha1(str(url).encode()).hexdigest() + ".img")
     if os.path.exists(arq):
         return open(arq, "rb").read()
+    # CDN que redimensiona pelo endereço (Bragantino): a miniatura de 150 px vira a mesma foto em 400 px
+    pedido = re.sub(r"(img\.redbullbragantino\.com/images/c_fill,g_auto),w_\d+,h_\d+", r"\1,w_400,h_400", str(url))
     try:
-        return P.get(url, timeout=30, headers={"Accept": "image/avif,image/webp,image/png,image/jpeg,*/*"})
+        # sem AVIF no pedido: CDN que escolhe o formato (f_auto) mandaria AVIF, que o OpenCV não abre
+        return P.get(pedido, timeout=30, headers={"Accept": "image/webp,image/png,image/jpeg,*/*;q=0.5"})
     except Exception as ex:
         P.log("fotos: baixar", str(url)[-70:], ex)
         return None
@@ -215,6 +218,10 @@ def cartoes(fotos):
     return out
 
 
+def _arquivo(src):
+    return re.sub(r"\?.*$", "", str(src or "")).rstrip("/").rsplit("/", 1)[-1].lower()
+
+
 def casar(fotos, jogadores):
     """{id do jogador: endereço da foto}. Uma foto vale para o jogador quando todas as palavras do nome dele (ou do nome
     completo) estão no cartão; com mais de um cartão possível, ganha o que tem o nome no texto da foto ou no nome do
@@ -236,7 +243,9 @@ def casar(fotos, jogadores):
             if melhor:
                 hits.append((melhor, i))
         hits.sort(reverse=True)
-        if hits and (len(hits) == 1 or hits[0][0] > hits[1][0]):
+        # a mesma foto em tamanhos diferentes (endereços diferentes, mesmo arquivo: Bragantino) não é empate
+        mesma = len(hits) > 1 and len({_arquivo(cards[i][3]) for sc, i in hits if sc == hits[0][0]}) == 1
+        if hits and (len(hits) == 1 or hits[0][0] > hits[1][0] or mesma):
             pares.append((hits[0][0], aid, hits[0][1]))
     usados, out = set(), {}
     for _score, aid, i in sorted(pares, reverse=True):
