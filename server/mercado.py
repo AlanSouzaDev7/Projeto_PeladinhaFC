@@ -25,6 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 P = None  # módulo placar_api
 FE = None  # server/fontes_elenco.py (ligado pelo placar_api)
 FIN = None  # server/financas.py
+FOTO = None  # server/fotos.py (monitor das fotos; ligado pelo placar_api)
 VERSAO = 2  # sobe quando o formato do elenco muda (o robô relê o cache antigo)
 
 SB = "https://site.api.espn.com/apis/site/v2/sports/soccer"
@@ -455,6 +456,7 @@ def enriquecer(cid, d):
         noticias = []
     fotos_ok = (os.environ.get("FOTOS_PRIVADAS", "1") != "0" and os.environ.get("MODO_VENDA") != "1")
     fe_cache = FE._ler() if FE else {}
+    fm_cache = FOTO._ler() if FOTO else None
     jogos_time = max([x["jogos"] for x in js.values()] + [1])
     for j in d["elenco"]:
         x = js.get(j["id"]) or {}
@@ -469,9 +471,12 @@ def enriquecer(cid, d):
         j["fontes"] = ["ESPN (cadastro)"] + (["TheSportsDB (cadastro)"] if t else []) + (["súmulas"] if j["jogos"] else [])
         if t.get("posTxt"):
             j["posTxt"] = t["posTxt"]
-        fp = FE.foto_privada(j["id"], fe_cache) if (FE and fotos_ok) else None
-        j["fotoPrivada"] = fp["url"] if fp else None
-        j["fotoInfo"] = {k: v for k, v in fp.items() if k != "url" and v} if fp and fp["fonte"] != "TheSportsDB" else None
+        if fm_cache and (fm_cache.get("j") or {}).get(str(j["id"])):
+            j["fotoPrivada"], j["fotoInfo"] = FOTO.campos_mercado(j["id"], fm_cache)
+        else:
+            fp = FE.foto_privada(j["id"], fe_cache) if (FE and fotos_ok) else None
+            j["fotoPrivada"] = fp["url"] if fp else None
+            j["fotoInfo"] = {k: v for k, v in fp.items() if k != "url" and v} if fp and fp["fonte"] != "TheSportsDB" else None
         j["situacao"] = FE.situacao(x.get("ult5") or [], (j["id"] in xi) if xi is not None else None, noticias, j["nome"]) if FE else None
     d["jogosTime"] = jogos_time
     # emprestados: minutos de quem está num clube da Série A (dados do próprio PLACAR)
@@ -487,9 +492,12 @@ def enriquecer(cid, d):
         hp = pos.get(str(e["espn"])) or {}
         e["funcao"] = hp.get("f") or FUNCAO_PADRAO.get(e["pos"], "MC")
         t = FE.do_jogador(e["id"]) if FE else {}
-        fp = FE.foto_privada(e["id"], fe_cache) if (FE and fotos_ok) else None
-        e["fotoPrivada"] = fp["url"] if fp else None
-        e["fotoInfo"] = {k: v for k, v in fp.items() if k != "url" and v} if fp and fp["fonte"] != "TheSportsDB" else None
+        if fm_cache and (fm_cache.get("j") or {}).get(str(e["id"])):
+            e["fotoPrivada"], e["fotoInfo"] = FOTO.campos_mercado(e["id"], fm_cache)
+        else:
+            fp = FE.foto_privada(e["id"], fe_cache) if (FE and fotos_ok) else None
+            e["fotoPrivada"] = fp["url"] if fp else None
+            e["fotoInfo"] = {k: v for k, v in fp.items() if k != "url" and v} if fp and fp["fonte"] != "TheSportsDB" else None
     # salários: a soma bate com a folha divulgada (o que cada um ganha é estimado pela proporção do valor)
     fin = FIN.do_clube(cid, sum(j["salario"] for j in d["elenco"])) if FIN else None
     if fin:

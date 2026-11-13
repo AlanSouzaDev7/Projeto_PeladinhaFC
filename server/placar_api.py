@@ -675,8 +675,9 @@ import mercado as MERC  # noqa: E402
 import fontes_elenco as FE  # noqa: E402
 import financas as FIN  # noqa: E402
 import escalacoes as ESCL  # noqa: E402
-MERC.P = FE.P = FIN.P = ESCL.P = sys.modules[__name__]
-MERC.FE, MERC.FIN = FE, FIN
+import fotos as FOTO  # noqa: E402
+MERC.P = FE.P = FIN.P = ESCL.P = FOTO.P = sys.modules[__name__]
+MERC.FE, MERC.FIN, MERC.FOTO = FE, FIN, FOTO
 import wiki_series as WIKI  # noqa: E402
 ESC.P = sys.modules[__name__]
 WIKI.P = sys.modules[__name__]
@@ -707,6 +708,13 @@ def update_fontes_elenco():
                     fp = FE.foto_privada(j["id"], fe)
                     j["fotoPrivada"] = fp["url"] if fp else None
                     j["fotoInfo"] = {k: v for k, v in fp.items() if k != "url" and v} if fp and fp["fonte"] != "TheSportsDB" else None
+
+
+def update_fotos():
+    """Monitor das fotos dos jogadores (server/fotos.py): confere quem tem foto, procura quem não tem, confere se as
+    fotos ainda abrem e renova tudo na virada da temporada. A cada rodada do robô e a cada hora no servidor ao vivo."""
+    FOTO.atualizar()
+    FOTO.aplicar_mercado()
 
 
 def update_escalacoes():
@@ -2362,7 +2370,7 @@ def write_snapshot():
         elenco_novo = update_squads_horario()
     except Exception as ex:
         log("falha em elenco", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado), ("fontes do elenco", update_fontes_elenco), ("escalações anunciadas", update_escalacoes)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado), ("fontes do elenco", update_fontes_elenco), ("fotos dos jogadores", update_fotos), ("escalações anunciadas", update_escalacoes)]
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
             fn()
@@ -2399,6 +2407,8 @@ def write_snapshot():
         MERC.gravar_js(mc, MERC._ler("mercado-global.json"))
     if escl is not None:
         ESCL.gravar_js(escl)
+    if FOTO.resumo():
+        FOTO.gravar_js()
     if elenco_novo:
         try:
             gravar_elenco()
@@ -3030,6 +3040,12 @@ class Handler(SimpleHTTPRequestHandler):
                 with lock:
                     md = (state.get("mercado") or {}).get(parts[2])
                 return self.send_json(md) if md else self.send_json({"ok": False, "message": "carregando dados"}, 503)
+            if parts[1:] == ["fotos"]:
+                return self.send_json(FOTO.resumo() or {"ok": False, "message": "carregando dados"}, 200 if FOTO.resumo() else 503)
+            if len(parts) == 3 and parts[1] == "fotos":
+                if parts[2] not in CLUBS:
+                    return self.send_json({"ok": False, "message": "clube desconhecido"}, 404)
+                return self.send_json(FOTO.do_clube(parts[2]))
             if len(parts) == 3 and parts[1] == "escalacoes":
                 if parts[2] not in CLUBS:
                     return self.send_json({"ok": False, "message": "clube desconhecido"}, 404)
@@ -3161,6 +3177,7 @@ def main():
     every(iv.get("competicoes", 15), update_competicoes)
     every(iv.get("mercado", 60), update_mercado)
     every(iv.get("escalacoes", 5), update_escalacoes)
+    every(iv.get("fotos", 60), update_fotos)
     threading.Thread(target=live_loop, daemon=True).start()
     log(f"PLACAR no ar: http://{'localhost' if HOST in ('127.0.0.1', 'localhost') else HOST}:{port}")
     srv = ThreadingHTTPServer((HOST, port), Handler)

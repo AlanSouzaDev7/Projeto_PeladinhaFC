@@ -211,6 +211,13 @@ O robô lia súmula e lances só de jogo encerrado. Agora os **jogos em andament
 - **X** (perfil oficial do clube, API oficial v2, `X_BEARER_TOKEN`) e **Instagram** (perfil oficial, Graph API Business Discovery, `IG_USER_ID` e `IG_ACCESS_TOKEN`): a publicação de escalação é cruzada com o elenco; com 9 ou mais jogadores citados, vale. Nada é raspado: sem as chaves, fica só a ESPN. Os perfis oficiais estão em `PERFIS` (confira antes de ligar as chaves).
 - Na janela de transferências e na escalação do clube, **a escalação anunciada vale mais que a do último jogo**; sem anúncio, o ponto de partida é **sempre a escalação do técnico no último jogo** (a edição do torcedor vale até o próximo jogo).
 
+## Monitor de fotos dos jogadores
+
+`server/fotos.py`, API `GET /api/fotos` (resumo: quantos têm foto em cada clube, de que fonte e quem falta) e `GET /api/fotos/<clube>`; o robô grava `js/fotos.js` a cada rodada e o site aplica as fotos em todo lugar (ficha, listas do elenco, cartão do mapa de calor, Janela). Vale para todo jogador do elenco, os emprestados e quem jogou na temporada e já saiu.
+- **Confere se cada jogador tem foto**; quem não tem é **procurado de novo a cada 3 dias**; foto achada é **conferida a cada 7 dias** (se deixou de abrir, sai e o jogador volta a ser procurado); na **virada da temporada** todos são procurados de novo, e as buscas no TheSportsDB recomeçam (fotos com a camisa nova). Roda a cada rodada do robô (30 min) e a cada hora no servidor ao vivo.
+- **Fontes, na ordem**: TheSportsDB (recorte com a camisa do clube), ESPN (foto de perfil recortada; pode ser da camisa do clube anterior), Flickr (com `FLICKR_API_KEY`), API-Football (com `API_FOOTBALL_KEY`: foto de praticamente todo jogador inscrito, inclusive da base) e a foto livre do Wikimedia Commons. Só APIs e arquivos públicos; nada é raspado.
+- As fotos das quatro primeiras fontes são privadas do dono (sem licença comercial); com `MODO_VENDA=1` o monitor só deixa as livres.
+
 ## Fotos de todos os jogadores (varredura e Flickr)
 
 `python tests/fotos_varredura.py` confere a foto de **todos os jogadores** dos 20 elencos (e os emprestados não entram na conta) e diz qual o site mostra e por que falta: recorte com a camisa do clube (TheSportsDB), foto livre ou nenhuma (número da camisa). Com `--lista`, mostra cada um; `--falhar-se-faltar=20%` faz o teste falhar acima do limite.

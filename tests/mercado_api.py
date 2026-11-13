@@ -134,5 +134,50 @@ finally:
     P.JOG._flickr, P.JOG.recorte_rosto, P.get = _fl, _rr, _get
     os.environ.pop("FLICKR_API_KEY", None)
 
+# monitor de fotos (server/fotos.py), sem rede: fontes e "a foto abre?" simuladas
+F = P.FOTO
+_abre, _arqf, _feler, _fegr, _st = F.abre, F._arq, P.FE._ler, P.FE._gravar, dict(P.state)
+P.FE._gravar = lambda d: None  # nunca grava no cache real do TheSportsDB
+import tempfile
+tmp = tempfile.mkdtemp()
+F._arq = lambda: os.path.join(tmp, "fotos.json")
+existe = {"https://r2.thesportsdb.com/a.png", "https://a.espncdn.com/i/headshots/soccer/players/full/2.png", "https://live.staticflickr.com/3.jpg"}
+F.abre = lambda url, timeout=15: url in existe
+P.FE._ler = lambda: {"tsdb": {"1": {"d": {"foto": "https://r2.thesportsdb.com/a.png"}}}, "flickr": {"3": {"d": {"url": "https://live.staticflickr.com/3.jpg", "autor": "Fã", "rosto": [0, 0, 1, 1]}}}}
+with P.lock:
+    P.state["mercado"] = {"cruzeiro": {"elenco": [{"id": "1", "nome": "Um"}, {"id": "2", "nome": "Dois"}, {"id": "3", "nome": "Tres"}, {"id": "4", "nome": "Quatro"}], "emprestados": []}}
+    P.state["jogadores"] = {"cruzeiro": {"jogadores": {"5": {"n": "Cinco", "foto": {"url": "https://upload.wikimedia.org/5.jpg"}}}}}
+try:
+    os.environ.pop("MODO_VENDA", None)
+    r = F.atualizar()["clubes"]["cruzeiro"]
+    fc = F.do_clube("cruzeiro")
+    ok(r["comFoto"] == 4 and [x["id"] for x in r["faltam"]] == ["4"], f"monitor: 4 de 5 com foto, falta quem não tem em lugar nenhum ({r['comFoto']}, {r['faltam']})")
+    F.aplicar_mercado()  # (antes travava: pegava a trava do servidor duas vezes)
+    el = {j["id"]: j for j in P.state["mercado"]["cruzeiro"]["elenco"]}
+    ok(el["1"]["fotoPrivada"].endswith("a.png") and el["1"]["fotoInfo"] is None and el["3"]["fotoInfo"]["fonte"] == "Flickr" and el["4"]["fotoPrivada"] is None, "monitor: fotos aplicadas no elenco da janela")
+    ok(fc["1"]["f"] == "TheSportsDB" and fc["2"]["f"] == "ESPN" and fc["3"]["f"] == "Flickr" and fc["3"]["r"] and fc["5"]["f"] == "Wikimedia", f"monitor: ordem das fontes ({ {k: v['f'] for k, v in fc.items()} })")
+    existe.discard("https://a.espncdn.com/i/headshots/soccer/players/full/2.png")
+    c = F._ler(); c["j"]["2"]["v"] = 0; F._gravar(c)
+    F.atualizar()
+    ok("2" not in F.do_clube("cruzeiro"), "monitor: foto que deixou de abrir sai e o jogador volta a ser procurado")
+    c = F._ler(); c["temp"] = c["temp"] - 1
+    for x in c["j"].values():
+        x["temp"] = c["temp"]
+    F._gravar(c)
+    F.atualizar()
+    ok(all(x.get("temp") == F.temporada() for x in F._ler()["j"].values()), "monitor: na virada da temporada, todos são procurados de novo")
+    os.environ["MODO_VENDA"] = "1"
+    ok(set(F.do_clube("cruzeiro")) == {"5"}, "monitor: com MODO_VENDA=1 só fica a foto livre")
+    os.environ.pop("MODO_VENDA", None)
+    f = Fake("/api/fotos/nao-existe"); P.Handler.do_GET(f)
+    ok(f.r[0] == 404, "rota: fotos de clube desconhecido = 404")
+    f = Fake("/api/fotos"); P.Handler.do_GET(f)
+    ok(f.r[0] == 200 and "comFoto" in f.r[1]["clubes"]["cruzeiro"], "rota: /api/fotos (resumo)")
+finally:
+    F.abre, F._arq, P.FE._ler, P.FE._gravar = _abre, _arqf, _feler, _fegr
+    os.environ.pop("MODO_VENDA", None)
+    with P.lock:
+        P.state.clear(); P.state.update(_st)
+
 print("\nOK" if not falhas else f"\n{len(falhas)} falha(s)")
 sys.exit(1 if falhas else 0)

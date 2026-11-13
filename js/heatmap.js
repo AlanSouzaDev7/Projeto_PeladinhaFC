@@ -109,19 +109,30 @@
   }
   // jogador com lances reais já carregados (de qualquer clube)
   const real = (pid) => { const C = window.JOGADORES_CLUBE || {}; for (const k in C) { const j = C[k].jogadores?.[pid]; if (j && j.calor) return { j, grade: C[k].grade || [24, 16] }; } return null; };
-  // fotos privadas do dono (TheSportsDB, recorte com a camisa do clube; sem licença comercial): quando ligadas,
-  // substituem a foto livre em todo o site (ficha, listas do elenco, cartão do mapa de calor)
+  // fotos dos jogadores conferidas pelo monitor de fotos (server/fotos.py → js/fotos.js ou /api/fotos/<clube>).
+  // As privadas do dono (TheSportsDB, ESPN, Flickr, API-Football; sem licença comercial), quando ligadas, substituem
+  // a foto livre em todo o site (ficha, listas do elenco, cartão do mapa de calor)
+  const RECORTADA = new Set(["TheSportsDB", "ESPN"]); // fundo transparente: o site põe o fundo na cor do clube
+  let fotosProm = null;
+  function carregaFotos(cid) {
+    if (window.PD?.LIVE) {
+      return fetch(`/api/fotos/${cid}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+        .then((d) => d || (window.FOTOS || {})[cid] || null);
+    }
+    fotosProm = fotosProm || new Promise((res) => { if (window.FOTOS) return res(); const s = document.createElement("script"); s.src = "js/fotos.js"; s.onload = s.onerror = () => res(); document.head.appendChild(s); });
+    return fotosProm.then(() => (window.FOTOS || {})[cid] || null);
+  }
   async function comFotosPrivadas(cid, d) {
     const M = window.MERCADO_UI;
     if (!d || d._fotosPriv || !M?.fotosLigadas?.()) return d;
     try {
-      const E = await M.carrega(cid);
-      for (const x of E?.elenco || []) {
-        const j = d.jogadores?.[x.id];
-        if (!j || !x.fotoPrivada) continue;
-        const fl = x.fotoInfo?.fonte === "Flickr";
-        j.foto = fl ? { url: x.fotoPrivada, autor: x.fotoInfo.autor || "autor no Flickr", pagina: x.fotoInfo.pagina, rosto: x.fotoInfo.rosto, licenca: "uso privado", fonte: "Flickr", privada: true, recorte: true }
-          : { url: x.fotoPrivada, autor: "TheSportsDB", licenca: "uso privado", fonte: "TheSportsDB", privada: true };
+      const F = await carregaFotos(cid);
+      if (F) window.SEG?.limpa(F);
+      for (const [aid, f] of Object.entries(F || {})) {
+        const j = d.jogadores?.[aid];
+        if (!j || !f?.u || f.f === "Wikimedia") continue;
+        j.foto = RECORTADA.has(f.f) ? { url: f.u, autor: f.f, licenca: "uso privado", fonte: f.f, privada: true }
+          : { url: f.u, autor: f.a || `foto no ${f.f}`, pagina: f.p, rosto: f.r, licenca: "uso privado", fonte: f.f, privada: true, recorte: true };
       }
     } catch { /* fica a foto livre */ }
     d._fotosPriv = true;
