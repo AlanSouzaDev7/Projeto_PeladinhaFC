@@ -134,47 +134,83 @@ finally:
     P.JOG._flickr, P.JOG.recorte_rosto, P.get = _fl, _rr, _get
     os.environ.pop("FLICKR_API_KEY", None)
 
-# monitor de fotos (server/fotos.py), sem rede: fontes e "a foto abre?" simuladas
+# monitor de fotos (server/fotos.py), sem rede e sem tocar nos arquivos reais: sites dos clubes, downloads e cópias simulados
 F = P.FOTO
-_abre, _arqf, _feler, _fegr, _st = F.abre, F._arq, P.FE._ler, P.FE._gravar, dict(P.state)
+guardado = {k: getattr(F, k) for k in ("abre", "_arq", "baixar", "guardar", "_existe", "ler_sites", "retirar")}
+_feler, _fegr, _st = P.FE._ler, P.FE._gravar, dict(P.state)
 P.FE._gravar = lambda d: None  # nunca grava no cache real do TheSportsDB
 import tempfile
 tmp = tempfile.mkdtemp()
-F._arq = lambda: os.path.join(tmp, "fotos.json")
-existe = {"https://r2.thesportsdb.com/a.png", "https://a.espncdn.com/i/headshots/soccer/players/full/2.png", "https://live.staticflickr.com/3.jpg"}
+F._arq = lambda nome=F.CACHE: os.path.join(tmp, nome)
+existe = {"https://r2.thesportsdb.com/a.png", "https://a.espncdn.com/i/headshots/soccer/players/full/2.png", "https://live.staticflickr.com/3.jpg", "https://clube.com/seis-v1.png"}
+copias = set()
 F.abre = lambda url, timeout=15: url in existe
-P.FE._ler = lambda: {"tsdb": {"1": {"d": {"foto": "https://r2.thesportsdb.com/a.png"}}}, "flickr": {"3": {"d": {"url": "https://live.staticflickr.com/3.jpg", "autor": "Fã", "rosto": [0, 0, 1, 1]}}}}
+F.baixar = lambda url: url.encode() if url in existe else None
+F.guardar = lambda cid, aid, dados: (copias.add(f"img/jogadores/{cid}/{aid}.webp"), f"img/jogadores/{cid}/{aid}.webp?v={abs(hash(dados)) % 10**8}")[1]
+F._existe = lambda u: bool(u) and u.split("?")[0] in copias
+sites = {"quando": 0, "clubes": {"cruzeiro": {"fotos": [{"src": "https://clube.com/seis-v1.png", "alt": "", "txt": "6 SEIS SILVA Meia"}]}}}
+F.ler_sites = lambda forcar=False: sites
+F.retirar = lambda: (copias.clear(), F._gravar({**F._ler(), "j": {}}))
+guardado["publicadas"] = F.publicadas
+F.publicadas = lambda: {}
+fe = {"tsdb": {"1": {"d": {"foto": "https://r2.thesportsdb.com/a.png"}}}, "flickr": {"3": {"d": {"url": "https://live.staticflickr.com/3.jpg", "autor": "Fã", "rosto": [0, 0, 1, 1]}}}}
+P.FE._ler = lambda: fe
 with P.lock:
-    P.state["mercado"] = {"cruzeiro": {"elenco": [{"id": "1", "nome": "Um"}, {"id": "2", "nome": "Dois"}, {"id": "3", "nome": "Tres"}, {"id": "4", "nome": "Quatro"}], "emprestados": []}}
+    P.state["mercado"] = {"cruzeiro": {"elenco": [{"id": "1", "nome": "Um"}, {"id": "2", "nome": "Dois"}, {"id": "3", "nome": "Tres"}, {"id": "4", "nome": "Quatro"},
+                                                  {"id": "6", "nome": "Seis Silva", "num": "6"}], "emprestados": []}}
     P.state["jogadores"] = {"cruzeiro": {"jogadores": {"5": {"n": "Cinco", "foto": {"url": "https://upload.wikimedia.org/5.jpg"}}}}}
 try:
     os.environ.pop("MODO_VENDA", None)
     r = F.atualizar()["clubes"]["cruzeiro"]
     fc = F.do_clube("cruzeiro")
-    ok(r["comFoto"] == 4 and [x["id"] for x in r["faltam"]] == ["4"], f"monitor: 4 de 5 com foto, falta quem não tem em lugar nenhum ({r['comFoto']}, {r['faltam']})")
+    ok(r["comFoto"] == 4 and sorted(x["id"] for x in r["faltam"]) == ["4", "5"], f"monitor: 4 de 6 com foto; a da Wikipédia não conta ({r['comFoto']}, {r['faltam']})")
+    ok({k: v["f"] for k, v in fc.items()} == {"1": "TheSportsDB", "2": "ESPN", "3": "Flickr", "6": "Clube"} and fc["3"]["r"], f"monitor: ordem das fontes, site do clube primeiro ({ {k: v['f'] for k, v in fc.items()} })")
+    ok(all(v["u"].startswith("img/jogadores/cruzeiro/") for v in fc.values()), "monitor: toda foto é uma cópia guardada no site")
     F.aplicar_mercado()  # (antes travava: pegava a trava do servidor duas vezes)
     el = {j["id"]: j for j in P.state["mercado"]["cruzeiro"]["elenco"]}
-    ok(el["1"]["fotoPrivada"].endswith("a.png") and el["1"]["fotoInfo"] is None and el["3"]["fotoInfo"]["fonte"] == "Flickr" and el["4"]["fotoPrivada"] is None, "monitor: fotos aplicadas no elenco da janela")
-    ok(fc["1"]["f"] == "TheSportsDB" and fc["2"]["f"] == "ESPN" and fc["3"]["f"] == "Flickr" and fc["3"]["r"] and fc["5"]["f"] == "Wikimedia", f"monitor: ordem das fontes ({ {k: v['f'] for k, v in fc.items()} })")
+    ok(el["1"]["fotoPrivada"].startswith("img/") and el["1"]["fotoInfo"] is None and el["3"]["fotoInfo"]["fonte"] == "Flickr" and el["4"]["fotoPrivada"] is None, "monitor: fotos aplicadas no elenco da janela")
+    # nunca sai sozinha: a ESPN apagou a foto do jogador 2 e mesmo assim a cópia guardada continua
     existe.discard("https://a.espncdn.com/i/headshots/soccer/players/full/2.png")
-    c = F._ler(); c["j"]["2"]["v"] = 0; F._gravar(c)
+    c = F._ler(); c["espn"]["2"]["t"] = 0; F._gravar(c)
     F.atualizar()
-    ok("2" not in F.do_clube("cruzeiro"), "monitor: foto que deixou de abrir sai e o jogador volta a ser procurado")
-    c = F._ler(); c["temp"] = c["temp"] - 1
-    for x in c["j"].values():
-        x["temp"] = c["temp"]
-    F._gravar(c)
+    ok(F.do_clube("cruzeiro").get("2", {}).get("f") == "ESPN", "monitor: foto que sumiu da fonte continua no site (cópia guardada)")
+    # o clube publicou uma foto nova: troca
+    existe.add("https://clube.com/seis-v2.png"); sites["clubes"]["cruzeiro"]["fotos"][0]["src"] = "https://clube.com/seis-v2.png"
+    antes = F.do_clube("cruzeiro")["6"]["u"]
     F.atualizar()
-    ok(all(x.get("temp") == F.temporada() for x in F._ler()["j"].values()), "monitor: na virada da temporada, todos são procurados de novo")
+    ok(F._ler()["j"]["6"]["src"].endswith("v2.png") and F.do_clube("cruzeiro")["6"]["u"] != antes, "monitor: o clube trocou a foto, o site troca também")
+    # apareceu uma fonte que vale mais (recorte do TheSportsDB para quem só tinha a da ESPN): troca
+    fe["tsdb"]["2"] = {"d": {"foto": "https://r2.thesportsdb.com/b.png"}}; existe.add("https://r2.thesportsdb.com/b.png")
+    F.atualizar()
+    ok(F.do_clube("cruzeiro")["2"]["f"] == "TheSportsDB", "monitor: fonte melhor substitui a guardada")
+    # cruzamento de nomes nos cartões do site do clube
+    J = {"a": {"nome": "Gabriel", "num": "1"}, "b": {"nome": "Gabriel Batista"}, "c": {"nome": "Darlan"}}
+    m = F.casar([{"src": "u1", "alt": "", "txt": "12 GABRIEL BATISTA Goleiro 7 Marinho"}, {"src": "u2", "alt": "", "txt": "1 GABRIEL Goleiro"},
+                 {"src": "https://x/DARLAN-scaled.png", "alt": "", "txt": "43 Edu Zagueiro 4 Camutanga Zagueiro 3 Darlan Zagueiro 53 Andrei Zagueiro 2 Britez Zagueiro 5 Outro Zagueiro"},
+                 {"src": "https://x/EDU-scaled.png", "alt": "", "txt": "43 Edu Zagueiro 4 Camutanga Zagueiro 3 Darlan Zagueiro 53 Andrei Zagueiro 2 Britez Zagueiro 5 Outro Zagueiro"}], J)
+    ok(m == {"a": "u2", "b": "u1", "c": "https://x/DARLAN-scaled.png"}, f"casar: nome mais específico primeiro, número da camisa desempata, nome no arquivo vale mais ({m})")
+    ok(F.casar([{"src": "n1", "alt": "", "txt": "12 NOV 2026 Gabriel Batista renova contrato"}], J) == {}, "casar: cartão de notícia não vale")
+    ok(F.casar([{"src": "g1", "txt": "GABRIEL SOUZA"}, {"src": "g2", "txt": "GABRIEL LIMA"}], {"a": {"nome": "Gabriel"}}) == {}, "casar: na dúvida entre dois, fica sem foto")
+    # o registro não conhece uma foto que já está no site (cache novo do robô) e a fonte dela sumiu: a foto fica
+    c = F._ler(); c["j"].pop("1"); F._gravar(c)
+    fe["tsdb"].pop("1")
+    F.publicadas = lambda: {"1": {"u": "img/jogadores/cruzeiro/1.webp?v=1", "f": "TheSportsDB"}}
+    F.atualizar()
+    ok(F.do_clube("cruzeiro").get("1", {}).get("f") == "TheSportsDB", "monitor: foto já publicada é adotada e não sai do site")
+    F.publicadas = lambda: {}
+    # comando de retirada
     os.environ["MODO_VENDA"] = "1"
-    ok(set(F.do_clube("cruzeiro")) == {"5"}, "monitor: com MODO_VENDA=1 só fica a foto livre")
+    F.atualizar()
+    ok(set(F.do_clube("cruzeiro")) == {"5"} and not copias, "monitor: MODO_VENDA=1 apaga as cópias e só fica a foto livre")
     os.environ.pop("MODO_VENDA", None)
     f = Fake("/api/fotos/nao-existe"); P.Handler.do_GET(f)
     ok(f.r[0] == 404, "rota: fotos de clube desconhecido = 404")
     f = Fake("/api/fotos"); P.Handler.do_GET(f)
     ok(f.r[0] == 200 and "comFoto" in f.r[1]["clubes"]["cruzeiro"], "rota: /api/fotos (resumo)")
 finally:
-    F.abre, F._arq, P.FE._ler, P.FE._gravar = _abre, _arqf, _feler, _fegr
+    for k, v in guardado.items():
+        setattr(F, k, v)
+    P.FE._ler, P.FE._gravar = _feler, _fegr
     os.environ.pop("MODO_VENDA", None)
     with P.lock:
         P.state.clear(); P.state.update(_st)

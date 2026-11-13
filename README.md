@@ -213,10 +213,12 @@ O robô lia súmula e lances só de jogo encerrado. Agora os **jogos em andament
 
 ## Monitor de fotos dos jogadores
 
-`server/fotos.py`, API `GET /api/fotos` (resumo: quantos têm foto em cada clube, de que fonte e quem falta) e `GET /api/fotos/<clube>`; o robô grava `js/fotos.js` a cada rodada e o site aplica as fotos em todo lugar (ficha, listas do elenco, cartão do mapa de calor, Janela). Vale para todo jogador do elenco, os emprestados e quem jogou na temporada e já saiu.
-- **Confere se cada jogador tem foto**; quem não tem é **procurado de novo a cada 3 dias**; foto achada é **conferida a cada 7 dias** (se deixou de abrir, sai e o jogador volta a ser procurado); na **virada da temporada** todos são procurados de novo, e as buscas no TheSportsDB recomeçam (fotos com a camisa nova). Roda a cada rodada do robô (30 min) e a cada hora no servidor ao vivo.
-- **Fontes, na ordem**: TheSportsDB (recorte com a camisa do clube), ESPN (foto de perfil recortada; pode ser da camisa do clube anterior), Flickr (com `FLICKR_API_KEY`), API-Football (com `API_FOOTBALL_KEY`: foto de praticamente todo jogador inscrito, inclusive da base) e a foto livre do Wikimedia Commons. Só APIs e arquivos públicos; nada é raspado.
-- As fotos das quatro primeiras fontes são privadas do dono (sem licença comercial); com `MODO_VENDA=1` o monitor só deixa as livres.
+`server/fotos.py`, API `GET /api/fotos` (resumo: quantos têm foto em cada clube, de que fonte e quem falta) e `GET /api/fotos/<clube>`; o robô grava `js/fotos.js` e as cópias em `img/jogadores/<clube>/<id>.webp`, e o site aplica as fotos em todo lugar (ficha, listas do elenco, cartão do mapa de calor, Janela).
+- **Foto da temporada, do clube atual**: a fonte que vale mais é o **site oficial do clube** (`server/fotos_clubes.mjs` abre a página pública do elenco num navegador, porque os sites montam o elenco com JavaScript, e cruza cada foto com o elenco pelo nome; na dúvida entre dois jogadores, fica sem). Hoje são lidos 17 sites; **Athletico-PR e Corinthians recusam acesso automático e o elenco do Cruzeiro pede login**: esses não são contornados. Depois vêm TheSportsDB (recorte com a camisa), ESPN, API-Football (com chave) e Flickr (com chave).
+- **Nunca Wikipédia**: com as fotos privadas no ar, a foto livre antiga (Wikipédia/Flickr) não aparece; sem foto atual, fica o número da camisa.
+- **As fotos nunca saem sozinhas**: cada uma é baixada, reduzida (360 px, WebP) e guardada no próprio site; só é trocada quando o clube publica outra ou aparece uma fonte que vale mais. Os sites são relidos a cada 3 dias e na virada da temporada (quando as buscas no TheSportsDB também recomeçam).
+- **Comando de retirada**: `MODO_VENDA=1` (ou `FOTOS_PRIVADAS=0`) apaga `img/jogadores/` e o registro das fotos privadas; o site fica só com as fotos livres.
+- `python tests/fotos_varredura.py` mostra a cobertura do elenco por clube, por que falta foto e se alguma cópia sumiu do disco.
 
 ## Fotos de todos os jogadores (varredura e Flickr)
 

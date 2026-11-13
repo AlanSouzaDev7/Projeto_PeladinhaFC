@@ -65,6 +65,29 @@ jobs:
       - name: OpenCV
         run: python -m pip install --quiet "opencv-python-headless==4.12.0.88"
 
+      # fotos dos jogadores nos sites oficiais dos clubes (server/fotos_clubes.mjs): o navegador só é instalado nas
+      # rodadas em que os sites são relidos (a cada 3 dias e na virada da temporada)
+      - name: Os sites dos clubes precisam ser relidos?
+        id: sites
+        run: |
+          python - >> "$GITHUB_OUTPUT" <<'PY'
+          import json, os, time
+          try:
+              q = json.load(open("server/cache/mercado-fotos-clubes.json")).get("quando", 0)
+          except Exception:
+              q = 0
+          try:
+              t = json.load(open("server/cache/mercado-fotos.json")).get("temp")
+          except Exception:
+              t = None
+          virada = bool(t) and t != int(time.strftime("%Y"))
+          print("ler=" + ("sim" if virada or time.time() - q > 3 * 86400 else "nao"))
+          PY
+
+      - name: Navegador para ler os sites dos clubes
+        if: steps.sites.outputs.ler == 'sim'
+        run: npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
+
       - name: Gerar dados
         timeout-minutes: 38   # estourando, o passo para e o cache ainda é guardado (próxima rodada continua de onde parou)
         run: python -X utf8 server/placar_api.py --snapshot
@@ -106,6 +129,7 @@ jobs:
           git config user.name "placar-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add js/live-data.js js/player-stats.js js/club-form.js js/heatmaps.js js/departamento-medico.js js/raio-x.js js/jogadores/ js/squads.js js/competicoes/ js/mercado/ js/escalacoes.js js/fotos.js
+          git add -A img/jogadores/ 2>/dev/null || true   # cópias das fotos (o comando de retirada apaga a pasta)
           if git diff --cached --quiet; then
             echo "Nada novo."
           else

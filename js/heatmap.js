@@ -112,7 +112,7 @@
   // fotos dos jogadores conferidas pelo monitor de fotos (server/fotos.py → js/fotos.js ou /api/fotos/<clube>).
   // As privadas do dono (TheSportsDB, ESPN, Flickr, API-Football; sem licença comercial), quando ligadas, substituem
   // a foto livre em todo o site (ficha, listas do elenco, cartão do mapa de calor)
-  const RECORTADA = new Set(["TheSportsDB", "ESPN"]); // fundo transparente: o site põe o fundo na cor do clube
+  const RECORTADA = new Set(["Clube", "TheSportsDB", "ESPN"]); // fundo transparente: o site põe o fundo na cor do clube
   let fotosProm = null;
   function carregaFotos(cid) {
     if (window.PD?.LIVE) {
@@ -128,6 +128,11 @@
     try {
       const F = await carregaFotos(cid);
       if (F) window.SEG?.limpa(F);
+      // com as fotos privadas no ar, a foto livre antiga (Wikipédia, Flickr) não aparece: sem foto atual, fica o número
+      // (no modo venda o arquivo só tem as livres, e elas continuam)
+      const temPrivadas = Object.values(window.FOTOS || F || {}).some((c) => Object.values(c || {}).some((f) => f && f.f && f.f !== "Wikimedia"))
+        || Object.values(F || {}).some((f) => f && f.f && f.f !== "Wikimedia");
+      if (temPrivadas) for (const j of Object.values(d.jogadores || {})) if (j.foto && !j.foto.privada) delete j.foto;
       for (const [aid, f] of Object.entries(F || {})) {
         const j = d.jogadores?.[aid];
         if (!j || !f?.u || f.f === "Wikimedia") continue;
