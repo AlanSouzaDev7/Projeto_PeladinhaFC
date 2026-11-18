@@ -281,7 +281,7 @@
     return `<div class="cbar" style="--band:${band};--bink:${bink};--base:${base};--ink:${ink}">
       <div class="cbar-name"><b>${club.abbr}</b></div>
       <div class="gb-team cbar-team"><span>${club.short}</span></div>
-      <div class="cbar-crest">${club.logo ? `<img src="${club.logo}" alt="" decoding="async"/>` : ""}</div>
+      <div class="cbar-crest">${club.logo ? `<img src="${SEG.esc(SEG.url(club.logo))}" alt="" decoding="async"/>` : ""}</div>
     </div>`;
   }
 
@@ -309,7 +309,7 @@
     box.href = gol.link || "#/";
     box.setAttribute("role", "status");
     box.setAttribute("aria-live", "assertive");
-    box.innerHTML = html(gol.club, "", gol) + `<p class="ga-txt"><b>GOL do ${gol.club.abbr}!</b><span>${gol.texto}</span></p>`;
+    box.innerHTML = html(gol.club, "", gol) + `<p class="ga-txt"><b>GOL do ${gol.club.abbr}!</b><span>${SEG.esc(gol.texto)}</span></p>`;
     box.querySelector(".gb").setAttribute("aria-label", `Gol do ${gol.club.name}. ${gol.texto}`);
     document.body.appendChild(box);
     if (!gol.som) window.SONS?.gol(gol.club.id);

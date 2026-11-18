@@ -18,7 +18,7 @@
   const guarda = { get: () => { try { return localStorage.getItem("tk-pausa") === "1"; } catch { return false; } },
     set: (v) => { try { localStorage.setItem("tk-pausa", v ? "1" : "0"); } catch {} } };
   let anim = null, mouse = false, foco = false, pausaUser = guarda.get();
-  const esc = (x) => String(x || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  const esc = (x) => SEG.esc(x || "");
   const hora = (ts) => new Date(ts * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
   const ha = (ts) => { const m = Math.max(1, Math.round((Date.now() / 1000 - ts) / 60)); return m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} d`; };
   const escudos = (x) => (x.clubes || []).slice(0, 2).map((c) => (window.PD?.byId && Object.prototype.hasOwnProperty.call(window.PD.byId, c) && window.GFX ? window.GFX.crest(window.PD.byId[c], 20) : "")).join("");
@@ -30,7 +30,7 @@
     const top = items.slice(0, 5);
     const fita = items.map((x) => `<a class="tk-item" href="${esc(window.SEG ? SEG.url(x.link) : "#")}" target="_blank" rel="noopener noreferrer">${escudos(x)}<b>${esc(x.title)}</b><small>${esc(x.source)} · ${hora(x.ts)}</small></a>`).join('<i class="tk-sep" aria-hidden="true"></i>');
     el.innerHTML = `
-      <div class="tk-tag" aria-hidden="true"><b>PLACAR<i></i>TV</b><span>Futebol agora</span><time class="tk-clock"></time></div>
+      <div class="tk-tag" aria-hidden="true"><b><img src="assets/marca/simbolo-invertido.svg" alt="" width="18" height="18">CazéStats.TV</b><span>Futebol agora</span><time class="tk-clock"></time></div>
       <div class="tk-body">
         <div class="tk-head" aria-live="polite">${top.map((x, i) => `<a class="tk-h${i === cur % top.length ? " on" : ""}" href="${esc(window.SEG ? SEG.url(x.link) : "#")}" target="_blank" rel="noopener noreferrer" ${i === cur % top.length ? "" : 'tabindex="-1" aria-hidden="true"'}>
             <b>${esc(x.title)}</b><small>${esc(x.source)} · ${ha(x.ts)}</small></a>`).join("")}${top.length > 1 ? '<i class="tk-prog" aria-hidden="true"></i>' : ""}</div>
@@ -95,11 +95,11 @@
   async function load() {
     let m = null;
     try {
-      if (window.PD?.LIVE) m = await (await fetch("/api/manchetes", { cache: "no-store" })).json();
+      if (window.PD?.LIVE) m = await SEG.json(await fetch("/api/manchetes", { cache: "no-store" }));
       else {
         // sem a API: o arquivo que o GitHub Actions grava a cada 30 min (a página não precisa ser recarregada)
         const src = await (await fetch(`js/live-data.js?t=${Date.now()}`, { cache: "no-store" })).text();
-        m = JSON.parse(src.slice(src.indexOf("{"), src.lastIndexOf("}") + 1)).manchetes;
+        m = SEG.le(src.slice(src.indexOf("{"), src.lastIndexOf("}") + 1)).manchetes;
       }
     } catch { m = null; }
     const novos = (m && m.items) || [];

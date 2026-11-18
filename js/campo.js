@@ -1,6 +1,6 @@
 /* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
-   Placar.TV — campinho: onde cada ponto do campo fica (GOL, ZAG, LD, VOL, MEI, PD, CA...), a posição de origem
+   CazéStats.TV — campinho: onde cada ponto do campo fica (GOL, ZAG, LD, VOL, MEI, PD, CA...), a posição de origem
    de cada jogador e o que ele já fez em cada posição (súmulas do Brasileirão, js/heatmaps.js), e a projeção 3D
    (campo inclinado, como na transmissão) com a conta inversa para arrastar no campo inclinado.
    Usado pela janela de transferências (js/mercado.js) e pela escalação do clube (js/lineup.js).
@@ -60,7 +60,7 @@
       : `${nome} não está acostumado a jogar de ${NOME[a.para].toLowerCase()}: ${h[a.para] ? `nas súmulas, só ${n(h[a.para][1])} min ali.` : "nas súmulas, nunca atuou ali."}`;
     const tab = linhas.length ? `<table class="cp-hist"><thead><tr><th>Posição</th><th>Jogos</th><th>Min</th><th>Gols</th><th>Assist.</th></tr></thead><tbody>${linhas.map(([p, s]) => `<tr class="${p === a.para ? "on" : ""}"><td><b>${p}</b> ${NOME[p] ? `<small>${NOME[p]}</small>` : ""}</td><td>${s[0]}</td><td>${n(s[1])}</td><td>${s[2]}</td><td>${s[3]}</td></tr>`).join("")}</tbody></table>`
       : `<p class="cp-sem">Sem súmulas do Brasileirão com este jogador ainda.</p>`;
-    return { a, html: `<p class="cp-cab s-${a.tipo}">${cab}</p>${tab}<p class="cp-fonte">Súmulas do Brasileirão (posição em cada jogo, ESPN), contadas pelo Placar.TV.</p>` };
+    return { a, html: `<p class="cp-cab s-${a.tipo}">${cab}</p>${tab}<p class="cp-fonte">Súmulas do Brasileirão (posição em cada jogo, ESPN), contadas pelo CazéStats.TV.</p>` };
   }
 
   /* ---------- projeção 3D: campo inclinado com perspectiva ----------

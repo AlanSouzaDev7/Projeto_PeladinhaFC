@@ -31,6 +31,15 @@
     return { cs, cx: w - Math.max(cs * 0.8, w * 0.17), cy: h * 0.46 };
   }
 
+  /* escudo para desenhar na cena: o oficial só com a opção ligada (js/config.js); senão, o escudo desenhado pelo
+     próprio site, como imagem SVG (nunca um pedido para "undefined") */
+  function crestImg(club) {
+    const im = new Image();
+    if (club.logo) im.src = club.logo;
+    else if (window.GFX) im.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(window.GFX.svgCrest(club, 120).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" '));
+    return im;
+  }
+
   /* ---------- palco ---------- */
   class Stage {
     constructor(canvas, factory, club) {
@@ -61,7 +70,7 @@
       // mudar o tamanho apaga o canvas: redesenha na hora para não piscar
       if (this.scene) this.draw(reduced ? 99 : (performance.now() - this.t0) / 1000);
     }
-    replay() { this.t0 = performance.now(); this.scene.replay && this.scene.replay(); }
+    replay() { this.t0 = performance.now(); this.congelada = false; this.scene.replay && this.scene.replay(); this.loop(); }
     // centro e tamanho do escudo do placar, em coordenadas do canvas
     measure() {
       const bar = this.c.closest(".hero")?.querySelector(".gb-bar");
@@ -80,7 +89,7 @@
     }
     loop() {
       clearTimeout(this.idle);
-      if (this.raf || !this.alive) return;
+      if (this.raf || !this.alive || this.congelada) return;
       const tick = (now) => {
         this.raf = null;
         // mede o tempo entre quadros; abaixo de ~40 fps, passa a desenhar em resolução menor e a 30 fps
@@ -89,10 +98,16 @@
           if (!this.lowPower && this.avg > 25 && now - this.t0 > 1500) { this.lowPower = true; this.resize(); }
         }
         this.last = now;
-        if (this.lowPower && (this.skip = !this.skip)) { this.raf = requestAnimationFrame(tick); return; }
+        // terminada a entrada (escudo formado + 4 s), sobra o movimento de fundo: 30 fps bastam e a CPU respira;
+        // 6 s depois disso a cena congela no último quadro (tocar no topo do clube toca de novo: replay)
+        const seg = (now - this.t0) / 1000, fimEntrada = (crestT[this.clubId] ?? 4.6) + 4;
+        if (seg > fimEntrada + 6) { this.congelada = true; return; }
+        const ambiente = seg > fimEntrada;
+        if ((this.lowPower || ambiente) && (this.skip = !this.skip)) { this.raf = requestAnimationFrame(tick); return; }
         if (!this.alive || !this.c.isConnected) return this.destroy();
         // fora da tela: confere de novo daqui a pouco em vez de depender só do observador
-        if (!this.visible || document.hidden) { this.idle = setTimeout(() => this.loop(), 400); return; }
+        // app em segundo plano (js/app-nativo.js liga PD.pausado): nada desenhado até voltar
+        if (!this.visible || document.hidden || window.PD?.pausado) { this.idle = setTimeout(() => this.loop(), 400); return; }
         this.draw((now - this.t0) / 1000);
         this.raf = requestAnimationFrame(tick);
       };
@@ -101,6 +116,7 @@
     destroy() { this.alive = false; this.ro.disconnect(); this.io.disconnect(); }
   }
   document.addEventListener("visibilitychange", () => { if (!document.hidden) stages.forEach((s) => s.loop()); });
+  window.addEventListener("placar:volta", () => stages.forEach((s) => s.loop()));
   const stages = new Set();
 
   function mount(root = document) {
@@ -110,6 +126,7 @@
       const id = c.dataset.heroScene, f = registry[id];
       if (!f) return;
       c.__stage = new Stage(c, f, window.PD.byId[id]);
+      c.__stage.clubId = id;
       stages.add(c.__stage);
     });
   }
@@ -120,7 +137,7 @@
     // segundo em que o escudo se forma na cena (o placar do GOL! entra junto)
     crestTime: (id) => crestT[id] ?? 4.6,
     mount,
-    kit: { clamp, lerp, span, ease, rand, bez, crestSpot },
+    kit: { clamp, lerp, span, ease, rand, bez, crestSpot, crestImg },
   };
 })();
 
@@ -133,8 +150,7 @@
 HERO_SCENES.register("cruzeiro", (st) => {
   const { clamp, lerp, span, ease, rand, bez } = HERO_SCENES.kit;
   const R = rand(1921);
-  const crest = new Image();
-  crest.src = st.club.logo;
+  const crest = HERO_SCENES.kit.crestImg(st.club);
 
   // estrelas do céu em 3 profundidades (coordenadas de "mundo" 0–1, maiores que a tela)
   const layers = [

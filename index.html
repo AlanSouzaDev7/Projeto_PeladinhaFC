@@ -1,44 +1,49 @@
 <!doctype html>
-<!-- O Placar.TV © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor. -->
-<html lang="pt-BR" data-theme="dark">
+<!-- CazéStats.TV © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados.
+     Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). -->
+<html lang="pt-BR" data-theme="dark" class="ident">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://a.espncdn.com https://*.wikimedia.org https://*.wikipedia.org https://live.staticflickr.com https://media.api-sports.io https://r2.thesportsdb.com; connect-src 'self' https://site.web.api.espn.com https://site.api.espn.com https://*.workers.dev; media-src 'self' blob:; manifest-src 'self'; worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://a.espncdn.com https://*.wikimedia.org https://*.wikipedia.org https://live.staticflickr.com https://media.api-sports.io https://r2.thesportsdb.com; connect-src 'self' https://site.web.api.espn.com https://site.api.espn.com https://*.workers.dev; media-src 'self' blob:; manifest-src 'self'; worker-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="O Placar.TV" />
+  <meta name="apple-mobile-web-app-title" content="CazéStats.TV" />
   <meta name="format-detection" content="telephone=no" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="assets/icon-180.png" />
-  <title>O Placar.TV — Futebol Brasileiro</title>
-  <meta name="description" content="O Placar.TV: placar ao vivo do futebol brasileiro: Brasileirão Séries A, B, C e D, Libertadores, Sul-Americana, Copa do Brasil e estaduais, com tabela, estatísticas e uma página temática para cada clube." />
-  <meta name="author" content="Alan Souza (AlanSouzaDev7)" />
-  <meta name="copyright" content="© 2026 Alan Souza. Todos os direitos reservados." />
-  <meta name="theme-color" content="#0c1117" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Saira:wdth,wght@50..125,400..900&family=Saira+Condensed:wght@500;600;700;800&family=Big+Shoulders+Display:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link rel="apple-touch-icon" href="assets/marca/icone-192.png" />
+  <title>CazéStats.TV — futebol brasileiro ao vivo</title>
+  <meta name="description" content="CazéStats.TV: placar ao vivo do futebol brasileiro: Brasileirão Séries A, B, C e D, Libertadores, Sul-Americana, Copa do Brasil e estaduais, com tabela, estatísticas e uma página temática para cada clube." />
+  <meta name="author" content="Alan Evangelista de Souza Martins" />
+  <meta name="copyright" content="© 2026 Alan Evangelista de Souza Martins. Todos os direitos reservados." />
+  <meta name="theme-color" content="#0B0B0D" />
+  <!-- prévia ao compartilhar (E6) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="CazéStats.TV" />
+  <meta property="og:title" content="CazéStats.TV — futebol brasileiro ao vivo" />
+  <meta property="og:description" content="Placar ao vivo, tabela, estatísticas, mapa de calor dos jogadores e janela de transferências dos 20 clubes da Série A." />
+  <meta property="og:image" content="assets/marca/icone-1024.png" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="preload" href="assets/fontes/space-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fontes/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="css/fontes.css" />
+  <link rel="stylesheet" href="css/fontes-identidade.css" />
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/identidade.css" />
   <!-- segurança e tema antes de desenhar a página (quem usa o claro não vê a página piscar escura) -->
   <script src="js/seguranca.js"></script>
-  <link rel="icon" type="image/svg+xml" href="assets/logo-mark.svg" />
+  <link rel="icon" type="image/svg+xml" href="assets/marca/simbolo-pequeno.svg" />
 </head>
 <body>
   <div class="backdrop" aria-hidden="true"></div>
 
   <header class="header">
-    <a href="#/" class="logo" aria-label="O Placar.TV — início">
-      <!-- símbolo: "P" feito com as linhas do meio-campo (linha do meio, círculo central e marca do pontapé inicial) -->
-      <span class="logo-mark">
-        <svg width="34" height="34" viewBox="0 0 48 48" aria-hidden="true">
-          <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 12.5V35.5"/><path d="M16.5 12.5H23a8 8 0 0 1 0 16h-6.5"/></g>
-          <circle class="logo-spot" cx="23" cy="20.5" r="2.6"/>
-        </svg>
-      </span>
-      <span class="logo-word"><small class="logo-o">O</small>PLACAR<i class="logo-dot" aria-hidden="true"></i><span class="logo-tv">TV</span></span>
+    <a href="#/" class="logo logo-433" aria-label="CazéStats.TV — início">
+      <!-- símbolo: a formação 4-3-3 lida de baixo para cima (1 + 4 + 3 + 3), o ponto lima é o camisa 10 -->
+      <span class="l433-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="26" fill="#3B4EEA"/><rect x="25.5" y="19.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="45.5" y="19.5" width="9" height="9" rx="3" fill="#C6F432"/><rect x="65.5" y="19.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="25.5" y="37.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="45.5" y="37.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="65.5" y="37.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="18.5" y="55.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="36.5" y="55.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="54.5" y="55.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="72.5" y="55.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="45.5" y="73.5" width="9" height="9" rx="3" fill="#F1EDE1"/></svg></span>
+      <span class="logo-word l433-word">CazéStats<span class="l433-tv">.TV</span></span>
     </a>
     <nav class="nav" aria-label="Principal">
       <a href="#/" data-nav="home">Ao vivo</a>
@@ -50,7 +55,7 @@
     </nav>
     <div class="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-      <input id="search" type="search" placeholder="Buscar clube…" autocomplete="off" aria-label="Buscar" />
+      <input id="search" type="search" placeholder="Buscar clube ou jogador…" autocomplete="off" aria-label="Buscar" />
       <kbd>/</kbd>
       <div class="search-results" id="search-results" role="listbox"></div>
     </div>
@@ -64,19 +69,19 @@
   <main id="view" class="view" tabindex="-1"></main>
 
   <footer class="footer">
-    <span>O Placar.TV — futebol brasileiro em tempo real. Tabela e jogos reais (ESPN); escudos via ESPN e Wikimedia Commons; elencos reais da ESPN; as aparições dos escudos são ilustrações próprias.</span>
-    <span>Fotos de jogadores: Flickr e Wikimedia Commons, só com licenças livres (Creative Commons ou domínio público), com o crédito de cada fotógrafo. This product uses the Flickr API but is not endorsed or certified by SmugMug, Inc.</span>
-    <span>Feito com HTML, CSS e JavaScript puro · sem frameworks</span>
-    <span class="footer-copy">© 2026 Alan Souza · Todos os direitos reservados. Código, design e marca O Placar.TV protegidos pelas Leis 9.609/98 e 9.610/98; cópia ou uso só com autorização do autor.</span>
+    <span>CazéStats.TV — futebol brasileiro em tempo real. Tabela e jogos reais (ESPN); elencos reais da ESPN; as aparições dos escudos são ilustrações próprias.</span>
+    <span>Fotos de jogadores: sites oficiais dos clubes, TheSportsDB, ESPN e Wikimedia Commons, com o crédito de cada fonte. This product uses the Flickr API but is not endorsed or certified by SmugMug, Inc.</span>
+    <span>Feito com HTML, CSS e JavaScript puro · sem frameworks · <a href="#/privacidade">Privacidade e termos</a></span>
+    <span class="footer-copy">© 2026 Alan Evangelista de Souza Martins · Todos os direitos reservados. Código, design e marca CazéStats.TV protegidos pelas Leis 9.609/98 e 9.610/98; cópia ou uso só com autorização do autor.</span>
   </footer>
 
   <nav class="bottom-nav" aria-label="Navegação inferior">
-    <a href="#/" data-nav="home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Ao vivo</a>
-    <a href="#/clubes" data-nav="clubes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></svg>Clubes</a>
-    <a href="#/tabela" data-nav="tabela"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Tabela</a>
-    <a href="#/simulador" data-nav="simulador"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2"/></svg>Simular</a>
-    <a href="#/bora-pro-jogo" data-nav="bora-pro-jogo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M3 9h3v6H3M21 9h-3v6h3"/></svg>Bora</a>
-    <a href="#/sobre" data-nav="sobre"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Sobre</a>
+    <a href="#/" data-nav="home"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Ao vivo</a>
+    <a href="#/clubes" data-nav="clubes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></svg>Clubes</a>
+    <a href="#/tabela" data-nav="tabela"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Tabela</a>
+    <a href="#/simulador" data-nav="simulador"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2"/></svg>Simular</a>
+    <a href="#/bora-pro-jogo" data-nav="bora-pro-jogo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M3 9h3v6H3M21 9h-3v6h3"/></svg>Bora</a>
+    <a href="#/sobre" data-nav="sobre"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Sobre</a>
   </nav>
 
   <div class="curtain" id="curtain" aria-hidden="true"></div>
@@ -92,6 +97,7 @@
   <script src="js/departamento-medico.js"></script>
   <script src="js/live-data.js"></script>
   <script src="js/config.js"></script>
+  <script src="js/dados.js"></script>
   <script src="js/sons.js"></script>
   <script src="js/live.js"></script>
   <script src="js/ticker.js"></script>
@@ -102,6 +108,7 @@
   <script src="js/mercado.js"></script>
   <script src="js/lineup.js"></script>
   <script src="js/drone.js"></script>
+  <script src="js/privacidade.js"></script>
   <script src="js/app.js"></script>
   <script src="js/backdrop.js"></script>
 </body>

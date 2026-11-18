@@ -1,0 +1,607 @@
+/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
+/* ==========================================================================
+   433Fut — identidade visual aplicada ao site dentro do app Android (Manual de Identidade Visual v1.0, nov. 2026).
+   Só entra no pacote do app (scripts/montar-www.mjs), depois de css/styles.css: troca as variáveis de tema e veste
+   os componentes com as regras do manual. As páginas de clube continuam com as cores de cada clube (conteúdo).
+     · Paleta (seção 06): Azul Camisa, Noite de Estádio e Cal (primárias); Gramado, Gramado Escuro, Refletor e
+       Vestiário (secundárias); cartões, Taça, Céu, Arquibancada e Rede (terciárias, em pequenas doses).
+     · Fundo escuro e denso por padrão; no tema claro o fundo é Cal (nunca branco puro).
+     · Tipografia (07): Space Grotesk (títulos, placares, logotipo), Inter (texto), JetBrains Mono (números e rótulos).
+     · Elementos (08): raio do ícone 26%, card 16, botão 12, pílula; status de jogo; últimos 5; diagonal 4-3-3.
+   Margens das barras do sistema: o Capacitor 8 injeta --safe-area-inset-* (o env() vem zerado em WebViews antigos).
+   ========================================================================== */
+:root {
+  /* paleta oficial */
+  --f-azul: #3b4eea;
+  --f-noite: #0b0b0d;
+  --f-cal: #f1ede1;
+  --f-gramado: #1f9d55;
+  --f-gramado-escuro: #0e5a34;
+  --f-refletor: #c6f432;
+  --f-vestiario: #17181c;
+  --f-amarelo: #ffc83d;
+  --f-vermelho: #ff5a3c;
+  --f-taca: #b8893a;
+  --f-ceu: #8c98ff;
+  --f-arquibancada: #9a9ca5;
+  --f-rede: #2a2c33;
+  /* escala do Azul Camisa (06B: 500 é a cor oficial) */
+  --f-azul-700: #2633a8;
+
+  --f-sans: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-display: "Space Grotesk", "Inter", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  --sa-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --sa-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --sa-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --sa-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- tema escuro (padrão do app): Noite de Estádio, Vestiário e Cal ---------- */
+.app-nativo,
+.app-nativo[data-comp]:not([data-theme="light"]) {
+  --bg: var(--f-noite);
+  --bg-2: #101114;
+  --surface: var(--f-vestiario);
+  --surface-2: #1e2025;
+  --surface-3: var(--f-rede);
+  --line: var(--f-rede);
+  --line-soft: #202227;
+  --text: var(--f-cal);
+  --text-2: #c4c1b8;
+  --text-3: var(--f-arquibancada);
+  --brand: var(--f-azul);
+  --brand-2: var(--f-refletor);
+  --brand-3: var(--f-noite);
+  --live: var(--f-refletor);
+  --win: var(--f-refletor);
+  --draw: #4a4c55;
+  --loss: var(--f-vermelho);
+  --gold: var(--f-taca);
+  --zona-acesso: var(--f-azul);
+  --zona-queda: var(--f-vermelho);
+  --shadow: none;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --font: var(--f-sans);
+  --font-display: var(--f-display);
+  --font-label: var(--f-display);
+  --header-h: calc(60px + var(--sa-top));
+  --f-on-live: var(--f-noite);
+  color-scheme: dark;
+}
+/* tema claro: fundo Cal, superfícies creme mais claras, texto Noite (o lima vira Gramado Escuro para ter contraste) */
+.app-nativo[data-theme="light"] {
+  --bg: var(--f-cal);
+  --bg-2: #e9e4d6;
+  --surface: #f8f6ef;
+  --surface-2: #ece7d9;
+  --surface-3: #e2dccb;
+  --line: #d9d3c2;
+  --line-soft: #e6e0d1;
+  --text: var(--f-noite);
+  --text-2: #3c3d43;
+  --text-3: #5b5d65;
+  --live: var(--f-gramado-escuro);
+  --win: var(--f-gramado);
+  --draw: #6b6d75;
+  --loss: #d23a1f;
+  --f-on-live: var(--f-cal);
+  color-scheme: light;
+}
+/* sem os fundos coloridos das competições: a cor de cada torneio fica só na faixa da competição */
+.app-nativo[data-comp] body,
+.app-nativo body {
+  background: var(--bg);
+  background-image: none;
+  font-family: var(--f-sans);
+}
+.app-nativo .backdrop {
+  display: none;
+}
+
+/* ---------- tipografia ---------- */
+.app-nativo :is(h1, h2, h3, .page-head h1, .round-nav b, .cpx-txt h1, .cp-topo h1) {
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-stretch: normal;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+/* números tabulares em placares, tabelas e estatísticas */
+.app-nativo :is(.score, .pts, .pos, .table td, .kpi b, .nota, .tk-clock, time) {
+  font-variant-numeric: tabular-nums;
+}
+.app-nativo :is(.match .score, .score b) {
+  font-family: var(--f-display);
+  font-weight: 700;
+}
+/* rótulos: JetBrains Mono em caixa-alta (seção 07, "Rótulo") */
+.app-nativo :is(.eyebrow, .card-h small, .day-h, .table th, .cp-fase-pill, [data-cp-eyebrow], .match .time, .tk-tag span, .dados-idade) {
+  font-family: var(--f-mono);
+  letter-spacing: 0.06em;
+}
+.app-nativo :is(.eyebrow, .table th, [data-cp-eyebrow], .day-h) {
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 500;
+}
+.app-nativo .card-h {
+  font: 700 16px/1.15 var(--f-display);
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+/* ---------- formas: card 16, botão 12, pílula ---------- */
+.app-nativo :is(.card, .cp-topo, .cpx-faixa, .kpi, .match-hero) {
+  border-radius: 16px;
+  box-shadow: none;
+}
+.app-nativo :is(.btn, .search, .round-nav button) {
+  border-radius: 12px;
+}
+.app-nativo :is(.chip, .tab, .tab-ink, .pill, .cp-bar, .cp-bar-i) {
+  border-radius: 999px;
+}
+
+/* ---------- cabeçalho: logotipo horizontal sobre Noite ---------- */
+.app-nativo .header {
+  padding-top: var(--sa-top);
+  height: calc(60px + var(--sa-top));
+  background: var(--bg);
+  border-bottom: 1px solid var(--line-soft);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.app-nativo .header::after {
+  display: none;
+}
+.app-nativo .logo-433 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.app-nativo .l433-mark {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: block;
+}
+.app-nativo .l433-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.app-nativo .l433-word {
+  font: 700 23px/1 var(--f-display);
+  letter-spacing: -0.035em;
+  color: var(--text);
+}
+/* no celular o site esconde a palavra da marca: no app o logotipo horizontal é o uso padrão */
+@media (max-width: 900px) {
+  .app-nativo .logo-word.l433-word {
+    display: inline;
+  }
+  .app-nativo .header .search {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.app-nativo .header .search {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+}
+
+/* ---------- barra inferior: encostada na borda, como no manual ---------- */
+@media (max-width: 900px) {
+  .app-nativo .bottom-nav {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 6px calc(8px + var(--sa-right)) calc(6px + var(--sa-bottom)) calc(8px + var(--sa-left));
+    border-radius: 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+  .app-nativo body {
+    padding-bottom: calc(72px + var(--sa-bottom));
+  }
+  .app-nativo .header {
+    padding-left: calc(16px + var(--sa-left));
+    padding-right: calc(16px + var(--sa-right));
+  }
+  .app-nativo .goal-alert {
+    bottom: calc(80px + var(--sa-bottom));
+  }
+}
+.app-nativo .bottom-nav a {
+  color: var(--text-3);
+  font: 500 11px var(--f-sans);
+  min-height: 48px;
+}
+.app-nativo .bottom-nav a.active {
+  color: var(--text);
+}
+.app-nativo .bottom-nav a.active svg {
+  color: var(--f-ceu);
+}
+.app-nativo[data-theme="light"] .bottom-nav a.active svg {
+  color: var(--f-azul);
+}
+
+/* ---------- abas e filtros: selecionado em Cal (texto Noite), os outros contornados ---------- */
+.app-nativo .tab-ink {
+  background: var(--text);
+}
+.app-nativo .tab.on {
+  color: var(--bg);
+}
+.app-nativo .tab {
+  font: 500 14px var(--f-sans);
+}
+.app-nativo .chip {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font: 500 14px var(--f-sans);
+}
+.app-nativo .chip.on {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+/* ---------- status de jogo (seção 08) ---------- */
+/* AO VIVO: pílula Refletor com texto Noite em JetBrains Mono */
+.app-nativo .match .time.live,
+.app-nativo .pill:not(.muted) {
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--live);
+  color: var(--f-on-live);
+  font: 600 11px/1.3 var(--f-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.app-nativo .match .time.live span {
+  animation: none;
+}
+/* encerrado, intervalo, agendado: pílula contornada */
+.app-nativo .pill.muted {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text-2);
+  font: 500 11px/1.3 var(--f-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.app-nativo .match .score.live {
+  color: var(--text);
+}
+.app-nativo .match .time {
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+/* lista de jogos: o fio colorido do clube some, como no manual */
+.app-nativo .match {
+  border-color: var(--line-soft);
+}
+.app-nativo .match::before {
+  display: none;
+}
+
+/* ---------- últimos 5: V lima, E cinza, D vermelho, em círculos ---------- */
+.app-nativo .form i,
+.app-nativo .rx-form i {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font: 600 10px var(--f-mono);
+  color: var(--f-noite);
+}
+.app-nativo :is(.form .V, .rx-form .v) {
+  background: var(--f-refletor);
+}
+.app-nativo :is(.form .E, .rx-form .e) {
+  background: #4a4c55;
+  color: var(--f-cal);
+}
+.app-nativo :is(.form .D, .rx-form .d) {
+  background: var(--f-vermelho);
+}
+
+/* ---------- tabela: linhas finas, números tabulares, zona em Azul ---------- */
+.app-nativo .table td {
+  border-bottom-color: var(--line-soft);
+}
+.app-nativo .table td.pts,
+.app-nativo .table .pts {
+  font: 700 15px var(--f-display);
+}
+.app-nativo .pos {
+  font-family: var(--f-mono);
+  font-weight: 500;
+  border-radius: 6px;
+}
+.app-nativo .pos.lib {
+  background: var(--f-azul);
+  color: var(--f-cal);
+}
+/* zonas como na tabela do manual: Libertadores em Azul Camisa, Pré-Libertadores em Céu; Sul-Americana em Gramado;
+   rebaixamento em Cartão Vermelho */
+.app-nativo .pos.pre {
+  background: var(--f-ceu);
+  color: var(--f-noite);
+}
+.app-nativo .pos.sul {
+  background: var(--f-gramado);
+  color: var(--f-noite);
+}
+.app-nativo :is(.pos.rel, .pos.z4) {
+  background: var(--f-vermelho);
+  color: var(--f-noite);
+}
+.app-nativo .table tr.me {
+  background: var(--f-cal);
+  color: var(--f-noite);
+}
+.app-nativo .table tr.me a {
+  color: var(--f-noite);
+}
+
+/* ---------- faixa do Brasileirão: Azul Camisa com a diagonal 4-3-3 (uso decorativo, seção 08) ---------- */
+/* as cores do torneio vêm no style do elemento: !important nas variáveis para valer a paleta */
+.app-nativo .cpx-faixa.cpx-bra {
+  --e1: var(--f-azul) !important;
+  --e2: var(--f-azul) !important;
+  --e3: var(--f-cal) !important;
+  background: var(--f-azul);
+  color: var(--f-cal);
+  border: 0;
+}
+.app-nativo .cpx-bra .cpx-campo {
+  background: repeating-linear-gradient(-60deg, transparent 0 22px, rgb(241 237 225 / 0.14) 22px 34px);
+  opacity: 1;
+}
+.app-nativo .cpx-bra .cpx-campo i,
+.app-nativo .cpx-bra::after {
+  display: none;
+}
+/* títulos retos e sem sombra em toda faixa de competição (a cor do torneio continua no fundo) */
+.app-nativo .cpx-txt h1 {
+  font: 700 clamp(28px, 4vw, 40px) / 1 var(--f-display);
+  font-style: normal;
+  letter-spacing: -0.03em;
+  text-shadow: none;
+}
+.app-nativo .cpx-faixa .cp-fase-pill {
+  font: 600 12px var(--f-mono);
+  letter-spacing: 0.04em;
+}
+.app-nativo .cpx-bra .cpx-series a.on {
+  background: var(--f-cal);
+  color: var(--f-noite);
+}
+.app-nativo .cpx-bra .cp-fase-pill i {
+  background: var(--f-refletor);
+}
+
+/* ---------- faixa de notícias: etiqueta Azul Camisa com o logotipo ---------- */
+.app-nativo .tk-tag {
+  --tk-red: var(--f-azul);
+  --tk-red2: var(--f-azul);
+  background: var(--f-azul);
+}
+.app-nativo .tk-tag::after {
+  background: var(--f-cal);
+}
+.app-nativo .tk-tag b {
+  font: 700 19px/1 var(--f-display);
+  font-stretch: normal;
+  letter-spacing: -0.03em;
+  text-transform: none;
+  align-items: center;
+  gap: 6px;
+}
+.app-nativo .tk-tag b img {
+  width: 18px;
+  height: 18px;
+}
+
+/* aviso de dados velhos: Vestiário com fio Cartão Amarelo (advertência) */
+.app-nativo .dados-idade {
+  background: var(--surface);
+  color: var(--text-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  font-size: 12px;
+}
+.app-nativo .dados-idade.velho {
+  border-left: 3px solid var(--f-amarelo);
+  color: var(--text);
+}
+
+/* ---------- toque de app ---------- */
+.app-nativo {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+.app-nativo :is(a, button, [role="button"], .bottom-nav, .nav, .club-tabs) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* alvos de toque de pelo menos 48 dp nas barras de navegação */
+.app-nativo :is(.bottom-nav a, .club-tabs a, .header .nav a, .tabs button) {
+  min-height: 48px;
+}
+
+/* ---------- faixa de notícias inteira na paleta: manchete sobre Vestiário, fita em Cal, marcadores em Azul ---------- */
+.app-nativo .ticker {
+  --tk-red: var(--f-azul);
+  --tk-red2: var(--f-azul);
+  --tk-ink: var(--f-vestiario);
+  --tk-tape: var(--f-cal);
+  border-top: 0;
+  border-bottom: 1px solid var(--line-soft);
+  box-shadow: none;
+  color: var(--f-cal);
+}
+.app-nativo .tk-head {
+  background: var(--f-vestiario);
+}
+.app-nativo .tk-h {
+  color: var(--f-cal);
+}
+.app-nativo .tk-h b {
+  font: 600 16px/1.2 var(--f-display);
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.app-nativo .tk-h small {
+  font-family: var(--f-mono);
+}
+.app-nativo .tk-run {
+  background: var(--f-cal);
+  color: var(--f-noite);
+  box-shadow: none;
+}
+.app-nativo .tk-item b {
+  font: 500 14px var(--f-sans);
+}
+.app-nativo .tk-item small {
+  font: 500 11px var(--f-mono);
+  color: #5b5d65;
+}
+.app-nativo .tk-sep {
+  background: var(--f-azul);
+  border-radius: 50%;
+  transform: none;
+}
+
+/* ---------- trilho de competições: selecionado em Cal com texto Noite ---------- */
+.app-nativo .cp-bar {
+  background: var(--surface);
+  border-color: var(--line-soft);
+}
+.app-nativo .cp-bar-i {
+  font: 500 14px var(--f-sans);
+}
+.app-nativo .cp-bar-i.on {
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: none;
+}
+
+/* ---------- números em destaque: superfície lisa, sem os brilhos coloridos (fundo denso, nada de enfeite) ---------- */
+.app-nativo .kpi::after {
+  display: none;
+}
+.app-nativo .kpi {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+}
+.app-nativo .kpi b {
+  font-family: var(--f-display);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+/* ---------- abertura do app (js/app-nativo.js, intro): mesmo quadro da splash do Android, depois a formação entra
+   em campo e o símbolo voa até o cabeçalho. Só transform e opacity; cada peça na própria camada. ---------- */
+.intro433 {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: auto;
+  contain: strict;
+}
+.i433-fundo {
+  position: absolute;
+  inset: 0;
+  background: var(--f-noite);
+}
+.i433-simbolo {
+  position: absolute;
+  left: calc(50% - var(--i433) / 2);
+  top: calc(50% - var(--i433) / 2);
+  width: var(--i433);
+  height: var(--i433);
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+.i433-quadro {
+  position: absolute;
+  inset: 0;
+  border-radius: 26%;
+  background: var(--f-azul);
+}
+.i433-mod {
+  position: absolute;
+  width: 9%;
+  height: 9%;
+  border-radius: 33%;
+  background: var(--f-cal);
+}
+.i433-mod.lima {
+  background: var(--f-refletor);
+}
+
+/* ---------- todo tipo de aparelho Android (tests/app/dispositivos.mjs) ---------- */
+/* o logotipo horizontal é o uso padrão do manual: aparece em qualquer largura (o site o esconde entre 901 e 1040 px) */
+.app-nativo .logo-word.l433-word {
+  display: inline !important;
+}
+/* tablet em retrato e dobrável aberto deitado (760 a 900 px): duas colunas, conteúdo e coluna lateral, em vez da
+   coluna única do celular esticada; a navegação continua na barra inferior, ao alcance do polegar */
+@media (min-width: 760px) and (max-width: 900px) {
+  .app-nativo .layout {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+  .app-nativo .layout > .left {
+    display: none;
+  }
+  .app-nativo .grid-2,
+  .app-nativo .grid-2.even {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .app-nativo .kpis,
+  .app-nativo .kpis.league-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* tela baixa (celular deitado, tela dividida): o cabeçalho encolhe e sai do topo ao rolar, sobrando altura ao conteúdo */
+@media (max-height: 520px) and (orientation: landscape) {
+  .app-nativo .header {
+    position: relative;
+    height: calc(48px + var(--sa-top));
+  }
+  .app-nativo {
+    --header-h: calc(48px + var(--sa-top));
+  }
+  .app-nativo .l433-mark {
+    width: 28px;
+    height: 28px;
+  }
+  .app-nativo .l433-word {
+    font-size: 20px;
+  }
+  .app-nativo .dados-idade {
+    padding-block: 4px;
+  }
+}
+/* tela muito estreita (Fold fechado, tela dividida): a busca fica só com a lupa, sem o texto cortado */
+@media (max-width: 380px) {
+  .app-nativo .header .search input::placeholder {
+    color: transparent;
+  }
+}

@@ -1,6 +1,6 @@
 /* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
-   Placar.TV — Janela de transferências (#/clube/<id>/mercado[/etapa])
+   CazéStats.TV — Janela de transferências (#/clube/<id>/mercado[/etapa])
    Mesa de transferências nas cores do clube, com a linguagem das páginas de notícia de mercado (cartão do negócio,
    carimbo de "negócio fechado", números grandes):
    1) Elenco: cartões por posição (goleiros, zagueiros, laterais, volantes, meias, pontas, centroavantes) com minutos
@@ -27,34 +27,33 @@
   const FOTO_KEY = "placar:fotos-privadas";
   try {
     const q = new URLSearchParams(location.search).get("privado");
-    if (q === "fotos" || q === "1") localStorage.removeItem(FOTO_KEY);
-    if (q === "0") localStorage.setItem(FOTO_KEY, "0");
+    if (q === "fotos" || q === "1") localStorage.setItem(FOTO_KEY, "1");
+    if (q === "0") localStorage.removeItem(FOTO_KEY);
   } catch { /* sem armazenamento */ }
-  // ligadas por padrão enquanto o site é de uso do dono (o robô com MODO_VENDA=1 tira as fotos dos arquivos);
-  // ?privado=0 desliga neste navegador e ?privado=fotos liga de novo
-  const fotosLigadas = () => { try { return localStorage.getItem(FOTO_KEY) !== "0"; } catch { return true; } };
+  // desligadas por padrão (o site é público e essas fotos não têm licença comercial); ?privado=fotos liga neste navegador,
+  // para o dono ver em uso local, e ?privado=0 desliga. O app nunca liga (js/nativo.js) e não leva essas fotos.
+  const fotosLigadas = () => { try { return localStorage.getItem(FOTO_KEY) === "1"; } catch { return false; } };
 
   /* ---------- dados ---------- */
   const prom = {};
-  function carregaScript(src, pronto) {
-    if (pronto()) return Promise.resolve();
-    return new Promise((res) => { const s = document.createElement("script"); s.src = src; s.onload = s.onerror = res; document.head.appendChild(s); });
-  }
   function carrega(cid) {
     if (window.MERCADO?.[cid]) return Promise.resolve(window.MERCADO[cid]);
     return (prom[cid] = prom[cid] || (async () => {
       if (window.PD?.LIVE) {
-        try { const r = await fetch(`/api/mercado/${cid}`, { cache: "no-store" }); if (r.ok) { const d = await r.json(); window.SEG.limpa(d); (window.MERCADO = window.MERCADO || {})[cid] = d; return d; } } catch { /* arquivo */ }
+        try { const r = await fetch(`/api/mercado/${cid}`, { cache: "no-store" }); if (r.ok) { const d = await SEG.json(r); (window.MERCADO = window.MERCADO || {})[cid] = d; return d; } } catch { /* arquivo */ }
       }
-      await carregaScript(`js/mercado/${cid}.js`, () => window.MERCADO?.[cid]);
-      return window.MERCADO?.[cid] || null;
+      return (await DADOS.carrega(`mercado/${cid}`)) || null;
     })());
   }
-  const carregaGlobal = () => (prom.global = prom.global || carregaScript("js/mercado/global.js", () => window.MERCADO_GLOBAL).then(() => window.MERCADO_GLOBAL || null));
-  const carregaPosicoes = () => (prom.pos = prom.pos || Promise.all([carregaScript("js/heatmaps.js", () => window.HEATMAPS), carregaScript("js/escalacoes.js", () => window.ESCALACOES)]));
+  const carregaGlobal = () => (prom.global = prom.global || DADOS.carrega("mercado/global"));
+  const carregaPosicoes = () => (prom.pos = prom.pos || Promise.all([window.HEATMAPS || DADOS.carrega("heatmaps"), window.ESCALACOES || DADOS.carrega("escalacoes")]));
 
   /* ---------- números ---------- */
   const eur = (v) => (v == null ? "—" : `${v < 0 ? "−" : ""}€ ${Math.abs(v) >= 1e6 ? `${(Math.abs(v) / 1e6).toFixed(Math.abs(v) >= 1e8 ? 0 : 1).replace(".", ",")} mi` : `${Math.round(Math.abs(v) / 1e3)} mil`}`);
+  /* salário de cada jogador: só em faixas e sempre com "estimativa" (o valor individual não é público; é a folha do clube
+     dividida pelo elenco). A folha do clube continua com o número e a fonte. A conta do modo real usa o valor interno. */
+  const FAIXAS_SAL = [[50e3, "até R$ 50 mil"], [150e3, "R$ 50 a 150 mil"], [400e3, "R$ 150 a 400 mil"], [1e6, "R$ 400 mil a 1 mi"], [Infinity, "acima de R$ 1 mi"]];
+  const salFaixa = (v) => (v > 0 ? `<small class="jt-sal" title="Estimativa do CazéStats.TV: a folha do clube dividida pelo elenco. O salário de cada jogador não é público.">${FAIXAS_SAL.find(([lim]) => v <= lim)[1]}/mês · <em>estimativa</em></small>` : "");
   const brl = (v) => (Math.abs(v) >= 1e6 ? `R$ ${(v / 1e6).toFixed(1).replace(".", ",")} mi` : `R$ ${Math.round(v / 1e3)} mil`);
   const mil = (v) => Number(v || 0).toLocaleString("pt-BR");
   const data = (iso) => (iso ? iso.split("-").reverse().join("/") : "");
@@ -67,7 +66,7 @@
 
   /* ---------- estado (por clube, neste aparelho) ---------- */
   const chave = (cid) => `placar:janela-${cid}`;
-  const ler = (cid) => { try { return JSON.parse(localStorage.getItem(chave(cid)) || "null"); } catch { return null; } };
+  const ler = (cid) => { try { return SEG.le(localStorage.getItem(chave(cid)) || "null"); } catch { return null; } };
   const novo = () => ({ modo: null, dec: {}, chegadas: [], form: "4-2-3-1", esc: {}, pos: {}, caixa: null });
   function estado(cid) { const e = { ...novo(), ...(ler(cid) || {}) }; e.dec = e.dec || {}; e.chegadas = e.chegadas || []; e.esc = e.esc || {}; e.pos = e.pos || {}; if (!FORMACOES[e.form]) e.form = "4-2-3-1"; return e; }
   function grava(cid, e) { try { const { _ultimaAplicada, _tit, ...g } = e; localStorage.setItem(chave(cid), JSON.stringify(g)); } catch { /* sem armazenamento: vale só nesta visita */ } }
@@ -167,7 +166,7 @@
     const escudos = k.chegadas.slice(0, 4).map((j) => (j.timeLogo ? crestOutro(j.timeNome, j.timeLogo, 18) : "")).join("") + (k.chegadas.length > 4 ? `<em>+${k.chegadas.length - 4}</em>` : "");
     const disp = k.orcamento + k.receita;
     const origemCaixa = k.real || e.caixa == null ? (fin.orcamento?.tipo === "noticia" ? `orçamento divulgado (${esc(fin.orcamento.fonte)})` : "estimativa: duas folhas mensais") : "valor definido por você";
-    const origemFolha = fin.folha ? (fin.folha.tipo === "estimativa" ? "estimativa do Placar.TV" : `${esc(fin.folha.fonte)}, ${data(fin.folha.data)}`) : "estimativa do Placar.TV";
+    const origemFolha = fin.folha ? (fin.folha.tipo === "estimativa" ? "estimativa do CazéStats.TV" : `${esc(fin.folha.fonte)}, ${data(fin.folha.data)}`) : "estimativa do CazéStats.TV";
     return `<section class="jt-mesa" style="--c1:${c.colors[0]};--c2:${c.colors[1]};--c3:${c.colors[2] || c.colors[1]};--tom:${onColor(c.colors[0]) === "#111111" ? c.colors[1] : c.colors[0]}">
       <svg class="jt-globo" viewBox="0 0 200 200" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width=".8"><circle cx="100" cy="100" r="96"/><ellipse cx="100" cy="100" rx="40" ry="96"/><ellipse cx="100" cy="100" rx="72" ry="96"/><path d="M4 100h192M14 52h172M14 148h172"/></g></svg>
       <div class="jt-mesa-topo">
@@ -232,7 +231,7 @@
     return `<li class="jt-card d-${d}" data-jt-j="${esc(j.id)}">
       ${avatar(j, c)}
       <div class="jt-card-txt">${ficha(j, cid) ? `<a class="jt-nome" href="${ficha(j, cid)}" title="Ficha técnica: mapa de calor, jogos e notas">${esc(j.nome)}</a>` : `<b class="jt-nome">${esc(j.nome)}</b>`}<span class="jt-sub">${sub}</span><span class="jt-uso">${uso}</span>${status ? `<span class="jt-sits">${status}</span>` : ""}</div>
-      <div class="jt-card-dir"><span class="jt-valor">${eur(j.valor)}<small>${brl(j.salario)}/mês</small></span>
+      <div class="jt-card-dir"><span class="jt-valor">${eur(j.valor)}${salFaixa(j.salario)}</span>
         <div class="jt-seg" role="radiogroup" aria-label="Decisão sobre ${esc(j.nome)}">${opc.map(([v, l]) => `<button type="button" role="radio" aria-checked="${v === d}" class="${v === d ? "on" : ""} o-${v}" data-jt-dec="${v}">${l}</button>`).join("")}</div></div></li>`;
   }
   function etapaElenco(cid, D, e) {
@@ -252,7 +251,7 @@
       </div>
       <div class="jt-seguir"><a class="jt-btn" href="#/clube/${cid}/mercado/reforcos">Ir aos reforços</a></div>
       <p class="source">Elenco: cadastro da ESPN e do TheSportsDB, conferido com as súmulas (quem jogou nos últimos 45 dias entra mesmo fora do cadastro). Minutos: todas as competições da temporada, pelas súmulas. Situação: súmulas dos últimos 5 jogos, último jogo e manchetes de escalação. Emprestados: Wikipédia em inglês (CC BY-SA 4.0) conferida com os elencos da ESPN.
-        Folha: ${fin?.folha ? `${esc(fin.folha.fonte)}${fin.folha.data ? ` (${data(fin.folha.data)})` : ""}` : "estimativa"}, dividida entre os jogadores pelo tempo de carreira, pelos minutos e pelo valor (o salário de cada um não é público). Câmbio: ${fin?.cambio ? `${esc(fin.cambio.fonte)}, € 1 = R$ ${String(fin.cambio.valor).replace(".", ",")}` : "referência"}. Valor de mercado: estimativa do Placar.TV. Atualizado em ${esc(D.updated)}.</p>`;
+        Folha: ${fin?.folha ? `${esc(fin.folha.fonte)}${fin.folha.data ? ` (${data(fin.folha.data)})` : ""}` : "estimativa"}, dividida entre os jogadores pelo tempo de carreira, pelos minutos e pelo valor (o salário de cada um não é público). Câmbio: ${fin?.cambio ? `${esc(fin.cambio.fonte)}, € 1 = R$ ${String(fin.cambio.valor).replace(".", ",")}` : "referência"}. Valor de mercado: estimativa do CazéStats.TV. Atualizado em ${esc(D.updated)}.</p>`;
   }
 
   /* ---------- 2) reforços ---------- */
@@ -282,7 +281,7 @@
       const j = jogadorGlobal(G, r[0], D), ja = escolhidos.has(j.id), semDinheiro = k.real && !ja && j.valor > k.caixa;
       return `<tr class="${ja ? "jt-ja" : ""}"><td class="jt-quem">${avatar(j, c, 34)}<div><b>${esc(j.nome)}</b><small>${j.timeLogo ? crestOutro(j.timeNome, j.timeLogo, 14) : ""} ${esc(j.timeNome)} · ${esc(G.ligas[j.lg]?.[0] || "")}</small></div></td>
         <td class="jt-pos"><span class="jt-pos-t p-${j.pos}">${POS_CURTO[j.pos]}</span></td><td class="hide-sm">${j.idade ?? "—"}</td><td class="hide-sm">${BANDEIRA(j.pais)}</td>
-        <td class="jt-v">${eur(j.valor)}<small>${brl(j.salario)}/mês</small></td>
+        <td class="jt-v">${eur(j.valor)}${salFaixa(j.salario)}</td>
         <td class="jt-acao"><button type="button" class="jt-contratar ${ja ? "ja" : ""}" data-jt-add="${esc(j.id)}" ${semDinheiro ? `disabled title="Sem caixa no modo real"` : ""}>${ja ? "Contratado" : semDinheiro ? "Sem caixa" : "Contratar"}</button></td></tr>`;
     }).join("");
     return `<div class="jt-mercado">
@@ -302,7 +301,7 @@
         <div class="jt-bloco jt-tab-card"><div class="jt-bloco-h"><h3>Mercado global</h3><span>${L.length.toLocaleString("pt-BR")} jogadores · ${Object.keys(G.ligas).length} ligas</span></div>
           <div class="jt-scroll"><table class="table jt-tabela"><thead><tr><th>Jogador</th><th>Pos.</th><th class="hide-sm">Idade</th><th class="hide-sm">Nac.</th><th>Valor · salário</th><th></th></tr></thead><tbody>${linhas || `<tr><td colspan="6"><div class="empty" style="padding:24px">Nenhum jogador com esses filtros.</div></td></tr>`}</tbody></table></div>
           ${L.length > f.n ? `<button type="button" class="jt-mais" data-jt-mais>Mostrar mais ${Math.min(25, L.length - f.n)}</button>` : ""}
-          <p class="source">Elencos de ${Object.keys(G.ligas).length} ligas pela ESPN (atualizados toda semana). Valores e salários: estimativa do Placar.TV. ${esc(G.updated || "")}</p></div>
+          <p class="source">Elencos de ${Object.keys(G.ligas).length} ligas pela ESPN (atualizados toda semana). Valores e salários: estimativa do CazéStats.TV. ${esc(G.updated || "")}</p></div>
         <div class="jt-seguir"><a class="jt-btn sec" href="#/clube/${cid}/mercado/elenco">Voltar ao elenco</a><a class="jt-btn" href="#/clube/${cid}/mercado/escalacao">Montar a escalação</a></div>
       </div></div>`;
   }
@@ -525,7 +524,7 @@
     await lista("SAÍDAS", k.saidas, W / 2 + 24, "#ff8a8a", (j) => ({ emprestar: "emprestado", liberar: "saiu", vender: "vendido", devolver: "devolvido" }[decisao(e, j)] || ""));
     x.fillStyle = "rgba(255,255,255,.08)"; x.fillRect(0, H - 92, W, 92);
     x.fillStyle = "#fff"; x.font = F(800, 30); x.fillText(`CAIXA ${eur(k.caixa)}   ·   FOLHA ${brl(k.folha)}/MÊS   ·   ${k.elencoFinal.length} JOGADORES`, 64, H - 36);
-    x.textAlign = "right"; x.font = F(900, 36); x.fillText("O PLACAR.TV", W - 64, H - 34); x.textAlign = "left";
+    x.textAlign = "right"; x.font = F(900, 36); x.fillText("O CAZÉSTATS.TV", W - 64, H - 34); x.textAlign = "left";
   }
   function rr(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
   function pdfDeJpeg(dataUrl, wpx, hpx) {
@@ -546,7 +545,10 @@
     add(`xref\n0 6\n0000000000 65535 f \n${[1, 2, 3, 4, 5].map((n) => `${String(offs[n]).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
     return new Blob(partes, { type: "application/pdf" });
   }
-  function baixa(blob, nome) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+  async function baixa(blob, nome) {
+    // no app: o cartaz vai para o seletor do sistema (salvar em arquivos ou enviar), em vez do download do navegador
+    try { if (await window.APP_NATIVO?.baixa(blob, nome)) return; } catch { /* segue com o download comum */ }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
 
   /* ---------- link para os amigos ---------- */
   const LETRA = { fica: "f", emprestar: "e", liberar: "l", manter: "k", comprar: "c", devolver: "d", segue: "s", reintegrar: "r", vender: "v" };
@@ -671,9 +673,12 @@
       if ("jtPng" in d && cv) { cv.toBlob((b) => b && baixa(b, `elenco-${cid}-2027.png`), "image/png"); if (msg) msg.textContent = "Cartaz em PNG baixado."; return; }
       if ("jtPdf" in d && cv) { baixa(pdfDeJpeg(cv.toDataURL("image/jpeg", 0.92), cv.width, cv.height), `elenco-${cid}-2027.pdf`); if (msg) msg.textContent = "Cartaz em PDF baixado."; return; }
       if ("jtLink" in d) {
-        const url = `${location.origin}${location.pathname}#/clube/${cid}/mercado/${codifica(D, e, contas(cid, D, e, G))}`;
-        const texto = `Montei o ${byId[cid].name} de 2027 na janela de transferências do Placar.TV. Monte o seu!`;
+        // no app o endereço da página é https://localhost: o link para os amigos aponta sempre para o site publicado
+        const url = `${window.SITE_URL || location.origin + location.pathname}#/clube/${cid}/mercado/${codifica(D, e, contas(cid, D, e, G))}`;
+        const texto = `Montei o ${byId[cid].name} de 2027 na janela de transferências do CazéStats.TV. Monte o seu!`;
         try {
+          const b0 = window.APP_NATIVO && cv ? await new Promise((r) => cv.toBlob(r, "image/png")) : null;
+          if (await window.APP_NATIVO?.compartilha({ title: "Meu elenco", text: texto, url, blob: b0, nome: `elenco-${cid}.png` })) return;
           if (navigator.share) {
             const b = cv ? await new Promise((r) => cv.toBlob(r, "image/png")) : null, file = b ? new File([b], `elenco-${cid}.png`, { type: "image/png" }) : null;
             await navigator.share(file && navigator.canShare?.({ files: [file] }) ? { title: "Meu elenco", text: texto, url, files: [file] } : { title: "Meu elenco", text: texto, url });

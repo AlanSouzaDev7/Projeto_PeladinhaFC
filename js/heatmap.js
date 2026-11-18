@@ -70,12 +70,7 @@
   function load() {
     if (window.HEATMAPS) return Promise.resolve(window.HEATMAPS);
     if (loading) return loading;
-    loading = new Promise((res) => {
-      const sc = document.createElement("script");
-      sc.src = "js/heatmaps.js";
-      sc.onload = sc.onerror = () => res(window.HEATMAPS || null);
-      document.head.appendChild(sc);
-    });
+    loading = DADOS.carrega("heatmaps");
     return loading;
   }
 
@@ -116,10 +111,10 @@
   let fotosProm = null;
   function carregaFotos(cid) {
     if (window.PD?.LIVE) {
-      return fetch(`/api/fotos/${cid}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      return fetch(`/api/fotos/${cid}`, { cache: "no-store" }).then((r) => (r.ok ? SEG.json(r) : null)).catch(() => null)
         .then((d) => d || (window.FOTOS || {})[cid] || null);
     }
-    fotosProm = fotosProm || new Promise((res) => { if (window.FOTOS) return res(); const s = document.createElement("script"); s.src = "js/fotos.js"; s.onload = s.onerror = () => res(); document.head.appendChild(s); });
+    fotosProm = fotosProm || (window.FOTOS ? Promise.resolve() : DADOS.carrega("fotos"));
     return fotosProm.then(() => (window.FOTOS || {})[cid] || null);
   }
   async function comFotosPrivadas(cid, d) {
@@ -127,7 +122,6 @@
     if (!d || d._fotosPriv || !M?.fotosLigadas?.()) return d;
     try {
       const F = await carregaFotos(cid);
-      if (F) window.SEG?.limpa(F);
       // com as fotos privadas no ar, a foto livre antiga (Wikipédia, Flickr) não aparece: sem foto atual, fica o número
       // (no modo venda o arquivo só tem as livres, e elas continuam)
       const temPrivadas = Object.values(window.FOTOS || F || {}).some((c) => Object.values(c || {}).some((f) => f && f.f && f.f !== "Wikimedia"))
@@ -150,12 +144,10 @@
     return (carregaClube.p[cid] = (async () => {
       let d = window.JOGADORES_CLUBE?.[cid] || null;
       if (!d && window.PD?.LIVE) {
-        try { const r = await fetch(`/api/elenco-temporada?club=${cid}`, { cache: "no-store" }); if (r.ok) { d = await r.json(); window.SEG?.limpa(d); (window.JOGADORES_CLUBE = window.JOGADORES_CLUBE || {})[cid] = d; } } catch { /* cai no arquivo */ }
+        try { const r = await fetch(`/api/elenco-temporada?club=${cid}`, { cache: "no-store" }); if (r.ok) { d = await SEG.json(r); (window.JOGADORES_CLUBE = window.JOGADORES_CLUBE || {})[cid] = d; } } catch { /* cai no arquivo */ }
       }
       if (!d) {
-        await new Promise((res) => { const sc = document.createElement("script"); sc.src = `js/jogadores/${cid}.js`; sc.onload = sc.onerror = res; document.head.appendChild(sc); });
-        d = window.JOGADORES_CLUBE?.[cid] || null;
-        if (d) window.SEG?.limpa(d);
+        d = (await DADOS.carrega(`jogadores/${cid}`)) || null;
       }
       return comFotosPrivadas(cid, d);
     })());

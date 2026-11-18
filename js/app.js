@@ -15,7 +15,7 @@
 
   /* ---------- estado ---------- */
   const store = {
-    get(k, d) { try { return JSON.parse(localStorage.getItem("placar:" + k)) ?? d; } catch { return d; } },
+    get(k, d) { try { return SEG.le(localStorage.getItem("placar:" + k)) ?? d; } catch { return d; } },
     set(k, v) { try { localStorage.setItem("placar:" + k, JSON.stringify(v)); } catch { /* armazenamento indisponível */ } },
   };
   const state = {
@@ -63,9 +63,9 @@
     return date === today ? `Hoje · ${dm}` : date === tomorrow ? `Amanhã · ${dm}` : date === yesterday ? `Ontem · ${dm}` : `${WD[d.getUTCDay()]} · ${dm}`;
   }
   const statusLabel = (m) =>
-    m.status === "ft" ? "Fim" : m.status === "progress" ? `<span>●</span> ${m.clock || "Agora"}` : m.status === "pending" ? "Aguard." : m.time || "A definir";
+    m.status === "ft" ? "Fim" : m.status === "progress" ? `<span>●</span> ${SEG.esc(m.clock || "Agora")}` : m.status === "pending" ? "Aguard." : m.time || "A definir";
   const statusText = (m) =>
-    m.status === "ft" ? "Encerrado" : m.status === "progress" ? `Ao vivo${m.clock ? ` · ${m.clock}` : ""}` : m.status === "pending" ? "Aguardando resultado" : m.time ? `${dayName(m.date)} · ${m.time}` : m.date ? `${dayName(m.date)} · horário a definir` : "A definir";
+    m.status === "ft" ? "Encerrado" : m.status === "progress" ? `Ao vivo${m.clock ? ` · ${SEG.esc(m.clock)}` : ""}` : m.status === "pending" ? "Aguardando resultado" : m.time ? `${dayName(m.date)} · ${m.time}` : m.date ? `${dayName(m.date)} · horário a definir` : "A definir";
   const posClass = (p) => (p <= 4 ? "lib" : p <= 6 ? "pre" : p <= 12 ? "sul" : p >= 17 ? "z4" : "");
   /* ==========================================================================
      Tema do clube (cores aplicadas no :root)
@@ -85,7 +85,7 @@
     for (let k = 0.04; k <= 1; k += 0.04) { const x = toward(c, t, k); if (worst(x) >= min) return toHex(x); }
     return dark ? "#111111" : "#ffffff";
   }
-  const BRAND = "#00a859"; // verde do Brasileirão 2026 (o legible() escurece o tom para o texto branco dos botões)
+  const BRAND = "#3B4EEA"; // Azul Camisa, a cor de assinatura da identidade (o legible() escurece o tom para o texto branco dos botões)
   function applyTheme(club) {
     const c = club ? club.colors : null, light = root.dataset.theme === "light";
     root.style.setProperty("--c1", c ? c[0] : "var(--brand)");
@@ -98,9 +98,9 @@
     root.style.setProperty("--accent", acc);
     root.style.setProperty("--on-accent", on);
     // texto de destaque (links, rótulos): legível sobre o fundo e os cartões do tema
-    root.style.setProperty("--ink", legible(club ? display(club) : light ? "#007a42" : "#3fd68a", light ? ["#eef1f5", "#ffffff"] : ["#151c25", "#0c1117"], 4.6));
+    root.style.setProperty("--ink", legible(club ? display(club) : light ? "#3B4EEA" : "#8C98FF", light ? ["#eef1f5", "#ffffff"] : ["#151c25", "#0c1117"], 4.6));
     root.style.setProperty("--logo-spot", c ? c[1] : "var(--live)");
-    $('meta[name="theme-color"]').content = c ? c[0] : light ? "#ffffff" : "#0c1117";
+    $('meta[name="theme-color"]').content = c ? c[0] : light ? "#F1EDE1" : "#0B0B0D";
   }
 
   /* ==========================================================================
@@ -147,10 +147,10 @@
       return `<span class="live-chip sim ${r}" title="Simulado: ${v.res.join("; ")}">+${v.dp}${curto ? "" : ` pt${v.dp === 1 ? "" : "s"}`}</span>`;
     }
     const res = v.gf > v.ga ? "w" : v.gf < v.ga ? "l" : "d";
-    return `<span class="live-chip ${res}${v.fim ? " fim" : ""}" title="${v.fim ? "Encerrado, ainda fora da tabela oficial" : "Jogo em andamento"}: ${v.gf} x ${v.ga} contra o ${byId[v.op].name}">${v.fim ? "" : `<i aria-hidden="true"></i>`}${v.gf}-${v.ga}${curto ? "" : ` ${byId[v.op].short}`}${v.fim ? " · fim" : v.clock ? ` · ${v.clock}` : ""}</span>`;
+    return `<span class="live-chip ${res}${v.fim ? " fim" : ""}" title="${v.fim ? "Encerrado, ainda fora da tabela oficial" : "Jogo em andamento"}: ${v.gf} x ${v.ga} contra o ${byId[v.op].name}">${v.fim ? "" : `<i aria-hidden="true"></i>`}${v.gf}-${v.ga}${curto ? "" : ` ${byId[v.op].short}`}${v.fim ? " · fim" : v.clock ? ` · ${SEG.esc(v.clock)}` : ""}</span>`;
   }
   const temAoVivo = () => state.standings.some((r) => r.vivo);
-  const sourceNote = `<div class="source">Fonte: <a href="${REAL.url}" target="_blank" rel="noopener noreferrer">${REAL.source}</a> · atualizado em ${REAL.updated}</div>`;
+  const sourceNote = `<div class="source">Fonte: <a href="${SEG.esc(SEG.url(REAL.url))}" target="_blank" rel="noopener noreferrer">${SEG.esc(REAL.source)}</a> · atualizado em ${SEG.esc(REAL.updated)}</div>`;
 
   /* artilharia oficial */
   /* ---------- departamento médico (js/departamento-medico.js ou /api/departamento-medico) ----------
@@ -162,7 +162,7 @@
     const c = window.DM?.clubs?.[id];
     if (!c) { // sem o monitor: as lesões das manchetes (versão antiga)
       return ["dm", "Departamento médico", "lesões noticiadas pela imprensa", d.lesionados.length
-        ? d.lesionados.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-tag ${p.confirmado ? "ok" : "warn"}">${p.confirmado ? `${p.fontes.length} fonte${p.fontes.length > 1 ? "s" : ""}` : "1 fonte"}</span>${full ? p.noticias.map(src).join("") : src(p.noticias[0])}</li>`).join("")
+        ? d.lesionados.slice(0, n).map((p) => `<li>${num(p.id)}<b>${SEG.esc(p.name)}</b><span class="ps-tag ${p.confirmado ? "ok" : "warn"}">${p.confirmado ? `${p.fontes.length} fonte${p.fontes.length > 1 ? "s" : ""}` : "1 fonte"}</span>${full ? p.noticias.map(src).join("") : src(p.noticias[0])}</li>`).join("")
         : empty("Nenhuma lesão noticiada nos últimos 21 dias.")];
     }
     const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -192,23 +192,23 @@
     const fmt = (iso) => (iso ? iso.split("-").reverse().slice(0, 2).join("/") : "");
     const num = (pid) => `<span class="ps-n" data-pid="${pid}-${id}">${nums[pid] ?? "–"}</span>`;
     const empty = (t) => `<li class="ps-empty">${t}</li>`;
-    const src = (x) => x ? `<a class="ps-src" href="${x.link}" target="_blank" rel="noopener noreferrer" title="${(x.manchete || "").replace(/"/g, "&quot;")}">${x.fonte}${x.setorista ? " · setorista" : ""} · ${fmt(x.data)} ↗</a>` : "";
+    const src = (x) => x ? `<a class="ps-src" href="${SEG.esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer" title="${SEG.esc(x.manchete || "")}">${SEG.esc(x.fonte)}${x.setorista ? " · setorista" : ""} · ${fmt(x.data)} ↗</a>` : "";
     const blocks = [
       ["pend", "Pendurados", "a um amarelo da suspensão", `<li class="ps-note"><b>O número ao lado do nome é o total de amarelos na temporada.</b>
           <span>No Brasileirão, o 3º, o 6º, o 9º… amarelo suspendem. Quem tem 2, 5 ou 8 está pendurado: mais um cartão e fica fora do próximo jogo.</span></li>` +
         (d.pendurados.length
-        ? d.pendurados.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-tag ${p.so_imprensa ? "warn" : p.imprensa ? "ok" : ""}">${p.so_imprensa ? "segundo a imprensa" : p.imprensa ? "confirmado pela imprensa" : "pela súmula"}${p.amarelos ? ` · suspende no ${p.amarelos + 1}º` : ""}</span><span class="ps-v" title="${p.amarelos ?? "–"} amarelos na temporada"><i class="rk-card y"></i>${p.amarelos ?? "–"}<small>na temporada</small></span>${full ? src(p.imprensa) : ""}</li>`).join("")
+        ? d.pendurados.slice(0, n).map((p) => `<li>${num(p.id)}<b>${SEG.esc(p.name)}</b><span class="ps-tag ${p.so_imprensa ? "warn" : p.imprensa ? "ok" : ""}">${p.so_imprensa ? "segundo a imprensa" : p.imprensa ? "confirmado pela imprensa" : "pela súmula"}${p.amarelos ? ` · suspende no ${p.amarelos + 1}º` : ""}</span><span class="ps-v" title="${p.amarelos ?? "–"} amarelos na temporada"><i class="rk-card y"></i>${p.amarelos ?? "–"}<small>na temporada</small></span>${full ? src(p.imprensa) : ""}</li>`).join("")
         : empty("Nenhum jogador pendurado."))],
       ["seq", "Jogos seguidos", "partidas em sequência, sem desfalcar", d.sequencia.length
-        ? d.sequencia.slice(0, n).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-sub">${p.titular} como titular</span><span class="ps-v">${p.jogos}</span></li>`).join("")
+        ? d.sequencia.slice(0, n).map((p) => `<li>${num(p.id)}<b>${SEG.esc(p.name)}</b><span class="ps-sub">${p.titular} como titular</span><span class="ps-v">${p.jogos}</span></li>`).join("")
         : empty("Ninguém com 2 ou mais jogos seguidos.")],
       dmBlock(id, full, n, num, fmt, empty, d, src),
       ["res", "Reservas mais usados", "minutos de quem mais entra saindo do banco", d.reservas.length
-        ? (() => { const max = d.reservas[0].minutos || 1; return d.reservas.slice(0, full ? 99 : 5).map((p) => `<li>${num(p.id)}<b>${p.name}</b><span class="ps-sub">${p.jogos} jogos · ${p.banco ?? p.jogos - p.titular} saindo do banco · ${p.titular} titular</span><span class="ps-v">${p.minutos}'</span><span class="ps-bar"><i data-w="${((p.minutos / max) * 100).toFixed(1)}"></i></span></li>`).join(""); })()
+        ? (() => { const max = d.reservas[0].minutos || 1; return d.reservas.slice(0, full ? 99 : 5).map((p) => `<li>${num(p.id)}<b>${SEG.esc(p.name)}</b><span class="ps-sub">${p.jogos} jogos · ${p.banco ?? p.jogos - p.titular} saindo do banco · ${p.titular} titular</span><span class="ps-v">${p.minutos}'</span><span class="ps-bar"><i data-w="${((p.minutos / max) * 100).toFixed(1)}"></i></span></li>`).join(""); })()
         : empty("Sem reservas com minutos.")],
     ];
     if (full && window.DM?.clubs?.[id]) blocks.push(dmHistBlock(window.DM.clubs[id], num, fmt, empty));
-    const foot = `<div class="source">Súmulas: ${d.fontes?.sumulas || "ESPN"} · ${d.jogos} jogos do Brasileirão · ${window.DM ? `departamento médico: imprensa nacional e local, site oficial, setoristas e relacionados da ESPN (atualizado em ${SEG.esc(window.DM.updated)}) · ` : ""}pendurados conferidos em ${(d.fontes?.imprensa || []).length ? d.fontes.imprensa.join(", ") : "ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra"} e com os setoristas · atualizado em ${all.updated}</div>`;
+    const foot = `<div class="source">Súmulas: ${SEG.esc(d.fontes?.sumulas || "ESPN")} · ${d.jogos} jogos do Brasileirão · ${window.DM ? `departamento médico: imprensa nacional e local, site oficial, setoristas e relacionados da ESPN (atualizado em ${SEG.esc(window.DM.updated)}) · ` : ""}pendurados conferidos em ${(d.fontes?.imprensa || []).length ? SEG.esc(d.fontes.imprensa.join(", ")) : "ge.globo, ESPN, UOL, Lance, Gazeta Esportiva e Terra"} e com os setoristas · atualizado em ${SEG.esc(all.updated)}</div>`;
     const grid = `<div class="pstats ${full ? "full" : ""}">${blocks.map(([k, t, sub, li]) => `<section class="ps-b ps-${k}"><h4>${t}<small>${sub}</small></h4><ul>${li}</ul></section>`).join("")}</div>`;
     return full ? `<div class="card">${grid}${foot}</div>`
       : `<div class="card reveal"><div class="card-h">Estatísticas do elenco <small><a href="#/clube/${id}/estatisticas" style="color:var(--ink)">ver tudo ›</a></small></div>${grid}${foot}</div>`;
@@ -357,7 +357,7 @@
     return `<div class="card rx" data-rx>
       <div class="card-h">Raio-X ${rxDo(club)}<small>Brasileirão · ${c.jogos} jogos · ${c.pontos} pontos (${rxN(c.aprov, 0)}%)</small></div>
       ${top}<div class="rx-grid">${faixas}${aneis}${liga}${placar}${seqs}${sabia}${indiv}</div>
-      <div class="source">Números calculados pelo Placar.TV a partir das ${SEG.esc(all.fonte || "súmulas da ESPN")} · posição entre os 20 clubes ao lado de cada número · atualizado em ${SEG.esc(all.updated)}</div></div>
+      <div class="source">Números calculados pelo CazéStats.TV a partir das ${SEG.esc(all.fonte || "súmulas da ESPN")} · posição entre os 20 clubes ao lado de cada número · atualizado em ${SEG.esc(all.updated)}</div></div>
       ${torcidaHTML(id)}`;
   }
 
@@ -377,7 +377,7 @@
     return `<div class="card rx-torcida reveal"><div class="card-h">Estatística feita pela torcida<small>créditos</small></div>
       <div class="card-b">${lista}
         ${gerais.length ? `<h5 class="rx-sub">Cobrem todos os clubes</h5><ul class="rx-pages">${gerais.map((p) => perfil(p, true)).join("")}</ul>` : ""}
-        <p class="rx-credit">Torcedores que estudam o clube a fundo e publicam análises, recordes e curiosidades. O que eles publicam pertence a eles: aqui ficam o perfil, as reportagens que citaram a página e, quando a API oficial do X está ligada, as publicações com link para o original. Os números do Raio-X acima são calculados pelo Placar.TV, no mesmo espírito.</p></div></div>`;
+        <p class="rx-credit">Torcedores que estudam o clube a fundo e publicam análises, recordes e curiosidades. O que eles publicam pertence a eles: aqui ficam o perfil, as reportagens que citaram a página e, quando a API oficial do X está ligada, as publicações com link para o original. Os números do Raio-X acima são calculados pelo CazéStats.TV, no mesmo espírito.</p></div></div>`;
   }
 
   // anima o Raio-X quando aparece na tela (contadores, barras, anéis); sem animação: já no valor final
@@ -402,12 +402,7 @@
   let rxScript = null;
   function loadRaioX() {
     if (rxScript) return rxScript;
-    rxScript = new Promise((res) => {
-      const sc = document.createElement("script");
-      sc.src = "js/raio-x.js";
-      sc.onload = sc.onerror = () => res();
-      document.head.appendChild(sc);
-    });
+    rxScript = DADOS.carrega("raio-x");
     return rxScript;
   }
 
@@ -437,14 +432,14 @@
       const H = e.home ? side(c) : side(opp(e), e.opp, e.oppLogo), A = e.home ? side(opp(e), e.opp, e.oppLogo) : side(c);
       const hs = e.home ? e.gf : e.ga, as = e.home ? e.ga : e.gf;
       const mid = e.state === "post" ? `<b class="hm-score">${hs}<i>×</i>${as}</b>${e.pen ? `<small>pên. ${e.home ? e.pen[0] : e.pen[1]}–${e.home ? e.pen[1] : e.pen[0]}</small>` : ""}`
-        : e.state === "in" ? `<b class="hm-score live">${hs}<i>×</i>${as}</b><small class="live">● ${e.clock || "ao vivo"}</small>`
+        : e.state === "in" ? `<b class="hm-score live">${hs}<i>×</i>${as}</b><small class="live">● ${SEG.esc(e.clock || "ao vivo")}</small>`
         : `<b class="hm-time ${e.time ? "" : "tbd"}">${e.time || "A definir"}</b>`;
       return `<li class="hm-row ${e.state} ${e.res ? `r${e.res}` : ""}">
         <span class="hm-date"><b>${e.date.slice(8, 10)}/${e.date.slice(5, 7)}</b><small>${WD[new Date(`${e.date}T12:00:00-03:00`).getDay()]}</small></span>
-        <span class="hm-comp">${e.comp}${e.stage ? `<small>${e.stage}</small>` : ""}</span>
+        <span class="hm-comp">${SEG.esc(e.comp)}${e.stage ? `<small>${SEG.esc(e.stage)}</small>` : ""}</span>
         <span class="hm-match">${H}<span class="hm-mid">${mid}</span>${A}</span>
         <span class="hm-res">${e.res ? `<i class="fm-res ${e.res}">${e.res}</i>` : ""}</span>
-        <span class="hm-venue">${estadio(e.venue)}</span></li>`;
+        <span class="hm-venue">${SEG.esc(estadio(e.venue))}</span></li>`;
     };
     let month = "";
     const rows = list.map((e) => {
@@ -460,7 +455,7 @@
         ${hasNext ? `<a class="hm-jump" href="#" data-hist-next>Ir para o próximo jogo ↓</a>` : ""}
       </div>
       <ul class="hm-list">${rows}</ul>
-      <div class="source">Temporada ${d.all[0].date.slice(0, 4)} · todas as competições oficiais · fonte: ESPN · horários de Brasília; "A definir" = horário ainda não marcado pela CBF/Conmebol${window.CLUB_FORM?.updated ? ` · atualizado em ${window.CLUB_FORM.updated}` : ""}</div>
+      <div class="source">Temporada ${d.all[0].date.slice(0, 4)} · todas as competições oficiais · fonte: ESPN · horários de Brasília; "A definir" = horário ainda não marcado pela CBF/Conmebol${window.CLUB_FORM?.updated ? ` · atualizado em ${SEG.esc(window.CLUB_FORM.updated)}` : ""}</div>
     </div>`;
   }
 
@@ -505,7 +500,7 @@
     return esc + `<div class="card"><div class="cc-top">${lado(A, ra, ta)}<span class="jg-vs">×</span>${lado(B, rb, tb)}</div>
         <ul class="jg-cmp-l">${L.map(linha).join("")}</ul>
         ${!fa || !fb ? `<p class="source">Carregando a temporada dos dois clubes…</p>` : ""}
-        <div class="source">Brasileirão: tabela ${REAL.source} · temporada (todas as competições), casa e fora: ESPN · em verde, o melhor número de cada linha</div></div>
+        <div class="source">Brasileirão: tabela ${SEG.esc(REAL.source)} · temporada (todas as competições), casa e fora: ESPN · em verde, o melhor número de cada linha</div></div>
       <div class="grid-2 even">
         <div class="card"><div class="card-h">Confrontos na temporada <small>${A.abbr} x ${B.abbr}</small></div>
           <ul class="cc-h2h fm-list">${h2h.map((e) => `<li class="fm-row"><span class="fm-date"><b>${e.date.slice(8, 10)}/${e.date.slice(5, 7)}</b><small>${SEG.esc(e.comp)}</small></span><span>${e.home ? `${A.abbr} x ${B.abbr}` : `${B.abbr} x ${A.abbr}`}</span><span class="fm-score"><b>${e.state === "post" ? (e.home ? `${e.gf}–${e.ga}` : `${e.ga}–${e.gf}`) : e.time || "a definir"}</b></span>${e.res ? `<span class="fm-res ${e.res}">${e.res}</span>` : ""}</li>`).join("") || `<li class="empty" style="padding:14px">Os dois ainda não se enfrentaram nesta temporada.</li>`}</ul></div>
@@ -659,22 +654,22 @@
     if (t) return t.slice(0, n).map((p) => ({ name: p.name, gols: p.gols, pos: p.pos, rank: p.rank, saiu: p.noClube === false }));
     return REAL.scorers.map(([name, c, gols], k) => ({ name, c, gols, pos: k + 1 })).filter((x) => x.c === cid).slice(0, n).map((x, k) => ({ ...x, rank: k + 1 }));
   }
-  const scorerAttrs = (name, cid) => (scorerOf(name, cid) ? ` class="has-ficha" data-scorer="${name}|${cid}" tabindex="0" aria-label="Ficha de ${name}"` : "");
+  const scorerAttrs = (name, cid) => (scorerOf(name, cid) ? ` class="has-ficha" data-scorer="${SEG.esc(name)}|${cid}" tabindex="0" aria-label="Ficha de ${SEG.esc(name)}"` : "");
   function scorersCard(limit = 10, clubId = null) {
     if (clubId) {
       const list = clubTop(clubId, limit), c = byId[clubId];
       if (!list.length) return "";
       return `<div class="card reveal" data-live="art-clube"><div class="card-h">Artilheiros do ${c.abbr} <small>Brasileirão</small></div>
-        <ul class="squad-list">${list.map((p) => `<li${scorerAttrs(p.name, clubId)}><span class="n">${p.rank}º</span><div style="flex:1;min-width:0"><b>${p.name}</b>${golHoje(p.vivo, p.rolando)}${p.pos || p.saiu ? `<small class="sl-sub">${[p.pos ? `${p.pos}º na artilharia` : "", p.saiu ? "saiu do clube" : ""].filter(Boolean).join(" · ")}</small>` : ""}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(p.gols / list[0].gols) * 100}" style="background:${display(c)}"></i></div></div><b class="goals">${p.gols}</b>${scorerOf(p.name, clubId) ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`).join("")}</ul>
+        <ul class="squad-list">${list.map((p) => `<li${scorerAttrs(p.name, clubId)}><span class="n">${p.rank}º</span><div style="flex:1;min-width:0"><b>${SEG.esc(p.name)}</b>${golHoje(p.vivo, p.rolando)}${p.pos || p.saiu ? `<small class="sl-sub">${[p.pos ? `${p.pos}º na artilharia` : "", p.saiu ? "saiu do clube" : ""].filter(Boolean).join(" · ")}</small>` : ""}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(p.gols / list[0].gols) * 100}" style="background:${display(c)}"></i></div></div><b class="goals">${p.gols}</b>${scorerOf(p.name, clubId) ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`).join("")}</ul>
         ${list.some((p) => scorerOf(p.name, clubId)) ? `<div class="source">Clique (ou toque) no jogador para ver a ficha; clique de novo para fechar</div>` : ""}</div>`;
     }
     const geral = artilhariaGeral(), list = geral.slice(0, limit);
     if (!list.length) return "";
     const max = geral[0][2];
-    return `<div class="card reveal" data-live="art"><div class="card-h">Artilharia <small>${geral.some((x) => x[4]) ? "ao vivo · " : ""}${REAL.source}</small></div>
+    return `<div class="card reveal" data-live="art"><div class="card-h">Artilharia <small>${geral.some((x) => x[4]) ? "ao vivo · " : ""}${SEG.esc(REAL.source)}</small></div>
       <ul class="squad-list">${list.map(([name, cid, g, vivo, rolando], k) => {
         const ficha = scorerOf(name, cid);
-        return `<li${scorerAttrs(name, cid)}><span class="n">${k + 1}º</span>${crest(byId[cid], 36)}<div style="flex:1;min-width:0"><b>${name}</b>${golHoje(vivo, rolando)}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(g / max) * 100}" style="background:${display(byId[cid])}"></i></div></div><b class="goals">${g}</b>${ficha ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`;
+        return `<li${scorerAttrs(name, cid)}><span class="n">${k + 1}º</span>${crest(byId[cid], 36)}<div style="flex:1;min-width:0"><b>${SEG.esc(name)}</b>${golHoje(vivo, rolando)}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(g / max) * 100}" style="background:${display(byId[cid])}"></i></div></div><b class="goals">${g}</b>${ficha ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`;
       }).join("")}</ul>${list.some(([n, c]) => scorerOf(n, c)) ? `<div class="source">Clique (ou toque) no jogador para ver a ficha; clique de novo para fechar</div>` : ""}</div>`;
   }
 
@@ -684,8 +679,8 @@
     if (!H.length && !A.length) return "";
     const max = Math.max(H[0]?.gols || 0, A[0]?.gols || 0, 1);
     const tot = (L) => L.reduce((t, p) => t + p.gols, 0);
-    const cell = (p, c, side) => p ? `<div class="sd-p sd-${side}${scorerOf(p.name, c.id) ? ` has-ficha" data-scorer="${p.name}|${c.id}" tabindex="0" aria-label="Ficha de ${p.name}` : ""}">
-        <span class="sd-nm"><b>${p.name}</b>${p.pos || p.vivo || p.saiu ? `<small>${[p.pos ? `${p.pos}º geral` : "", p.saiu ? "saiu do clube" : ""].filter(Boolean).join(" · ")}${golHoje(p.vivo, p.rolando)}</small>` : ""}</span>
+    const cell = (p, c, side) => p ? `<div class="sd-p sd-${side}${scorerOf(p.name, c.id) ? ` has-ficha" data-scorer="${SEG.esc(p.name)}|${c.id}" tabindex="0" aria-label="Ficha de ${SEG.esc(p.name)}` : ""}">
+        <span class="sd-nm"><b>${SEG.esc(p.name)}</b>${p.pos || p.vivo || p.saiu ? `<small>${[p.pos ? `${p.pos}º geral` : "", p.saiu ? "saiu do clube" : ""].filter(Boolean).join(" · ")}${golHoje(p.vivo, p.rolando)}</small>` : ""}</span>
         <b class="sd-g">${p.gols}</b>
         <i class="sd-bar" style="--f:${(p.gols / max).toFixed(3)};--c:${display(c)}"></i></div>` : `<div class="sd-p sd-${side} sd-none">—</div>`;
     const rows = Array.from({ length: Math.max(H.length, A.length) }, (_, k) => `<li>${cell(H[k], h, "h")}<span class="sd-k">${k + 1}º</span>${cell(A[k], a, "a")}</li>`).join("");
@@ -731,7 +726,7 @@
     const maxAdv = p.adversarios[0]?.[1] || 1;
     return `<div class="sc-h" style="--sc:${cor}">
         ${crest(c, 52)}
-        <div><b>${p.name}</b><small>${c.name} · ${p.pos ? `${p.pos}º na artilharia` : `${p.rank}º artilheiro do clube`}</small></div>
+        <div><b>${SEG.esc(p.name)}</b><small>${c.name} · ${p.pos ? `${p.pos}º na artilharia` : `${p.rank}º artilheiro do clube`}</small></div>
         <div class="sc-g"><b>${p.gols}</b><small>${p.aoVivo ? `gols · +${p.aoVivo} hoje` : "gols"}</small></div>
       </div>
       <div class="sc-sec">Ficha técnica</div>
@@ -1015,10 +1010,10 @@
         <div class="grid-2">
           <div>
             <div class="card reveal">
-              <div class="card-h">Pontos no campeonato <small>${REAL.source} · ${REAL.updated}</small></div>
+              <div class="card-h">Pontos no campeonato <small>${SEG.esc(REAL.source)} · ${SEG.esc(REAL.updated)}</small></div>
               <div class="card-b">${pointsChart(id)}</div>
             </div>
-            ${m ? `<div class="card reveal"><div class="card-h">Jogo da ${ROUND}ª rodada <small>${estadio(m.venue)}</small></div>
+            ${m ? `<div class="card reveal"><div class="card-h">Jogo da ${ROUND}ª rodada <small>${SEG.esc(estadio(m.venue))}</small></div>
               <a class="card-b feature" href="#/partida/${m.id}" style="display:block;${matchVars(m)}">${scoreline(m, false)}<div style="margin-top:12px">${compareHTML(m, 4)}</div></a></div>` : ""}
             ${playerStatsHTML(id)}
           </div>
@@ -1030,7 +1025,7 @@
                 const by = (g) => ps.filter((p) => p.pos === g).length;
                 const ages = ps.filter((p) => p.age), avg = ages.reduce((t, p) => t + p.age, 0) / (ages.length || 1);
                 return `<div class="card-b season-grid"><div><b>${ps.length}</b><small>jogadores no elenco</small></div><div><b>${avg.toFixed(1).replace(".", ",")}</b><small>idade média</small></div><div><b>${s.f}</b><small>sua formação</small></div></div>
-                  <ul class="squad-list">${s.xi.slice(0, 11).map((pid) => map[pid]).filter(Boolean).slice(-4).reverse().map((p) => `<li><span class="n">${p.n ?? "–"}</span><b>${p.name}</b><span class="p">${{ G: "GOL", D: "DEF", M: "MEI", F: "ATA" }[p.pos]}</span></li>`).join("")}</ul>`;
+                  <ul class="squad-list">${s.xi.slice(0, 11).map((pid) => map[pid]).filter(Boolean).slice(-4).reverse().map((p) => `<li><span class="n">${p.n ?? "–"}</span><b>${SEG.esc(p.name)}</b><span class="p">${{ G: "GOL", D: "DEF", M: "MEI", F: "ATA" }[p.pos]}</span></li>`).join("")}</ul>`;
               })()}
             </div>
             <div class="card reveal">
@@ -1117,29 +1112,29 @@
       ["Competição", `Brasileirão Série A · ${m.round}ª rodada`],
       ["Data", m.date ? dayName(m.date) : "—"],
       ["Horário", m.time ? `${m.time} (Brasília)` : "A definir"],
-      ["Estádio", estadio(m.venue) || "—"],
+      ["Estádio", SEG.esc(estadio(m.venue)) || "—"],
       ["Situação", statusText(m)],
     ];
     // arbitragem pelas manchetes (a escala oficial é da CBF, que não permite reutilizar os dados do site)
     const arb = m.status !== "ft" ? arbitragemDe(m) : null;
-    if (arb) info.push(["Árbitro", arb.arbitro ? `${arb.arbitro}<small class="arb-src">segundo ${arb.confirmacoes > 1 ? `${arb.confirmacoes} manchetes` : "a imprensa"}</small>` : `<span class="arb-pend">Ainda não noticiado</span>`]);
+    if (arb) info.push(["Árbitro", arb.arbitro ? `${SEG.esc(arb.arbitro)}<small class="arb-src">segundo ${arb.confirmacoes > 1 ? `${arb.confirmacoes} manchetes` : "a imprensa"}</small>` : `<span class="arb-pend">Ainda não noticiado</span>`]);
     const both = state.standings.filter((r) => r.id === m.home || r.id === m.away);
     const drone = window.DRONE ? DRONE.html(m.venue, m.home) : "";
     return `<section class="match-hero${drone ? " has-drone" : ""}" data-jogo="${m.id}" style="${matchVars(m)}">${drone}<h1 class="sr-only">${h.name} x ${a.name} — ${statusText(m)}</h1>
         <div style="text-align:center;margin-bottom:18px" data-live="pill"><span class="${m.status === "progress" ? "pill" : "pill muted"}">Brasileirão · ${m.round}ª rodada</span></div>
         ${scoreline(m, true, 128)}
         <div class="mh-marks" data-marks hidden></div>
-        ${m.venue ? `<p style="text-align:center;color:var(--text-2);margin:16px 0 0">${ICON.stadium.replace("<svg", '<svg style="display:inline;vertical-align:-2px;margin-right:4px"')}${estadio(m.venue)}</p>` : ""}
+        ${m.venue ? `<p style="text-align:center;color:var(--text-2);margin:16px 0 0">${ICON.stadium.replace("<svg", '<svg style="display:inline;vertical-align:-2px;margin-right:4px"')}${SEG.esc(estadio(m.venue))}</p>` : ""}
       </section>
       <div class="grid-2">
         <div>
           <div class="card"><div class="card-h">Informações</div><div class="card-b" style="display:grid;gap:10px">
             ${info.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--text-2)">${k}</span><b style="text-align:right"${k === "Situação" ? " data-situacao" : ""}>${v}</b></div>`).join("")}
           </div>${arb ? arbitragemHTML(arb) : ""}${m.status === "pending" ? `<div class="source">O resultado deste jogo ainda não foi lançado no site.</div>` : ""}</div>
-          ${m.espn && m.status !== "pending" ? `<div class="card notas-partida" data-notas-partida="${m.espn}" data-h="${m.home}" data-a="${m.away}"><div class="card-h">Notas da partida <small>${m.status === "progress" ? "ao vivo, atualizadas durante o jogo" : "critérios do Placar.TV"}</small></div><div class="empty" style="padding:18px">Calculando as notas…</div></div>` : ""}
-          ${m.espn || (LIVE.proxy() && m.status !== "ft") ? `<div class="card mam" data-mam="${m.espn || ""}" data-h="${m.home}" data-a="${m.away}" data-kick="${m.kick || ""}"><div class="card-h">Minuto a minuto <small class="mam-src">lances: ${LIVE.proxy() ? "API-Football" : "ESPN"} · narração: Placar.TV</small></div>
+          ${m.espn && m.status !== "pending" ? `<div class="card notas-partida" data-notas-partida="${m.espn}" data-h="${m.home}" data-a="${m.away}"><div class="card-h">Notas da partida <small>${m.status === "progress" ? "ao vivo, atualizadas durante o jogo" : "critérios do CazéStats.TV"}</small></div><div class="empty" style="padding:18px">Calculando as notas…</div></div>` : ""}
+          ${m.espn || (LIVE.proxy() && m.status !== "ft") ? `<div class="card mam" data-mam="${m.espn || ""}" data-h="${m.home}" data-a="${m.away}" data-kick="${m.kick || ""}"><div class="card-h">Minuto a minuto <small class="mam-src">lances: ${LIVE.proxy() ? "API-Football" : "ESPN"} · narração: CazéStats.TV</small></div>
             <div class="mam-top"></div><ul class="mam-list"><li class="mam-empty">Carregando a narração…</li></ul></div>` : ""}
-          <div class="card"><div class="card-h">Comparação no campeonato <small>${REAL.source} · ${REAL.updated}</small></div><div class="card-b">${compareHTML(m)}</div></div>
+          <div class="card"><div class="card-h">Comparação no campeonato <small>${SEG.esc(REAL.source)} · ${SEG.esc(REAL.updated)}</small></div><div class="card-b">${compareHTML(m)}</div></div>
         </div>
         <div>
           ${voteCard(m)}
@@ -1158,10 +1153,10 @@
   }
   const haTempo = (ts) => { const min = Math.max(1, Math.round((Date.now() / 1000 - ts) / 60)); return min < 60 ? `há ${min} min` : min < 1440 ? `há ${Math.round(min / 60)} h` : `há ${Math.round(min / 1440)} d`; };
   function arbitragemHTML(a) {
-    const esc = (x) => String(x || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    const esc = (x) => SEG.esc(x || "");
     return `<div class="arb" data-live="arb">
       <div class="arb-h">${ICON.whistle || ""}<b>Arbitragem nas manchetes</b><small>atualiza a cada 30 min</small></div>
-      ${a.manchetes?.length ? `<ul class="arb-list">${a.manchetes.slice(0, 3).map((x) => `<li><a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer"><b>${esc(x.title)}</b><small>${esc(x.source)} · ${haTempo(x.ts)} ↗</small></a></li>`).join("")}</ul>` : `<p class="arb-none">Os veículos ainda não publicaram a escala deste jogo.</p>`}
+      ${a.manchetes?.length ? `<ul class="arb-list">${a.manchetes.slice(0, 3).map((x) => `<li><a href="${esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer"><b>${esc(x.title)}</b><small>${esc(x.source)} · ${haTempo(x.ts)} ↗</small></a></li>`).join("")}</ul>` : `<p class="arb-none">Os veículos ainda não publicaram a escala deste jogo.</p>`}
       <p class="arb-aviso">A escala completa (assistentes, quarto árbitro e VAR) é divulgada pela CBF; aqui aparece o que a imprensa já noticiou, com link para cada matéria. <a href="https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/${new Date().getFullYear()}" target="_blank" rel="noopener noreferrer">Escala oficial na CBF ↗</a></p>
     </div>`;
   }
@@ -1193,7 +1188,7 @@
         </div>
         <a class="feat-link" href="#/partida/${m.id}">
           ${scoreline(m, false)}
-          ${m.venue ? `<small class="feat-venue">${estadio(m.venue)}</small>` : ""}
+          ${m.venue ? `<small class="feat-venue">${SEG.esc(estadio(m.venue))}</small>` : ""}
           <div class="feat-sub">No campeonato</div>
           <div style="margin-top:6px">${compareHTML(m, 3)}</div>
         </a>
@@ -1340,7 +1335,7 @@
   }
 
   function pageTable() {
-    return `${COPA.barra("brasileirao")}<div class="page-head"><div><div class="eyebrow">Brasileirão Série A · ${ROUND}ª rodada</div><h1>Classificação</h1><p data-live="aviso">${temAoVivo() ? `<span class="pill">Ao vivo</span> Com os placares dos jogos em andamento; a tabela oficial é de ${REAL.updated}.` : `Classificação oficial, atualizada em ${REAL.updated}.`}</p></div></div>
+    return `${COPA.barra("brasileirao")}<div class="page-head"><div><div class="eyebrow">Brasileirão Série A · ${ROUND}ª rodada</div><h1>Classificação</h1><p data-live="aviso">${temAoVivo() ? `<span class="pill">Ao vivo</span> Com os placares dos jogos em andamento; a tabela oficial é de ${SEG.esc(REAL.updated)}.` : `Classificação oficial, atualizada em ${SEG.esc(REAL.updated)}.`}</p></div></div>
       ${leagueStats()}
       <div class="grid-2" style="margin-top:16px">
         <div class="card">${standingsTable(state.standings)}${legend}${sourceNote}</div>
@@ -1539,7 +1534,7 @@
       <div>
         <div class="eyebrow">Sobre o projeto</div>
         <h1 class="display">Um placar<br/>com alma de arquibancada</h1>
-        <p style="color:var(--text-2);font-size:16px;max-width:640px">O Placar.TV é um estudo de interface para plataformas de resultados esportivos: a densidade de informação das listas de partidas, o cuidado com gráficos de desempenho e, acima de tudo, a identidade de cada clube brasileiro aplicada à interface.</p>
+        <p style="color:var(--text-2);font-size:16px;max-width:640px">CazéStats.TV é um estudo de interface para plataformas de resultados esportivos: a densidade de informação das listas de partidas, o cuidado com gráficos de desempenho e, acima de tudo, a identidade de cada clube brasileiro aplicada à interface.</p>
         <div class="card reveal" style="margin-top:22px"><div class="card-h">Habilidades em campo</div><div class="card-b">
           ${skills.map(([s, v]) => `<div class="skill"><header><span>${s}</span><span>${v}</span></header><div class="bar"><i data-w="${v}"></i></div></div>`).join("")}
         </div></div>
@@ -1601,7 +1596,7 @@
     const codigo = [["Interface (JS)", 3200, "var(--accent)"], ["Cenas e GOL! (JS)", 1570, "#e0182a"], ["Estilos (CSS)", 2370, "#13a37a"], ["Servidor (Python)", 1500, "#f0a020"]];
     const cTot = codigo.reduce((a, c) => a + c[1], 0);
     return `<section class="docs" aria-labelledby="docs-h">
-      <div class="docs-head"><div class="eyebrow">Por dentro do Placar.TV</div><h2 id="docs-h" class="docs-title">Como o site funciona</h2>
+      <div class="docs-head"><div class="eyebrow">Por dentro do CazéStats.TV</div><h2 id="docs-h" class="docs-title">Como o site funciona</h2>
         <p>Um resumo do que foi construído, de onde vêm os dados e com que frequência eles chegam à tela.</p></div>
       <div class="docs-kpis">${kpis.map(([n, t, s], i) => `<div class="dk" style="--i:${i}"><b data-count="${n}">${n}</b><span>${t}</span><small>${s}</small></div>`).join("")}</div>
 
@@ -1657,7 +1652,8 @@
       r.page === "simulador" ? pageSim(r.id) :
       r.page === "jogador" ? JOGADOR.page(r.id, r.tab, r.extra) :
       r.page === "copa" ? COPA.page(r.id, r.tab, r.extra) :
-      r.page === "sobre" ? pageAbout() : pageNotFound();
+      r.page === "sobre" ? pageAbout() :
+      r.page === "privacidade" ? PRIVACIDADE.page() : pageNotFound();
   /* competição em tela: Brasileirão (o site de sempre) ou Libertadores, Sul-Americana, Copa do Brasil e estaduais
      (js/copa.js). Trocar de competição troca as cores do site e toca a abertura animada da competição; o Bora pro jogo
      aberto a partir de uma competição fica no clima dela. */
@@ -1685,7 +1681,7 @@
     stamp(view);
     const navKey = r.page === "" || r.page === "partida" || r.page === "copa" ? "home" : r.page === "clube" || r.page === "jogador" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    document.title = club ? `${club.name} — O Placar.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — O Placar.TV` : r.page === "partida" ? "Partida — O Placar.TV" : r.page === "bora-pro-jogo" ? "Bora pro jogo — O Placar.TV" : r.page === "simulador" ? "Simulador da tabela — O Placar.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — O Placar.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "O Placar.TV — Futebol Brasileiro";
+    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? "Partida — CazéStats.TV" : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
     enhance();
   }
 
@@ -1863,8 +1859,8 @@
       $$("[data-pid]", view).forEach((el) => {
         const [aid] = el.dataset.pid.split("-"), j = D?.jogadores?.[aid];
         const nome = el.parentElement?.querySelector("b");
-        if (nome && JOGADOR.get(el.dataset.pid) && !nome.closest("a")) nome.outerHTML = `<a class="ps-link" href="#/jogador/${el.dataset.pid}">${nome.outerHTML}</a>`;
-        if (j?.foto && !el.querySelector("img")) { el.classList.add("com-foto"); el.innerHTML = `<span class="foto-c">${window.GFX.fotoImg(j.foto)}</span><i>${el.textContent}</i>`; el.title = `Foto: ${j.foto.autor} · ${j.foto.licenca} · ${j.foto.privada ? "uso privado" : j.foto.fonte === "Flickr" ? "Flickr" : "Wikimedia Commons"}`; }
+        if (nome && JOGADOR.get(el.dataset.pid) && !nome.closest("a")) nome.outerHTML = `<a class="ps-link" href="#/jogador/${SEG.esc(el.dataset.pid)}">${nome.outerHTML}</a>`;
+        if (j?.foto && !el.querySelector("img")) { el.classList.add("com-foto"); el.innerHTML = `<span class="foto-c">${window.GFX.fotoImg(j.foto)}</span><i>${SEG.esc(el.textContent)}</i>`; el.title = `Foto: ${j.foto.autor} · ${j.foto.licenca} · ${j.foto.privada ? "uso privado" : j.foto.fonte === "Flickr" ? "Flickr" : "Wikimedia Commons"}`; }
       });
     });
     LIVE.mount(view);
@@ -1951,16 +1947,10 @@
   function loadClubForm() {
     if (formScript) return formScript;
     const before = window.CLUB_FORM;
-    formScript = new Promise((res) => {
-      const sc = document.createElement("script");
-      sc.src = "js/club-form.js";
-      sc.onload = sc.onerror = () => {
-        // o que já veio da ESPN nesta visita vale mais que o arquivo gravado
-        if (before?.clubs && window.CLUB_FORM?.clubs && before !== window.CLUB_FORM) Object.assign(window.CLUB_FORM.clubs, before.clubs);
-        else if (before && !window.CLUB_FORM) window.CLUB_FORM = before;
-        res();
-      };
-      document.head.appendChild(sc);
+    formScript = DADOS.carrega("club-form").then(() => {
+      // o que já veio da ESPN nesta visita vale mais que o arquivo gravado
+      if (before?.clubs && window.CLUB_FORM?.clubs && before !== window.CLUB_FORM) Object.assign(window.CLUB_FORM.clubs, before.clubs);
+      else if (before && !window.CLUB_FORM) window.CLUB_FORM = before;
     });
     return formScript;
   }
@@ -2158,7 +2148,7 @@
       const vist = new Set();
       return { fonte: "destaque", itens: itens.filter((x) => !vist.has(x.t + x.id) && vist.add(x.t + x.id)).slice(0, 6) };
     };
-    const p = !base ? Promise.resolve(destaque()) : fetch(`${base}/em-alta`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => {
+    const p = !base ? Promise.resolve(destaque()) : fetch(`${base}/em-alta`, { cache: "no-store" }).then((r) => (r.ok ? SEG.json(r) : null)).then((d) => {
       const itens = (d?.itens || []).filter((x) => (x.t === "c" ? byId[x.id] : JOGADOR.get(x.id))).map((x) => (x.t === "j" ? { t: "j", id: JOGADOR.get(x.id).key } : x)).slice(0, 6);
       return itens.length >= 3 ? { fonte: "buscas", itens } : destaque(); // pouca busca ainda: completa com o destaque
     }).catch(() => destaque());

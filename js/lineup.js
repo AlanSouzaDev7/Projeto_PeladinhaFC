@@ -67,7 +67,7 @@
   const KEY = (cid) => `placar:xi2:${cid}`;
   function load(cid) {
     try {
-      const s = JSON.parse(localStorage.getItem(KEY(cid)));
+      const s = SEG.le(localStorage.getItem(KEY(cid)));
       // a edição vale até o próximo jogo: saiu escalação nova do técnico, ela volta a ser o ponto de partida
       if (s && F[s.f] && s.xi.length === 11 && (!s.base || s.base === baseAtual(cid))) return s;
     } catch { /* sem armazenamento */ }
@@ -117,7 +117,7 @@
           <a class="chip" href="#/bora-pro-jogo/${cid}/${cid === "palmeiras" ? "flamengo" : "palmeiras"}">Bora pro jogo ›</a>
         </div>
       </div>
-      ${L ? `<div class="lu-source">${fromMatch ? "Escalação titular do último jogo" : "Sua escalação · baseada no último jogo"}: ${L.comp}, ${L.home ? `${c.abbr} ${L.score.replace("-", " x ")} ${L.vs}` : `${L.vs} ${L.score.split("-").reverse().join(" x ")} ${c.abbr}`} · ${L.date.split("-").reverse().join("/")} · ${L.formation}</div>` : ""}
+      ${L ? `<div class="lu-source">${fromMatch ? "Escalação titular do último jogo" : "Sua escalação · baseada no último jogo"}: ${SEG.esc(L.comp)}, ${L.home ? `${c.abbr} ${SEG.esc(L.score.replace("-", " x "))} ${SEG.esc(L.vs)}` : `${SEG.esc(L.vs)} ${SEG.esc(L.score.split("-").reverse().join(" x "))} ${c.abbr}`} · ${SEG.esc(L.date.split("-").reverse().join("/"))} · ${SEG.esc(L.formation)}</div>` : ""}
       <div class="lu-grid">
         <div>
           <div class="pitch lu-pitch">
@@ -137,7 +137,7 @@
                 const av = p && window.CAMPO ? CAMPO.avalia({ id: p.id, pos: p.pos, nome: p.name }, cod) : null;
                 const dica = av && av.tipo !== "igual" ? CAMPO.previa({ id: p.id, pos: p.pos, nome: p.name }, cod).html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").split(" Posição ")[0].trim() : "";
                 const marca = av && av.tipo !== "igual" ? CAMPO.selo(av).replace("cp-selo", "cp-selo rl-selo") : `<i class="rl">${cod}</i>`;
-                return `<div class="slot ${just("xi", i)}" data-slot="xi" data-i="${i}" style="left:${x}%;top:${y}%;--i:${i};--mw:${mw.toFixed(1)}cqw" title="${p ? `${p.name} · ${dica || (CAMPO?.NOME?.[cod] || cod)}` : role}">
+                return `<div class="slot ${just("xi", i)}" data-slot="xi" data-i="${i}" style="left:${x}%;top:${y}%;--i:${i};--mw:${mw.toFixed(1)}cqw" title="${p ? `${SEG.esc(p.name)} · ${SEG.esc(dica || (CAMPO?.NOME?.[cod] || cod))}` : role}">
                   <span class="tkw">${tok(p, c)}${marca}</span><span class="nm">${nm}</span></div>`;
               }).join("");
             })()}
@@ -146,7 +146,7 @@
             <div class="lu-h"><span>Reservas</span><small>arraste para o campo para trocar</small></div>
             <div class="bench-row">${Array.from({ length: 12 }, (_, i) => {
               const p = map[s.bench[i]];
-              return `<div class="slot b ${just("bench", i)}" data-slot="bench" data-i="${i}" title="${p ? p.name : "vaga"}">${tok(p, c)}<span class="bn"><b>${p ? p.name : "Vaga"}</b><small>${p ? GROUP[p.pos] || "" : "arraste alguém"}</small></span></div>`;
+              return `<div class="slot b ${just("bench", i)}" data-slot="bench" data-i="${i}" title="${p ? SEG.esc(p.name) : "vaga"}">${tok(p, c)}<span class="bn"><b>${p ? SEG.esc(p.name) : "Vaga"}</b><small>${p ? GROUP[p.pos] || "" : "arraste alguém"}</small></span></div>`;
             }).join("")}</div>
           </div>
         </div>
@@ -154,7 +154,7 @@
           <div class="card-h">Elenco completo <small>${ps.length} jogadores · ESPN</small></div>
           <div class="tabs lu-tabs">${[["all", "Todos"], ...Object.entries(GROUPS)].map(([k, l]) => `<button class="tab ${ui.filter === k ? "on" : ""}" data-lu-filter="${k}">${l}</button>`).join("")}</div>
           <ul>${list.map((p) => `<li data-player="${p.id}" class="${inXI.has(p.id) ? "is-xi" : inBench.has(p.id) ? "is-bench" : ""}">
-              <span class="grip" aria-hidden="true">⠿</span>${tok(p, c)}<div><b>${p.name}</b><small>${GROUP[p.pos]}${p.age ? ` · ${p.age} anos` : ""}</small></div>
+              <span class="grip" aria-hidden="true">⠿</span>${tok(p, c)}<div><b>${SEG.esc(p.name)}</b><small>${GROUP[p.pos]}${p.age ? ` · ${p.age} anos` : ""}</small></div>
               <em>${inXI.has(p.id) ? "Titular" : inBench.has(p.id) ? "Reserva" : ""}</em></li>`).join("")}</ul>
         </div>
       </div>
@@ -211,7 +211,7 @@
     drag.on = true;
     drag.ghost = document.createElement("div");
     drag.ghost.className = "lu-ghost";
-    drag.ghost.innerHTML = `${tok(p, c)}<b>${p.name}</b>`;
+    drag.ghost.innerHTML = `${tok(p, c)}<b>${SEG.esc(p.name)}</b>`;
     document.body.append(drag.ghost);
     drag.from.classList.add("dragging");
     drag.lu.classList.add("is-dragging");
@@ -267,7 +267,7 @@
   const bp = { phase: "def", timer: null };
   // posições que o usuário arrastou: { "a|b": { def: { "a3": [x, y] }, a: {...}, b: {...} } } (x, y em % do campo)
   const BKEY = "placar:bora";
-  const custom = (() => { try { return JSON.parse(localStorage.getItem(BKEY)) || {}; } catch { return {}; } })();
+  const custom = (() => { try { return SEG.le(localStorage.getItem(BKEY)) || {}; } catch { return {}; } })();
   const saveCustom = () => { try { localStorage.setItem(BKEY, JSON.stringify(custom)); } catch { /* sem armazenamento */ } };
   const pairOf = (root) => root.dataset.board;
   const moved = (root, phase) => custom[pairOf(root)]?.[phase] || {};
@@ -310,8 +310,8 @@
   };
   function boardTokens(cid, side) {
     const c = byId[cid];
-    return shape(cid).map((s, i) => `<div class="bt ${side}" data-side="${side}" data-i="${i}" title="${s.p ? `${s.p.n ?? "–"} · ${s.p.name}` : s.role}" style="--tc:${display(c)};--to:${onColor(display(c))};--tb:${c.colors[1]}">
-        <span>${s.p ? s.p.n ?? "–" : ""}</span><em>${s.p ? boardName(s.p.name) : s.role}</em></div>`).join("");
+    return shape(cid).map((s, i) => `<div class="bt ${side}" data-side="${side}" data-i="${i}" title="${s.p ? `${SEG.esc(s.p.n ?? "–")} · ${SEG.esc(s.p.name)}` : s.role}" style="--tc:${display(c)};--to:${onColor(display(c))};--tb:${c.colors[1]}">
+        <span>${s.p ? s.p.n ?? "–" : ""}</span><em>${s.p ? SEG.esc(boardName(s.p.name)) : s.role}</em></div>`).join("");
   }
 
   function layoutBoard(root, a, b) {
@@ -357,7 +357,7 @@
     const xiList = (cid) => {
       const c = byId[cid];
       return `<div class="card"><div class="card-h"><span style="display:flex;gap:8px;align-items:center">${crest(c, 26)}${c.abbr}</span><small>${load(cid).f} · <a href="#/clube/${cid}/elenco" style="color:var(--ink)">editar</a></small></div>
-        <ul class="squad-list">${shape(cid).map((s) => `<li><span class="n">${s.p ? s.p.n ?? "–" : ""}</span><b>${s.p ? s.p.name : "—"}</b><span class="p">${s.role}</span></li>`).join("")}</ul></div>`;
+        <ul class="squad-list">${shape(cid).map((s) => `<li><span class="n">${s.p ? s.p.n ?? "–" : ""}</span><b>${s.p ? SEG.esc(s.p.name) : "—"}</b><span class="p">${s.role}</span></li>`).join("")}</ul></div>`;
     };
     const pct = (v) => `${Math.round(v * 100)}%`;
     return `<div class="page-head"><div><div class="eyebrow">Prancheta tática</div><h1>Bora pro jogo</h1>
@@ -458,7 +458,7 @@
       const { top, base } = HEATMAP.summary(pr);
       card.style.setProperty("--tc", display(c));
       const foto = s.p && HEATMAP.real(s.p.id)?.j.foto;
-      card.innerHTML = `<div class="hc-head">${foto ? `<span class="hc-foto" style="--tc:${display(c)}" title="Foto: ${SEG.esc(foto.autor)} · ${SEG.esc(foto.licenca)} · ${foto.privada ? "uso privado" : foto.fonte === "Flickr" ? "Flickr" : "Wikimedia Commons"}"><span class="foto-c">${window.GFX.fotoImg(foto)}</span><i style="background:${display(c)};color:${onColor(display(c))}">${s.p?.n ?? ""}</i></span>` : `<span class="hc-n" style="background:${display(c)};color:${onColor(display(c))}">${s.p?.n ?? "–"}</span>`}<div><b>${s.p ? s.p.name : s.role}</b><small>${crest(c, 18)} ${c.abbr} · ${s.role} na escalação</small></div></div>
+      card.innerHTML = `<div class="hc-head">${foto ? `<span class="hc-foto" style="--tc:${display(c)}" title="Foto: ${SEG.esc(foto.autor)} · ${SEG.esc(foto.licenca)} · ${foto.privada ? "uso privado" : foto.fonte === "Flickr" ? "Flickr" : "Wikimedia Commons"}"><span class="foto-c">${window.GFX.fotoImg(foto)}</span><i style="background:${display(c)};color:${onColor(display(c))}">${s.p?.n ?? ""}</i></span>` : `<span class="hc-n" style="background:${display(c)};color:${onColor(display(c))}">${s.p?.n ?? "–"}</span>`}<div><b>${s.p ? SEG.esc(s.p.name) : s.role}</b><small>${crest(c, 18)} ${c.abbr} · ${s.role} na escalação</small></div></div>
         <div class="hc-roles">${top}</div><div class="hc-meta">${base}</div>
         <div class="hc-scale" aria-hidden="true"><i></i><span>menos</span><span>mais tempo</span></div>
         <div class="hc-src">${pr.estimado === "lances" ? "Mapa de calor com os lances reais da temporada (cada passe, desarme, cruzamento e finalização com posição no campo; fonte: ESPN)" : "Mapa de calor estimado: posições em que jogou (escalações da ESPN), pesadas pelos minutos"}</div>`;

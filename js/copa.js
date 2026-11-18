@@ -111,7 +111,7 @@
     const nome = f === "brasileirao" ? "Brasileirão" : id === "estaduais" ? "Estaduais" : c?.tipo === "estadual" ? c.nome : c?.nome || "";
     const sub = f === "brasileirao" ? "Série A · 2026" : SERIES.includes(id) ? `${c.longo.replace("Brasileirão ", "")} · 2026` : c?.lema || "Temporada 2026";
     document.querySelector(".cpx-intro")?.remove();
-    const vistas = (() => { try { return JSON.parse(sessionStorage.getItem("placar:intros") || "[]"); } catch { return []; } })();
+    const vistas = (() => { try { return SEG.le(sessionStorage.getItem("placar:intros") || "[]"); } catch { return []; } })();
     const curta = vistas.includes(f);
     if (!curta) { vistas.push(f); try { sessionStorage.setItem("placar:intros", JSON.stringify(vistas)); } catch { /* ok */ } }
     const el = document.createElement("div");
@@ -146,12 +146,9 @@
     if (prom[id]) return prom[id];
     return (prom[id] = (async () => {
       if (window.PD?.LIVE) {
-        try { const r = await fetch(`/api/competicao/${id}`, { cache: "no-store" }); if (r.ok) { const d = await r.json(); window.SEG?.limpa(d); (window.COMPETICOES = window.COMPETICOES || {})[id] = d; return d; } } catch { /* arquivo */ }
+        try { const r = await fetch(`/api/competicao/${id}`, { cache: "no-store" }); if (r.ok) { const d = await SEG.json(r); (window.COMPETICOES = window.COMPETICOES || {})[id] = d; return d; } } catch { /* arquivo */ }
       }
-      await new Promise((res) => { const s = document.createElement("script"); s.src = `js/competicoes/${id}.js`; s.onload = s.onerror = res; document.head.appendChild(s); });
-      const d = window.COMPETICOES?.[id] || null;
-      if (d) window.SEG?.limpa(d);
-      return d;
+      return (await DADOS.carrega(`competicoes/${id}`)) || null;
     })());
   }
   // no dia de jogo: placar direto da ESPN a cada 30 s (o arquivo do robô é de até 30 min atrás)
@@ -174,7 +171,7 @@
     const tick = async () => {
       if (!document.querySelector(`[data-copa="${id}"]`)) return clearInterval(vivoTimer);
       try {
-        const sb = await (await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${C[id].lg}/scoreboard?dates=${hoje.replace(/-/g, "")}`, { cache: "no-store" })).json();
+        const sb = await SEG.json(await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${C[id].lg}/scoreboard?dates=${hoje.replace(/-/g, "")}`, { cache: "no-store" }));
         let mudou = false;
         for (const ev of sb.events || []) {
           const j = D.jogos.find((x) => x.id === ev.id);
@@ -447,7 +444,7 @@
 
   // simulador: placar dos jogos que faltam; grupos recalculados e quem avança no mata-mata
   const simKey = (id) => `placar:copa-sim-${id}`;
-  const simLer = (id) => { try { return JSON.parse(localStorage.getItem(simKey(id)) || "{}"); } catch { return {}; } };
+  const simLer = (id) => { try { return SEG.le(localStorage.getItem(simKey(id)) || "{}"); } catch { return {}; } };
   const simGravar = (id, p) => { try { localStorage.setItem(simKey(id), JSON.stringify(p)); } catch { /* ok */ } };
   function tabelaSim(js, palp) {
     const T = {};
@@ -587,11 +584,11 @@
     });
   }
   const titulo = (id, aba, extra) => {
-    if (id === "estaduais") return "Estaduais — O Placar.TV";
+    if (id === "estaduais") return "Estaduais — CazéStats.TV";
     const c = C[id];
-    if (!c) return "Competição — O Placar.TV";
+    if (!c) return "Competição — CazéStats.TV";
     const D = window.COMPETICOES?.[id], t = aba === "clube" && D ? D.geral.find((r) => r.id === decodeURIComponent(extra || "")) : null;
-    return `${t ? `${t.nome} na ` : ""}${c.longo} — O Placar.TV`;
+    return `${t ? `${t.nome} na ` : ""}${c.longo} — CazéStats.TV`;
   };
 
   window.COPA = { C, ESTADUAIS, SERIES, page, mount, barra, faixa, tema, intro, familia, titulo, carrega, emblema };

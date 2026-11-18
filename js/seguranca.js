@@ -4,7 +4,8 @@
    Carregado no <head>, antes de qualquer outro script. Vale para tudo o que
    existe hoje e para o que for criado depois:
      - todo dado que chega de fora (fetch, JSON, arquivos de dados, armazenamento
-       local) passa por uma limpeza antes de ser usado;
+       local) é lido por SEG.json / SEG.le, que limpam antes de entregar, e é
+       escapado (SEG.esc, SEG.url) na hora de virar HTML;
      - links só abrem endereços web; páginas novas abrem isoladas desta;
      - o site não funciona dentro de moldura (iframe) de outro endereço.
    ========================================================================== */
@@ -14,7 +15,7 @@
   /* ---------- tema antes de desenhar a página (antes era um script embutido no HTML) ---------- */
   try {
     const t = JSON.parse(localStorage.getItem("placar:theme"));
-    document.documentElement.dataset.theme = t === "light" || t === "dark" ? t : matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.dataset.theme = t === "light" || t === "dark" ? t : "dark"; // identidade: escuro por padrão (Noite de Estádio)
   } catch (e) { /* armazenamento indisponível */ }
 
   /* ---------- não abrir dentro de moldura de outro site ---------- */
@@ -77,17 +78,14 @@
     return d;
   }
 
-  /* ---------- todo JSON que entrar no site já chega limpo ---------- */
-  const parseOriginal = JSON.parse;
-  const parse = function (txt, reviver) { return limpa(parseOriginal.call(JSON, txt, reviver)); };
-  Object.defineProperty(JSON, "parse", { value: parse, writable: false, configurable: false });
-  if (window.Response && Response.prototype.json) {
-    const jsonOriginal = Response.prototype.json;
-    Object.defineProperty(Response.prototype, "json", {
-      value: function () { return jsonOriginal.call(this).then((d) => limpa(d)); },
-      writable: false, configurable: false,
-    });
-  }
+  /* ---------- leitura de dado de fora: sempre por aqui ----------
+     O site NÃO troca mais JSON.parse nem Response.json do navegador (a troca alterava também o que não era dado de fora,
+     como as respostas da parte nativa do app, e passava a ideia de que não era preciso escapar na hora de montar o HTML).
+     A regra agora são duas, e valem juntas:
+       1) todo dado que chega de fora (fetch, arquivo de dados, armazenamento local) é lido por SEG.json ou SEG.le;
+       2) todo dado que entra em HTML passa por SEG.esc (texto e atributo) e SEG.url (endereço) no ponto de uso. */
+  const json = (resposta) => resposta.json().then(limpa); // no lugar de resposta.json()
+  const le = (txt) => limpa(JSON.parse(txt)); // no lugar de JSON.parse(texto de fora)
 
   /* ---------- links: só endereços web; as páginas de fora abrem isoladas ---------- */
   const guarda = (e) => {
@@ -108,5 +106,5 @@
     try { console.warn("[PLACAR] bloqueado pela política de segurança:", e.violatedDirective, e.blockedURI || ""); } catch (x) { /* sem console */ }
   });
 
-  window.SEG = Object.freeze({ esc, url, texto, limpa });
+  window.SEG = Object.freeze({ esc, url, texto, limpa, json, le });
 })();

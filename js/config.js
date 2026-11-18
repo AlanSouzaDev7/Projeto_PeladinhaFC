@@ -11,4 +11,10 @@ window.PLACAR_CONFIG = {
   /* hinos: ids dos clubes com o instrumental do hino LICENCIADO em media/hinos/<id>.mp3 (ex.: ["cruzeiro"]).
      Vazio: o gol toca a fanfarra própria de cada clube (js/sons.js). */
   hinos: [],
+  /* escudosOficiais: true = imagem oficial (Wikimedia/ESPN); false = escudo desenhado pelo site (cores + sigla).
+     Os escudos são marcas registradas dos clubes (risco J3 em docs/RISCOS-APRESENTACAO.md): ligado enquanto o site é do
+     dono; antes de apresentar a uma empresa, avaliar desligar. */
+  escudosOficiais: true,
+  /* marca: nome exibido (o app Android troca para "433Fut" ao empacotar, em app/montar-www.mjs) */
+  marca: "CazéStats.TV",
 };

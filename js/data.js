@@ -32,7 +32,8 @@ const CLUBS = [
 ];
 
 /* Escudos oficiais (Wikimedia, os mesmos usados na Wikipédia em português).
-   São marcas registradas dos clubes; usadas aqui só para identificação, sem fins comerciais. */
+   São marcas registradas dos clubes. DESLIGADOS por padrão: o site mostra o escudo desenhado por ele (cores + sigla).
+   Só aparecem com PLACAR_CONFIG.escudosOficiais = true (js/config.js), depois de haver licença. A revisar por advogado. */
 const CRESTS = {
   "athletico-pr": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/43/Athletico_Paranaense_%28Logo_2019%29.svg/330px-Athletico_Paranaense_%28Logo_2019%29.svg.png",
   "atletico-mg": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/27/Clube_Atl%C3%A9tico_Mineiro_logo.svg/330px-Clube_Atl%C3%A9tico_Mineiro_logo.svg.png",
@@ -55,9 +56,11 @@ const CRESTS = {
   "vasco": "https://thumb.wikimedia.org/wikipedia/pt/thumb/8/8b/EscudoDoVascoDaGama.svg/330px-EscudoDoVascoDaGama.svg.png",
   "vitoria": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/15/Esporte_Clube_Vit%C3%B3ria_%282024%29.svg/330px-Esporte_Clube_Vit%C3%B3ria_%282024%29.svg.png"
 };
-CLUBS.forEach((c) => (c.logo = CRESTS[c.id]));
+// calculado na hora do uso (js/config.js carrega depois deste arquivo): sem a opção ligada, todo lugar que usa
+// club.logo (escudo, GOL!, cenas, cartaz da janela) recebe "nada" e cai no escudo desenhado
+CLUBS.forEach((c) => Object.defineProperty(c, "logo", { enumerable: true, configurable: true, get: () => (window.PLACAR_CONFIG?.escudosOficiais === true ? CRESTS[c.id] : undefined) }));
 
-/* fotos dos ídolos: imagens livres do Wikimedia Commons (as mesmas da Wikipédia em português) */
+/* fotos dos ídolos: imagens livres do Wikimedia Commons (as mesmas da Wikipédia em português), copiadas para o projeto */
 const IDOL_PHOTOS = {
   "athletico-pr": "Atletiba_1972.jpg",
   "atletico-mg": "JPP4693_(54137928249)_(cropped).jpg",
@@ -76,7 +79,8 @@ const IDOL_PHOTOS = {
 };
 CLUBS.forEach((c) => {
   const f = IDOL_PHOTOS[c.id];
-  if (f) c.idolPhoto = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(f)}?width=640`;
+  // cópia local (E4: scripts/copiar-cenas-livres.mjs baixa do Commons uma vez, em WebP de 640 px)
+  if (f) c.idolPhoto = `img/livres/idolos/${c.id}.webp`;
 });
 
 const byId = Object.assign(Object.create(null), Object.fromEntries(CLUBS.map((c) => [c.id, c])));

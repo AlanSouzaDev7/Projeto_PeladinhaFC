@@ -67,12 +67,12 @@
     const style = vt ? ` style="view-transition-name: crest-${club.id}"` : "";
     // escudos pequenos (listas) usam a miniatura de 120 px da Wikimedia: ~5 KB em vez de ~50 KB
     const src = size <= 56 ? club.logo.replace("/330px-", "/120px-") : club.logo;
-    return `<img class="crest" src="${src}" alt="Escudo do ${club.name}" width="${size}" height="${size}" loading="lazy" decoding="async" data-club="${club.id}" data-size="${size}"${vt ? " data-vt" : ""}${style}/>`;
+    return `<img class="crest" src="${esc(window.SEG.url(src))}" alt="Escudo do ${esc(club.name)}" width="${size}" height="${size}" loading="lazy" decoding="async" data-club="${club.id}" data-size="${size}"${vt ? " data-vt" : ""}${style}/>`;
   }
   /* ---------- escudo de outro time (adversário fora da Série A: estaduais, copas, Libertadores) ----------
      Com o escudo da ESPN, a imagem; sem ele (a ESPN não tem o de muitos times pequenos: Pouso Alegre, Betim,
      Noroeste, Maricá...) ou se a imagem falhar, um escudo desenhado com as iniciais do time e uma cor própria. */
-  const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  const esc = window.SEG.esc; // um escape só para o site inteiro (js/seguranca.js)
   const PEQ = new Set(["ec", "fc", "sc", "ac", "cr", "ca", "aa", "ad", "ce", "cs", "de", "do", "da", "dos", "das", "e", "clube", "esporte", "esportivo", "futebol", "club", "sport", "atletico"]);
   function iniciais(nome) {
     const w = String(nome || "?").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9 -]/g, " ").split(/[\s-]+/).filter(Boolean);
@@ -100,7 +100,7 @@
   // imagens aceitas: ESPN, Wikimedia Commons (só livres) e API-Football
   const LOGO_OK = /^https:\/\/(a\.espncdn\.com|upload\.wikimedia\.org\/wikipedia\/commons|media\.api-sports\.io)\//;
   function crestOutro(nome, logo, size = 28, cores = null) {
-    if (logo && LOGO_OK.test(logo)) return `<img class="crest" src="${esc(logo)}" alt="Escudo do ${esc(nome)}" width="${size}" height="${size}" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-nome="${esc(nome)}" data-size="${size}"/>`;
+    if (window.PLACAR_CONFIG?.escudosOficiais === true && logo && LOGO_OK.test(logo)) return `<img class="crest" src="${esc(logo)}" alt="Escudo do ${esc(nome)}" width="${size}" height="${size}" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-nome="${esc(nome)}" data-size="${size}"/>`;
     return iniCrest(nome, size, cores);
   }
   // se a imagem não carregar (sem internet, link quebrado), troca pelo escudo desenhado
@@ -157,7 +157,7 @@
   function fotoImg(foto, alt = "") {
     const r = Array.isArray(foto?.rosto) && foto.rosto.length === 4 && foto.rosto.every((v) => Number.isFinite(v) && v >= 0 && v <= 1) && foto.rosto[2] > 0.05 && foto.rosto[3] > 0.05 ? foto.rosto : null;
     // carregamento imediato: são poucas fotos por página, e o adiado (lazy) não dispara nos círculos pequenos das listas
-    const base = `src="${esc(foto.url)}" alt="${esc(alt)}" decoding="async" referrerpolicy="no-referrer"`;
+    const base = `src="${esc(window.SEG.url(foto.url))}" alt="${esc(alt)}" decoding="async" referrerpolicy="no-referrer"`;
     if (!r) return `<img class="foto-p${foto.privada && !foto.recorte ? " priv" : ""}" ${base} />`;
     const [x, y, sx, sy] = r, pc = (v) => `${(v * 100).toFixed(2)}%`;
     return `<img class="foto-r" ${base} style="width:${pc(1 / sx)};height:${pc(1 / sy)};left:${pc(-x / sx)};top:${pc(-y / sy)}" />`;

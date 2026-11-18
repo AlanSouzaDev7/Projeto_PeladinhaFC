@@ -229,7 +229,7 @@
         <g clip-path="url(#${id}c)">
           ${sc.draw(id)}
           <circle class="x" cx="120" cy="120" r="80" fill="url(#${id}g)" ${A("flash", T - 0.1, 0.9)}/>
-          <g class="x crest-in" ${A("crestIn", T, 0.9)}><image href="${club.logo}" x="62" y="62" width="116" height="116" preserveAspectRatio="xMidYMid meet"/></g>
+          <g class="x crest-in" ${A("crestIn", T, 0.9)}>${club.logo ? `<image href="${window.SEG.esc(window.SEG.url(club.logo))}" x="62" y="62" width="116" height="116" preserveAspectRatio="xMidYMid meet"/>` : `<g transform="translate(70 53)">${window.GFX.svgCrest(club, 100).replace('class="crest"', "")}</g>`}</g>
         </g>
       </svg>
       ${variant === "hero" ? `<figcaption><b>${sc.cap}</b><span>${sc.sub}</span></figcaption>` : ""}

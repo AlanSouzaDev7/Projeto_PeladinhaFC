@@ -145,8 +145,8 @@
      1.1
     ],
     "nome": "Belo Horizonte à noite, vista do alto",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Belo_Horizonte_view_from_Comiteco.jpg/960px-Belo_Horizonte_view_from_Comiteco.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Belo_Horizonte_view_from_Comiteco.jpg/1920px-Belo_Horizonte_view_from_Comiteco.jpg",
+    "w960": "img/livres/cenas/belo-horizonte-view-from-comiteco-8a2f2818.webp",
+    "w1920": "img/livres/cenas/belo-horizonte-view-from-comiteco-8a2f2818.webp",
     "ar": 1.778,
     "autor": "Sudhertzen",
     "licenca": "CC BY-SA 4.0",
@@ -166,8 +166,8 @@
    "flamengo": {
     "cel": [0.36, 0.15, 1.5],
     "nome": "Rio de Janeiro e o Pão de Açúcar",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Rio_de_Janeiro_skyline_and_Sugarloaf_Mountain_at_sunset%2C_Brazil_4.jpg/960px-Rio_de_Janeiro_skyline_and_Sugarloaf_Mountain_at_sunset%2C_Brazil_4.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d9/Rio_de_Janeiro_skyline_and_Sugarloaf_Mountain_at_sunset%2C_Brazil_4.jpg/1920px-Rio_de_Janeiro_skyline_and_Sugarloaf_Mountain_at_sunset%2C_Brazil_4.jpg",
+    "w960": "img/livres/cenas/rio-de-janeiro-skyline-and-sugarloaf-mountain-at-4d8fd86d.webp",
+    "w1920": "img/livres/cenas/rio-de-janeiro-skyline-and-sugarloaf-mountain-at-4d8fd86d.webp",
     "ar": 1.635,
     "autor": "Wilfredor",
     "licenca": "CC0",
@@ -182,8 +182,8 @@
    },
    "fluminense": {
     "nome": "Rio de Janeiro visto do Corcovado",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0b/Panoramablick_vom_Corcovado_auf_den_Zuckerhut_und_Teile_von_Rio_de_Janeiro_-_panoramio.jpg/960px-Panoramablick_vom_Corcovado_auf_den_Zuckerhut_und_Teile_von_Rio_de_Janeiro_-_panoramio.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0b/Panoramablick_vom_Corcovado_auf_den_Zuckerhut_und_Teile_von_Rio_de_Janeiro_-_panoramio.jpg/1920px-Panoramablick_vom_Corcovado_auf_den_Zuckerhut_und_Teile_von_Rio_de_Janeiro_-_panoramio.jpg",
+    "w960": "img/livres/cenas/panoramablick-vom-corcovado-auf-den-zuckerhut-un-48a955ae.webp",
+    "w1920": "img/livres/cenas/panoramablick-vom-corcovado-auf-den-zuckerhut-un-48a955ae.webp",
     "ar": 2.1,
     "autor": "giggel",
     "licenca": "CC BY 3.0",
@@ -198,8 +198,8 @@
    },
    "botafogo": {
     "nome": "Enseada de Botafogo à noite",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/Botafogo_waterfront_skyline_reflected_at_night%2C_Rio_de_Janeiro%2C_Brazil.jpg/960px-Botafogo_waterfront_skyline_reflected_at_night%2C_Rio_de_Janeiro%2C_Brazil.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/Botafogo_waterfront_skyline_reflected_at_night%2C_Rio_de_Janeiro%2C_Brazil.jpg/1920px-Botafogo_waterfront_skyline_reflected_at_night%2C_Rio_de_Janeiro%2C_Brazil.jpg",
+    "w960": "img/livres/cenas/botafogo-waterfront-skyline-reflected-at-night-r-3e97cf1a.webp",
+    "w1920": "img/livres/cenas/botafogo-waterfront-skyline-reflected-at-night-r-3e97cf1a.webp",
     "ar": 1.493,
     "autor": "Wilfredor",
     "licenca": "CC0",
@@ -216,8 +216,8 @@
    "vasco": {
     "cel": [0.36, 0.44, 1.3],
     "nome": "Baía de Guanabara e o Cristo Redentor",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c0/View_from_Morro_da_Urca_in_direction_Christ_the_Redeemer_statue_after_sunset.jpg/960px-View_from_Morro_da_Urca_in_direction_Christ_the_Redeemer_statue_after_sunset.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c0/View_from_Morro_da_Urca_in_direction_Christ_the_Redeemer_statue_after_sunset.jpg/1920px-View_from_Morro_da_Urca_in_direction_Christ_the_Redeemer_statue_after_sunset.jpg",
+    "w960": "img/livres/cenas/view-from-morro-da-urca-in-direction-christ-the--ab05805e.webp",
+    "w1920": "img/livres/cenas/view-from-morro-da-urca-in-direction-christ-the--ab05805e.webp",
     "ar": 1.778,
     "autor": "Volker E.",
     "licenca": "CC BY-SA 4.0",
@@ -234,8 +234,8 @@
    "atletico-mg": {
     "cel": [0.5, 0.535, 1.7],
     "nome": "Mirante do Mangabeiras, Belo Horizonte",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b5/P%C3%B4r-do-Sol_no_Mirante_do_Mangabeiras_%28Belo_Horizonte-MG%29.JPG/960px-P%C3%B4r-do-Sol_no_Mirante_do_Mangabeiras_%28Belo_Horizonte-MG%29.JPG",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b5/P%C3%B4r-do-Sol_no_Mirante_do_Mangabeiras_%28Belo_Horizonte-MG%29.JPG/1920px-P%C3%B4r-do-Sol_no_Mirante_do_Mangabeiras_%28Belo_Horizonte-MG%29.JPG",
+    "w960": "img/livres/cenas/por-do-sol-no-mirante-do-mangabeiras-belo-horizo-b76f19f8.webp",
+    "w1920": "img/livres/cenas/por-do-sol-no-mirante-do-mangabeiras-belo-horizo-b76f19f8.webp",
     "ar": 1.502,
     "autor": "Gabrielacheloni",
     "licenca": "CC BY-SA 3.0",
@@ -251,8 +251,8 @@
    },
    "athletico-pr": {
     "nome": "Curitiba",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Curitiba_Skyline_2.jpg/960px-Curitiba_Skyline_2.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Curitiba_Skyline_2.jpg/1920px-Curitiba_Skyline_2.jpg",
+    "w960": "img/livres/cenas/curitiba-skyline-2-6baf3ca1.webp",
+    "w1920": "img/livres/cenas/curitiba-skyline-2-6baf3ca1.webp",
     "ar": 1.592,
     "autor": "Wilfredor",
     "licenca": "CC0",
@@ -268,8 +268,8 @@
    "coritiba": {
     "cel": [0.5, 0.42, 1.2],
     "nome": "Jardim Botânico de Curitiba",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/51/Jardim_Bot%C3%A2nico_Fanchette_Rischbieter_em_Curitiba_09.jpg/960px-Jardim_Bot%C3%A2nico_Fanchette_Rischbieter_em_Curitiba_09.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/51/Jardim_Bot%C3%A2nico_Fanchette_Rischbieter_em_Curitiba_09.jpg/1920px-Jardim_Bot%C3%A2nico_Fanchette_Rischbieter_em_Curitiba_09.jpg",
+    "w960": "img/livres/cenas/jardim-botanico-fanchette-rischbieter-em-curitib-1067db36.webp",
+    "w1920": "img/livres/cenas/jardim-botanico-fanchette-rischbieter-em-curitib-1067db36.webp",
     "ar": 1.438,
     "autor": "Halley Pacheco de Oliveira",
     "licenca": "CC BY-SA 3.0",
@@ -284,8 +284,8 @@
    },
    "bahia": {
     "nome": "Salvador e a Baía de Todos os Santos",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ae/Salvador_Skyline.jpg/960px-Salvador_Skyline.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ae/Salvador_Skyline.jpg/1920px-Salvador_Skyline.jpg",
+    "w960": "img/livres/cenas/salvador-skyline-74b2997f.webp",
+    "w1920": "img/livres/cenas/salvador-skyline-74b2997f.webp",
     "ar": 1.506,
     "autor": "Avinash Achar",
     "licenca": "CC BY 2.0",
@@ -301,8 +301,8 @@
    "vitoria": {
     "cel": [0.2, 0.42, 1.25],
     "nome": "Farol da Barra, Salvador",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d3/Salvador-Brazil-Farol-da-Barra-sunset.jpg/960px-Salvador-Brazil-Farol-da-Barra-sunset.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d3/Salvador-Brazil-Farol-da-Barra-sunset.jpg/1920px-Salvador-Brazil-Farol-da-Barra-sunset.jpg",
+    "w960": "img/livres/cenas/salvador-brazil-farol-da-barra-sunset-7471b52e.webp",
+    "w1920": "img/livres/cenas/salvador-brazil-farol-da-barra-sunset-7471b52e.webp",
     "ar": 1.361,
     "autor": "acediscovery",
     "licenca": "CC BY 4.0",
@@ -318,8 +318,8 @@
    "bragantino": {
     "cel": [0.25, 0.55, 1.3],
     "nome": "Bragança Paulista",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Por_do_Sol_em_Bragan%C3%A7a_Paulista.JPG/960px-Por_do_Sol_em_Bragan%C3%A7a_Paulista.JPG",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Por_do_Sol_em_Bragan%C3%A7a_Paulista.JPG/1920px-Por_do_Sol_em_Bragan%C3%A7a_Paulista.JPG",
+    "w960": "img/livres/cenas/por-do-sol-em-braganca-paulista-a91a951e.webp",
+    "w1920": "img/livres/cenas/por-do-sol-em-braganca-paulista-a91a951e.webp",
     "ar": 1.5,
     "autor": "LariSolis",
     "licenca": "CC BY-SA 4.0",
@@ -334,8 +334,8 @@
    },
    "chapecoense": {
     "nome": "Chapecó",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Chapec%C3%B3_092016.jpg/960px-Chapec%C3%B3_092016.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Chapec%C3%B3_092016.jpg/1920px-Chapec%C3%B3_092016.jpg",
+    "w960": "img/livres/cenas/chapeco-092016-589f813f.webp",
+    "w1920": "img/livres/cenas/chapeco-092016-589f813f.webp",
     "ar": 1.571,
     "autor": "Rafinha C.",
     "licenca": "CC BY-SA 4.0",
@@ -350,8 +350,8 @@
    },
    "corinthians": {
     "nome": "São Paulo à noite",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Night_Panorama_-_S%C3%A3o_Paulo_-_Skyline_120705-3147-jikatu.jpg/960px-Night_Panorama_-_S%C3%A3o_Paulo_-_Skyline_120705-3147-jikatu.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Night_Panorama_-_S%C3%A3o_Paulo_-_Skyline_120705-3147-jikatu.jpg/1920px-Night_Panorama_-_S%C3%A3o_Paulo_-_Skyline_120705-3147-jikatu.jpg",
+    "w960": "img/livres/cenas/night-panorama-sao-paulo-skyline-120705-3147-jik-386a7920.webp",
+    "w1920": "img/livres/cenas/night-panorama-sao-paulo-skyline-120705-3147-jik-386a7920.webp",
     "ar": 2.749,
     "autor": "Jimmy Baikovicius",
     "licenca": "CC BY-SA 2.0",
@@ -366,8 +366,8 @@
    },
    "palmeiras": {
     "nome": "Pôr do sol na Praça do Pôr do Sol, São Paulo",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Panorama_of_Sunset_at_Praca_Por_Do_Sol%2C_Sao_Paulo.jpg/960px-Panorama_of_Sunset_at_Praca_Por_Do_Sol%2C_Sao_Paulo.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Panorama_of_Sunset_at_Praca_Por_Do_Sol%2C_Sao_Paulo.jpg/1920px-Panorama_of_Sunset_at_Praca_Por_Do_Sol%2C_Sao_Paulo.jpg",
+    "w960": "img/livres/cenas/panorama-of-sunset-at-praca-por-do-sol-sao-paulo-e48a1eb4.webp",
+    "w1920": "img/livres/cenas/panorama-of-sunset-at-praca-por-do-sol-sao-paulo-e48a1eb4.webp",
     "ar": 3.346,
     "autor": "Slyronit",
     "licenca": "CC BY-SA 4.0",
@@ -383,8 +383,8 @@
    "sao-paulo": {
     "cel": [0.5, 0.35, 1.2],
     "nome": "Ponte Estaiada, São Paulo",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/Ponte_estaiada_Octavio_Frias_-_Sao_Paulo.jpg/960px-Ponte_estaiada_Octavio_Frias_-_Sao_Paulo.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/Ponte_estaiada_Octavio_Frias_-_Sao_Paulo.jpg/1920px-Ponte_estaiada_Octavio_Frias_-_Sao_Paulo.jpg",
+    "w960": "img/livres/cenas/ponte-estaiada-octavio-frias-sao-paulo-2ac268d2.webp",
+    "w1920": "img/livres/cenas/ponte-estaiada-octavio-frias-sao-paulo-2ac268d2.webp",
     "ar": 1.517,
     "autor": "Marcosleal",
     "licenca": "CC BY-SA 3.0",
@@ -399,8 +399,8 @@
    },
    "gremio": {
     "nome": "Porto Alegre",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/Porto_Alegre_Cityscape_in_the_blue_hour_%28explored%29_%2824274935872%29.jpg/960px-Porto_Alegre_Cityscape_in_the_blue_hour_%28explored%29_%2824274935872%29.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/Porto_Alegre_Cityscape_in_the_blue_hour_%28explored%29_%2824274935872%29.jpg/1920px-Porto_Alegre_Cityscape_in_the_blue_hour_%28explored%29_%2824274935872%29.jpg",
+    "w960": "img/livres/cenas/porto-alegre-cityscape-in-the-blue-hour-explored-e7005bc9.webp",
+    "w1920": "img/livres/cenas/porto-alegre-cityscape-in-the-blue-hour-explored-e7005bc9.webp",
     "ar": 1.588,
     "autor": "Felipe Valduga from Porto Alegre, Brazil",
     "licenca": "CC BY 2.0",
@@ -416,8 +416,8 @@
    "internacional": {
     "cel": [0.38, 0.45, 1.35],
     "nome": "Pôr do sol no Guaíba, Porto Alegre",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/92/P%C3%B4r_do_sol_Lago_Gua%C3%ADba_4.JPG/960px-P%C3%B4r_do_sol_Lago_Gua%C3%ADba_4.JPG",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/92/P%C3%B4r_do_sol_Lago_Gua%C3%ADba_4.JPG/1920px-P%C3%B4r_do_sol_Lago_Gua%C3%ADba_4.JPG",
+    "w960": "img/livres/cenas/por-do-sol-lago-guaiba-4-cd7d7088.webp",
+    "w1920": "img/livres/cenas/por-do-sol-lago-guaiba-4-cd7d7088.webp",
     "ar": 1.778,
     "autor": "Jonas Schen",
     "licenca": "CC BY-SA 3.0",
@@ -432,8 +432,8 @@
    },
    "mirassol": {
     "nome": "São José do Rio Preto, vizinha de Mirassol",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d3/Centro_de_S%C3%A3o_Jos%C3%A9_do_Rio_Preto%2C_SP.jpg/960px-Centro_de_S%C3%A3o_Jos%C3%A9_do_Rio_Preto%2C_SP.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d3/Centro_de_S%C3%A3o_Jos%C3%A9_do_Rio_Preto%2C_SP.jpg/1920px-Centro_de_S%C3%A3o_Jos%C3%A9_do_Rio_Preto%2C_SP.jpg",
+    "w960": "img/livres/cenas/centro-de-sao-jose-do-rio-preto-sp-5ee2cf33.webp",
+    "w1920": "img/livres/cenas/centro-de-sao-jose-do-rio-preto-sp-5ee2cf33.webp",
     "ar": 1.778,
     "autor": "Creedence",
     "licenca": "CC BY-SA 4.0",
@@ -448,8 +448,8 @@
    },
    "remo": {
     "nome": "Ver-o-Peso e a baía do Guajará, Belém",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/Bel%C3%A9m_Fishing_port_and_Ver-o-peso_01.jpg/960px-Bel%C3%A9m_Fishing_port_and_Ver-o-peso_01.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/Bel%C3%A9m_Fishing_port_and_Ver-o-peso_01.jpg/1920px-Bel%C3%A9m_Fishing_port_and_Ver-o-peso_01.jpg",
+    "w960": "img/livres/cenas/belem-fishing-port-and-ver-o-peso-01-7265b75f.webp",
+    "w1920": "img/livres/cenas/belem-fishing-port-and-ver-o-peso-01-7265b75f.webp",
     "ar": 1.381,
     "autor": "Cayambe",
     "licenca": "CC BY-SA 3.0",
@@ -464,8 +464,8 @@
    },
    "santos": {
     "nome": "Orla de Santos",
-    "w960": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/Santos_skyline.jpg/960px-Santos_skyline.jpg",
-    "w1920": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/Santos_skyline.jpg/1920px-Santos_skyline.jpg",
+    "w960": "img/livres/cenas/santos-skyline-b7572438.webp",
+    "w1920": "img/livres/cenas/santos-skyline-b7572438.webp",
     "ar": 1.45,
     "autor": "Leguth Edson",
     "licenca": "CC BY-SA 3.0",
@@ -740,7 +740,7 @@
       tinta.style.setProperty("--sombra", f.sombra || "#000");
     }
     el.muted = true; el.defaultMuted = true; el.loop = true; el.playsInline = true; el.setAttribute("playsinline", ""); el.preload = "auto";
-    el.src = `${V.arq}-${innerWidth < 900 ? 540 : 720}.mp4`;
+    el.src = `${V.arq}-${innerWidth < 900 || window.PLACAR_APP ? 540 : 720}.mp4`; // o app leva só os de 540p
     const falha = () => {
       if (o.falhou) return;
       o.falhou = true; el.classList.remove("on"); el.removeAttribute("src"); el.load();
@@ -754,8 +754,11 @@
     const tenta = () => { const pr = el.play(); if (pr && pr.catch) pr.catch(() => {}); };
     tenta();
     // fora da tela: pausa (economiza bateria); de volta: continua
-    o.io = new IntersectionObserver(([e]) => { if (o.falhou) return; if (e.isIntersecting) tenta(); else el.pause(); });
+    o.io = new IntersectionObserver(([e]) => { o.visivel = e.isIntersecting; if (o.falhou) return; if (e.isIntersecting) tenta(); else el.pause(); });
     o.io.observe(el);
+    // app em segundo plano (js/app-nativo.js): o vídeo para; na volta, continua se ainda estiver na tela
+    window.addEventListener("placar:pausa", () => el.pause());
+    window.addEventListener("placar:volta", () => { if (!o.falhou && o.visivel && el.isConnected) tenta(); });
     // internet lenta (ou o navegador não deixou tocar): em 6 s sem começar, fica a foto
     setTimeout(() => { if (!o.on) falha(); }, 6000);
     return o;
@@ -862,7 +865,7 @@
   /* fábrica: cada clube só descreve o que desenha */
   function scene(spec) {
     return (st) => {
-      const img = new Image(); img.src = st.club.logo;
+      const img = HERO_SCENES.kit.crestImg(st.club);
       const data = spec.init ? spec.init(st) : {};
       data.foto = carregaFoto(st.club.id);
       return {

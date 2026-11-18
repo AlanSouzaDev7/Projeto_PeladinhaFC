@@ -675,8 +675,9 @@ import mercado as MERC  # noqa: E402
 import fontes_elenco as FE  # noqa: E402
 import financas as FIN  # noqa: E402
 import escalacoes as ESCL  # noqa: E402
+import dados_json as DJ  # noqa: E402
 import fotos as FOTO  # noqa: E402
-MERC.P = FE.P = FIN.P = ESCL.P = FOTO.P = sys.modules[__name__]
+MERC.P = FE.P = FIN.P = ESCL.P = FOTO.P = DJ.P = sys.modules[__name__]
 MERC.FE, MERC.FIN, MERC.FOTO = FE, FIN, FOTO
 import wiki_series as WIKI  # noqa: E402
 ESC.P = sys.modules[__name__]
@@ -2416,6 +2417,11 @@ def write_snapshot():
             log("falha ao gravar o elenco", ex)
     if positions and positions.get("players"):
         write_js("heatmaps.js", "HEATMAPS", positions, "posições de cada jogador no Brasileirão (minutos por posição), base do mapa de calor estimado. Fonte: escalações da ESPN")
+    # cópia em JSON de todos os arquivos de dados (carregador único do site e app 433Fut)
+    try:
+        DJ.exportar()
+    except Exception as ex:
+        log("falha ao gravar dados/*.json", ex)
 
 
 def news_query(q):

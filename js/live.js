@@ -9,8 +9,13 @@
 (() => {
   const API = "/api";
   const PD = window.PD;
-  // arquivos de dados (gravados pelo robô a partir de fontes externas): limpos antes de qualquer uso
-  ["LIVE_DATA", "PLAYER_STATS", "SQUADS", "SQUADS_LAST", "CLUB_FORM", "HEATMAPS", "ARBITRAGEM", "DM"].forEach((k) => { if (window[k] && window.SEG) window.SEG.limpa(window[k]); });
+  // no app Android (js/app-nativo.js): não há API local, o placar vem da ESPN a cada 5 s e tudo para em segundo plano
+  const APP = !!window.PLACAR_APP;
+  PD.pausado = false; // o app liga quando vai para segundo plano (nenhuma consulta enquanto isso)
+  const parado = () => document.hidden || PD.pausado;
+  // arquivos de dados que o index.html carrega antes de tudo (squads, player-stats, departamento-medico, live-data):
+  // limpos antes de qualquer uso. Os demais chegam por js/dados.js, que já limpa.
+  ["LIVE_DATA", "PLAYER_STATS", "SQUADS", "SQUADS_LAST", "SQUADS_META", "DM"].forEach((k) => { if (window[k] && window.SEG) window.SEG.limpa(window[k]); });
 
   function apply(s) {
     PD.REAL.table = s.standings;
@@ -47,11 +52,12 @@
   }
 
   async function fetchState(timeout = 2500) {
+    if (APP) return null; // o app não tem servidor local: nem espera os 2,5 s
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), timeout);
     try {
       const r = await fetch(`${API}/state`, { signal: ctl.signal, cache: "no-store" });
-      return r.ok ? await r.json() : null;
+      return r.ok ? await SEG.json(r) : null;
     } catch { return null; } finally { clearTimeout(t); }
   }
 
@@ -66,7 +72,7 @@
 
   async function scoreboard(q = "") {
     for (const url of ESPN_SB) {
-      try { return await (await fetch(`${url}${q}`, { cache: "no-store" })).json(); } catch { /* tenta o próximo endereço */ }
+      try { return await SEG.json(await fetch(`${url}${q}`, { cache: "no-store" })); } catch { /* tenta o próximo endereço */ }
     }
     return null;
   }
@@ -103,7 +109,7 @@
       try {
         const r = await fetch(`${PROXY}/ao-vivo`, { cache: "no-store", signal: ctl.signal });
         if (!r.ok) return null;
-        const d = await r.json();
+        const d = await SEG.json(r);
         if (!d || !Array.isArray(d.games) || d.esgotado) return null;
         setTimeout(() => window.dispatchEvent(new Event("placar:proxy"))); // o minuto a minuto aproveita a mesma resposta
         return d;
@@ -348,7 +354,7 @@
     if (!rodada || now - tabelaEm < 120e3 || !PD.REAL.table) return false;
     tabelaEm = now;
     try {
-      const d = await (await fetch(ESPN_TABLE, { cache: "no-store" })).json();
+      const d = await SEG.json(await fetch(ESPN_TABLE, { cache: "no-store" }));
       const old = Object.fromEntries(PD.REAL.table.map((r) => [r[0], r]));
       const rows = d.children[0].standings.entries.map((e) => {
         const cid = ESPN_CLUB[e.team.id], s = Object.fromEntries(e.stats.map((x) => [x.name, x.value])), o = old[cid];
@@ -386,12 +392,9 @@
   let relendo = null;
   function relerArquivo() {
     if (relendo) return relendo;
-    relendo = new Promise((res) => {
-      const velho = window.LIVE_DATA, sc = document.createElement("script");
-      sc.src = `js/live-data.js?v=${Date.now()}`;
-      sc.onload = sc.onerror = () => { sc.remove(); const d = window.LIVE_DATA; if (d === velho) return res(false); window.SEG?.limpa(d); res(juntar(d)); };
-      document.head.appendChild(sc);
-    }).finally(() => setTimeout(() => (relendo = null), 1000));
+    const velho = window.LIVE_DATA;
+    relendo = DADOS.carrega("live-data", { fresco: true }).then((d) => (d && d !== velho ? juntar(d) : false))
+      .finally(() => setTimeout(() => (relendo = null), 1000));
     return relendo;
   }
   function juntar(d) {
@@ -454,9 +457,10 @@
   }
   PD.vigiar = vigiar;
   // a cada 2 min; e na hora em que a aba volta (o computador acordou), a internet voltou ou a página saiu do cache
-  setInterval(() => vigiar("rotina"), RODA);
+  setInterval(() => { if (!PD.pausado) vigiar("rotina"); }, RODA);
   const voltou = (m) => () => { if (document.visibilityState !== "hidden" && Date.now() - vigiaEm > 5000) vigiar(m); };
   document.addEventListener("visibilitychange", voltou("aba voltou"));
+  window.addEventListener("placar:volta", voltou("app voltou"));
   addEventListener("online", voltou("internet voltou"));
   addEventListener("focus", voltou("janela em foco"));
   addEventListener("pageshow", (e) => e.persisted && vigiar("página restaurada"));
@@ -472,7 +476,9 @@
        - nenhum jogo perto: a cada 1 min.
      O relógio roda num Worker (js/relogio.js): com a aba em segundo plano, o navegador espaça os timers da página
      para 1 vez por minuto, mas não os de um Worker. */
-  const RITMO = { vivo: 800, escondido: 3000, economia: 4000, antes: 5000, parado: 60000 };
+  const RITMO = APP
+    ? { vivo: 5000, escondido: 60000, economia: 8000, antes: 15000, parado: 60000 } // app: modo reserva, sem Worker
+    : { vivo: 800, escondido: 3000, economia: 4000, antes: 5000, parado: 60000 };
   const economia = () => { const c = navigator.connection; return !!(c && (c.saveData || /(^|-)(2g|3g)$/.test(c.effectiveType || ""))); };
   function ritmo(r) {
     if (!r) return RITMO.parado;
@@ -499,6 +505,8 @@
   (async function loop() {
     await window.PD_BOOT;
     for (;;) {
+      // app em segundo plano: nenhuma consulta até voltar (placar:volta acorda o laço)
+      while (PD.pausado) await new Promise((res) => (acorda = res));
       lembrar();
       const t0 = Date.now();
       const r = await pollScores().catch(() => false);
@@ -512,17 +520,18 @@
     }
   })();
   document.addEventListener("visibilitychange", () => { if (!document.hidden && acorda) acorda(); });
+  window.addEventListener("placar:volta", () => { if (acorda) acorda(); });
 
   /* ---------------- Minuto a minuto ---------------- */
   const ICO = { goal: "⚽", "yellow-card": "🟨", "red-card": "🟥", substitution: "🔁", status: "⏱", panorama: "📊" };
   const streams = new Set();
 
   function lineHTML(l) {
-    return `<li class="mam-l ${l.type}"><span class="mam-min">${l.min || ""}</span><span class="mam-ico">${ICO[l.type] || "•"}</span><p>${l.text}</p></li>`;
+    return `<li class="mam-l ${l.type}"><span class="mam-min">${SEG.esc(l.min || "")}</span><span class="mam-ico">${ICO[l.type] || "•"}</span><p>${SEG.esc(l.text)}</p></li>`;
   }
 
   // resumo do jogo no topo da partida, como nos apps de resultado: quem marcou, em que minuto, e quem foi expulso
-  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const esc = SEG.esc;
   function paintMarks(n) {
     const box = document.querySelector(".match-hero [data-marks]");
     if (!box || !n || !n.marks) return;
@@ -535,8 +544,8 @@
   }
   function head(n) {
     const live = n.state === "in";
-    return `<div class="mam-head"><span class="${live ? "pill" : "pill muted"}">${live ? `Ao vivo · ${n.clock || ""}` : n.state === "post" ? "Encerrado" : "Ainda não começou"}</span>
-      <b>${n.home.name} ${n.home.score} x ${n.away.score} ${n.away.name}</b></div>`;
+    return `<div class="mam-head"><span class="${live ? "pill" : "pill muted"}">${live ? `Ao vivo · ${SEG.esc(n.clock || "")}` : n.state === "post" ? "Encerrado" : "Ainda não começou"}</span>
+      <b>${SEG.esc(n.home.name)} ${SEG.esc(n.home.score)} x ${SEG.esc(n.away.score)} ${SEG.esc(n.away.name)}</b></div>`;
   }
 
   /* narração própria a partir dos lances da súmula da ESPN (a mesma regra da API em Python) */
@@ -544,7 +553,7 @@
     let d = null;
     for (const lg of ["bra.1", "bra.copa_do_brazil", "conmebol.libertadores", "conmebol.sudamericana"]) {
       try {
-        const r = await (await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${lg}/summary?event=${eid}`, { cache: "no-store" })).json();
+        const r = await SEG.json(await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${lg}/summary?event=${eid}`, { cache: "no-store" }));
         if (r.header) { d = r; break; }
       } catch { /* tenta a próxima competição */ }
     }
@@ -638,14 +647,14 @@
     const list = el.querySelector(".mam-list"), top = el.querySelector(".mam-top"), src = el.querySelector(".mam-src");
     let n;
     if (PD.LIVE) {
-      try { n = await (await fetch(`${API}/minuto-a-minuto/${id}`, { cache: "no-store" })).json(); } catch { n = null; }
+      try { n = await SEG.json(await fetch(`${API}/minuto-a-minuto/${id}`, { cache: "no-store" })); } catch { n = null; }
     } else {
       n = await loadMam(id, h, a);
     }
     if (!n && !id) { list.innerHTML = `<li class="mam-empty">A narração começa com a bola rolando.</li>`; return; }
     if (!n || !n.lines) { list.innerHTML = `<li class="mam-empty">Narração indisponível agora.</li>`; return; }
     let fonte = n.source;
-    if (src && fonte) src.textContent = `lances: ${fonte} · narração: Placar.TV`;
+    if (src && fonte) src.textContent = `lances: ${fonte} · narração: CazéStats.TV`;
     top.innerHTML = head(n);
     paintMarks(n);
     const seen = new Set();
@@ -674,7 +683,7 @@
         if (p.source !== fonte) {
           // trocou de fonte no meio do jogo (ex.: limite da API-Football): redesenha a lista inteira
           fonte = p.source; seen.clear(); list.innerHTML = "";
-          if (src) src.textContent = `lances: ${fonte} · narração: Placar.TV`;
+          if (src) src.textContent = `lances: ${fonte} · narração: CazéStats.TV`;
           add(p.lines, false);
         }
         const empty = list.querySelector(".mam-empty"); if (empty) empty.remove();
@@ -682,7 +691,7 @@
         if (p.state === "post") stop();
       };
       // ESPN: a cada 4 s com a página à vista (antes 20 s) e na hora em que o placar muda (gol visto no placar do dia)
-      const timer = setInterval(() => { if (!document.hidden) tick(); }, 4000);
+      const timer = setInterval(() => { if (!parado()) tick(); }, APP ? 5000 : 4000);
       const stop = () => { clearInterval(timer); window.removeEventListener("placar:proxy", tick); window.removeEventListener("placar:data", tick); };
       if (PROXY) window.addEventListener("placar:proxy", tick);
       window.addEventListener("placar:data", tick);
@@ -693,7 +702,7 @@
     const es = new EventSource(`${API}/minuto-a-minuto/${id}/stream`);
     streams.add(es);
     es.onmessage = (e) => {
-      const p = JSON.parse(e.data);
+      const p = SEG.le(e.data);
       top.innerHTML = head(p);
       paintMarks(p);
       const empty = list.querySelector(".mam-empty"); if (empty) empty.remove();
@@ -706,7 +715,7 @@
   async function mountNews(el) {
     const club = el.dataset.news;
     try {
-      const r = PD.LIVE ? await (await fetch(`${API}/news?club=${club}`, { cache: "no-store" })).json() : { items: window.LIVE_DATA?.news?.[club] || [] };
+      const r = PD.LIVE ? await SEG.json(await fetch(`${API}/news?club=${club}`, { cache: "no-store" })) : { items: window.LIVE_DATA?.news?.[club] || [] };
       const items = (r.items || []).slice(0, 6);
       if (!items.length) { el.querySelector("ul").innerHTML = `<li class="mam-empty">Nenhuma notícia nas últimas horas.</li>`; return; }
       const ago = (ts) => { const m = Math.round((Date.now() / 1000 - ts) / 60); return m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} d`; };
@@ -728,7 +737,7 @@
   async function fetchForm(cid) {
     const espn = ESPN_ID[cid], year = new Date().getFullYear(), past = [], next = [];
     const urls = Object.keys(LEAGUES).flatMap((lg) => ["", "&fixture=true"].map((fx) => [lg, `https://site.web.api.espn.com/apis/site/v2/sports/soccer/${lg}/teams/${espn}/schedule?season=${year}${fx}`]));
-    const res = await Promise.all(urls.map(([lg, u]) => fetch(u, { cache: "no-store" }).then((r) => r.json()).then((d) => [lg, d]).catch(() => [lg, null])));
+    const res = await Promise.all(urls.map(([lg, u]) => fetch(u, { cache: "no-store" }).then(SEG.json).then((d) => [lg, d]).catch(() => [lg, null])));
     if (res.every(([, d]) => !d)) return null;
     for (const [lg, d] of res) {
       for (const ev of d?.events || []) {
@@ -802,8 +811,8 @@
     const k = `${eid}|${lg}`, hit = jogoCache.get(k);
     if (hit && (hit.fim || Date.now() - hit.t < 60e3)) return hit.p;
     const p = (async () => {
-      if (PD.LIVE) { const r = await fetch(`${API}/jogo?event=${eid}&lg=${encodeURIComponent(lg)}`, { cache: "no-store" }); if (r.ok) return r.json(); }
-      const d = await (await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${lg}/summary?event=${eid}`, { cache: "no-store" })).json();
+      if (PD.LIVE) { const r = await fetch(`${API}/jogo?event=${eid}&lg=${encodeURIComponent(lg)}`, { cache: "no-store" }); if (r.ok) return SEG.json(r); }
+      const d = await SEG.json(await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${lg}/summary?event=${eid}`, { cache: "no-store" }));
       return lerResumo(d, String(eid), lg);
     })().catch(() => null);
     const reg = { t: Date.now(), p, fim: false };

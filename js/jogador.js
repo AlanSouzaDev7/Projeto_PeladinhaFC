@@ -154,7 +154,7 @@
   const CAB = ["Nota", "Min", "G", "A", "Fin.", "Alvo", "Ações", "Passes", "Desarm.", "Interc.", "Dribles", "CA", "CV"];
   /* nota de 3 a 10 com a cor dos apps de placar: vermelho (abaixo de 6), laranja, amarelo, verde, azul (8+) */
   const corNota = (n) => (n == null ? "" : n >= 8 ? "n-top" : n >= 7 ? "n-boa" : n >= 6.5 ? "n-ok" : n >= 6 ? "n-med" : "n-ruim");
-  const notaHTML = (n, vivo) => (n == null ? `<span class="nota n-sem" title="Menos de 10 minutos em campo">–</span>` : `<span class="nota ${corNota(n)}${vivo ? " vivo" : ""}" title="${vivo ? "Ao vivo: muda durante o jogo" : "Nota do Placar.TV"}">${n.toFixed(1).replace(".", ",")}</span>`);
+  const notaHTML = (n, vivo) => (n == null ? `<span class="nota n-sem" title="Menos de 10 minutos em campo">–</span>` : `<span class="nota ${corNota(n)}${vivo ? " vivo" : ""}" title="${vivo ? "Ao vivo: muda durante o jogo" : "Nota do CazéStats.TV"}">${n.toFixed(1).replace(".", ",")}</span>`);
   const mediaNota = (jogos) => { const xs = jogos.filter((x) => x.nota != null); return xs.length ? xs.reduce((t, x) => t + x.nota, 0) / xs.length : null; };
   const cab = (extra = "") => `<thead><tr><th>Data</th><th class="hide-sm">Competição</th><th>Adversário</th><th>Placar</th>${CAB.map((h, i) => `<th${COLS[i][1] ? ' class="hide-sm"' : ""}>${h}</th>`).join("")}${extra}</tr></thead>`;
 
