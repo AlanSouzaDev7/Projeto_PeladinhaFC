@@ -3,6 +3,7 @@
 #   Cloudflare Pages: quando existirem os segredos CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID (passo a passo em
 #   docs/HOSPEDAGEM.md). Endereço gratuito: https://<projeto>.pages.dev
 #   GitHub Pages por Actions: quando a variável PAGES_POR_ACTIONS = 1 (e, em Settings > Pages, a fonte "GitHub Actions").
+# O robô de dados dispara esta publicação logo depois de gravar (gh workflow run publicar.yml).
 # Dados fora do main (ponto 5): com a variável DADOS_NO_RAMO = 1 o robô grava os dados no ramo "dados" e esta
 # publicação junta o código do main com os dados desse ramo.
 name: Publicar
@@ -10,9 +11,6 @@ name: Publicar
 on:
   push:
     branches: [main]
-  workflow_run:
-    workflows: ["Atualizar dados"]
-    types: [completed]
   workflow_dispatch:
 
 permissions:
