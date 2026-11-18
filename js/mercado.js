@@ -27,12 +27,13 @@
   const FOTO_KEY = "placar:fotos-privadas";
   try {
     const q = new URLSearchParams(location.search).get("privado");
-    if (q === "fotos" || q === "1") localStorage.setItem(FOTO_KEY, "1");
-    if (q === "0") localStorage.removeItem(FOTO_KEY);
+    if (q === "fotos" || q === "1") localStorage.removeItem(FOTO_KEY);
+    if (q === "0") localStorage.setItem(FOTO_KEY, "0");
   } catch { /* sem armazenamento */ }
-  // desligadas por padrão (o site é público e essas fotos não têm licença comercial); ?privado=fotos liga neste navegador,
-  // para o dono ver em uso local, e ?privado=0 desliga. O app nunca liga (js/nativo.js) e não leva essas fotos.
-  const fotosLigadas = () => { try { return localStorage.getItem(FOTO_KEY) === "1"; } catch { return false; } };
+  // regra do dono: as fotos da temporada ficam LIGADAS (site e app) até o comando de retirada (MODO_VENDA=1 no robô,
+  // que apaga as cópias). ?privado=0 desliga só neste navegador; ?privado=fotos liga de novo. Risco F2 em
+  // docs/RISCOS-APRESENTACAO.md.
+  const fotosLigadas = () => { try { return localStorage.getItem(FOTO_KEY) !== "0"; } catch { return true; } };
 
   /* ---------- dados ---------- */
   const prom = {};
@@ -632,7 +633,7 @@
       const d = t.dataset, k = () => contas(cid, D, e, G);
       if (d.jtModo) { if (d.jtModo !== e.modo && e.modo) e.caixa = null; e.modo = d.jtModo; perguntar = false; salva(); return pinta(); }
       if ("jtTrocar" in d) { perguntar = true; return pinta(); }
-      if ("jtFotosOff" in d) { try { localStorage.removeItem(FOTO_KEY); } catch { /* */ } return pinta(); }
+      if ("jtFotosOff" in d) { try { localStorage.setItem(FOTO_KEY, "0"); } catch { /* */ } return pinta(); }
       if ("jtReset" in d) {
         if (!confirmaReset) { confirmaReset = setTimeout(() => { confirmaReset = 0; if (el.isConnected) pinta(); }, 4000); return pinta(); }
         clearTimeout(confirmaReset); confirmaReset = 0;

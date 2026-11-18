@@ -128,7 +128,11 @@ console.log("página do jogador: Matheus Pereira (Cruzeiro)");
   if (k[0] !== String(tot("j")) || k[2] !== String(tot("g")) || k[3] !== String(tot("a"))) erro(`números do topo ${k} ≠ arquivo (${tot("j")} jogos, ${tot("g")} gols, ${tot("a")} assist.)`); else ok(`topo: ${k[0]} jogos, ${k[1]} min, ${k[2]} gols, ${k[3]} assistências`);
   await ateQue(page, () => { const i = document.querySelector(".jg-topo .jg-av img"); return !i || (i.complete && i.naturalWidth > 0); }, null, 10000);
   const foto = await page.evaluate(() => { const i = document.querySelector(".jg-topo .jg-av img"); return i ? i.complete && i.naturalWidth : null; });
-  if (mp.foto && !foto) erro("foto do topo não abriu"); else ok(mp.foto ? "foto livre (Wikimedia Commons) no topo, com crédito" : "sem foto livre: número no lugar");
+  // regra do dono: no topo, a foto da temporada guardada no site (clube, TheSportsDB, ESPN); nunca a da Wikipédia
+  const topo = await page.evaluate(() => ({ src: document.querySelector(".jg-topo .jg-av img")?.getAttribute("src") || "", cred: document.querySelector("[data-jg-cred]")?.textContent || "" }));
+  if (!foto || !/^img\/jogadores\//.test(topo.src)) erro(`foto do topo: esperava a foto guardada da temporada, veio "${topo.src}"`);
+  else ok(`foto da temporada guardada no site no topo (${topo.cred})`);
+  if (/wikimedia|wikipedia/i.test(topo.src)) erro("foto da Wikipédia apareceu no topo");
   await page.waitForTimeout(600);
   let px = await pintado(page, ".jg-calor");
   if (!px.length || !px[0]) erro("mapa de calor da visão geral vazio"); else ok("visão geral: mapa de calor pintado");
