@@ -193,7 +193,7 @@ jobs:
   # Nunca empilha: o grupo "dados" deixa no máximo uma rodada na fila, e uma rodada nova substitui a que esperava.
   proxima:
     needs: atualizar
-    if: always() && github.ref == 'refs/heads/main'
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}   # rodada cancelada não agenda outra (a espera seguraria a fila)
     runs-on: ubuntu-latest
     timeout-minutes: 70
     permissions:
