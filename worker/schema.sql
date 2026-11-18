@@ -91,3 +91,24 @@ CREATE TABLE IF NOT EXISTS gols (
   cursor TEXT    NOT NULL DEFAULT ''  -- até qual inscrito já foi avisado ('fim' = todos)
 );
 CREATE INDEX IF NOT EXISTS gols_quando ON gols (quando);
+
+-- conta opcional (Entrar com Google) e sincronização (worker/conta.mjs). Sem e-mail, nome ou foto: só um código da conta.
+CREATE TABLE IF NOT EXISTS usuarios (
+  id     TEXT    PRIMARY KEY,     -- hash do id da conta Google
+  criado INTEGER NOT NULL,
+  visto  INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sessoes (
+  token   TEXT    PRIMARY KEY,    -- hash do token da sessão (o token só fica no aparelho)
+  usuario TEXT    NOT NULL,
+  criado  INTEGER NOT NULL,
+  expira  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sessoes_usuario ON sessoes (usuario);
+CREATE TABLE IF NOT EXISTS salvos (
+  usuario    TEXT    NOT NULL,
+  chave      TEXT    NOT NULL,    -- "placar:favs", "placar:janela-cruzeiro"...
+  dados      TEXT,                -- o mesmo texto do localStorage; NULL = apagado no aparelho
+  atualizado INTEGER NOT NULL,
+  PRIMARY KEY (usuario, chave)
+);

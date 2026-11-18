@@ -17,6 +17,7 @@
      GET /jogos?clube=&contra=&temporada=&liga=  histórico dos jogos (todas as temporadas) com resumo V/E/D
      POST /jogos                                 só o robô: lote de jogos para o histórico
      POST /alerta, GET /gols/recentes            alerta de gol do clube favorito (worker/alertas.mjs, Web Push)
+     /conta/entrar, /conta/dados, /conta/sair, DELETE /conta   conta com Google e sincronização (worker/conta.mjs)
    Cron (wrangler.toml): a cada 30 min dispara o robô de dados do GitHub e limpa registros antigos do banco.
 
    Economia de consultas (o plano grátis dá ~100 por dia):
@@ -28,6 +29,7 @@
        (UTC, quando a API-Football renova o limite) e o site volta para a ESPN sozinho.
    ========================================================================== */
 
+import { entrar, usuarioDa, lerDados, gravarDados, sair, apagarConta, limpaSessoes } from "./conta.mjs";
 import { inscrever, verificaGols, enviaPushes, golsRecentes, limpaGols } from "./alertas.mjs";
 import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo, roboAutorizado, gravaArquivo, listaArquivos, serveArquivo, gravaJogos, consultaJogos } from "./plataforma.mjs";
 
@@ -222,7 +224,7 @@ export const _busca = { BUSCA_OK, horaUTC, reset: () => { pendente = {}; gravado
 /* ---------------- Worker ---------------- */
 export default {
   async fetch(req, env) {
-    const cors = { "access-control-allow-origin": env.ORIGEM || "*", "access-control-allow-methods": "GET, POST, OPTIONS", "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
+    const cors = { "access-control-allow-origin": env.ORIGEM || "*", "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS", "access-control-allow-headers": "authorization, content-type", "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
       "vary": "Origin", "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "no-referrer",
       "content-security-policy": "default-src 'none'; frame-ancestors 'none'", "cross-origin-resource-policy": "cross-origin" };
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
@@ -265,6 +267,25 @@ export default {
       pendente[k] = Math.min(1e6, (pendente[k] || 0) + 1);
       await gravaBuscas(env);
       return json({ ok: true });
+    }
+    // conta opcional (Entrar com Google) e sincronização do que o torcedor salva
+    if (path === "/conta/entrar" || path === "/conta/dados" || path === "/conta/sair" || path === "/conta") {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      if (path === "/conta/entrar" && req.method === "POST") {
+        if (+(req.headers.get("content-length") || 0) > 8192) return json({ erro: "pedido grande demais" }, 413);
+        const r = await entrar(env, await req.text());
+        return r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, sessao: r.sessao, nome: r.nome, foto: r.foto });
+      }
+      const sessao = await usuarioDa(env, req);
+      if (!sessao) return json({ erro: "entre de novo na conta" }, 401);
+      if (path === "/conta/dados" && req.method === "GET") return json({ itens: await lerDados(env, sessao.id) });
+      if (path === "/conta/dados" && req.method === "PUT") {
+        const r = await gravarDados(env, sessao.id, await req.text());
+        return r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, gravados: r.gravados });
+      }
+      if (path === "/conta/sair" && req.method === "POST") { await sair(env, sessao); return json({ ok: true }); }
+      if (path === "/conta" && req.method === "DELETE") { await apagarConta(env, sessao.id); return json({ ok: true }); }
+      return json({ erro: "método não permitido" }, 405);
     }
     // alerta de gol: o navegador se inscreve (POST /alerta) e o service worker lê os gols recentes (GET /gols/recentes)
     if (path === "/alerta" && req.method === "POST") {
@@ -341,6 +362,6 @@ export default {
       return;
     }
     ctx.waitUntil(disparaRobo(env).then((r) => console.log("robô:", r)));
-    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env)]));
+    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env), limpaSessoes(env)]));
   },
 };

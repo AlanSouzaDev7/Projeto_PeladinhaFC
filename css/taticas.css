@@ -113,3 +113,23 @@
 .alerta-msg { font-size: 12.5px; font-weight: 600; color: rgb(255 255 255 / 0.9); text-shadow: 0 1px 6px rgb(0 0 0 / 0.6); max-width: 46ch; }
 @keyframes sino { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(18deg); } 40% { transform: rotate(-14deg); } 60% { transform: rotate(9deg); } 80% { transform: rotate(-5deg); } }
 @media (prefers-reduced-motion: reduce) { .alerta-btn.on svg { animation: none; } }
+
+/* ---------- conta (Entrar com Google) no cabeçalho (js/conta.js) ---------- */
+.conta-btn { position: relative; overflow: hidden; }
+.conta-btn.logado { padding: 0; }
+.conta-btn img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.conta-btn b { font: 800 15px/1 var(--font-display); }
+.conta-painel { position: absolute; z-index: 60; top: calc(100% + 8px); right: 12px; width: min(340px, calc(100vw - 24px)); padding: 16px; border-radius: 16px;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: 0 24px 48px -16px rgb(0 0 0 / 0.55); animation: rise 0.25s var(--ease) both; }
+.conta-painel[hidden] { display: none; }
+.conta-ola { margin: 0 0 6px; font-size: 15px; }
+.conta-txt { margin: 0 0 12px; font-size: 13px; line-height: 1.45; color: var(--text-2); }
+.conta-google { min-height: 44px; display: flex; align-items: center; }
+.conta-acoes { display: flex; gap: 8px; }
+.conta-acoes button { flex: 1; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font-weight: 700; cursor: pointer; }
+.conta-apagar { margin-top: 10px; padding: 0; border: 0; background: none; color: var(--loss, #e5383b); font-size: 12px; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.conta-msg { margin: 8px 0 0; font-size: 12.5px; color: var(--text-2); }
+.conta-msg:empty { display: none; }
+.conta-aviso { position: fixed; z-index: 70; left: 50%; bottom: 84px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px;
+  border-radius: 999px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 16px 32px -12px rgb(0 0 0 / 0.6); font-size: 13px; font-weight: 600; }
+.conta-aviso button { padding: 6px 12px; border-radius: 999px; border: 0; background: var(--text); color: var(--bg, #0b0b0d); font-weight: 800; cursor: pointer; }

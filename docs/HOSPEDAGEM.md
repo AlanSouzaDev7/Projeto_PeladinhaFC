@@ -120,6 +120,23 @@ Limites: 35 avisos por minuto por gol (o resto sai no minuto seguinte; o plano g
 execução). No iPhone, o push só funciona com o site adicionado à tela de início (iOS 16.4+). No app 433Fut o botão não
 aparece (a WebView do Android não recebe push da web; no app seria preciso o Firebase Cloud Messaging).
 
+### 8. Entrar com Google (conta opcional e sincronização)
+
+O botão de conta no cabeçalho (js/conta.js) usa o "Entrar com Google". O Worker confere o comprovante do Google e guarda
+na tabela `salvos` o que o torcedor cria (favoritos, escalações, janela, palpites), sem e-mail, nome ou foto
+(`worker/conta.mjs`). Para ligar, é preciso um **ID do cliente OAuth** do Google (gratuito; é público, vai no site):
+
+1. Em https://console.cloud.google.com crie um projeto (ex.: "CazeStats").
+2. "APIs e serviços" > "Tela de consentimento OAuth": tipo **Externo**, nome "CazéStats.TV", seu e-mail de suporte;
+   escopos padrão (e-mail, perfil, openid); publique o app (status "Em produção").
+3. "Credenciais" > "Criar credenciais" > "ID do cliente OAuth" > tipo **Aplicativo da Web**. Em "Origens JavaScript
+   autorizadas" coloque: `https://cazestats.pages.dev`, `https://alansouzadev7.github.io` e `http://localhost:5173`.
+   Não precisa de URI de redirecionamento.
+4. Copie o ID do cliente (termina em `.apps.googleusercontent.com`) para `googleClientId` em `js/config.js` e para
+   `GOOGLE_CLIENT_ID` em `worker/wrangler.toml`, e publique o Worker.
+
+No app 433Fut o botão não aparece (o Google não permite login dentro de WebView).
+
 ## Quanto aguenta (estimativa com o plano grátis)
 
 | Cenário | Antes | Com Cloudflare |

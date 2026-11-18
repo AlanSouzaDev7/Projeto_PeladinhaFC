@@ -19,6 +19,7 @@ Feito com **HTML, CSS e JavaScript puro** (sem frameworks) e uma **API em Python
 | Pontos fracos resolvidos: CI com lint e testes, erros registrados, proxy confiável, CSS dividido por área, marca d'água de autoria | `.github/workflows/testes.yml`, `eslint.config.mjs`, `pyproject.toml` |
 | **Hospedagem gratuita Cloudflare** pronta (Pages + Worker com cache compartilhado, repasse da ESPN, banco D1 e agendador do robô) | `docs/HOSPEDAGEM.md`, `worker/` |
 | **Histórico dos jogos** no banco D1 (18/11): desde 2023 (carga das temporadas anteriores pelo workflow Histórico) e acumulando, com confronto direto e resumo V/E/D (`GET /jogos?clube=cruzeiro&contra=atletico-mg` no Worker) | `server/historico_jogos.py`, `worker/plataforma.mjs` |
+| **Conta com Google e sincronização** (18/11): favoritos, escalações, janela e palpites salvos na conta e em todos os aparelhos; sem guardar e-mail | `js/conta.js`, `worker/conta.mjs` |
 | **Alerta de gol do clube favorito** (18/11): botão "Avisar gols" na página do clube; notificação no navegador a cada gol (Web Push, grátis) | `js/alertas.js`, `sw.js`, `worker/alertas.mjs` |
 | **Confronto direto na página da partida** (18/11): todas as competições desde 2023, com resumo de vitórias, empates e gols | `js/confronto.js` |
 | **Dados no banco D1** (18/11): o robô envia só o que mudou, o site lê do banco e usa a cópia estática se ele falhar; o site deixa de ser republicado a cada rodada | `server/enviar_d1.py`, `js/dados.js`, `worker/` |
