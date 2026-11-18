@@ -61,9 +61,17 @@ jobs:
             server/cache/financas.json
             server/cache/fontes-elenco.json
             server/cache/escalacoes.json
-            server/cache/carreiras.json
           key: partidas-${{ github.run_id }}
           restore-keys: partidas-
+
+      # carreiras dos jogadores num cache SEPARADO: mexer nele não muda a versão do cache principal acima (em 18/11,
+      # acrescentar este arquivo àquela lista zerou o cache principal e a rodada estourou o tempo: dados ficaram velhos)
+      - name: Carreiras já pesquisadas
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: server/cache/carreiras.json
+          key: carreiras-${{ github.run_id }}
+          restore-keys: carreiras-
 
       # detector de rostos (centraliza o rosto no círculo da foto dos jogadores)
       - name: OpenCV
@@ -107,6 +115,13 @@ jobs:
           # as fotos privadas de quem não tem outra (MODO_VENDA=1 tira)
           FLICKR_API_KEY: ${{ secrets.FLICKR_API_KEY }}
 
+      - name: Guardar as carreiras (mesmo se a rodada falhar)
+        if: always() && hashFiles('server/cache/carreiras.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: server/cache/carreiras.json
+          key: carreiras-${{ github.run_id }}
+
       - name: Guardar o cache (mesmo se a rodada falhar)
         if: always()
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -126,7 +141,6 @@ jobs:
             server/cache/financas.json
             server/cache/fontes-elenco.json
             server/cache/escalacoes.json
-            server/cache/carreiras.json
           key: partidas-${{ github.run_id }}
 
       - name: Publicar se algo mudou
@@ -175,7 +189,7 @@ jobs:
         run: gh workflow run publicar.yml -R "$GITHUB_REPOSITORY" --ref main || echo "publicação não disparada"
 
   # ritmo garantido: o agendamento do GitHub para repositórios públicos atrasa horas, então cada rodada agenda a
-  # seguinte. Espera ROBO_INTERVALO_MIN (variável do repositório, padrão 20) e dispara este workflow de novo.
+  # seguinte. Espera ROBO_INTERVALO_MIN (variável do repositório, padrão 5: o site fica com no máximo ~15 min de atraso) e dispara este workflow de novo.
   # Nunca empilha: o grupo "dados" deixa no máximo uma rodada na fila, e uma rodada nova substitui a que esperava.
   proxima:
     needs: atualizar
@@ -188,7 +202,7 @@ jobs:
       - name: Agendar a próxima rodada
         env:
           GH_TOKEN: ${{ github.token }}
-          INTERVALO: ${{ vars.ROBO_INTERVALO_MIN || '20' }}
+          INTERVALO: ${{ vars.ROBO_INTERVALO_MIN || '5' }}
         run: |
           sleep $(( INTERVALO * 60 ))
           gh workflow run dados.yml -R "$GITHUB_REPOSITORY" --ref main
