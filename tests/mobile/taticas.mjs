@@ -21,6 +21,18 @@ for (const [nome, opts] of [["pc", { viewport: { width: 1366, height: 900 } }], 
   ok(await espera(p, () => document.querySelectorAll(".tat-editor .lu-pitch [data-slot='xi']").length === 11), `${nome}: "Montar a minha" abre o campinho editável do jogo`);
   const vaza = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   ok(vaza <= 1, `${nome}: nada vaza para o lado na aba (${vaza}px)`);
+  // aba Histórico (js/historico.js): resumo, filtros e retrospecto, pelo banco ou, sem ele, pela temporada
+  await p.goto(`${BASE}/?t=${Date.now()}#/clube/cruzeiro/historico`, { waitUntil: "load" });
+  ok(await espera(p, () => document.querySelectorAll(".hs-aba .hs-jogo").length > 5 && document.querySelector(".hs-resumo")), `${nome}: aba Histórico com jogos e resumo`);
+  const filtrou = await p.evaluate(() => {
+    const antes = document.querySelector(".hs-resumo b").textContent, b = document.querySelectorAll("[data-hs-t]")[1];
+    if (!b) return true; // só uma temporada (sem banco): nada a filtrar
+    b.click();
+    return document.querySelector(".hs-chip.on")?.dataset.hsT === b.dataset.hsT && document.querySelector(".hs-resumo b").textContent !== "" && antes !== null;
+  });
+  ok(filtrou, `${nome}: filtro de temporada do Histórico`);
+  const vazaH = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  ok(vazaH <= 1, `${nome}: nada vaza para o lado no Histórico (${vazaH}px)`);
   // partida: dois times e troca de jogador salva no jogo
   await p.goto(`${BASE}/?t=${Date.now()}#/`, { waitUntil: "load" });
   await espera(p, () => document.querySelector('a[href^="#/partida/"]'));

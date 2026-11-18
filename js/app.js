@@ -996,7 +996,7 @@
     const words = c.name.split(" ");
     const m = state.matches.find((x) => x.home === id || x.away === id);
     const rival = byId[c.rival];
-    const tabs = [["geral", "Visão geral"], ["partidas", "Partidas"], ["escalacoes", "Escalações"], ["elenco", "Elenco"], ["mercado", "Janela"], ["estatisticas", "Estatísticas"], ["comparar", "Comparar"], ["tabela", "Tabela"]];
+    const tabs = [["geral", "Visão geral"], ["partidas", "Partidas"], ["escalacoes", "Escalações"], ["historico", "Histórico"], ["elenco", "Elenco"], ["mercado", "Janela"], ["estatisticas", "Estatísticas"], ["comparar", "Comparar"], ["tabela", "Tabela"]];
     let body = "";
 
     if (tab === "geral") {
@@ -1064,6 +1064,7 @@
 
     if (tab === "elenco") body = LINEUP.builder(id);
     if (tab === "escalacoes") body = TATICA.abaClube(id);
+    if (tab === "historico") body = window.HISTORICO ? HISTORICO.abaClube(id) : "";
     if (tab === "mercado") body = MERCADO_UI.page(id, extra);
     if (tab === "estatisticas") body = `<div data-raiox="${id}">${raioxHTML(id)}</div>${playerStatsHTML(id, true)}`;
 
@@ -1857,6 +1858,7 @@
     JOGADOR.montaNotas?.(view); // notas da partida (página do jogo)
     window.TATICA?.mount(view); // campinho tático da partida e aba Escalações do clube
     window.CONFRONTO?.mount(view); // confronto direto da partida (histórico do banco)
+    window.HISTORICO?.mount(view); // aba Histórico do clube (todos os jogos desde 2023)
     COPA.mount(view); // página de competição; nas outras, só centraliza a barra de competições
     MERCADO_UI.mount(view); // janela de transferências (aba "Janela" do clube)
     // fotos dos jogadores (licença livre, Wikimedia Commons) nas listas de estatísticas; o nome abre a página do jogador
