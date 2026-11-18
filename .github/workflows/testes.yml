@@ -73,6 +73,9 @@ jobs:
       - name: API das competições
         timeout-minutes: 3
         run: python -X utf8 tests/competicoes_api.py
+      - name: Histórico de jogos (conversão e carga das temporadas)
+        timeout-minutes: 2
+        run: python -X utf8 tests/historico_casos.py
       - name: Worker do placar ao vivo
         timeout-minutes: 2
         run: node tests/worker.mjs

@@ -32,23 +32,30 @@ def _int(v):
     return v if isinstance(v, int) and not isinstance(v, bool) else None
 
 
+def linha(j, competicao, temporada=None, liga=""):
+    """Um jogo no formato das competições (server/competicoes.py, jogo()) vira uma linha da tabela; None se incompleto."""
+    casa, fora = j.get("casa") or {}, j.get("fora") or {}
+    if not str(j.get("id") or "").isdigit() or not j.get("data") or not casa.get("nome") or not fora.get("nome"):
+        return None
+    return {
+        "id": j["id"], "liga": j.get("lg") or liga, "competicao": competicao,
+        "temporada": str(temporada or j["data"][:4]), "data": j["data"], "hora": j.get("hora"),
+        "fase": j.get("faseNome") or None,
+        "casa_id": _time_id(casa), "casa": casa["nome"], "fora_id": _time_id(fora), "fora": fora["nome"],
+        "gols_casa": _int(casa.get("gols")), "gols_fora": _int(fora.get("gols")),
+        "pen_casa": _int(casa.get("pen")), "pen_fora": _int(fora.get("pen")),
+        "estado": j.get("estado") or "pre", "local": j.get("local") or None,
+    }
+
+
 def das_competicoes(dados=DADOS):
     jogos = {}
     for p in sorted((dados / "competicoes").glob("*.json")):
         c = _le(p) or {}
         for j in c.get("jogos") or []:
-            casa, fora = j.get("casa") or {}, j.get("fora") or {}
-            if not str(j.get("id") or "").isdigit() or not j.get("data") or not casa.get("nome") or not fora.get("nome"):
-                continue
-            jogos[j["id"]] = {
-                "id": j["id"], "liga": j.get("lg") or c.get("lg") or "", "competicao": c.get("nome") or "",
-                "temporada": str(c.get("temporada") or j["data"][:4]), "data": j["data"], "hora": j.get("hora"),
-                "fase": j.get("faseNome") or None,
-                "casa_id": _time_id(casa), "casa": casa["nome"], "fora_id": _time_id(fora), "fora": fora["nome"],
-                "gols_casa": _int(casa.get("gols")), "gols_fora": _int(fora.get("gols")),
-                "pen_casa": _int(casa.get("pen")), "pen_fora": _int(fora.get("pen")),
-                "estado": j.get("estado") or "pre", "local": j.get("local") or None,
-            }
+            x = linha(j, c.get("nome") or "", c.get("temporada"), c.get("lg") or "")
+            if x:
+                jogos[x["id"]] = x
     return jogos
 
 

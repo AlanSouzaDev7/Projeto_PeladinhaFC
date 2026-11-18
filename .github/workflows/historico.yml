@@ -1,0 +1,42 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins.
+# Carga das temporadas anteriores no histórico de jogos (tabela jogos do banco D1). Roda só quando disparado
+# (Actions > "Histórico: temporadas anteriores" > Run workflow, ou: gh workflow run historico.yml -f anos="2023 2024 2025").
+# Pode ser repetido sem problema: o banco só grava jogo novo ou alterado.
+name: "Histórico: temporadas anteriores"
+
+on:
+  workflow_dispatch:
+    inputs:
+      anos:
+        description: "Temporadas passadas, separadas por espaço"
+        required: true
+        default: "2023 2024 2025"
+
+permissions: {}
+
+concurrency:
+  group: historico
+  cancel-in-progress: false
+
+jobs:
+  carga:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Buscar na ESPN e enviar ao banco
+        env:
+          ROBO_CHAVE: ${{ secrets.ROBO_CHAVE }}
+          ANOS: ${{ inputs.anos }}
+        run: |
+          # só números de 4 dígitos passam (o texto vem de quem disparou o workflow)
+          LISTA=$(printf '%s' "$ANOS" | tr -c '0-9' ' ' | tr -s ' ')
+          python -X utf8 server/temporadas_anteriores.py $LISTA 2>&1 | grep -v "aviso (competicoes"
+          exit "${PIPESTATUS[0]}"

@@ -115,9 +115,10 @@ def enviar(api, chave):
     return 1 if falhas else 0
 
 
-def enviar_jogos(api, chave):
-    """Histórico: manda todos os jogos em lotes; o banco só grava os novos e os que mudaram (placar, estado...)."""
-    jogos = historico_jogos.coleta()
+def enviar_jogos(api, chave, jogos=None):
+    """Histórico: manda os jogos em lotes; o banco só grava os novos e os que mudaram (placar, estado...).
+    Sem lista, usa os jogos dos arquivos de dados da rodada (historico_jogos.coleta())."""
+    jogos = historico_jogos.coleta() if jogos is None else jogos
     url = api.rstrip("/") + "/jogos"
     gravados = falhas = 0
     for i in range(0, len(jogos), LOTE_JOGOS):
