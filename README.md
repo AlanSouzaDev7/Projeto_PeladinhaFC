@@ -1,12 +1,27 @@
-# PLACAR. — futebol brasileiro em tempo real
+<!-- © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. -->
+# CazéStats.TV — futebol brasileiro em tempo real
 
-### ▶ [Acessar o site](https://alansouzadev7.github.io/Projeto_PeladinhaFC/)
+### ▶ [Acessar o site](https://alansouzadev7.github.io/Projeto_PeladinhaFC/) · 📱 app Android **433Fut 2.0**
 
-> Versão publicada no GitHub Pages, com os dados gravados no projeto. Para os dados ao vivo (placares, notícias e minuto a minuto), rode a API localmente — veja [Como rodar](#como-rodar).
+> Autor: **Alan Evangelista de Souza Martins**. Site e app compartilham o mesmo código (o app é montado a partir do site em `app/montar-www.mjs`).
 
-Plataforma de resultados do futebol brasileiro: **Brasileirão Séries A, B, C e D**, **Libertadores**, **Sul-Americana**, **Copa do Brasil** e **estaduais**, com placar ao vivo, tabelas, estatísticas, página temática para cada clube da Série A, campinho interativo para montar o time, prancheta tática e narração minuto a minuto.
+Plataforma de resultados do futebol brasileiro: **Brasileirão Séries A, B, C e D**, **Libertadores**, **Sul-Americana**, **Copa do Brasil** e **estaduais**, com placar ao vivo, tabelas, estatísticas, página temática para cada clube da Série A, campinho interativo para montar o time, **campinho tático editável de cada partida**, **escalação de cada jogo**, prancheta tática e narração minuto a minuto.
 
 Feito com **HTML, CSS e JavaScript puro** (sem frameworks) e uma **API em Python** (só biblioteca padrão).
+
+## Novidades de 17/11/2026
+
+| O quê | Onde |
+|---|---|
+| **Identidade visual 433** (manual "433Fut — Identidade Visual") aplicada ao site, com o nome **CazéStats.TV**; fontes servidas pelo próprio site | `css/identidade.css`, `css/fontes-identidade.css`, `assets/marca/` |
+| Correções do app trazidas para o site: carregador único de dados (`js/dados.js`), escape no ponto de uso (`SEG.json`/`SEG.le`), privacidade e termos (`#/privacidade`), salário em faixa, aviso de dados velhos | `js/` |
+| **Campinho tático editável da partida** (qualquer jogador do elenco: titular, reserva ou não relacionado) e **aba Escalações** do clube (escalação de cada jogo) | `js/taticas.js`, `server/escalacoes_jogos.py` |
+| Pontos fracos resolvidos: CI com lint e testes, erros registrados, proxy confiável, CSS dividido por área, marca d'água de autoria | `.github/workflows/testes.yml`, `eslint.config.mjs`, `pyproject.toml` |
+| **Hospedagem gratuita Cloudflare** pronta (Pages + Worker com cache compartilhado, repasse da ESPN, banco D1 e agendador do robô) | `docs/HOSPEDAGEM.md`, `worker/` |
+| Riscos para lembrar ao apresentar a uma empresa (nunca bloqueiam funções) | `docs/RISCOS-APRESENTACAO.md` |
+| Funcionalidades que precisam de capital inicial | `docs/FUNCIONALIDADES-PREMIUM.pdf` |
+| App **433Fut 2.0** (Capacitor 8, Android 16) com todas as funções do site e dados atualizados pela rede | `app/` |
+| QA com limite de tempo por teste e orçamento total | `node tests/qa-final.mjs` |
 
 ![Página do Cruzeiro](prints/14-aparicao-cruzeiro.png)
 
