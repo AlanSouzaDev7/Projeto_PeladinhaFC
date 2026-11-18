@@ -78,8 +78,24 @@ await t("visitantes seguidos não gastam consultas novas (memória de 15 s)", as
   for (let i = 0; i < 20; i++) await get("/ao-vivo");
   assert.equal(calls.length, LISTAS + 1);
 });
+await t("cache compartilhado (E7): outra instância do Worker no mesmo data center não gasta consulta", async () => {
+  const antes = calls.length;
+  const mod = await import(`../worker/ao-vivo.mjs?instancia=${Date.now()}`); // instância nova, mesmo cache da Cloudflare
+  const r = await mod.default.fetch(new Request("https://w.test/ao-vivo"), env);
+  assert.equal(r.status, 200); assert.equal(calls.length, antes);
+});
+await t("repasse da ESPN: só caminhos conhecidos, com cache curto no placar", async () => {
+  const { rotaEspn } = await import("../worker/plataforma.mjs");
+  const ok = rotaEspn("/espn/site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard", "?dates=20261117");
+  assert.equal(ok.ttl, 2); assert.equal(ok.url, "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261117");
+  assert.equal(rotaEspn("/espn/site.api.espn.com/apis/site/v2/sports/soccer/bra.1/teams/6273/roster", "").ttl, 60);
+  assert.equal(rotaEspn("/espn/evil.com/apis/site/v2/sports/soccer/bra.1/scoreboard", ""), null);
+  assert.equal(rotaEspn("/espn/site.api.espn.com/apis/../../etc/passwd", ""), null);
+  assert.equal(rotaEspn("/espn/site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard", "?x=<script>"), null);
+});
 await t("limite do dia no fim: para de consultar e avisa o site", async () => {
   remaining = LISTAS + 3; // na última consulta desta visita restam só 2 (a reserva)
+  (await import("../worker/plataforma.mjs"))._cacheCompartilhado.limpa(); // outro data center: nem o cache compartilhado
   const mod = await import(`../worker/ao-vivo.mjs?novo=${Date.now()}`); // Worker novo, sem memória
   const r1 = await mod.default.fetch(new Request("https://w.test/ao-vivo"), env);
   assert.equal(r1.status, 200);
