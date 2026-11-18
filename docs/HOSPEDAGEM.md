@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | **Cloudflare Pages** ✅ escolhido | `cazestats.pages.dev` | tráfego **sem limite**, 500 publicações/mês, 20 mil arquivos, 25 MB por arquivo | site | CDN no mundo todo, inclusive no Brasil; uso comercial permitido |
 | **Cloudflare Workers** ✅ | `cazestats-api.<usuario>.workers.dev` | 100 mil requisições/dia, cron grátis | API, placar ao vivo, agendador | resolve escala e cache compartilhado |
-| **Cloudflare D1** ✅ | — | 5 GB, 5 milhões de leituras/dia | banco (dados não essenciais) | SQLite gerenciado |
+| **Cloudflare D1** ✅ | — | 5 GB, 5 milhões de linhas lidas/dia, 100 mil gravadas/dia, sem cartão | banco: dados do site, buscas, erros, escalações | SQLite gerenciado, na mesma rede do Worker |
 | GitHub Pages (atual) | `alansouzadev7.github.io/...` | 100 GB de tráfego/mês (limite brando), 1 GB de site | site | termos não são para negócio/SaaS comercial |
 | Netlify | `cazestats.netlify.app` | 100 GB de tráfego/mês, 300 min de build | site | bom, mas tráfego limitado |
 | Vercel (Hobby) | `cazestats.vercel.app` | 100 GB/mês | site | plano Hobby **proíbe uso comercial** |
@@ -26,7 +26,8 @@ plano grátis, e o mesmo painel cobre site, API, cache de borda, agendador e ban
 |---|---|---|
 | Site (Cloudflare Pages) | https://cazestats.pages.dev | no ar (primeira publicação feita pelo terminal) |
 | Worker | https://cazestats-api.alanmartinsdesouza07.workers.dev | no ar, com banco D1 `cazestats` e cron de 30 min |
-| Publicação automática pelo GitHub | workflow Publicar | falta o dono criar os segredos `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID` |
+| Publicação automática pelo GitHub | workflow Publicar | funcionando (segredos criados em 18/11) |
+| Dados do site no banco D1 (tabela `arquivos`) | `<Worker>/dados/<nome>.json` | tabela e rotas no ar; falta o segredo `ROBO_CHAVE` (passo 6) para o robô começar a enviar |
 | GitHub Pages | https://alansouzadev7.github.io/Projeto_PeladinhaFC/ | continua no ar em paralelo |
 
 Ao criar o token pelo modelo "Edit Cloudflare Workers", **apague a regra "Edit Zone policy"** (pede um domínio, que o projeto
@@ -43,6 +44,7 @@ A ESPN recusa `site.web.api.espn.com` vindo da Cloudflare: o Worker busca sempre
 | Banco D1 (buscas "Em alta", erros do navegador, escalações compartilhadas) | `worker/schema.sql` | banco de dados (Trello) |
 | Site usando o Worker quando configurado | `js/rede.js` + `js/config.js` (`aoVivo`) | escala e observabilidade |
 | Dados fora do `main` | variável `DADOS_NO_RAMO=1` | ponto 5 |
+| Dados do site no banco D1: o robô envia só o que mudou, o site lê de lá e usa a cópia estática se o banco falhar | `server/enviar_d1.py`, `js/dados.js`, rotas `/dados/` do Worker | limite de 500 publicações/mês do Pages; dado novo sem republicar |
 
 ## Passo a passo (uns 20 minutos, uma vez)
 
@@ -86,6 +88,22 @@ Crie a variável `DADOS_NO_RAMO` = `1`. O robô passa a gravar no ramo `dados`, 
 Se usar o GitHub Pages junto, mude *Settings → Pages → Source* para **GitHub Actions** e crie a variável
 `PAGES_POR_ACTIONS` = `1`.
 
+### 6. Dados do site no banco D1 (uma vez)
+
+Por quê: o Cloudflare Pages grátis aceita **500 publicações por mês**, e o robô roda cerca de 70 vezes por dia. Sem o banco,
+cada rodada republica o site e o limite acaba em cerca de uma semana. Com o banco, o robô grava os `dados/*.json` no D1
+(`server/enviar_d1.py`, só o que mudou), o site lê de `<Worker>/dados/<nome>.json` (`js/dados.js`) e o Pages só é republicado
+quando o código muda. Se o banco falhar, o site usa a cópia estática e o workflow volta a publicar do jeito antigo.
+
+Falta só uma chave combinada entre o robô (GitHub) e o Worker (Cloudflare), o `ROBO_CHAVE`. O comando abaixo (PowerShell,
+na pasta do projeto) sorteia uma chave forte e grava nos dois lugares, sem mostrar o valor na tela:
+
+```powershell
+$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); $k = -join ($b | % { $_.ToString('x2') }); $k | npx --yes wrangler@4.48.0 secret put ROBO_CHAVE --config worker/wrangler.toml; gh secret set ROBO_CHAVE --body $k; Remove-Variable k, b
+```
+
+Na rodada seguinte do robô, o passo "Enviar os dados ao banco" fica verde e o passo "Publicar o site" é pulado.
+
 ## Quanto aguenta (estimativa com o plano grátis)
 
 | Cenário | Antes | Com Cloudflare |
@@ -93,6 +111,8 @@ Se usar o GitHub Pages junto, mude *Settings → Pages → Source* para **GitHub
 | 1.000 pessoas vendo um jogo | 75 mil consultas/min à ESPN (bloqueio certo) | ~60 consultas/min à ESPN (cache de 1 s na borda) |
 | Visitas por dia | limitado pelos 100 GB/mês do GitHub | tráfego estático sem limite; API até 100 mil requisições/dia |
 | Robô atrasado | até 8 h sem gravar (13/11) | a cada 30 min pelo cron do Worker |
+| Publicações do site | 1 por rodada do robô (~2.100/mês, acima do limite de 500) | só quando o código muda; os dados vão para o D1 (~80 linhas por rodada, bem abaixo das 100 mil gravações/dia) |
+| Worker passa de 100 mil pedidos no dia | — | o site volta sozinho para a ESPN direta (`js/rede.js`) e para os dados estáticos (`js/dados.js`); nada sai do ar |
 
 Acima de 100 mil requisições/dia na API: 💲 Workers Paid, US$ 5/mês (10 milhões de requisições).
 

@@ -58,6 +58,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24   # node:sqlite (banco D1 simulado nos testes)
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
@@ -73,6 +76,9 @@ jobs:
       - name: Worker do placar ao vivo
         timeout-minutes: 2
         run: node tests/worker.mjs
+      - name: Robô enviando os dados ao banco D1 (Worker local, SQLite simulado)
+        timeout-minutes: 3
+        run: node tests/enviar-d1.mjs
       - name: Testes de invasão da API
         timeout-minutes: 5
         run: node tests/seguranca/api.mjs

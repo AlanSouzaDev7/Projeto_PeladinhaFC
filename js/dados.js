@@ -8,6 +8,9 @@
      3) publica no mesmo global de hoje (window.RAIO_X, window.JOGADORES_CLUBE[cid]...), então quem já lia
         o global continua funcionando sem mudar nada.
    No app, DADOS.base aponta para o endereço remoto dos dados; o .js antigo nunca é buscado fora do aparelho.
+   Banco de dados (D1): com o Worker configurado (PLACAR_CONFIG.api), cada arquivo vem primeiro de <api>/dados/<nome>.json,
+   que o robô atualiza a cada rodada sem republicar o site. Se o banco falhar 2 vezes na visita, ou não tiver o arquivo,
+   vale a cópia estática (dados/<nome>.json), como antes.
    ========================================================================== */
 (() => {
   "use strict";
@@ -32,6 +35,34 @@
   const promessas = new Map();
   const APP = !!window.PLACAR_APP;
   let ultimoErro = null;
+  const API = ((window.PLACAR_CONFIG && window.PLACAR_CONFIG.api) || "").replace(/\/+$/, "");
+  const BANCO = API ? `${API}/dados/` : "";
+  let falhasBanco = 0;
+  // de onde ler, na ordem: o banco (enquanto responde) e a cópia estática
+  const origens = () => (BANCO && falhasBanco < 2 ? [BANCO, DADOS.base] : [DADOS.base]);
+  // baixa <base><arquivo> tentando cada origem; 404 no banco é só "arquivo ainda não chegou", não falha do banco
+  async function baixa(arquivo, fresco) {
+    let ultimo = null;
+    for (const base of origens()) {
+      const banco = base === BANCO;
+      try {
+        const sufixo = fresco && !banco ? `?v=${Date.now()}` : ""; // o banco ignora ?v= (cache de borda de 30 a 60 s)
+        const r = await fetch(`${base}${arquivo}${sufixo}`, { cache: fresco ? "no-store" : "default" });
+        if (r.ok) {
+          if (banco) falhasBanco = 0;
+          return r;
+        }
+        if (banco && r.status >= 500) falhasBanco++;
+        // sem meta.json o banco ainda não foi abastecido: nesta visita, nem tenta (economiza pedidos ao Worker)
+        if (banco && r.status === 404 && arquivo === "meta.json") falhasBanco = 2;
+        ultimo = r;
+      } catch (e) {
+        if (banco) falhasBanco++;
+        else throw e;
+      }
+    }
+    return ultimo;
+  }
 
   const destino = (nome) => {
     if (DESTINO[nome]) return { tipo: "global", alvo: DESTINO[nome] };
@@ -116,14 +147,14 @@
     const d = destino(nome);
     if (!d || !NOME_OK.test(nome)) throw new Error(`arquivo de dados desconhecido: ${nome}`);
     try {
-      const r = await fetch(`${DADOS.base}${nome}.json${fresco ? `?v=${Date.now()}` : ""}`, { cache: fresco ? "no-store" : "default" });
-      if (r.ok) {
+      const r = await baixa(`${nome}.json`, fresco);
+      if (r && r.ok) {
         const txt = await r.text();
         const v = SEG.le(txt); // JSON pela metade ou corrompido: cai no catch e fica o último dado bom
         guarda(nome, txt);
         return publica(d, v);
       }
-      ultimoErro = `${nome}.json: HTTP ${r.status}`;
+      ultimoErro = `${nome}.json: HTTP ${r ? r.status : "sem resposta"}`;
     } catch (e) {
       ultimoErro = `${nome}.json: ${e && e.message}`;
     }
@@ -162,8 +193,8 @@
   };
   async function gravadoEm() {
     try {
-      const r = await fetch(`${DADOS.base}meta.json?v=${Date.now()}`, { cache: "no-store" });
-      if (r.ok) {
+      const r = await baixa("meta.json", true);
+      if (r && r.ok) {
         const m = await SEG.json(r);
         if (Number.isFinite(m.quando)) return m.quando * 1000;
       }
@@ -210,6 +241,7 @@
     gravadoEm,
     confereIdade,
     ultimoErro: () => ultimoErro,
+    banco: () => (BANCO ? (falhasBanco < 2 ? "ligado" : "fora do ar nesta visita") : "não configurado"),
   };
   window.DADOS = DADOS;
   // confere ao abrir, a cada 5 minutos e quando a pessoa volta para a aba ou para o app

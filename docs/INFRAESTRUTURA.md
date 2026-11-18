@@ -65,6 +65,17 @@ navegador ── │  Pages (site estático, CDN global, tráfego sem limite)   
 
 A migração depende de criar as contas no Cloudflare e no Supabase e de configurar as chaves. Isso cabe ao dono do projeto, porque envolve credenciais e cobrança.
 
+## Decisão de 18/11/2026: Cloudflare D1 para os dados do site
+
+**Precisa de banco agora? Sim.** O site passou para o Cloudflare Pages, que no plano gratuito aceita 500 publicações por mês, e o
+robô publicava a cada rodada (~70 por dia). Os dados agora vão para o **D1** (tabela `arquivos`, uma linha por arquivo de
+dados), servidos pelo Worker com cache de borda de 30 a 60 s; o site lê do banco e, se ele falhar, da cópia estática.
+
+Por que D1 e não Supabase neste momento: já estava criado e ligado ao Worker; é grátis sem cartão; fica na mesma rede do
+Worker (sem ida a outro provedor a cada leitura); e o Supabase grátis pausa o projeto depois de 1 semana sem uso. O Supabase
+continua sendo o caminho para quando entrar **login** (abaixo). Próximo passo natural no D1: uma tabela `jogos` com o histórico
+de cada temporada, que hoje se perde quando o robô regrava os arquivos.
+
 ## Login opcional e escalações salvas (revisto em 12/11/2026)
 
 **Ainda não é obrigatório ter banco de dados**: tudo que o torcedor monta (janela de transferências, escalação do clube, simulador) fica no navegador dele (`localStorage`, uma chave por recurso, como `placar:janela-cruzeiro`) e o link de compartilhar carrega o elenco inteiro no endereço. Os dados públicos (elencos, jogos, finanças) seguem como arquivos estáticos gerados pelo robô, que é o jeito mais barato e rápido de servir.

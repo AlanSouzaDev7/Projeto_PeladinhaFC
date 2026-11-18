@@ -12,6 +12,8 @@
      POST /busca, GET /em-alta              contagem de buscas (banco D1; reserva: Workers KV)
      POST /erro                              erro de JavaScript de um visitante (banco D1, sem dado pessoal)
      POST /escalacao, GET /escalacao/<id>    escalação compartilhada por link curto (banco D1)
+     GET /dados/<nome>.json                  dados públicos do site guardados no banco D1 (cache de borda de 30 a 60 s)
+     PUT /dados/<nome>.json, GET /dados/_lista   só o robô de dados (segredo ROBO_CHAVE)
    Cron (wrangler.toml): a cada 30 min dispara o robô de dados do GitHub e limpa registros antigos do banco.
 
    Economia de consultas (o plano grátis dá ~100 por dia):
@@ -23,7 +25,7 @@
        (UTC, quando a API-Football renova o limite) e o site volta para a ESPN sozinho.
    ========================================================================== */
 
-import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo } from "./plataforma.mjs";
+import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo, roboAutorizado, gravaArquivo, listaArquivos, serveArquivo } from "./plataforma.mjs";
 
 const BASE = "https://v3.football.api-sports.io";
 
@@ -259,6 +261,18 @@ export default {
       pendente[k] = Math.min(1e6, (pendente[k] || 0) + 1);
       await gravaBuscas(env);
       return json({ ok: true });
+    }
+    // dados do site no banco: o robô grava (PUT, com a chave) e qualquer um lê (GET)
+    if (path.startsWith("/dados/")) {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      const nome = path.slice("/dados/".length).replace(/\.json$/, "");
+      if (req.method === "PUT") {
+        if (!roboAutorizado(req, env)) return json({ erro: "não autorizado" }, 401);
+        const r = await gravaArquivo(env, nome, req);
+        return r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, hash: r.hash });
+      }
+      if (nome === "_lista") return roboAutorizado(req, env) ? json(await listaArquivos(env)) : json({ erro: "não autorizado" }, 401);
+      if (req.method === "GET" || req.method === "HEAD") return serveArquivo(env, nome, req, cors);
     }
     // fora isso, só leitura: qualquer outro método é recusado
     if (req.method !== "GET" && req.method !== "HEAD") return new Response(null, { status: 405, headers: { ...cors, allow: "GET, HEAD, POST, OPTIONS" } });

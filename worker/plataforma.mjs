@@ -10,7 +10,8 @@
    3) Banco de dados D1 (SQLite da Cloudflare, binding DB, opcional) para dados não essenciais:
         buscas      contagem por hora do que se busca no site ("Em alta");
         erros       erros de JavaScript dos visitantes, sem dado pessoal (E5, observabilidade);
-        escalacoes  escalações compartilhadas por link curto (até 8 KB de JSON, sem login).
+        escalacoes  escalações compartilhadas por link curto (até 8 KB de JSON, sem login);
+        arquivos    os dados públicos do site (dados/*.json), enviados pelo robô e lidos pelo site (5, abaixo).
       Esquema em worker/schema.sql. Sem o binding, as rotas respondem 503 e o site segue como hoje.
    4) Agendador (ponto 6): o gatilho de cron do Worker dispara o robô do GitHub (workflow_dispatch) a cada 30 min,
       sem depender do agendamento do GitHub, que atrasa horas. Precisa do segredo GITHUB_DISPARO (token só com
@@ -103,6 +104,61 @@ export async function limpaAntigos(env) {
     env.DB.prepare("DELETE FROM buscas WHERE hora < ?1").bind(new Date(agora - 3 * 864e5).toISOString().slice(0, 13).replace(/[-T]/g, "")),
     env.DB.prepare("DELETE FROM escalacoes WHERE criado < ?1").bind(agora - 365 * 864e5),
   ]);
+}
+
+/* ---------- 5) dados do site no banco ----------
+   PUT /dados/<nome>.json   o robô envia um arquivo (Authorization: Bearer ROBO_CHAVE; cabeçalho x-hash com o sha-256)
+   GET /dados/_lista        o robô pergunta o hash de cada arquivo guardado, para enviar só o que mudou (com a chave)
+   GET /dados/<nome>.json   o site lê, com cache de borda curto e ETag; arquivo ausente = 404 (o site usa a cópia estática)
+   O Worker não interpreta o JSON (o plano grátis dá 10 ms de CPU por pedido): confere só a chave, o tamanho e o formato.
+   O robô é quem valida o JSON antes de enviar. */
+export const DADOS_NOME = /^(meta|[a-z][a-z-]{1,30}(\/[a-z0-9][a-z0-9-]{0,30})?)$/;
+const HASH_OK = /^[0-9a-f]{64}$/;
+const DADOS_MAX = 1_900_000; // a linha do D1 aceita até 2 MB
+const iguais = (a, b) => {
+  // comparação em tempo constante (não revela quantos caracteres da chave acertou)
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+};
+export function roboAutorizado(req, env) {
+  const chave = (env.ROBO_CHAVE || "").trim();
+  if (chave.length < 32) return false; // sem chave (ou chave fraca) configurada: ninguém grava
+  return iguais((req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim(), chave);
+}
+export async function gravaArquivo(env, nome, req) {
+  if (!DADOS_NOME.test(nome)) return { status: 400, erro: "nome inválido" };
+  const hash = (req.headers.get("x-hash") || "").toLowerCase();
+  if (!HASH_OK.test(hash)) return { status: 400, erro: "x-hash inválido" };
+  if (+(req.headers.get("content-length") || 0) > DADOS_MAX) return { status: 413, erro: "arquivo grande demais" };
+  const txt = await req.text();
+  if (!txt || txt.length > DADOS_MAX || !/^\s*[[{]/.test(txt)) return { status: 400, erro: "não parece JSON" };
+  await env.DB.prepare(
+    "INSERT INTO arquivos (nome, hash, quando, tamanho, dados) VALUES (?1, ?2, ?3, ?4, ?5) " +
+      "ON CONFLICT(nome) DO UPDATE SET hash = ?2, quando = ?3, tamanho = ?4, dados = ?5",
+  ).bind(nome, hash, Date.now(), txt.length, txt).run();
+  return { status: 200, hash };
+}
+export async function listaArquivos(env) {
+  const { results } = await env.DB.prepare("SELECT nome, hash FROM arquivos").all();
+  return Object.fromEntries((results || []).map((r) => [r.nome, r.hash]));
+}
+export async function serveArquivo(env, nome, req, cors) {
+  if (!DADOS_NOME.test(nome)) return new Response(JSON.stringify({ erro: "nome inválido" }), { status: 400, headers: cors });
+  const ttl = nome === "meta" || nome === "live-data" ? 30 : 60;
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  const chave = `https://cache.cazestats.interno/dados/${nome}.json`; // sem ?v=: o "fresco" do site não fura o cache de borda
+  let r = cache ? await cache.match(chave) : null;
+  if (!r) {
+    const linha = await env.DB.prepare("SELECT hash, quando, dados FROM arquivos WHERE nome = ?1").bind(nome).first();
+    if (!linha) return new Response(JSON.stringify({ erro: "arquivo não está no banco" }), { status: 404, headers: cors });
+    r = new Response(linha.dados, { headers: { "content-type": "application/json; charset=utf-8", etag: `"${linha.hash}"`, "x-quando": String(linha.quando), "cache-control": `public, max-age=${ttl}` } });
+    if (cache) await cache.put(chave, r.clone());
+  }
+  const etag = r.headers.get("etag"), cab = { ...cors, "content-type": "application/json; charset=utf-8", "cache-control": `public, max-age=${ttl}`, etag, "x-quando": r.headers.get("x-quando") || "" };
+  if (etag && req.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers: cab });
+  return new Response(r.body, { headers: cab });
 }
 
 /* ---------- 4) agendador do robô ---------- */

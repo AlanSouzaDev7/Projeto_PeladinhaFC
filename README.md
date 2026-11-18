@@ -1,7 +1,7 @@
 <!-- © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. -->
 # CazéStats.TV — futebol brasileiro em tempo real
 
-### ▶ [Acessar o site](https://alansouzadev7.github.io/Projeto_PeladinhaFC/) · 📱 app Android **433Fut 2.0**
+### ▶ [Acessar o site](https://cazestats.pages.dev) · [endereço reserva (GitHub Pages)](https://alansouzadev7.github.io/Projeto_PeladinhaFC/) · 📱 app Android **433Fut 2.0**
 
 > Autor: **Alan Evangelista de Souza Martins**. Site e app compartilham o mesmo código (o app é montado a partir do site em `app/montar-www.mjs`).
 
@@ -18,6 +18,7 @@ Feito com **HTML, CSS e JavaScript puro** (sem frameworks) e uma **API em Python
 | **Campinho tático editável da partida** (qualquer jogador do elenco: titular, reserva ou não relacionado) e **aba Escalações** do clube (escalação de cada jogo) | `js/taticas.js`, `server/escalacoes_jogos.py` |
 | Pontos fracos resolvidos: CI com lint e testes, erros registrados, proxy confiável, CSS dividido por área, marca d'água de autoria | `.github/workflows/testes.yml`, `eslint.config.mjs`, `pyproject.toml` |
 | **Hospedagem gratuita Cloudflare** pronta (Pages + Worker com cache compartilhado, repasse da ESPN, banco D1 e agendador do robô) | `docs/HOSPEDAGEM.md`, `worker/` |
+| **Dados no banco D1** (18/11): o robô envia só o que mudou, o site lê do banco e usa a cópia estática se ele falhar; o site deixa de ser republicado a cada rodada | `server/enviar_d1.py`, `js/dados.js`, `worker/` |
 | Riscos para lembrar ao apresentar a uma empresa (nunca bloqueiam funções) | `docs/RISCOS-APRESENTACAO.md` |
 | Funcionalidades que precisam de capital inicial | `docs/FUNCIONALIDADES-PREMIUM.pdf` |
 | App **433Fut 2.0** (Capacitor 8, Android 16) com todas as funções do site e dados atualizados pela rede | `app/` |

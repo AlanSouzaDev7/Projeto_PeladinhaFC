@@ -20,6 +20,7 @@ const TESTES = [
   ["API dos jogadores", "python", ["-X", "utf8", "tests/jogadores_api.py"], 240],
   ["API das competições", "python", ["-X", "utf8", "tests/competicoes_api.py"], 180],
   ["Worker (cache, ESPN, banco)", "node", ["tests/worker.mjs"], 60],
+  ["robô enviando os dados ao banco D1", "node", ["tests/enviar-d1.mjs"], 120],
   ["invasão da API", "node", ["tests/seguranca/api.mjs"], 200],
   ["invasão do site (PC, iPhone, Android)", "node", ["tests/seguranca/site.mjs"], 240],
   ["jogadores, busca e comparativos", "node", ["tests/mobile/jogadores.mjs"], 300],

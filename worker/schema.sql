@@ -28,3 +28,14 @@ CREATE TABLE IF NOT EXISTS escalacoes (
   dados  TEXT    NOT NULL
 );
 CREATE INDEX IF NOT EXISTS escalacoes_criado ON escalacoes (criado);
+
+-- dados públicos do site (os mesmos dados/*.json que o robô grava), servidos pelo Worker com cache de borda.
+-- O robô envia só o que mudou (comparando o hash); o site lê daqui e, se o banco falhar, usa a cópia estática.
+-- Assim o site não precisa ser republicado a cada rodada (o Pages grátis aceita 500 publicações por mês).
+CREATE TABLE IF NOT EXISTS arquivos (
+  nome    TEXT    PRIMARY KEY,   -- "live-data", "jogadores/cruzeiro", "meta"...
+  hash    TEXT    NOT NULL,      -- sha-256 do conteúdo (hex), calculado pelo robô
+  quando  INTEGER NOT NULL,      -- quando chegou ao banco (ms desde 1970)
+  tamanho INTEGER NOT NULL,
+  dados   TEXT    NOT NULL       -- o JSON, como o robô gravou
+);

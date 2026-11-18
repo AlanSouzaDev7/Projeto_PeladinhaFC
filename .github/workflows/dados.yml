@@ -152,8 +152,22 @@ jobs:
             fi
           fi
 
-      - name: Publicar o site (Cloudflare, quando configurado)
+      # banco D1: o site lê os dados de lá (js/dados.js), então não precisa ser republicado a cada rodada
+      # (o Cloudflare Pages grátis aceita 500 publicações por mês; o robô roda ~70 vezes por dia)
+      - name: Enviar os dados ao banco (Cloudflare D1)
+        id: d1
         if: success()
+        env:
+          ROBO_CHAVE: ${{ secrets.ROBO_CHAVE }}
+        run: |
+          if python -X utf8 server/enviar_d1.py; then
+            echo "ok=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "banco não configurado ou indisponível: o site será republicado com os dados novos"
+          fi
+
+      - name: Publicar o site (Cloudflare, só se o banco não recebeu os dados)
+        if: success() && steps.d1.outputs.ok != '1'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run publicar.yml -R "$GITHUB_REPOSITORY" --ref main || echo "publicação não disparada"

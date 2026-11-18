@@ -143,4 +143,52 @@ await t("sem chave: erro claro", async () => {
     assert.ok([...kv.keys()].filter((k) => k.startsWith("h:")).length <= 1);
   });
 }
+// ---------- dados do site no banco D1 (SQLite simulado) ----------
+{
+  const { d1Simulado } = await import("./sim/d1.mjs");
+  const { createHash } = await import("node:crypto");
+  const DB = d1Simulado(), ROBO_CHAVE = "k".repeat(40), env = { DB, ROBO_CHAVE: ROBO_CHAVE + "\n" }; // a chave pode vir com quebra de linha
+  const mod = await import(`../worker/ao-vivo.mjs?dados=${Date.now()}`);
+  const sha = (t) => createHash("sha256").update(t).digest("hex");
+  const put = (nome, corpo, chave = ROBO_CHAVE, hash = sha(corpo)) =>
+    mod.default.fetch(new Request(`https://w.test/dados/${nome}.json`, { method: "PUT", body: corpo, headers: { authorization: `Bearer ${chave}`, "x-hash": hash } }), env);
+  const get = (caminho, cab = {}) => mod.default.fetch(new Request(`https://w.test${caminho}`, { headers: cab }), env);
+  await t("dados no banco: só o robô com a chave grava", async () => {
+    assert.equal((await put("live-data", '{"a":1}', "errada".repeat(8))).status, 401);
+    assert.equal((await put("live-data", '{"a":1}', "")).status, 401);
+    assert.equal((await mod.default.fetch(new Request("https://w.test/dados/live-data.json", { method: "PUT", body: "{}" }), { DB })).status, 401); // sem chave configurada
+    assert.equal((await put("live-data", '{"a":1}')).status, 200);
+  });
+  await t("dados no banco: nome, hash e formato conferidos", async () => {
+    assert.equal((await put("../segredo", "{}")).status, 405); // o endereço resolve o ".." antes: vira /segredo.json, fora da rota
+    assert.equal((await put("x", "{}")).status, 400);
+    assert.equal((await put("Jogadores/X", "{}")).status, 400);
+    assert.equal((await put("live-data", "{}", ROBO_CHAVE, "abc")).status, 400);
+    assert.equal((await put("live-data", "<html>")).status, 400);
+  });
+  await t("dados no banco: o site lê com ETag e cache de borda; 304 quando nada mudou", async () => {
+    const corpo = '{"jogadores":[1,2,3]}';
+    await put("jogadores/cruzeiro", corpo);
+    const r = await get("/dados/jogadores/cruzeiro.json?v=123");
+    assert.equal(r.status, 200);
+    assert.equal(await r.text(), corpo);
+    assert.equal(r.headers.get("etag"), `"${sha(corpo)}"`);
+    assert.match(r.headers.get("cache-control"), /max-age=60/);
+    assert.equal(r.headers.get("access-control-allow-origin"), "*");
+    assert.equal((await get("/dados/jogadores/cruzeiro.json", { "if-none-match": `"${sha(corpo)}"` })).status, 304);
+    assert.equal((await get("/dados/nao-existe.json")).status, 404); // o site usa a cópia estática
+  });
+  await t("dados no banco: a lista de hashes (para enviar só o que mudou) exige a chave", async () => {
+    assert.equal((await get("/dados/_lista")).status, 401);
+    const d = await (await get("/dados/_lista", { authorization: `Bearer ${ROBO_CHAVE}` })).json();
+    assert.equal(d["live-data"], sha('{"a":1}'));
+    assert.equal(Object.keys(d).length, 2);
+  });
+  await t("dados no banco: reenviar troca o conteúdo (uma linha por arquivo)", async () => {
+    await put("live-data", '{"a":2}');
+    assert.equal(await (await get("/dados/live-data.json")).text(), '{"a":2}');
+    assert.equal(DB._db.prepare("SELECT COUNT(*) n FROM arquivos").get().n, 2);
+    assert.equal((await mod.default.fetch(new Request("https://w.test/dados/live-data.json", { method: "DELETE" }), env)).status, 405);
+  });
+}
 console.log(`\n${ok} testes do Worker passaram`);
