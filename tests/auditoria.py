@@ -1,3 +1,4 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """Auditoria de coerência dos dados do site (sem internet): confere se o que o site mostra fecha entre si.
 Tabela (pontos, jogos, saldo, ordem), rodadas (clube jogando duas vezes, placar de jogo encerrado),
 listas do elenco (só quem está no clube; reserva é reserva de verdade), departamento médico, artilharia,

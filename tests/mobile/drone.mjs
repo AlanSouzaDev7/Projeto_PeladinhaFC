@@ -1,4 +1,4 @@
-/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. */
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. */
 /* Tomada de drone do estádio na faixa da partida (js/drone.js):
    - para cada um dos 20 estádios, abre um jogo nele, espera a câmera parar e confere: foto carregada, sem erro,
      placar e escudos por cima da foto, créditos da foto, nada saindo da tela; guarda um print do quadro final;

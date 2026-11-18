@@ -1,4 +1,4 @@
-# © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """PLACAR — conferência do elenco de cada clube em várias fontes, para a janela de transferências.
 
 Fontes e para que serve cada uma:
@@ -42,7 +42,8 @@ def _arq():
 def _ler():
     try:
         return json.load(open(_arq(), encoding="utf-8"))
-    except Exception:
+    except Exception as ex:
+        P.silencioso("fontes_elenco:45", ex)
         return {}
 
 

@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Desempenho no carregamento (PC e celular, sem cache): tempo até o conteúdo, peso baixado, requisições e
    saltos de layout. Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  node tests/mobile/desempenho.mjs */
 import { chromium, devices } from "playwright";

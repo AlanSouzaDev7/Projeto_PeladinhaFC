@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Faixa de notícias embaixo do menu: aparece em todas as páginas, a manchete troca a cada 8 s, a fita anda
    (e para com o mouse em cima), cada notícia é um link para a matéria, não cria rolagem para os lados e se atualiza
    sozinha (relógio adiantado em 30 min: busca o js/live-data.js novo, sem recarregar a página).

@@ -1,4 +1,4 @@
-# © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """PLACAR — Séries C e D do Brasileirão pela Wikipédia (a ESPN não cobre essas duas em 2026).
 
 Lê, pela API oficial do MediaWiki (pt.wikipedia.org/w/api.php), o artigo da temporada e tira dele:

@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
    PLACAR — testes em celular
    iPhone 15 (motor WebKit, o mesmo do Safari) e Pixel 7 (Chrome Android).

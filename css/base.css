@@ -1,0 +1,295 @@
+/* CazéStats.TV — variáveis de tema, base, fundo e cabeçalho (parte de css/styles.css dividida por área; a ordem dos arquivos no index.html é a da cascata) */
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
+/* ==========================================================================
+   PLACAR — folha de estilos
+   Referências: densidade de lista à la Flashscore, painéis e gráficos à la Sofascore.
+   ========================================================================== */
+
+:root {
+  --bg: #0c1117;
+  --bg-2: #10161e;
+  --surface: #151c25;
+  --surface-2: #1b2430;
+  --surface-3: #232e3c;
+  --line: #2a3544;
+  --line-soft: #202a37;
+  --text: #edf1f6;
+  --text-2: #a2adbd;
+  --text-3: #8592a5; /* contraste ≥ 4,5:1 sobre os cartões */
+  --brand: #00a859;   /* verde do Brasileirão 2026 */
+  --brand-2: #ffd200; /* amarelo-ouro */
+  --brand-3: #0a2a66; /* azul-marinho */
+  --live: #ff3352;
+  --win: #19c37d;
+  --draw: #8b95a7;
+  --loss: #ff4d5e;
+  --gold: #f5c542;
+  --shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6);
+  --radius: 14px;
+  --radius-sm: 9px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --font: "Saira", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Saira", "Arial Narrow", -apple-system, Roboto, sans-serif;
+  /* letra de placar de transmissão: cabeçalhos dos cards, chamadas, rótulos e números das listas */
+  --font-label: "Saira Condensed", "Saira", "Arial Narrow", sans-serif;
+  --header-h: 64px;
+
+  /* cores do clube ativo (sobrescritas via JS nas páginas de clube) */
+  --c1: var(--brand);
+  --c2: #ffffff;
+  --c3: var(--brand-2);
+  --on-c1: #ffffff;
+  --accent: #00813f;
+  --zona-acesso: #1f9d55;
+  --zona-queda: #d12a3c;
+  --on-accent: #ffffff;
+  --ink: #3fd68a; /* texto de destaque (o app recalcula para cada tema e clube) */
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #eef1f5;
+  --bg-2: #e5e9ef;
+  --surface: #ffffff;
+  --surface-2: #f5f7fa;
+  --surface-3: #eaeef3;
+  --line: #dde2e9;
+  --line-soft: #e9edf2;
+  --text: #121821;
+  --text-2: #4c5768;
+  --text-3: #5a6577; /* contraste ≥ 5:1 sobre o fundo claro */
+  --win: #0b7f4e;
+  --draw: #5d6779;
+  --loss: #c8283a;
+  --shadow: 0 10px 30px -14px rgb(20 30 60 / 0.25);
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+/* textos auxiliares (<small>) com no mínimo 11 px */
+small { font-size: max(11px, 0.8333em); }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.45;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+  min-height: 100vh;
+  /* clip (e não hidden): corta o que passa da borda sem virar uma caixa de rolagem; com hidden, o
+     cabeçalho e os títulos dos meses deixavam de grudar no alto ao rolar */
+  overflow-x: clip;
+  transition: background-color 0.4s var(--ease), color 0.4s var(--ease);
+}
+
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+img, svg { display: block; }
+::selection { background: var(--accent); color: var(--on-c1); }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+/* ---------- fundo vivo ----------
+   Desenhado em js/backdrop.js: brilho nas bordas nas cores do site/clube e grade de pontinhos que
+   acende perto dos brilhos e em volta do mouse. Antes do desenho, um degradê simples (sem custo). */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(70vmax 46vmax at 104% -6%, color-mix(in srgb, var(--c1) 28%, transparent), transparent 62%),
+    radial-gradient(60vmax 42vmax at -6% 106%, color-mix(in srgb, var(--c3) 18%, transparent), transparent 64%);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.backdrop.painted { background-color: transparent; }
+.backdrop-spot {
+  --step: 22px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--accent) 80%, var(--text)) 1.3px, transparent 1.8px);
+  background-size: var(--step) var(--step);
+  -webkit-mask-image: radial-gradient(closest-side, black, transparent);
+  mask-image: radial-gradient(closest-side, black, transparent);
+  opacity: 0;
+  transition: opacity 0.4s;
+  will-change: transform;
+}
+.backdrop-spot.on { opacity: 0.85; }
+:root[data-theme="light"] .backdrop-spot.on { opacity: 0.6; }
+
+/* ==========================================================================
+   Cabeçalho
+   ========================================================================== */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  backdrop-filter: blur(10px) saturate(1.3);
+  border-bottom: 1px solid var(--line-soft);
+  view-transition-name: header;
+}
+.header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--c1), var(--c3), var(--c2));
+  transform-origin: left;
+  transform: scaleX(var(--scroll, 0));
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-stretch: 72%;
+  font-size: 25px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+}
+/* o símbolo veste a cor do clube nas páginas de clube */
+.logo-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--c1) 85%, #fff), color-mix(in srgb, var(--c1) 80%, #000));
+  color: var(--on-c1);
+  box-shadow: 0 6px 18px -8px var(--c1), inset 0 0 0 1px rgb(255 255 255 / 0.12);
+  transition: transform 0.5s var(--ease-bounce);
+}
+.logo-spot { fill: var(--logo-spot, var(--live)); transition: transform 0.5s var(--ease-bounce); transform-origin: 23px 20.5px; }
+.logo:hover .logo-mark { transform: rotate(-8deg) scale(1.06); }
+.logo:hover .logo-spot { transform: scale(1.35); }
+.logo-word { display: inline-flex; align-items: flex-end; }
+/* o ponto final é o "ao vivo" da marca */
+.logo-dot {
+  width: 6px;
+  height: 6px;
+  margin: 0 0 3px 3px;
+  border-radius: 50%;
+  background: var(--live);
+  animation: livePulse 2.4s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 55%, transparent); }
+  50% { box-shadow: 0 0 0 5px transparent; }
+}
+
+.nav { display: flex; gap: 4px; }
+.nav a {
+  position: relative;
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: var(--text-2);
+  font-weight: 600;
+  transition: color 0.2s, background 0.2s;
+}
+.nav a:hover { color: var(--text); background: var(--surface-2); }
+.nav a.active { color: var(--text); background: var(--surface-2); }
+.nav a.active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 16px;
+  height: 3px;
+  margin-left: -8px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.search {
+  margin-left: auto;
+  position: relative;
+  width: min(340px, 34vw);
+}
+.search input {
+  width: 100%;
+  height: 40px;
+  padding: 0 44px 0 40px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+.search > svg { position: absolute; left: 14px; top: 12px; color: var(--text-3); }
+.search kbd {
+  position: absolute;
+  right: 10px;
+  top: 9px;
+  font: 600 11px var(--font);
+  padding: 3px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  color: var(--text-3);
+}
+.search-results {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 6px;
+  display: none;
+  max-height: 60vh;
+  overflow: auto;
+}
+.search-results.open { display: block; animation: pop 0.25s var(--ease); }
+.search-results a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+}
+.search-results a:hover,
+.search-results a.sel { background: var(--surface-2); }
+.search-results small { color: var(--text-3); margin-left: auto; }
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  transition: transform 0.3s var(--ease-bounce), border-color 0.2s;
+}
+.icon-btn:hover { transform: rotate(20deg); border-color: var(--accent); }

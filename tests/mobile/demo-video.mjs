@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Vídeo de demonstração das novidades (tests/mobile/out/demo-novidades.mp4), com som.
    Roteiro: busca por letra inicial, simulador da tabela, gol ao vivo (Cruzeiro x Palmeiras simulado, com o tempo
    entre o gol na fonte e o alerta na tela) com o som do gol.

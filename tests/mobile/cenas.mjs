@@ -1,4 +1,4 @@
-/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. */
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. */
 /* Cenas de abertura dos clubes (js/hero-scenes-clubes.js) com a foto real da cidade ao fundo:
    - nos 20 clubes (o Cruzeiro, em js/hero-scenes.js, com Belo Horizonte à noite embaixo do céu estrelado): a foto da cidade carrega e entra na cena, o crédito da foto aparece, a cena desenha (não fica
      preta), sem erros de JavaScript e sem rolagem para os lados;

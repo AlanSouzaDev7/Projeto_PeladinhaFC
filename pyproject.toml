@@ -1,0 +1,11 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# Lint do Python (ponto 8 do relatório). Rodar: python -m ruff check server tests
+[tool.ruff]
+line-length = 200
+target-version = "py312"
+extend-exclude = ["node_modules", "dados", "app"]
+
+[tool.ruff.lint]
+# erros de verdade: sintaxe, nomes indefinidos, comparações e imports quebrados; mais o aviso de except mudo (ponto 9)
+select = ["E9", "F63", "F7", "F82", "F811", "F401", "B012"]
+ignore = ["F401"]

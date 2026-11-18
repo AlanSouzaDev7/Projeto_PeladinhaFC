@@ -1,3 +1,4 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """Calendário dos clubes na API (server/placar_api.py).
 - estatísticas rápidas de um jogo encerrado de verdade (resumo da ESPN): placar, gols, posse, finalizações...;
 - jogos da API-Football (respostas no formato da documentação oficial): estadual entra, Série A não duplica,

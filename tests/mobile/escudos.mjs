@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Escudos inteiros nas animações (topo do clube, cortina de entrada e aviso de gol ao vivo).
    Para os 20 clubes, no PC, iPhone 15 e Pixel 7, com a animação rodando até o fim:
    mede o desenho real do escudo (object-fit: contain) e confere, ponto a ponto nas bordas,

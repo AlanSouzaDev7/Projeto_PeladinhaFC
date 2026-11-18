@@ -1,4 +1,4 @@
-# © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """
 PLACAR — API de dados ao vivo (Python, só biblioteca padrão)
 
@@ -90,6 +90,25 @@ def log(*a):
     print(time.strftime("[%H:%M:%S]"), *a, flush=True)
 
 
+# erros que antes eram engolidos (ponto 9 do relatório): cada ponto do código registra as 3 primeiras ocorrências e
+# depois só conta, para não inundar o log; a contagem fica em /api/health e no fim da rodada do robô
+_silenciosos = {}
+
+
+def silencioso(onde, ex):
+    n = _silenciosos[onde] = _silenciosos.get(onde, 0) + 1
+    if n <= 3:
+        log(f"aviso ({onde}):", type(ex).__name__, str(ex)[:160])
+
+
+def avisar_falha(etapa, ex):
+    """Falha de uma etapa do robô: no GitHub Actions vira anotação vermelha na rodada (sem descartar as outras etapas)."""
+    log("falha em", etapa, ex)
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        print(f"::error title=Robô de dados::falha em {etapa}: {str(ex)[:200]}", flush=True)
+
+
+PROXIES_CONFIAVEIS = {x.strip() for x in os.environ.get("PROXIES_CONFIAVEIS", "").split(",") if x.strip()}
 MAX_BYTES = 15 * 1024 * 1024   # nenhuma resposta de fonte de dados passa disso
 
 
@@ -126,7 +145,8 @@ def clean_link(u):
     u = CONTROL.sub("", str(u or "")).strip()
     try:
         x = urllib.parse.urlsplit(u)
-    except ValueError:
+    except ValueError as ex:
+        silencioso("placar_api:147", ex)
         return None
     if x.scheme != "https" or not x.netloc or "@" in x.netloc or any(c in u for c in '"<>`\\ '):
         return None
@@ -185,7 +205,8 @@ def jogos_parados(fixtures, agora=None):
                 continue
             try:
                 k = calendar.timegm(time.strptime(f"{g[4]} {g[5]}", "%Y-%m-%d %H:%M")) + 3 * 3600   # horário de Brasília
-            except ValueError:
+            except ValueError as ex:
+                silencioso("placar_api:206", ex)
                 continue
             st = (g[8] or {}).get("state") if len(g) > 8 and isinstance(g[8], dict) else None
             encerrado = st == "post" or (st is None and g[2] is not None)
@@ -471,12 +492,14 @@ def club_form(cid):
         for fx in ("", "&fixture=true"):
             try:
                 d = get_json(f"{ESPN_WEB}/site/v2/sports/soccer/{lg}/teams/{espn}/schedule?season={time.strftime('%Y')}{fx}")
-            except Exception:
+            except Exception as ex:
+                silencioso("placar_api:492", ex)
                 continue
             for ev in d.get("events", []):
                 try:
                     e = form_event(ev, espn, lg)
-                except Exception:
+                except Exception as ex:
+                    silencioso("placar_api:497", ex)
                     continue
                 (past if e["state"] == "post" else nxt).append(e)
     # torneios que a ESPN não cobre (estaduais do PR, BA, SC e PA, Copa do Nordeste, Copa Verde, Fifa): API-Football,
@@ -539,7 +562,8 @@ def af_time(cid):
     try:
         os.makedirs(os.path.dirname(AF_CACHE), exist_ok=True)
         json.dump(_af_times, open(AF_CACHE, "w", encoding="utf-8"))
-    except Exception:
+    except Exception as ex:
+        silencioso("placar_api:560", ex)
         pass
     return achado
 
@@ -627,7 +651,8 @@ def match_stats(eid, lg):
     def num(v, unid):
         try:
             f = float(v)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as ex:
+            silencioso("placar_api:648", ex)
             return None
         if unid == "%" and f <= 1:
             f *= 100
@@ -933,7 +958,8 @@ def kickoff(g):
     """Horário do apito em segundos (o horário da tabela é de Brasília, UTC-3)."""
     try:
         return calendar.timegm(time.strptime(f"{g[4]} {g[5]}", "%Y-%m-%d %H:%M")) + 3 * 3600
-    except Exception:
+    except Exception as ex:
+        silencioso("placar_api:954", ex)
         return None
 
 
@@ -1085,7 +1111,8 @@ def update_squads():
         for lg in LEAGUES:
             try:
                 sb = get_json(f"{ESPN}/site/v2/sports/soccer/{lg}/scoreboard?dates={day}")
-            except Exception:
+            except Exception as ex:
+                silencioso("placar_api:1106", ex)
                 continue
             for ev in sb.get("events", []):
                 if not ev["status"]["type"]["completed"]:
@@ -1202,7 +1229,8 @@ def match_extract(eid, lg="bra.1"):
 def load_matches():
     try:
         return json.load(open(MATCHES_FILE, encoding="utf-8"))
-    except Exception:
+    except Exception as ex:
+        silencioso("placar_api:1223", ex)
         return {}
 
 
@@ -1752,7 +1780,8 @@ def dm_load():
         src = open(DM_FILE, encoding="utf-8").read()
         d = json.loads(src[src.index("{"):src.rindex("}") + 1])
         return d if d.get("temporada") == int(time.strftime("%Y")) else None
-    except Exception:
+    except Exception as ex:
+        silencioso("placar_api:1773", ex)
         return None
 
 
@@ -2051,7 +2080,8 @@ FAIXAS = ["0–15", "16–30", "31–45", "46–60", "61–75", "76–90"]
 def _num(v):
     try:
         return float(str(v).replace(",", "."))
-    except Exception:
+    except Exception as ex:
+        silencioso("placar_api:2072", ex)
         return None
 
 
@@ -2350,7 +2380,7 @@ LIVE_DATA_FILE = os.path.join(ROOT, "js", "live-data.js")
 
 def write_js(name, var, data, comment):
     path = os.path.join(ROOT, "js", name)
-    open(path, "w", encoding="utf-8").write(f"/* PLACAR — {comment} (gerado por: python server/placar_api.py --snapshot) */\n"
+    open(path, "w", encoding="utf-8").write(f"/* CazéStats.TV · autor: Alan Evangelista de Souza Martins — {comment} (gerado por: python server/placar_api.py --snapshot) */\n"
                                             f"window.{var} = " + json.dumps(clean_deep(data), ensure_ascii=False) + ";\n")
     log("gravado", path)
 
@@ -2372,11 +2402,17 @@ def write_snapshot():
     except Exception as ex:
         log("falha em elenco", ex)
     steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado), ("fontes do elenco", update_fontes_elenco), ("fotos dos jogadores", update_fotos), ("escalações anunciadas", update_escalacoes)]
+    falhas = []
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
             fn()
         except Exception as ex:
-            log("falha em", name, ex)
+            avisar_falha(name, ex)
+            falhas.append(name)
+    if falhas:
+        log(f"rodada com {len(falhas)} etapa(s) falhando: {', '.join(falhas)}")
+    if _silenciosos:
+        log("avisos registrados nesta rodada:", ", ".join(f"{k} ({v}x)" for k, v in sorted(_silenciosos.items())))
     with lock:
         live = {k: state.get(k) for k in ("updated", "standings", "round", "fixtures", "scorers")}
         live["manchetes"] = state.get("manchetes")
@@ -2620,7 +2656,8 @@ def known_refs():
         try:
             src = open(LIVE_DATA_FILE, encoding="utf-8").read()
             refs = set((json.loads(src[src.index("{"):src.rindex("}") + 1]).get("arbitragem") or {}).get("arbitros") or [])
-        except Exception:
+        except Exception as ex:
+            silencioso("placar_api:2641", ex)
             pass
     # busca geral e uma por clube ("Fulano apita o Flamengo..."): a lista cresce a cada atualização
     qs = [f"{q} when:120d" for q in REF_QUERIES] + [f'"{(c.get("apelidos") or [c["busca"]])[0]}" (apita OR "no apito" OR "árbitro escalado" OR "escala de arbitragem") when:90d' for c in CLUBS.values()]
@@ -2727,7 +2764,8 @@ def summary(eid):
             if d.get("header"):
                 data = d
                 break
-        except Exception:
+        except Exception as ex:
+            silencioso("placar_api:2748", ex)
             continue
     summary_cache[eid] = (time.time(), data)
     summary_cache.move_to_end(eid)
@@ -2830,7 +2868,8 @@ SEC_HEADERS = {
     "X-Permitted-Cross-Domain-Policies": "none",
 }
 # só isto é servido como arquivo; o resto da pasta (código do servidor, cache, .git, testes, chaves locais) nunca sai
-STATIC_OK = re.compile(r"^/(?:|index\.html|manifest\.webmanifest|(?:css|js|assets|prints)/[A-Za-z0-9._\-/%]+)$")
+# arquivos do site que a API serve: páginas, estilos, scripts, marca, dados em JSON (js/dados.js), fotos guardadas e vídeos
+STATIC_OK = re.compile(r"^/(?:|index\.html|manifest\.webmanifest|(?:css|js|assets|prints|dados|img|media)/[A-Za-z0-9._\-/%]+)$")
 MAX_URL = 2048
 EVENT_OK = re.compile(r"^\d{4,12}$")
 # limites por endereço de quem acessa (janela de 60 s)
@@ -2869,13 +2908,26 @@ class Handler(SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):
         line = CONTROL.sub("", fmt % args)[:500]
         if "/api/" in line or '" 4' in line or '" 5' in line:
-            log(self.client_address[0], line)
+            log(self.ip_real(), line)
+
+    # ---- quem é o visitante (ponto 12 do relatório): atrás de proxy ou CDN, a conexão chega sempre do mesmo endereço;
+    # os cabeçalhos repassados (X-Forwarded-For/Proto) só valem quando a conexão vem de um proxy conhecido,
+    # listado em PROXIES_CONFIAVEIS (separados por vírgula). Sem a lista, vale o endereço da conexão (uso local).
+    def via_proxy(self):
+        return self.client_address[0] in PROXIES_CONFIAVEIS
+
+    def ip_real(self):
+        if self.via_proxy() and self.headers:
+            fwd = (self.headers.get("CF-Connecting-IP") or self.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+            if re.fullmatch(r"[0-9a-fA-F:.]{3,45}", fwd or ""):
+                return fwd
+        return self.client_address[0]
 
     # ---- cabeçalhos de segurança em toda resposta
     def end_headers(self):
         for k, v in SEC_HEADERS.items():
             self.send_header(k, v)
-        if self.headers and self.headers.get("X-Forwarded-Proto", "") == "https":
+        if self.headers and self.via_proxy() and self.headers.get("X-Forwarded-Proto", "") == "https":
             self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         origin = ((self.headers.get("Origin") if self.headers else "") or "").rstrip("/")
         if origin and origin in ORIGENS:
@@ -2909,7 +2961,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(414)
             return False
         api = self.path.startswith("/api/") or self.path == "/api"
-        if not allow(self.client_address[0], "api" if api else "arq", LIMITE_API if api else LIMITE_ARQUIVOS):
+        if not allow(self.ip_real(), "api" if api else "arq", LIMITE_API if api else LIMITE_ARQUIVOS):
             self.send_response(429)
             self.send_header("Retry-After", "60")
             self.send_header("Content-Length", "0")
@@ -2941,7 +2993,7 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if urllib.parse.urlparse(self.path).path != "/api/busca":
             return self.refuse()
-        if not allow(self.client_address[0], "busca", 30):
+        if not allow(self.ip_real(), "busca", 30):
             return self.send_json({"ok": False, "message": "muitas buscas"}, 429)
         try:
             n = int(self.headers.get("Content-Length") or 0)
@@ -3125,7 +3177,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def stream(self, eid):
         """Server-Sent Events: manda cada lance novo assim que aparece (com limite de conexões e de duração)."""
-        ip = self.client_address[0]
+        ip = self.ip_real()
         with _hits_lock:
             if _streams_ip.get(ip, 0) >= STREAMS_POR_IP:
                 return self.send_json({"ok": False, "message": "conexões demais"}, 429)
@@ -3153,7 +3205,8 @@ class Handler(SimpleHTTPRequestHandler):
                 if n["state"] == "post":
                     break
                 time.sleep(20)
-        except (BrokenPipeError, ConnectionResetError, TimeoutError, OSError):
+        except (BrokenPipeError, ConnectionResetError, TimeoutError, OSError) as ex:
+            silencioso("placar_api:3174", ex)
             pass
         finally:
             with _hits_lock:
@@ -3167,7 +3220,8 @@ def main():
         try:
             state.update(json.load(open(CACHE_FILE, encoding="utf-8")))
             log("cache carregado de", state.get("updated"))
-        except Exception:
+        except Exception as ex:
+            silencioso("placar_api:3188", ex)
             pass
     iv = CONFIG["intervalos_minutos"]
     every(iv["tabela_e_jogos"], update_standings_and_fixtures)

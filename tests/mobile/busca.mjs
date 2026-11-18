@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Busca de clubes: só aparecem clubes cujo nome (ou a forma curta) começa com o que foi digitado.
    Confere todas as letras de A a Z e alguns começos de nome, no PC e no celular, contra a lista de clubes do site;
    e que "f" não traz mais o Athletico Paranaense (antes vinha pelo apelido "Furacão").

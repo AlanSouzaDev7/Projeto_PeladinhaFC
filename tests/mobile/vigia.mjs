@@ -1,4 +1,4 @@
-/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. */
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. */
 /* Vigia: reproduz a aba aberta desde a noite anterior. O arquivo gravado chega "de ontem", com um jogo ao vivo aos 63'
    e outro ainda sem placar, mas os dois já terminaram. O site tem de perceber sozinho e mostrar o resultado final.
    1) ao abrir: o vigia consulta a ESPN e encerra os dois jogos;

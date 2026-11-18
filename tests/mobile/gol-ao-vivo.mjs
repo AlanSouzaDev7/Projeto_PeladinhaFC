@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Gol ao vivo: um jogo hipotético (Cruzeiro x Flamengo, roteiro em tests/sim/jogo.mjs) rola com a ESPN
    simulada e o site precisa tocar o GOL! do clube que marcou, com o placar e o minuto certos.
    Confere os 3 gols (Cruzeiro 12', Flamengo 61', Cruzeiro 88' de pênalti) no PC e no celular,

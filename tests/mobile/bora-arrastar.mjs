@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Bora pro jogo: arrastar jogadores na prancheta em tempo real.
    - PC (mouse) e Pixel 7 (dedo, eventos de toque de verdade): o jogador acompanha durante o arraste,
      fica onde foi solto, continua lá depois de recarregar e "Restaurar posições" desfaz.

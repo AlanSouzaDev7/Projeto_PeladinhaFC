@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Testes de invasão do site (navegador). Simula dados maliciosos chegando pelas fontes externas
    (manchetes, notícias, ESPN), endereços forjados, armazenamento local adulterado e o site dentro de
    moldura de outro endereço. Nada pode executar código nem quebrar a página.
@@ -103,7 +104,12 @@ async function cenario(L, nome, opts) {
   await p.evaluate(() => localStorage.clear());
 
   // 6) as defesas não podem ser desligadas por outro script
-  const trava = await p.evaluate(() => { const a = JSON.parse; try { JSON.parse = (x) => x; } catch {} return JSON.parse === a && JSON.parse('{"t":"<b>"}').t === "‹b›" && Object.isFrozen(window.SEG); });
+  // o site não troca mais o JSON.parse do navegador (ponto 10 do relatório): dado de fora entra por SEG.le / SEG.json,
+  // que limpam, e o SEG não pode ser trocado nem alterado por outro script
+  const trava = await p.evaluate(() => {
+    const seg = window.SEG; try { window.SEG = { le: (x) => x }; } catch {} try { seg.le = (x) => x; } catch {}
+    return window.SEG === seg && Object.isFrozen(seg) && seg.le('{"t":"<b>"}').t === "‹b›" && JSON.parse('{"t":"<b>"}').t === "<b>" && seg.AUTORIA?.autor === "Alan Evangelista de Souza Martins";
+  });
   ok(trava, `${nome}: limpeza de dados travada (não pode ser trocada) e funcionando`);
   const urls = await p.evaluate(() => [SEG.url("javascript:alert(1)"), SEG.url(" java\tscript:x"), SEG.url("https://user:senha@ge.globo.com/"), SEG.url("https://ge.globo.com/a?b=1"), SEG.url("#/clube/flamengo"), SEG.url("//evil.example/"), SEG.url("\\\\evil.example"), SEG.url("/\\evil.example")]);
   ok(urls[0] === "#" && urls[1] === "#" && urls[2] === "#" && urls[3] === "https://ge.globo.com/a?b=1" && urls[4] === "#/clube/flamengo" && urls[5] === "#" && urls[6] === "#" && urls[7] === "#", `${nome}: validação de endereços (${urls.join(" , ")})`);

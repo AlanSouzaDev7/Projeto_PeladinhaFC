@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Estatísticas do elenco: confere o card da visão geral e a aba nos 20 clubes (computador e celular).
    Uso: npm run api (em outro terminal) e depois  node tests/mobile/estatisticas.mjs */
 import { chromium, devices } from "playwright";

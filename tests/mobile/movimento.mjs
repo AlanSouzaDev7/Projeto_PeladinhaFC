@@ -1,4 +1,4 @@
-/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. */
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. */
 /* Fita de notícias andando e escudos grandes da faixa da partida, em aparelhos de tamanhos e formatos diferentes
    (Chrome e Safari/WebKit; telas de 320 px a 2560 px; retrato e paisagem).
    Fita: anda normalmente, com as animações do aparelho desligadas (Windows, iPhone, Android), depois de clicar numa

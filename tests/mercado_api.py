@@ -1,3 +1,4 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """Janela de transferências na API (server/mercado.py), sem rede.
 - valor estimado: auge entre 24 e 27 anos, atacante vale mais que goleiro, liga e força do time pesam, nunca zero;
 - salário estimado: proporcional ao valor, com piso;

@@ -1,14 +1,20 @@
 {
-  "name": "placar-portfolio",
+  "name": "cazestats-tv",
   "private": true,
-  "description": "PLACAR. — testes automatizados em celular (iPhone/WebKit e Android/Chrome)",
+  "description": "CazéStats.TV (site) e 433Fut (app Android) — autor: Alan Evangelista de Souza Martins",
   "scripts": {
     "api": "python -X utf8 server/placar_api.py",
     "test:mobile": "node tests/mobile/run.mjs",
     "test:worker": "node tests/worker.mjs",
-    "test:simulacao": "node tests/mobile/simulacao.mjs"
+    "test:simulacao": "node tests/mobile/simulacao.mjs",
+    "lint": "eslint . && python -m ruff check server tests",
+    "test:seguranca": "node tests/seguranca/api.mjs && node tests/seguranca/site.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
     "playwright": "1.65.0"
-  }
+  },
+  "author": "Alan Evangelista de Souza Martins"
 }

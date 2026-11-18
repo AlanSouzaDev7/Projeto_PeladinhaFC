@@ -1,4 +1,4 @@
-/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
    CazéStats.TV — campinho: onde cada ponto do campo fica (GOL, ZAG, LD, VOL, MEI, PD, CA...), a posição de origem
    de cada jogador e o que ele já fez em cada posição (súmulas do Brasileirão, js/heatmaps.js), e a projeção 3D

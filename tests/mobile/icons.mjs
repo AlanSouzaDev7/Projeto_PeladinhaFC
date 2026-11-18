@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* gera os ícones PNG (tela inicial do iPhone/Android) a partir de assets/logo-mark.svg */
 import { chromium } from "playwright";
 import { readFileSync } from "node:fs";

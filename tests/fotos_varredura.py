@@ -1,4 +1,4 @@
-# © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """Varredura das fotos de todos os jogadores do elenco dos 20 clubes: qual foto o site mostra (js/fotos.js, gravado
 pelo monitor de fotos) e por que falta.
   clube    - foto da temporada no site oficial do clube (guardada em img/jogadores/);

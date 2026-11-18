@@ -1,0 +1,95 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# CazéStats.TV — testes automáticos a cada mudança de código (ponto 4 do relatório de pontos fracos).
+# Três etapas independentes, cada uma com limite de tempo (um teste travado não segura a fila por horas):
+#   lint      ESLint (JavaScript) e Ruff (Python): erros de verdade, sem mexer no estilo;
+#   rapidos   testes de regra e de API em Python, Worker e testes de invasão da API (sem navegador);
+#   navegador testes de invasão do site no Chrome, no Safari (WebKit) e no Android, com o site servido localmente.
+# Os commits de dados do robô ("Dados atualizados") não disparam: só mudanças de código.
+name: Testes
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - "js/*.js"
+      - "css/**"
+      - "index.html"
+      - "server/**"
+      - "tests/**"
+      - "worker/**"
+      - "app/montar-www.mjs"
+      - "package*.json"
+      - ".github/workflows/testes.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Dependências
+        run: |
+          npm ci --no-audit --no-fund
+          python -m pip install --quiet ruff==0.14.5
+      - name: ESLint
+        timeout-minutes: 4
+        run: npx eslint .
+      - name: Ruff
+        timeout-minutes: 2
+        run: python -m ruff check server tests
+      - name: Sintaxe de todo o JavaScript
+        timeout-minutes: 2
+        run: for f in js/*.js server/*.mjs tests/*.mjs tests/mobile/*.mjs tests/seguranca/*.mjs worker/*.mjs; do node --check "$f" || exit 1; done
+
+  rapidos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Regras do departamento médico
+        timeout-minutes: 3
+        run: python -X utf8 tests/dm_casos.py
+      - name: API do mercado, das fotos e das escalações
+        timeout-minutes: 5
+        run: python -X utf8 tests/mercado_api.py
+      - name: API das competições
+        timeout-minutes: 3
+        run: python -X utf8 tests/competicoes_api.py
+      - name: Worker do placar ao vivo
+        timeout-minutes: 2
+        run: node tests/worker.mjs
+      - name: Testes de invasão da API
+        timeout-minutes: 5
+        run: node tests/seguranca/api.mjs
+
+  navegador:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Playwright (Chromium e WebKit)
+        timeout-minutes: 8
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium webkit
+      - name: Testes de invasão do site (PC, iPhone, Android)
+        timeout-minutes: 8
+        run: |
+          python3 -m http.server 5174 --bind 127.0.0.1 > /dev/null 2>&1 &
+          sleep 2
+          BASE=http://127.0.0.1:5174 node tests/seguranca/site.mjs

@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Bora pro jogo: mapa de calor de quem está sendo arrastado.
    PC (mouse) e Pixel 7 (dedo): segura um lateral, um volante e o centroavante de cada time e confere,
    no meio do arraste, o cartão (nome, posições em %, jogos) e o mapa pintado do lado certo do campo;

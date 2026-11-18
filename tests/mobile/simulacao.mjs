@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Simulação de um jogo hipotético ao vivo (Cruzeiro x Flamengo, ~2min40s) sem nenhum jogo real rolando.
    As respostas da ESPN e da API-Football são simuladas a partir do roteiro em tests/sim/jogo.mjs.
    Três cenários, lado a lado e com o mesmo jogo:

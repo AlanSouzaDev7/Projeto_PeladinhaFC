@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Atraso do placar ao vivo, antes e depois: o mesmo jogo hipotético (Cruzeiro x Flamengo) roda com a ESPN simulada
    em 4 abas ao mesmo tempo, com 10 gols a cada ~21 s (mais que os 12 s da consulta antiga somados aos 7,8 s do alerta,
    para um gol não esperar o alerta do anterior), alternando os clubes:

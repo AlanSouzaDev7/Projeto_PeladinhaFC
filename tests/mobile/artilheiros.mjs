@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Artilheiros: comparativo top 5 dos dois times em todas as partidas da rodada e o card de cada clube.
    Confere: os dois lados preenchidos (até 5), gols em ordem, ficha abre e mostra os gols por clube,
    nada vaza da tela no PC e no celular. Uso: python -m http.server 5174 --bind 127.0.0.1  e depois  node tests/mobile/artilheiros.mjs */

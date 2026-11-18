@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* "O site atualiza sozinho": com jogo rolando, o placar muda o minuto a cada consulta (12 s) e antes isso
    redesenhava a página inteira. Simula a ESPN (relógio do navegador em 04/11/2026 20:20, Athletico x Vasco rolando,
    gol no meio) e confere, no início, no clube, na tabela e na partida: os elementos continuam os mesmos (a página

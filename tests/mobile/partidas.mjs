@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Aba Partidas (temporada inteira) nos 20 clubes, no computador e no celular.
    Uso: servidor rodando e  BASE=... node tests/mobile/partidas.mjs */
 import { chromium, devices } from "playwright";

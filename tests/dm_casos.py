@@ -1,3 +1,4 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """Casos reais de manchetes para o departamento médico: quem é citado e o que a manchete diz dele.
 Uso: python -X utf8 tests/dm_casos.py   (sem internet; só as regras de leitura)"""
 import os

@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Próximas rodadas e placar ao vivo sem a API (como no GitHub Pages), no computador, Android e iPhone.
    Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  BASE=http://127.0.0.1:5173 node tests/mobile/rodadas.mjs */
 import { chromium, webkit, devices } from "playwright";

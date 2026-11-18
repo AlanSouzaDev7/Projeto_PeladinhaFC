@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Janela de transferências (#/clube/<id>/mercado): o fluxo inteiro, como um torcedor faria.
    - dados (js/mercado/*.js): elenco de cada clube da Série A, valores e salários positivos, folha = soma dos salários,
      mercado global com milhares de jogadores e times;

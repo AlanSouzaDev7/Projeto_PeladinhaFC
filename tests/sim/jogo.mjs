@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Jogo hipotético para testes: Cruzeiro x Flamengo, comprimido em ~2min40s.
    Gera, para qualquer instante, a resposta que a ESPN e a API-Football dariam. */
 export const H = { id: "2022", af: 135, club: "cruzeiro", name: "Cruzeiro" };

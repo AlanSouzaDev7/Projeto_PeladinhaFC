@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* "Próximo jogo" passando pelos jogos da rodada e ficha do artilheiro (mouse no PC, toque no celular).
    Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  BASE=http://127.0.0.1:5173 node tests/mobile/proximo-artilheiros.mjs */
 import { chromium, webkit, devices } from "playwright";

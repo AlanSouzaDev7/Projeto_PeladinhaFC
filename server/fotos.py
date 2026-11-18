@@ -1,4 +1,4 @@
-# © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """PLACAR — monitor das fotos dos jogadores: confere se cada jogador dos 20 clubes tem foto, procura a foto atual de
 quem não tem, guarda uma cópia no próprio site e troca quando o clube publica uma nova.
 
@@ -61,7 +61,8 @@ def _arq(nome=CACHE):
 def _ler(nome=CACHE):
     try:
         return json.load(open(_arq(nome), encoding="utf-8"))
-    except Exception:
+    except Exception as ex:
+        P.silencioso("fotos:64", ex)
         return {}
 
 
@@ -85,7 +86,8 @@ def abre(url, timeout=15):
             return r.status == 200 and (tipo.startswith("image/") or tipo in ("", "application/octet-stream", "binary/octet-stream"))
     except urllib.error.HTTPError as ex:
         return False if ex.code in (403, 404, 410) else None
-    except Exception:
+    except Exception as ex:
+        P.silencioso("fotos:88", ex)
         return None
 
 
@@ -305,7 +307,8 @@ def publicadas():
     try:
         s = open(os.path.join(P.ROOT, "js", "fotos.js"), encoding="utf-8").read()
         d = json.JSONDecoder().raw_decode(s[s.index("window.FOTOS = ") + len("window.FOTOS = "):])[0]
-    except Exception:
+    except Exception as ex:
+        P.silencioso("fotos:308", ex)
         return {}
     return {aid: f for c in d.values() for aid, f in (c or {}).items() if f.get("f") != "Wikimedia" and _existe(f.get("u"))}
 
@@ -472,7 +475,7 @@ def gravar_js():
     c = _ler()
     dados = {cid: do_clube(cid, c) for cid in P.CLUBS}
     open(os.path.join(P.ROOT, "js", "fotos.js"), "w", encoding="utf-8", newline="\n").write(
-        "/* PLACAR — fotos dos jogadores, conferidas e guardadas pelo monitor de fotos (server/fotos.py). As fotos dos sites dos "
+        "/* CazéStats.TV · autor: Alan Evangelista de Souza Martins — fotos dos jogadores, conferidas e guardadas pelo monitor de fotos (server/fotos.py). As fotos dos sites dos "
         "clubes, TheSportsDB, ESPN, API-Football e Flickr são privadas do dono (sem licença comercial); o comando de retirada "
         "(MODO_VENDA=1) apaga todas. Gerado por: python server/placar_api.py --snapshot */\nwindow.FOTOS = "
         + json.dumps(P.clean_deep(dados), ensure_ascii=False, separators=(",", ":")) + ";\n")

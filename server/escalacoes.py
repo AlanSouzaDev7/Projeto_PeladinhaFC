@@ -1,4 +1,4 @@
-# © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """Placar.TV — escalação anunciada para o próximo jogo de cada clube da Série A.
 
 Fontes (todas de uso permitido):
@@ -36,7 +36,8 @@ TERMOS = re.compile(r"escala[cç][aã]o|escalad[oa]s?|\btime (para|de hoje)|\bon
 def _ts(data, hora):
     try:
         return calendar.timegm(time.strptime(f"{data} {hora or '00:00'}", "%Y-%m-%d %H:%M")) + 3 * 3600  # horário de Brasília -> UTC
-    except Exception:
+    except Exception as ex:
+        P.silencioso("escalacoes:39", ex)
         return None
 
 
@@ -136,7 +137,8 @@ def atualizar():
     antigo = {}
     try:
         antigo = json.load(open(os.path.join(P.ROOT, "server", "cache", "escalacoes.json"), encoding="utf-8"))
-    except Exception:
+    except Exception as ex:
+        P.silencioso("escalacoes:139", ex)
         pass
     out = {}
     for cid in P.CLUBS:

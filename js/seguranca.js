@@ -1,4 +1,4 @@
-/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
    PLACAR — camada de segurança do navegador
    Carregado no <head>, antes de qualquer outro script. Vale para tudo o que
@@ -106,5 +106,8 @@
     try { console.warn("[PLACAR] bloqueado pela política de segurança:", e.violatedDirective, e.blockedURI || ""); } catch (x) { /* sem console */ }
   });
 
-  window.SEG = Object.freeze({ esc, url, texto, limpa, json, le });
+  // marca d'água de autoria em tempo de execução (não pode ser trocada por outro script da página)
+  const AUTORIA = Object.freeze({ autor: "Alan Evangelista de Souza Martins", usuario: "AlanSouzaDev7", ano: 2026, marcas: ["CazéStats.TV", "433Fut"] });
+  // travado: outro script da página não consegue trocar o SEG nem as funções dele
+  Object.defineProperty(window, "SEG", { value: Object.freeze({ esc, url, texto, limpa, json, le, AUTORIA }), writable: false, configurable: false, enumerable: true });
 })();

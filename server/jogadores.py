@@ -1,4 +1,4 @@
-# © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """PLACAR — jogadores: estatísticas por jogo e da temporada, mapa de calor com os lances reais e fotos com licença livre.
 
 Fontes
@@ -107,7 +107,8 @@ def _cache(nome):
 def _ler(nome):
     try:
         return json.load(open(_cache(nome), encoding="utf-8"))
-    except Exception:
+    except Exception as ex:
+        P.silencioso("jogadores:110", ex)
         return {}
 
 
@@ -672,7 +673,7 @@ def gravar_js(clubes):
     pasta = os.path.join(P.ROOT, "js", "jogadores")
     os.makedirs(pasta, exist_ok=True)
     for cid, d in clubes.items():
-        txt = (f"/* PLACAR — jogadores do clube: estatísticas por jogo, temporada, mapa de calor (lances da ESPN) e fotos livres (Wikimedia Commons). "
+        txt = (f"/* CazéStats.TV · autor: Alan Evangelista de Souza Martins — jogadores do clube: estatísticas por jogo, temporada, mapa de calor (lances da ESPN) e fotos livres (Wikimedia Commons). "
                f"Gerado por: python server/placar_api.py --snapshot */\nwindow.JOGADORES_CLUBE = window.JOGADORES_CLUBE || {{}};\n"
                f"window.JOGADORES_CLUBE[{json.dumps(cid)}] = " + json.dumps(P.clean_deep(d), ensure_ascii=False, separators=(",", ":")) + ";\n")
         open(os.path.join(pasta, f"{cid}.js"), "w", encoding="utf-8", newline="\n").write(txt)

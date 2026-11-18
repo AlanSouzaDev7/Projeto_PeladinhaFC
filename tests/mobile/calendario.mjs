@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Calendário do clube (visão geral), nos 20 clubes.
    - abre no mês atual, com cada jogo no dia certo e todos os jogos do mês na lista (conferido com os dados da temporada);
    - voltar e avançar o mês: meses anteriores com placar, resultado (V/E/D) e local; botões param no começo e no fim da temporada;

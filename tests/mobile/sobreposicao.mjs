@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Revisão visual automática: em cada página e em 5 larguras de tela, procura
    - texto que vaza da própria caixa (sem reticências);
    - elementos vizinhos que se sobrepõem (escudo em cima da data, rótulo em cima de número...);

@@ -1,4 +1,4 @@
-/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. */
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. */
 /* Escudos x textos: em cada página e em várias larguras de tela, confere letra por letra que nenhum texto visível fica
    embaixo (ou em cima) de um escudo, que nenhum escudo encosta em outro e que nenhum escudo sai da tela ou do cartão.
    Também lista o tamanho de cada escudo por página (para ver se ficou num tamanho bom).

@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Som do gol (js/sons.js) — o único som do site.
    - o alerta GOL! toca 5 s de grito de gol com a torcida ao fundo; dois gols juntos tocam um depois do outro;
    - nenhum som ao navegar (nem no "Bora pro jogo", nas estatísticas ou nos rankings) e nenhum botão de som;

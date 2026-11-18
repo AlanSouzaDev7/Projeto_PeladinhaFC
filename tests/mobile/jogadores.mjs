@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Jogadores: busca, página do jogador (visão geral, últimos 10, temporada, mapa de calor, comparar), fotos,
    mapa de calor real no "Bora pro jogo", comparativo de clubes e escudos dos estaduais.
    - dados (js/jogadores/*.js): mapa de calor com orientação certa (goleiros perto do próprio gol, atacantes perto do

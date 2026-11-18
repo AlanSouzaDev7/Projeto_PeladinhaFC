@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Ficha do artilheiro como botão: abre no clique (ou toque), continua aberta ao tirar o mouse e ao rolar
    (a ficha e a página), dá para chegar ao fim dela em telas baixas, e fecha clicando de novo, fora, no ✕ ou com Esc.
    Uso: python -m http.server 5174 --bind 127.0.0.1  e depois  node tests/mobile/ficha-clique.mjs */

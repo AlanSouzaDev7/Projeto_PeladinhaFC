@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Grava em vídeo a entrada num clube (cortina com a faixa do clube) e o "GOL!" do topo.
    Usa o screencast do Chrome (quadros com horário) e monta o MP4 com o ffmpeg do sistema.
    Sai em tests/mobile/out/simulacao-gol-pc.mp4 e simulacao-gol-celular.mp4.

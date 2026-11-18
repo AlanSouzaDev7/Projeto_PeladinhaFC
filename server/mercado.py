@@ -1,4 +1,4 @@
-# © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """PLACAR — Janela de transferências: elenco de cada clube da Série A, emprestados e o mercado global.
 
 Fontes (todas de uso permitido):
@@ -50,7 +50,8 @@ def _cache(nome):
 def _ler(nome):
     try:
         return json.load(open(_cache(nome), encoding="utf-8"))
-    except Exception:
+    except Exception as ex:
+        P.silencioso("mercado:53", ex)
         return {}
 
 
@@ -306,7 +307,8 @@ def _minutos(cid):
 def _posicoes():
     try:
         return _js_obj(("js", "heatmaps.js"), "window.HEATMAPS =").get("players", {})
-    except Exception:
+    except Exception as ex:
+        P.silencioso("mercado:309", ex)
         return {}
 
 
@@ -317,7 +319,8 @@ def _ultimo_xi(cid):
         last = json.JSONDecoder().raw_decode(resto[resto.index("{"):])[0]
         x = last.get(cid) or {}
         return {str(i[1] if isinstance(i, list) else i) for i in (x.get("xi") or x.get("titulares") or [])}
-    except Exception:
+    except Exception as ex:
+        P.silencioso("mercado:320", ex)
         return None
 
 
@@ -332,7 +335,8 @@ def _transferencias(aid):
         tipo = (u.get("type") or "").lower()
         return {"data": (u.get("date") or "")[:10], "tipo": "empréstimo" if "loan" in tipo else "livre" if "free" in tipo else "compra" if (u.get("amount") or 0) > 0 or "fee" in tipo else "não divulgado",
                 "valor": u.get("amount") or None, "texto": P.clean_text(u.get("displayAmount") or "", 20)}
-    except Exception:
+    except Exception as ex:
+        P.silencioso("mercado:335", ex)
         return None
 
 
@@ -358,7 +362,8 @@ def _overview_espn(aid, team_id):
             tot["tit"] += int(float(v.get("starts") or 0)); tot["g"] += int(float(v.get("totalGoals") or 0)); tot["a"] += int(float(v.get("goalAssists") or 0))
             tot["comps"].append(P.clean_text(re.sub(r"^\d{4}(-\d{2})?\s*", "", s.get("displayName") or ""), 40))
         return tot
-    except Exception:
+    except Exception as ex:
+        P.silencioso("mercado:361", ex)
         return None
 
 
@@ -568,12 +573,12 @@ def gravar_js(clubes, glob=None):
             d = enriquecer(cid, d)
         except Exception as ex:
             P.log("mercado: enriquecer", cid, ex)
-        txt = (f"/* PLACAR — janela de transferências do {cid}: elenco, emprestados e folha. Fontes: ESPN, TheSportsDB, Wikipédia, ge, Banco Central; valores de mercado são estimativas. "
+        txt = (f"/* CazéStats.TV · autor: Alan Evangelista de Souza Martins — janela de transferências do {cid}: elenco, emprestados e folha. Fontes: ESPN, TheSportsDB, Wikipédia, ge, Banco Central; valores de mercado são estimativas. "
                f"Gerado por: python server/placar_api.py --snapshot */\nwindow.MERCADO = window.MERCADO || {{}};\nwindow.MERCADO[{json.dumps(cid)}] = "
                + json.dumps(P.clean_deep(d), ensure_ascii=False, separators=(",", ":")) + ";\n")
         open(os.path.join(pasta, f"{cid}.js"), "w", encoding="utf-8", newline="\n").write(txt)
     if glob:
-        txt = ("/* PLACAR — mercado global: elencos das principais ligas (ESPN). Valores: estimativa do PLACAR. Gerado por: python server/placar_api.py --snapshot */\n"
+        txt = ("/* CazéStats.TV · autor: Alan Evangelista de Souza Martins — mercado global: elencos das principais ligas (ESPN). Valores: estimativa do PLACAR. Gerado por: python server/placar_api.py --snapshot */\n"
                "window.MERCADO_GLOBAL = " + json.dumps(P.clean_deep(global_compacto(glob)), ensure_ascii=False, separators=(",", ":")) + ";\n")
         open(os.path.join(pasta, "global.js"), "w", encoding="utf-8", newline="\n").write(txt)
     P.log("mercado gravado em js/mercado/")

@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Campinho do elenco (aba "Elenco" de cada clube): nomes legíveis e sem encostar uns nos outros.
    Para os 20 clubes, no PC (tela cheia e notebook 1280×720), iPhone 15 e Pixel 7:
    - etiquetas de nome do campo que se sobrepõem (nome com nome, ou nome com bolinha de outro jogador)

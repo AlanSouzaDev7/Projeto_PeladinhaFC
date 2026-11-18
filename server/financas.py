@@ -1,4 +1,4 @@
-# © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """PLACAR — situação financeira de cada clube da Série A para a janela de transferências.
 
 O que existe de público e confiável (e o que NÃO existe):
@@ -37,7 +37,8 @@ _NUM = re.compile(r"R\$\s?(\d{1,3}(?:[.,]\d{1,3})?)\s?(bilh[õo]es|bilh[ãa]o|bi
 def _ler():
     try:
         return json.load(open(os.path.join(P.ROOT, "server", "cache", CACHE), encoding="utf-8"))
-    except Exception:
+    except Exception as ex:
+        P.silencioso("financas:40", ex)
         return {}
 
 

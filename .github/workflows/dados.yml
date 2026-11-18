@@ -1,3 +1,4 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 # PLACAR — atualiza os dados do site sem depender de nenhum computador ligado.
 # A cada 30 minutos o GitHub roda a API em modo "snapshot" e grava os arquivos de dados em js/
 # (tabela, jogos, notícias, estatísticas dos jogadores e histórico dos clubes). O GitHub Pages

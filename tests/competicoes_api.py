@@ -1,3 +1,4 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """Competições na API (server/competicoes.py), com jogos simulados.
 - nomes das fases em português (inclusive taças dos estaduais: "taca-rio---final" -> "Taça Rio · final");
 - fase de pontos corridos x mata-mata decidido pelos próprios jogos (cada clube joga no máximo 2 vezes no mata-mata);

@@ -1,4 +1,4 @@
-// © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+// © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 // PLACAR — fotos do elenco nos sites oficiais dos clubes (a foto da temporada, com a camisa atual).
 // Abre a página pública do elenco profissional num navegador (os sites montam o elenco com JavaScript), rola até o fim
 // para as fotos carregarem e grava cada foto com o texto em volta dela: o cruzamento com o elenco (pelo nome) é feito

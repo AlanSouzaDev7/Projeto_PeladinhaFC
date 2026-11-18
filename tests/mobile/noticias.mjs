@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* "Últimas notícias" na página de cada clube: só manchetes que falam do clube (nome ou apelido no título,
    sem "ex-Clube"). Abre os 20 clubes no PC e no celular e confere cada manchete mostrada.
    Uso: python -m http.server 5174 --bind 127.0.0.1  e depois  node tests/mobile/noticias.mjs */

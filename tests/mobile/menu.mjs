@@ -1,4 +1,4 @@
-/* © 2026 Alan Souza (AlanSouzaDev7). Todos os direitos reservados. */
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. */
 /* Menu principal em toda largura de tela: no PC, o do topo; no celular e no tablet, a barra inferior.
    Confere que os 6 itens (Ao vivo, Clubes, Tabela, Simulador, Bora pro jogo, Sobre) estão visíveis, não ficam cobertos
    e levam à página certa com o item marcado. (Antes, abaixo de 900 px o site ficava sem menu nenhum.)

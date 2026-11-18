@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Contraste do texto do topo dos 20 clubes sobre a cena animada (o que se vê de verdade, com a sombra).
    Fotografa o topo com o texto escondido, lê os pixels atrás do nome, dos dados e da frase e calcula o
    contraste com a cor do texto (pixel 90% mais claro, para não contar estrelinhas soltas). Meta: ≥ 4,5:1.

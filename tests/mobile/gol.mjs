@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Confere o "GOL!" do topo dos 20 clubes (js/goal-bug.js).
    - linha do tempo do Cruzeiro em quadros (placar neutro, escudo, GOL!, varredura, 1 · 0, final)
    - estado final dos 20 clubes numa folha só (PC) e no celular (Pixel 7)

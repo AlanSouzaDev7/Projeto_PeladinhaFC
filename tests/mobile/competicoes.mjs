@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Outras competições (#/copa/...): Libertadores, Sul-Americana, Copa do Brasil e estaduais.
    - dados (js/competicoes/*.js): fases na ordem do calendário, gols marcados = sofridos na classificação geral,
      confrontos do mata-mata com o vencedor batendo com o placar somado/pênaltis, artilharia sem passar do total de gols;

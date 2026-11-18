@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* compara quadros por segundo com e sem a animação do topo (para separar o custo da cena do custo do motor) */
 import { webkit, chromium, devices } from "playwright";
 const BASE = process.env.BASE || "http://localhost:8000";

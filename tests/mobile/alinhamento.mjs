@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Procura botões desalinhados em todas as páginas, no PC e no celular:
    - conteúdo fora do centro do botão (texto/ícone mais para cima, baixo ou para um lado)
    - botões vizinhos na mesma linha com alturas ou centros diferentes

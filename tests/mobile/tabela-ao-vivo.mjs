@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Classificação, artilharia e GOL! em tempo real, com a ESPN simulada (relógio do navegador em 04/11/2026 20:20).
    Athletico 1 x 0 Vasco e Flamengo 2 x 0 Grêmio rolando; depois sai o 2º do Athletico (Kevin Viveros).
    Confere: a tabela soma os placares parciais (pontos, jogos, posição, ▲▼ e o placar ao lado do clube),

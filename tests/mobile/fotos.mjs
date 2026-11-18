@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Fotos das páginas principais (PC e celular, claro e escuro) para revisão visual: tests/mobile/out/foto-*.png
    Uso: python -m http.server 5174 --bind 127.0.0.1  e depois  node tests/mobile/fotos.mjs [prefixo] */
 import { chromium, devices } from "playwright";

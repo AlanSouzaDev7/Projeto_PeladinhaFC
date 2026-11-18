@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Testes de invasão da API em Python (server/placar_api.py). Sobe o servidor numa porta de teste e tenta:
    ler arquivos que não são do site (.git, código, chaves locais), atravessar pastas, listar diretórios,
    métodos de escrita, parâmetros forjados, endereço gigante, outro site lendo a API, conexão lenta e
@@ -35,12 +36,12 @@ for (let i = 0; i < 60; i++) { if ((await get("/index.html")).status) break; awa
 try {
   // 1) site normal + cabeçalhos de segurança
   const home = await get("/");
-  ok(home.status === 200 && /PLACAR/.test(home.body), "página inicial servida");
+  ok(home.status === 200 && /Stats\.TV/.test(home.body), "página inicial servida");
   const H = home.headers;
   ok(/frame-ancestors 'none'/.test(H["content-security-policy"] || "") && H["x-frame-options"] === "DENY" && H["x-content-type-options"] === "nosniff" && H["referrer-policy"] && H["permissions-policy"] && H["cross-origin-opener-policy"] === "same-origin",
     "cabeçalhos de segurança em toda resposta (CSP, moldura proibida, nosniff, referência, permissões, isolamento)");
   ok(H.server === "PLACAR", `servidor não revela versão (Server: ${H.server})`);
-  for (const f of ["/js/app.js", "/css/styles.css", "/manifest.webmanifest", "/assets/logo-mark.svg"]) ok((await get(f)).status === 200, `arquivo do site liberado: ${f}`);
+  for (const f of ["/js/app.js", "/css/base.css", "/manifest.webmanifest", "/assets/marca/simbolo.svg"]) ok((await get(f)).status === 200, `arquivo do site liberado: ${f}`);
 
   // 2) arquivos que não são do site nunca saem
   for (const f of ["/.git/config", "/.git/HEAD", "/.gitignore", "/server/config.json", "/server/placar_api.py", "/server/cache/state.json", "/worker/.dev.vars", "/worker/wrangler.toml",

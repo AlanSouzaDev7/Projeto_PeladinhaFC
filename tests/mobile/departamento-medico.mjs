@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Departamento médico na página do clube: quem está fora (situação, desde quando, parte do corpo, quantos veículos
    confirmam e a manchete com link), e na aba Estatísticas também quem voltou ao time na temporada.
    Usa dados fixos (não depende das notícias do dia). Também confere que nada vaza para os lados no celular.

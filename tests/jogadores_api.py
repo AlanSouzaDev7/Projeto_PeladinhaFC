@@ -1,3 +1,4 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
 """Jogadores na API (server/jogadores.py e as rotas em server/placar_api.py), com respostas simuladas.
 - lances: coordenadas de 0 a 100 e de 0 a 1 caem no mesmo lugar; (0, 0) é "sem posição"; lado esquerdo/direito certo;
 - homônimos com o mesmo número da ESPN em dois clubes: cada clube com o seu jogador, sem "também jogou por" falso;

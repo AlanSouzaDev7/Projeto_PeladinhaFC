@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Rankings no celular: segurar o dedo no cartão mostra a prévia, deslizar troca, soltar abre a subpágina.
    Uso: npm run api (em outro terminal) e depois  node tests/mobile/rankings.mjs */
 import { chromium, devices } from "playwright";

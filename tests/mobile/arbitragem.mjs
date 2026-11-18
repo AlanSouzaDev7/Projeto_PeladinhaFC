@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Arbitragem dos próximos jogos pelas manchetes.
    1) a leitura do nome do árbitro nos títulos (server/placar_api.py: ref_names), com casos reais e armadilhas;
    2) a página do jogo: "Árbitro" nas Informações e as manchetes com link quando há escala noticiada,

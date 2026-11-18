@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Simulador da tabela (#/simulador).
    - lista só os jogos que faltam: nada encerrado nem em andamento (um jogo é posto "ao vivo" de propósito);
    - os placares dados mudam pontos, vitórias, saldo e posição exatamente como a conta feita aqui no teste

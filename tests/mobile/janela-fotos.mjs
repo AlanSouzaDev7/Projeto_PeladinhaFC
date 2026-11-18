@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Capturas da janela de transferências (para revisão visual): elenco, reforços com um negócio fechado, escalação 3D
    (com um jogador arrastado para outra posição) e o cartaz, no PC e no celular. Grava em tests/mobile/shots/janela-*.png.
    Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  node tests/mobile/janela-fotos.mjs [clube] [--privado] */

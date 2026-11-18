@@ -79,6 +79,6 @@ def exportar(raiz=None):
                     n += 1
             except (ValueError, OSError) as ex:
                 P.log("dados json:", sub, nome, ex)
-    _gravar("meta", {"quando": int(time.time()), "arquivos": n}, pasta)
+    _gravar("meta", {"quando": int(time.time()), "arquivos": n, "autor": "Alan Evangelista de Souza Martins"}, pasta)
     P.log(f"dados json: {n} arquivos em dados/")
     return n

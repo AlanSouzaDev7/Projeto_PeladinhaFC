@@ -1,3 +1,4 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* Testa o Worker da API-Football sem chave real: a API é simulada.
    Uso: node tests/worker.mjs */
 import assert from "node:assert/strict";
