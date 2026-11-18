@@ -160,7 +160,7 @@ async function lerClube(ctx, cid, url) {
 const saida = process.argv[2] || path.join(RAIZ, "server", "cache", "mercado-fotos-clubes.json");
 const so = process.argv.slice(3);
 const browser = await chromium.launch(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {});
-const ctx = await browser.newContext({ userAgent: "Mozilla/5.0 (compatible; Placar/1.0)", viewport: { width: 1366, height: 900 }, locale: "pt-BR" });
+const ctx = await browser.newContext({ userAgent: "Mozilla/5.0 (compatible; CazeStats/1.0 (+https://alansouzadev7.github.io/Projeto_PeladinhaFC/))", viewport: { width: 1366, height: 900 }, locale: "pt-BR" });
 const resultado = { quando: Date.now() / 1000, clubes: {} };
 for (const [cid, url] of Object.entries(PAGINAS)) {
   if (so.length && !so.includes(cid)) continue;

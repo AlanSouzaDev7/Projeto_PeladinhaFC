@@ -108,6 +108,8 @@ def avisar_falha(etapa, ex):
         print(f"::error title=Robô de dados::falha em {etapa}: {str(ex)[:200]}", flush=True)
 
 
+# identificação do robô com contato (J9): o Wikimedia e outros pedem um endereço para falar com o responsável
+UA = "CazeStats/1.0 (+https://alansouzadev7.github.io/Projeto_PeladinhaFC/)"
 PROXIES_CONFIAVEIS = {x.strip() for x in os.environ.get("PROXIES_CONFIAVEIS", "").split(",") if x.strip()}
 MAX_BYTES = 15 * 1024 * 1024   # nenhuma resposta de fonte de dados passa disso
 
@@ -115,7 +117,7 @@ MAX_BYTES = 15 * 1024 * 1024   # nenhuma resposta de fonte de dados passa disso
 def get(url, timeout=20, headers=None):
     if not str(url).startswith("https://"):
         raise ValueError("só endereços https")
-    req = urllib.request.Request(url, headers={"User-Agent": "Placar/1.0", "Accept-Encoding": "gzip", **(headers or {})})
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Encoding": "gzip", **(headers or {})})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         if not r.geturl().startswith("https://"):
             raise ValueError("redirecionado para endereço sem https")

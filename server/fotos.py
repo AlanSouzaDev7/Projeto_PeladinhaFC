@@ -80,7 +80,7 @@ def abre(url, timeout=15):
     if not str(url or "").startswith("https://"):
         return False
     try:
-        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "Placar/1.0"})
+        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": P.UA})
         with urllib.request.urlopen(req, timeout=timeout) as r:
             tipo = r.headers.get("Content-Type", "")
             return r.status == 200 and (tipo.startswith("image/") or tipo in ("", "application/octet-stream", "binary/octet-stream"))

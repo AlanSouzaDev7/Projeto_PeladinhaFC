@@ -126,15 +126,25 @@ jobs:
           key: partidas-${{ github.run_id }}
 
       - name: Publicar se algo mudou
+        env:
+          DADOS_NO_RAMO: ${{ vars.DADOS_NO_RAMO }}
         run: |
-          git config user.name "placar-bot"
+          git config user.name "cazestats-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add js/live-data.js js/player-stats.js js/club-form.js js/heatmaps.js js/departamento-medico.js js/raio-x.js js/jogadores/ js/squads.js js/competicoes/ js/mercado/ js/escalacoes.js js/fotos.js dados/
-          git add -A img/jogadores/ 2>/dev/null || true   # cópias das fotos (o comando de retirada apaga a pasta)
-          if git diff --cached --quiet; then
-            echo "Nada novo."
+          ARQS="js/live-data.js js/player-stats.js js/club-form.js js/heatmaps.js js/departamento-medico.js js/raio-x.js js/jogadores js/squads.js js/competicoes js/mercado js/escalacoes.js js/fotos.js dados img/jogadores"
+          if [ "$DADOS_NO_RAMO" = "1" ]; then
+            # ponto 5: os dados vão para o ramo "dados" e o main só recebe código (o workflow Publicar junta os dois)
+            git fetch origin dados 2>/dev/null && git worktree add /tmp/ramo origin/dados -B dados || git worktree add --orphan -b dados /tmp/ramo
+            for a in $ARQS; do [ -e "$a" ] && mkdir -p "/tmp/ramo/$(dirname "$a")" && rm -rf "/tmp/ramo/$a" && cp -r "$a" "/tmp/ramo/$a"; done
+            cd /tmp/ramo && git add -A && { git diff --cached --quiet && echo "Nada novo." || { git commit -q -m "Dados atualizados ($(date '+%d/%m %H:%M'))" && git push origin dados; }; }
           else
-            git commit -m "Dados atualizados ($(date '+%d/%m %H:%M'))"
-            git pull --rebase origin main
-            git push
+            git add $ARQS 2>/dev/null || true
+            git add -A img/jogadores/ 2>/dev/null || true   # cópias das fotos (o comando de retirada apaga a pasta)
+            if git diff --cached --quiet; then
+              echo "Nada novo."
+            else
+              git commit -m "Dados atualizados ($(date '+%d/%m %H:%M'))"
+              git pull --rebase origin main
+              git push
+            fi
           fi

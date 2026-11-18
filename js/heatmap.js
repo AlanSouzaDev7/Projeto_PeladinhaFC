@@ -118,15 +118,14 @@
     return fotosProm.then(() => (window.FOTOS || {})[cid] || null);
   }
   async function comFotosPrivadas(cid, d) {
+    if (!d || d._fotosPriv) return d;
+    // regra do dono: foto de jogador da Wikipédia (ou Flickr antiga) nunca aparece, em nenhum modo; sem foto atual da
+    // temporada, fica o número da camisa
+    for (const j of Object.values(d.jogadores || {})) if (j.foto && !j.foto.privada) delete j.foto;
     const M = window.MERCADO_UI;
-    if (!d || d._fotosPriv || !M?.fotosLigadas?.()) return d;
+    if (!M?.fotosLigadas?.()) { d._fotosPriv = true; return d; }
     try {
       const F = await carregaFotos(cid);
-      // com as fotos privadas no ar, a foto livre antiga (Wikipédia, Flickr) não aparece: sem foto atual, fica o número
-      // (no modo venda o arquivo só tem as livres, e elas continuam)
-      const temPrivadas = Object.values(window.FOTOS || F || {}).some((c) => Object.values(c || {}).some((f) => f && f.f && f.f !== "Wikimedia"))
-        || Object.values(F || {}).some((f) => f && f.f && f.f !== "Wikimedia");
-      if (temPrivadas) for (const j of Object.values(d.jogadores || {})) if (j.foto && !j.foto.privada) delete j.foto;
       for (const [aid, f] of Object.entries(F || {})) {
         const j = d.jogadores?.[aid];
         if (!j || !f?.u || f.f === "Wikimedia") continue;

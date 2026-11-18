@@ -6,8 +6,13 @@
    devolve só os jogos dos 20 clubes, já no formato do site.
 
    Rotas:
-     GET /ao-vivo   jogos de hoje dos 20 clubes: placar, situação, relógio e lances
-     GET /saude     se a chave está configurada e quantas consultas restam hoje
+     GET /ao-vivo            jogos de hoje dos 20 clubes: placar, situação, relógio e lances
+     GET /saude              se a chave está configurada e quantas consultas restam hoje
+     GET /espn/<host>/<api>  placar, resumo e agenda da ESPN com cache de borda (worker/plataforma.mjs)
+     POST /busca, GET /em-alta              contagem de buscas (banco D1; reserva: Workers KV)
+     POST /erro                              erro de JavaScript de um visitante (banco D1, sem dado pessoal)
+     POST /escalacao, GET /escalacao/<id>    escalação compartilhada por link curto (banco D1)
+   Cron (wrangler.toml): a cada 30 min dispara o robô de dados do GitHub e limpa registros antigos do banco.
 
    Economia de consultas (o plano grátis dá ~100 por dia):
      - a lista de jogos do dia é baixada no máximo a cada LISTA_SEGUNDOS (padrão 30 min);
@@ -17,6 +22,8 @@
      - quando o limite do dia está no fim, o Worker para de consultar até a meia-noite
        (UTC, quando a API-Football renova o limite) e o site volta para a ESPN sozinho.
    ========================================================================== */
+
+import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo } from "./plataforma.mjs";
 
 const BASE = "https://v3.football.api-sports.io";
 
@@ -119,7 +126,9 @@ let bloqueadoAte = 0, restantes = null;
 function guardado(key, ms, fn) {
   const hit = mem.get(key);
   if (hit && Date.now() - hit.t < ms) return hit.p;
-  const p = fn();
+  // a memória desta instância vale só para ela; o cache compartilhado da Cloudflare vale para todas (E7):
+  // em escala, várias instâncias não gastam a cota da API-Football cada uma por conta própria
+  const p = guardaCompartilhado(`af:${key}`, Math.round(ms / 1000), fn);
   mem.set(key, { t: Date.now(), p });
   p.catch(() => mem.delete(key));
   return p;
@@ -215,7 +224,30 @@ export default {
     if (req.url.length > 512) return json({ erro: "endereço longo demais" }, 414);
     const path = new URL(req.url).pathname.replace(/\/+$/, "");
     // a única escrita: contar uma busca (corpo de até 200 bytes, só ids de clube ou jogador)
+    if (req.method === "POST" && path === "/erro") {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      const txt = await req.text();
+      if (!txt || txt.length > 600) return json({ erro: "corpo inválido" }, 400);
+      let d;
+      try { d = JSON.parse(txt); } catch { return json({ erro: "corpo inválido" }, 400); }
+      return (await registraErro(env, d)) ? json({ ok: true }) : json({ erro: "erro inválido" }, 400);
+    }
+    if (req.method === "POST" && path === "/escalacao") {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      if (+(req.headers.get("content-length") || 0) > 8192) return json({ erro: "escalação grande demais" }, 413);
+      const id = await salvaEscalacao(env, await req.text());
+      return id ? json({ ok: true, id }) : json({ erro: "escalação inválida" }, 400);
+    }
     if (req.method === "POST" && path === "/busca") {
+      if (env.DB) {
+        if (+(req.headers.get("content-length") || 0) > 200) return json({ erro: "corpo inválido" }, 400);
+        let d;
+        try { d = JSON.parse(await req.text()); } catch { return json({ erro: "corpo inválido" }, 400); }
+        const k = `${d && d.t}:${d && d.id}`;
+        if (!BUSCA_OK.test(k)) return json({ erro: "busca inválida" }, 400);
+        await contaBuscaD1(env, k, horaUTC());
+        return json({ ok: true });
+      }
       if (!env.BUSCAS) return json({ erro: "contagem de buscas não configurada" }, 503);
       if (+(req.headers.get("content-length") || 0) > 200) return json({ erro: "corpo inválido" }, 400);
       const txt = await req.text();
@@ -230,12 +262,22 @@ export default {
     }
     // fora isso, só leitura: qualquer outro método é recusado
     if (req.method !== "GET" && req.method !== "HEAD") return new Response(null, { status: 405, headers: { ...cors, allow: "GET, HEAD, POST, OPTIONS" } });
+    const espn = path.startsWith("/espn/") ? rotaEspn(path, new URL(req.url).search) : null;
+    if (path.startsWith("/espn/")) return espn ? repassaEspn(espn, cors) : json({ erro: "caminho da ESPN não permitido" }, 400);
+    if (path.startsWith("/escalacao/")) {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      const d = await lerEscalacao(env, path.slice("/escalacao/".length));
+      return d ? new Response(JSON.stringify(d), { headers: { ...cors, "cache-control": "public, max-age=86400" } }) : json({ erro: "escalação não encontrada" }, 404);
+    }
     if (path === "/em-alta") {
-      if (!env.BUSCAS) return json({ erro: "contagem de buscas não configurada", itens: [] }, 503);
+      if (!env.BUSCAS && !env.DB) return json({ erro: "contagem de buscas não configurada", itens: [] }, 503);
       const cache = typeof caches !== "undefined" ? caches.default : null, chave = new Request(new URL("/em-alta", req.url).toString());
       const hit = cache && (await cache.match(chave));
       if (hit) return hit;
-      const r = new Response(JSON.stringify(await emAlta(env)), { headers: { ...cors, "cache-control": "public, max-age=300" } });
+      const dados = env.DB
+        ? { updated: new Date().toISOString(), horas: 24, itens: await emAltaD1(env, Array.from({ length: 24 }, (_, i) => horaUTC(Date.now() - i * 3600e3))) }
+        : await emAlta(env);
+      const r = new Response(JSON.stringify(dados), { headers: { ...cors, "cache-control": "public, max-age=300" } });
       if (cache) await cache.put(chave, r.clone());
       return r;
     }
@@ -250,5 +292,10 @@ export default {
       console.error("ao-vivo:", e && e.message);
       return json({ erro: "fonte indisponível", esgotado: Date.now() < bloqueadoAte, games: [] }, 503);
     }
+  },
+  // gatilho de cron (wrangler.toml, [triggers]): agendador confiável do robô de dados (ponto 6) e limpeza do banco
+  async scheduled(evento, env, ctx) {
+    ctx.waitUntil(disparaRobo(env).then((r) => console.log("robô:", r)));
+    if (env.DB) ctx.waitUntil(limpaAntigos(env));
   },
 };

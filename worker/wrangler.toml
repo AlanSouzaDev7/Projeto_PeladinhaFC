@@ -1,24 +1,35 @@
 # © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
-# Cloudflare Worker do placar ao vivo (API-Football). Passo a passo em worker/README.md.
-name = "placar-ao-vivo"
+# Cloudflare Worker do CazéStats.TV: placar ao vivo, repasse da ESPN com cache de borda, banco D1 e agendador do robô.
+# Tudo cabe no plano gratuito. Passo a passo em docs/HOSPEDAGEM.md.
+name = "cazestats-api"
 main = "ao-vivo.mjs"
 compatibility_date = "2024-09-23"
 
 [vars]
-# endereço do site que pode ler o Worker ("*" libera qualquer um)
-ORIGEM = "https://alansouzadev7.github.io"
-# placar e lances: consulta a API-Football no máximo a cada N segundos durante os jogos
-# plano grátis (100 consultas/dia): use 240 ou mais; planos pagos: 15
-INTERVALO_SEGUNDOS = "15"
-# lista de jogos do dia: no máximo a cada N segundos
+# endereço do site que pode ler o Worker ("*" libera qualquer um; o app Android lê com origem própria)
+ORIGEM = "*"
+# repositório cujo robô de dados o agendador dispara
+GITHUB_REPO = "AlanSouzaDev7/Projeto_PeladinhaFC"
+# placar e lances da API-Football: no máximo a cada N segundos (plano grátis, 100 consultas/dia: 240 ou mais)
+INTERVALO_SEGUNDOS = "240"
 LISTA_SEGUNDOS = "1800"
-# para de consultar quando restarem N consultas no dia (o site volta para a ESPN)
 RESERVA = "2"
 
-# a chave NÃO fica aqui: rode  npx wrangler secret put API_FOOTBALL_KEY
+# segredos (nunca neste arquivo):
+#   npx wrangler secret put API_FOOTBALL_KEY     (opcional: placar pela API-Football)
+#   npx wrangler secret put GITHUB_DISPARO       (token do GitHub só com permissão "Actions: write" neste repositório)
 
-# opcional: contagem de buscas para o "Em alta" da busca do site (só contagens por clube/jogador).
-# Crie com  npx wrangler kv namespace create BUSCAS  e cole o id abaixo (sem isso, o site mostra "Em destaque").
+# agendador do robô de dados (ponto 6): a cada 30 min, sem depender do agendamento do GitHub
+[triggers]
+crons = ["*/30 * * * *"]
+
+# banco D1 (opcional): npx wrangler d1 create cazestats  e cole o id abaixo; depois rode worker/schema.sql
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "cazestats"
+# database_id = "COLE_O_ID_AQUI"
+
+# reserva antiga do "Em alta" (sem o D1): npx wrangler kv namespace create BUSCAS
 # [[kv_namespaces]]
 # binding = "BUSCAS"
 # id = "COLE_O_ID_AQUI"

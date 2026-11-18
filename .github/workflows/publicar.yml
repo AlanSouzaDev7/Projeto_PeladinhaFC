@@ -1,0 +1,77 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE).
+# CazéStats.TV — publica o site montado (scripts/montar-site.mjs: versão nos arquivos, cache, robots e sitemap).
+#   Cloudflare Pages: quando existirem os segredos CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID (passo a passo em
+#   docs/HOSPEDAGEM.md). Endereço gratuito: https://<projeto>.pages.dev
+#   GitHub Pages por Actions: quando a variável PAGES_POR_ACTIONS = 1 (e, em Settings > Pages, a fonte "GitHub Actions").
+# Dados fora do main (ponto 5): com a variável DADOS_NO_RAMO = 1 o robô grava os dados no ramo "dados" e esta
+# publicação junta o código do main com os dados desse ramo.
+name: Publicar
+
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: ["Atualizar dados"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: publicar
+  cancel-in-progress: true
+
+jobs:
+  montar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      cloudflare: ${{ steps.alvos.outputs.cloudflare }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Dados do ramo "dados" (ponto 5)
+        if: vars.DADOS_NO_RAMO == '1'
+        run: |
+          git fetch --depth=1 origin dados && git checkout origin/dados -- dados js/live-data.js js/player-stats.js js/club-form.js js/heatmaps.js js/departamento-medico.js js/raio-x.js js/squads.js js/escalacoes.js js/fotos.js js/jogadores js/competicoes js/mercado img/jogadores || echo "ramo dados ainda vazio: publica os dados do main"
+      - name: Montar o site
+        run: node scripts/montar-site.mjs _site
+      - name: Para onde publicar
+        id: alvos
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo "cloudflare=$([ -n "$CF_TOKEN" ] && echo sim || echo nao)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: _site
+
+  cloudflare:
+    needs: montar
+    if: needs.montar.outputs.cloudflare == 'sim'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: github-pages
+      - name: Publicar no Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mkdir -p _site && tar -xf artifact.tar -C _site
+          npx --yes wrangler@4.48.0 pages deploy _site --project-name "${{ vars.CLOUDFLARE_PROJETO || 'cazestats' }}" --branch main
+
+  github-pages:
+    needs: montar
+    if: vars.PAGES_POR_ACTIONS == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.publicar.outputs.page_url }}
+    steps:
+      - id: publicar
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
