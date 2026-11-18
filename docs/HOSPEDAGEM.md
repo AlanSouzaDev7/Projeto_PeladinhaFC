@@ -20,6 +20,19 @@
 **Recomendação:** Cloudflare (Pages + Workers + D1). É o único da lista com tráfego sem limite e uso comercial no
 plano grátis, e o mesmo painel cobre site, API, cache de borda, agendador e banco.
 
+## Situação (18/11/2026)
+
+| Peça | Endereço | Estado |
+|---|---|---|
+| Site (Cloudflare Pages) | https://cazestats.pages.dev | no ar (primeira publicação feita pelo terminal) |
+| Worker | https://cazestats-api.alanmartinsdesouza07.workers.dev | no ar, com banco D1 `cazestats` e cron de 30 min |
+| Publicação automática pelo GitHub | workflow Publicar | falta o dono criar os segredos `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID` |
+| GitHub Pages | https://alansouzadev7.github.io/Projeto_PeladinhaFC/ | continua no ar em paralelo |
+
+Ao criar o token pelo modelo "Edit Cloudflare Workers", **apague a regra "Edit Zone policy"** (pede um domínio, que o projeto
+não tem) e confira as permissões Workers Scripts, Cloudflare Pages e D1 como Edit.
+A ESPN recusa `site.web.api.espn.com` vindo da Cloudflare: o Worker busca sempre em `site.api.espn.com` (mesmos caminhos).
+
 ## O que já está pronto no código
 
 | Peça | Arquivo | O que resolve |

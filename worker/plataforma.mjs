@@ -45,7 +45,9 @@ export function rotaEspn(pathname, search) {
   const m = /^\/espn\/([a-z.]+)(\/apis\/.+)$/.exec(pathname);
   if (!m || !ESPN_HOSTS.has(m[1]) || !ESPN_OK.test(m[2]) || !ESPN_PARAMS.test((search || "").replace(/^\?/, ""))) return null;
   const ttl = /\/(scoreboard|summary)$/.test(m[2]) ? 2 : 60;
-  return { url: `https://${m[1]}${m[2]}${search || ""}`, ttl };
+  // a ESPN recusa (403) site.web.api.espn.com vindo dos servidores da Cloudflare; site.api.espn.com tem os mesmos
+  // caminhos e responde normal (conferido em 18/11/2026)
+  return { url: `https://site.api.espn.com${m[2]}${search || ""}`, ttl };
 }
 export async function repassaEspn(alvo, cors) {
   const cache = typeof caches !== "undefined" ? caches.default : null;
@@ -56,7 +58,7 @@ export async function repassaEspn(alvo, cors) {
   const r = await fetch(alvo.url, { headers: { accept: "application/json", "user-agent": "CazeStats/1.0 (+https://alansouzadev7.github.io/Projeto_PeladinhaFC/)" }, cf: { cacheTtl: alvo.ttl } });
   const corpo = await r.text();
   if (corpo.length > 3e6) return new Response(JSON.stringify({ erro: "resposta grande demais" }), { status: 502, headers: cors });
-  const resp = new Response(corpo, { status: r.ok ? 200 : 502, headers: { ...cors, "cache-control": `public, max-age=${alvo.ttl}`, "x-cache": "MISS" } });
+  const resp = new Response(corpo, { status: r.ok ? 200 : 502, headers: { ...cors, "cache-control": r.ok ? `public, max-age=${alvo.ttl}` : "no-store", "x-cache": "MISS", "x-origem": String(r.status) } });
   if (cache && r.ok) await cache.put(alvo.url, new Response(corpo, { headers: { "cache-control": `public, max-age=${alvo.ttl}`, "content-type": "application/json" } }));
   return resp;
 }

@@ -1,7 +1,7 @@
 /* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
    CazéStats.TV — rede: escala e observabilidade pelo Worker da Cloudflare (worker/ao-vivo.mjs)
-   Liga só quando PLACAR_CONFIG.aoVivo tem o endereço do Worker (vazio: o site funciona como antes).
+   Liga só quando PLACAR_CONFIG.api (ou aoVivo) tem o endereço do Worker (vazio: o site funciona como antes).
      1) Escala (E1 do relatório): toda consulta do site à ESPN vai para <Worker>/espn/<host>/<caminho>, que guarda a
         resposta na borda por 1 a 2 s. Mil visitantes num jogo = uma consulta por segundo à ESPN. Se o Worker falhar,
         a mesma consulta vai direto à ESPN (o placar nunca para por causa do Worker).
@@ -10,7 +10,7 @@
    ========================================================================== */
 (() => {
   "use strict";
-  const base = ((window.PLACAR_CONFIG && window.PLACAR_CONFIG.aoVivo) || "").replace(/\/+$/, "");
+  const base = ((window.PLACAR_CONFIG && (window.PLACAR_CONFIG.api || window.PLACAR_CONFIG.aoVivo)) || "").replace(/\/+$/, "");
   if (!/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(base)) return;
   const ESPN = /^https:\/\/(site\.api\.espn\.com|site\.web\.api\.espn\.com)(\/apis\/[^?#]*)(\?[^#]*)?$/;
   const original = window.fetch.bind(window);

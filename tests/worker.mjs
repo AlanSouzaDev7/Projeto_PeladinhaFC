@@ -89,6 +89,7 @@ await t("repasse da ESPN: só caminhos conhecidos, com cache curto no placar", a
   const ok = rotaEspn("/espn/site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard", "?dates=20261117");
   assert.equal(ok.ttl, 2); assert.equal(ok.url, "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261117");
   assert.equal(rotaEspn("/espn/site.api.espn.com/apis/site/v2/sports/soccer/bra.1/teams/6273/roster", "").ttl, 60);
+  assert.equal(rotaEspn("/espn/site.web.api.espn.com/apis/v2/sports/soccer/bra.1/standings", "").url, "https://site.api.espn.com/apis/v2/sports/soccer/bra.1/standings");
   assert.equal(rotaEspn("/espn/evil.com/apis/site/v2/sports/soccer/bra.1/scoreboard", ""), null);
   assert.equal(rotaEspn("/espn/site.api.espn.com/apis/../../etc/passwd", ""), null);
   assert.equal(rotaEspn("/espn/site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard", "?x=<script>"), null);

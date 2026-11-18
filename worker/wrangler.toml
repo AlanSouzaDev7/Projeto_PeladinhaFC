@@ -23,11 +23,11 @@ RESERVA = "2"
 [triggers]
 crons = ["*/30 * * * *"]
 
-# banco D1 (opcional): npx wrangler d1 create cazestats  e cole o id abaixo; depois rode worker/schema.sql
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "cazestats"
-# database_id = "COLE_O_ID_AQUI"
+# banco D1 (criado em 18/11/2026; tabelas em worker/schema.sql)
+[[d1_databases]]
+binding = "DB"
+database_name = "cazestats"
+database_id = "b1d7b3bf-78fa-4171-ac27-4c0ded3b707b"
 
 # reserva antiga do "Em alta" (sem o D1): npx wrangler kv namespace create BUSCAS
 # [[kv_namespaces]]

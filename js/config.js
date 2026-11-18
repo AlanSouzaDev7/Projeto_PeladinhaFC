@@ -6,6 +6,9 @@
    intervalo: de quantos em quantos segundos o site consulta o Worker durante os jogos
               (use o mesmo INTERVALO_SEGUNDOS do worker/wrangler.toml). */
 window.PLACAR_CONFIG = {
+  /* api: Worker da Cloudflare do CazéStats.TV (worker/): repasse da ESPN com cache de borda, "Em alta", banco D1
+     e registro de erros (js/rede.js). Vazio: o site consulta tudo direto. */
+  api: "https://cazestats-api.alanmartinsdesouza07.workers.dev",
   aoVivo: "",
   intervalo: 15,
   /* hinos: ids dos clubes com o instrumental do hino LICENCIADO em media/hinos/<id>.mp3 (ex.: ["cruzeiro"]).

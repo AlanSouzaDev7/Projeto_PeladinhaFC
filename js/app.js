@@ -2139,7 +2139,7 @@
   function mostrar(html) { results.innerHTML = html; results.classList.toggle("open", !!html); sel = 0; }
   // em alta: API > Worker > destaque calculado aqui (sem servidor)
   let alta = null;
-  const altaBase = () => (LIVE.on() ? "/api" : String(window.PLACAR_CONFIG?.aoVivo || "").replace(/\/+$/, ""));
+  const altaBase = () => (LIVE.on() ? "/api" : String(window.PLACAR_CONFIG?.api || window.PLACAR_CONFIG?.aoVivo || "").replace(/\/+$/, ""));
   function emAlta() {
     if (alta && Date.now() - alta.t < 5 * 60e3) return alta.p;
     const base = altaBase();
