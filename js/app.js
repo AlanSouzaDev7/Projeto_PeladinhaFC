@@ -1141,6 +1141,7 @@
           ${voteCard(m)}
           <div class="card"><div class="card-h">Na tabela</div>${standingsTable(both, null, true)}${sourceNote}</div>
           ${scorersDuel(m)}
+          ${window.CONFRONTO ? CONFRONTO.card(m) : ""}
         </div>
       </div>
       ${window.TATICA ? TATICA.cardPartida(m) : ""}`;
@@ -1855,6 +1856,7 @@
     if (state.route.page === "jogador") JOGADOR.mount(view);
     JOGADOR.montaNotas?.(view); // notas da partida (página do jogo)
     window.TATICA?.mount(view); // campinho tático da partida e aba Escalações do clube
+    window.CONFRONTO?.mount(view); // confronto direto da partida (histórico do banco)
     COPA.mount(view); // página de competição; nas outras, só centraliza a barra de competições
     MERCADO_UI.mount(view); // janela de transferências (aba "Janela" do clube)
     // fotos dos jogadores (licença livre, Wikimedia Commons) nas listas de estatísticas; o nome abre a página do jogador

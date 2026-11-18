@@ -27,6 +27,8 @@ for (const [nome, opts] of [["pc", { viewport: { width: 1366, height: 900 } }], 
   const link = await p.evaluate(() => document.querySelector('a[href^="#/partida/"]').getAttribute("href"));
   await p.goto(`${BASE}/?t=${Date.now()}${link}`, { waitUntil: "load" });
   ok(await espera(p, () => document.querySelectorAll("[data-tatica] .lu-pitch [data-slot='xi']").length === 11), `${nome}: campinho tático na página da partida`);
+  // confronto direto (js/confronto.js): preenchido pelo histórico do banco ou, sem ele, pela temporada
+  ok(await espera(p, () => { const c = document.querySelector("[data-confronto] .cd-corpo"); return c && !/Buscando/.test(c.textContent) && /venceu|ainda não se enfrentaram/.test(c.textContent); }), `${nome}: confronto direto na página da partida`);
   ok(await p.evaluate(() => document.querySelectorAll("[data-tat-lado]").length === 2), `${nome}: os dois times podem ser editados`);
   if (nome === "pc") {
     const r = await p.evaluate(async () => {
