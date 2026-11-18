@@ -1,0 +1,24 @@
+{
+  "name": "433fut-app",
+  "private": true,
+  "version": "2.0.0",
+  "description": "433Fut 2.0 — app Android do CazéStats.TV (Capacitor). Autor: Alan Evangelista de Souza Martins.",
+  "author": "Alan Evangelista de Souza Martins",
+  "scripts": {
+    "montar": "node montar-www.mjs",
+    "android": "node montar-www.mjs && npx cap sync android && cd android && gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.2",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.2"
+  }
+}
