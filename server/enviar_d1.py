@@ -7,7 +7,8 @@ Com os dados no banco, o site lê deles direto (js/dados.js) e só é republicad
 Como:
   1. pergunta ao Worker o hash de cada arquivo guardado (GET /dados/_lista);
   2. envia só os que mudaram (PUT /dados/<nome>.json, com o sha-256 no cabeçalho x-hash);
-  3. envia o meta.json por último, para o aviso de "dados de HH:MM" só mudar quando tudo já chegou.
+  3. envia o meta.json por último, para o aviso de "dados de HH:MM" só mudar quando tudo já chegou;
+  4. envia os jogos para o histórico (tabela jogos, POST /jogos, em lotes): o banco só regrava o que mudou.
 Cada JSON é validado antes de sair daqui (o Worker não interpreta o conteúdo, para caber em 10 ms de CPU).
 
 Uso:  ROBO_CHAVE=... python server/enviar_d1.py [--api https://...workers.dev]
@@ -24,10 +25,14 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import historico_jogos  # noqa: E402  (módulo irmão, também só biblioteca padrão)
+
 RAIZ = Path(__file__).resolve().parent.parent
 DADOS = RAIZ / "dados"
 NOME_OK = re.compile(r"^(meta|[a-z][a-z-]{1,30}(/[a-z0-9][a-z0-9-]{0,30})?)$")  # o mesmo do Worker
 MAX = 1_900_000
+LOTE_JOGOS = 400  # ~150 KB por pedido
 UA = "CazeStats-robo/1.0 (+https://cazestats.pages.dev)"
 
 
@@ -110,13 +115,34 @@ def enviar(api, chave):
     return 1 if falhas else 0
 
 
+def enviar_jogos(api, chave):
+    """Histórico: manda todos os jogos em lotes; o banco só grava os novos e os que mudaram (placar, estado...)."""
+    jogos = historico_jogos.coleta()
+    url = api.rstrip("/") + "/jogos"
+    gravados = falhas = 0
+    for i in range(0, len(jogos), LOTE_JOGOS):
+        corpo = json.dumps(jogos[i : i + LOTE_JOGOS], ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        st, resp = pedido("POST", url, chave, corpo, {"content-type": "application/json"})
+        if st == 200:
+            gravados += json.loads(resp).get("gravados", 0)
+        else:
+            falhas += 1
+            print(f"  ! jogos {i}-{i + LOTE_JOGOS}: {st} {resp[:160]!r}", file=sys.stderr)
+    print(f"histórico: {len(jogos)} jogos conferidos, {gravados} novos ou alterados, {falhas} lotes com falha")
+    return 1 if falhas else 0
+
+
 def main():
     api = sys.argv[sys.argv.index("--api") + 1] if "--api" in sys.argv else os.environ.get("CAZE_API") or api_da_config()
     chave = (os.environ.get("ROBO_CHAVE") or "").strip()
     if not api or not chave:
         print("banco D1 não configurado (falta ROBO_CHAVE ou o endereço do Worker): nada enviado")
         return 2
-    return enviar(api, chave)
+    r = enviar(api, chave)
+    # o histórico não decide a publicação do site: falha aqui só fica registrada (os dados do site já chegaram)
+    if r == 0 and enviar_jogos(api, chave):
+        print("aviso: o histórico de jogos não foi atualizado nesta rodada", file=sys.stderr)
+    return r
 
 
 if __name__ == "__main__":

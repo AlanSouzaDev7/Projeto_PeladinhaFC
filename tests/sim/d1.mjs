@@ -9,7 +9,7 @@ export function d1Simulado(schema = new URL("../../worker/schema.sql", import.me
   db.exec(fs.readFileSync(schema, "utf8"));
   const stmt = (sql, args = []) => ({
     bind: (...a) => stmt(sql, a),
-    run: async () => (db.prepare(sql).run(...args), { success: true }),
+    run: async () => ({ success: true, meta: { changes: Number(db.prepare(sql).run(...args).changes) } }),
     first: async () => db.prepare(sql).get(...args) ?? null,
     all: async () => ({ results: db.prepare(sql).all(...args) }),
   });

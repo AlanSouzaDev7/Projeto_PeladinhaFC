@@ -55,6 +55,19 @@ try {
     assert.equal(r.status, 200);
     assert.equal(await r.text(), fs.readFileSync("dados/raio-x.json", "utf8"));
   });
+  await t("histórico: todos os jogos dos arquivos chegam ao banco; na rodada seguinte nada é regravado", async () => {
+    const total = DB._db.prepare("SELECT COUNT(*) n FROM jogos").get().n;
+    const r = await roda();
+    assert.match(r.saida, new RegExp(`histórico: ${total} jogos conferidos, 0 novos ou alterados, 0 lotes com falha`));
+    assert.ok(total > 1000, `só ${total} jogos`);
+    assert.equal(DB._db.prepare("SELECT COUNT(*) n FROM jogos WHERE liga = 'bra.1'").get().n, 380); // a Série A inteira
+  });
+  await t("histórico: consulta de um clube da Série A em todas as competições", async () => {
+    const d = await (await fetch(`${api}/jogos?clube=cruzeiro&temporada=2026&limite=200`)).json();
+    assert.ok(d.jogos.length >= 38);
+    assert.ok(new Set(d.jogos.map((j) => j.liga)).size >= 3, "esperava Brasileirão, copa e estadual");
+    assert.equal(d.resumo.jogos, d.jogos.filter((j) => j.estado === "post").length);
+  });
 } finally {
   srv.close();
 }

@@ -27,7 +27,8 @@ plano grátis, e o mesmo painel cobre site, API, cache de borda, agendador e ban
 | Site (Cloudflare Pages) | https://cazestats.pages.dev | no ar (primeira publicação feita pelo terminal) |
 | Worker | https://cazestats-api.alanmartinsdesouza07.workers.dev | no ar, com banco D1 `cazestats` e cron de 30 min |
 | Publicação automática pelo GitHub | workflow Publicar | funcionando (segredos criados em 18/11) |
-| Dados do site no banco D1 (tabela `arquivos`) | `<Worker>/dados/<nome>.json` | tabela e rotas no ar; falta o segredo `ROBO_CHAVE` (passo 6) para o robô começar a enviar |
+| Dados do site no banco D1 (tabela `arquivos`) | `<Worker>/dados/<nome>.json` | no ar; segredo `ROBO_CHAVE` criado em 18/11 |
+| Histórico dos jogos (tabela `jogos`) | `<Worker>/jogos?clube=cruzeiro` | no ar; o robô envia a cada rodada |
 | GitHub Pages | https://alansouzadev7.github.io/Projeto_PeladinhaFC/ | continua no ar em paralelo |
 
 Ao criar o token pelo modelo "Edit Cloudflare Workers", **apague a regra "Edit Zone policy"** (pede um domínio, que o projeto
@@ -111,6 +112,7 @@ Na rodada seguinte do robô, o passo "Enviar os dados ao banco" fica verde e o p
 | 1.000 pessoas vendo um jogo | 75 mil consultas/min à ESPN (bloqueio certo) | ~60 consultas/min à ESPN (cache de 1 s na borda) |
 | Visitas por dia | limitado pelos 100 GB/mês do GitHub | tráfego estático sem limite; API até 100 mil requisições/dia |
 | Robô atrasado | até 8 h sem gravar (13/11) | a cada 30 min pelo cron do Worker |
+| Histórico dos jogos | perdido a cada temporada (os arquivos são regravados) | tabela `jogos` no D1: ~1.500 jogos por temporada; a 1ª carga grava ~7.500 linhas e as rodadas seguintes só os jogos que mudaram |
 | Publicações do site | 1 por rodada do robô (~2.100/mês, acima do limite de 500) | só quando o código muda; os dados vão para o D1 (~80 linhas por rodada, bem abaixo das 100 mil gravações/dia) |
 | Worker passa de 100 mil pedidos no dia | — | o site volta sozinho para a ESPN direta (`js/rede.js`) e para os dados estáticos (`js/dados.js`); nada sai do ar |
 

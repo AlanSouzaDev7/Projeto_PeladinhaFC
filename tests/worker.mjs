@@ -191,4 +191,40 @@ await t("sem chave: erro claro", async () => {
     assert.equal((await mod.default.fetch(new Request("https://w.test/dados/live-data.json", { method: "DELETE" }), env)).status, 405);
   });
 }
+// ---------- histórico dos jogos (SQLite simulado) ----------
+{
+  const { d1Simulado } = await import("./sim/d1.mjs");
+  const DB = d1Simulado(), ROBO_CHAVE = "h".repeat(40), env = { DB, ROBO_CHAVE };
+  const mod = await import(`../worker/ao-vivo.mjs?jogos=${Date.now()}`);
+  const jogo = (id, casa_id, fora_id, gc, gf, extra = {}) => ({ id, liga: "bra.1", competicao: "Brasileirão", temporada: "2026", data: `2026-11-${id.slice(-2)}`, hora: "16:00", casa_id, casa: casa_id, fora_id, fora: fora_id, gols_casa: gc, gols_fora: gf, estado: "post", ...extra });
+  const post = (lista, chave = ROBO_CHAVE) => mod.default.fetch(new Request("https://w.test/jogos", { method: "POST", body: typeof lista === "string" ? lista : JSON.stringify(lista), headers: { authorization: `Bearer ${chave}` } }), env);
+  const get = async (q) => { const r = await mod.default.fetch(new Request(`https://w.test/jogos?${q}`), env); return [r.status, await r.json()]; };
+  await t("histórico: só o robô grava, e só listas", async () => {
+    assert.equal((await post([jogo("100000001", "cruzeiro", "atletico-mg", 2, 1)], "x".repeat(40))).status, 401);
+    assert.equal((await post('{"id":"1"}')).status, 400);
+    assert.equal((await post("[nao é json")).status, 400);
+  });
+  await t("histórico: grava o lote num comando só; reenviar igual não regrava nada", async () => {
+    const lote = [jogo("100000001", "cruzeiro", "atletico-mg", 2, 1), jogo("100000002", "flamengo", "cruzeiro", 0, 0), jogo("100000003", "cruzeiro", "bahia", 0, 3), { id: "../x", liga: "a" }];
+    assert.deepEqual(await (await post(lote)).json(), { ok: true, gravados: 3 }); // o id inválido fica de fora
+    assert.equal((await (await post(lote)).json()).gravados, 0);
+    lote[1] = jogo("100000002", "flamengo", "cruzeiro", 0, 1); // placar corrigido
+    assert.equal((await (await post(lote)).json()).gravados, 1);
+  });
+  await t("histórico: jogos do clube com resumo V/E/D e confronto direto", async () => {
+    const [st, d] = await get("clube=cruzeiro");
+    assert.equal(st, 200);
+    assert.deepEqual(d.jogos.map((j) => j.id), ["100000003", "100000002", "100000001"]); // mais recente primeiro
+    assert.deepEqual(d.resumo, { jogos: 3, v: 2, e: 0, d: 1, gp: 3, gc: 4 });
+    const [, h2h] = await get("clube=atletico-mg&contra=cruzeiro");
+    assert.deepEqual(h2h.jogos.map((j) => j.id), ["100000001"]);
+    assert.deepEqual(h2h.resumo, { jogos: 1, v: 0, e: 0, d: 1, gp: 1, gc: 2 });
+  });
+  await t("histórico: filtros validados (nada de SQL vindo do endereço)", async () => {
+    assert.equal((await get(""))[0], 400);
+    assert.equal((await get("clube=cruzeiro' OR 1=1--"))[0], 400);
+    assert.equal((await get("temporada=26"))[0], 400);
+    assert.equal((await get("temporada=2026&liga=bra.1&limite=9999"))[1].filtro.limite, 200);
+  });
+}
 console.log(`\n${ok} testes do Worker passaram`);

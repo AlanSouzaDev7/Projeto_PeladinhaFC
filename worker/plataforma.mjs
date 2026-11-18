@@ -11,7 +11,8 @@
         buscas      contagem por hora do que se busca no site ("Em alta");
         erros       erros de JavaScript dos visitantes, sem dado pessoal (E5, observabilidade);
         escalacoes  escalações compartilhadas por link curto (até 8 KB de JSON, sem login);
-        arquivos    os dados públicos do site (dados/*.json), enviados pelo robô e lidos pelo site (5, abaixo).
+        arquivos    os dados públicos do site (dados/*.json), enviados pelo robô e lidos pelo site (5, abaixo);
+        jogos       histórico de todos os jogos, temporada após temporada (6, abaixo).
       Esquema em worker/schema.sql. Sem o binding, as rotas respondem 503 e o site segue como hoje.
    4) Agendador (ponto 6): o gatilho de cron do Worker dispara o robô do GitHub (workflow_dispatch) a cada 30 min,
       sem depender do agendamento do GitHub, que atrasa horas. Precisa do segredo GITHUB_DISPARO (token só com
@@ -159,6 +160,66 @@ export async function serveArquivo(env, nome, req, cors) {
   const etag = r.headers.get("etag"), cab = { ...cors, "content-type": "application/json; charset=utf-8", "cache-control": `public, max-age=${ttl}`, etag, "x-quando": r.headers.get("x-quando") || "" };
   if (etag && req.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers: cab });
   return new Response(r.body, { headers: cab });
+}
+
+/* ---------- 6) histórico dos jogos ----------
+   POST /jogos   o robô envia um lote (lista JSON, até 1 MB) com a chave ROBO_CHAVE
+   GET  /jogos   ?clube=cruzeiro [&contra=atletico-mg] [&temporada=2026] [&liga=bra.1] [&limite=50]
+   Gravação: UM comando SQL por lote (json_each lê a lista inteira): o D1 grátis aceita 50 consultas por pedido.
+   Jogo igual ao que já está no banco não é regravado (o WHERE do ON CONFLICT), para não gastar as 100 mil
+   gravações por dia do plano grátis: numa rodada comum só mudam os jogos do dia. */
+const COLUNAS = ["liga", "competicao", "temporada", "data", "hora", "fase", "casa_id", "casa", "fora_id", "fora", "gols_casa", "gols_fora", "pen_casa", "pen_fora", "estado", "local"];
+const SQL_JOGOS =
+  `INSERT INTO jogos (id, ${COLUNAS.join(", ")}, atualizado) ` +
+  `SELECT j ->> '$.id', ${COLUNAS.map((c) => `j ->> '$.${c}'`).join(", ")}, ?2 FROM (SELECT value AS j FROM json_each(?1)) ` +
+  `WHERE (j ->> '$.id') GLOB '[0-9]*' AND length(j ->> '$.id') <= 15 ` +
+  `ON CONFLICT(id) DO UPDATE SET ${COLUNAS.map((c) => `${c} = excluded.${c}`).join(", ")}, atualizado = excluded.atualizado ` +
+  `WHERE ${COLUNAS.map((c) => `jogos.${c} IS NOT excluded.${c}`).join(" OR ")}`;
+const JOGOS_MAX = 1_000_000;
+export async function gravaJogos(env, req) {
+  if (+(req.headers.get("content-length") || 0) > JOGOS_MAX) return { status: 413, erro: "lote grande demais" };
+  const txt = await req.text();
+  if (!txt || txt.length > JOGOS_MAX || !/^\s*\[/.test(txt)) return { status: 400, erro: "esperava uma lista JSON" };
+  try {
+    const r = await env.DB.prepare(SQL_JOGOS).bind(txt, Date.now()).run();
+    return { status: 200, gravados: (r.meta && (r.meta.changes ?? r.meta.rows_written)) || 0 };
+  } catch (e) {
+    return { status: 400, erro: `lote recusado pelo banco: ${String(e && e.message).slice(0, 120)}` };
+  }
+}
+const TIME_OK = /^([a-z][a-z-]{1,30}|espn:[0-9]{1,10})$/;
+export async function consultaJogos(env, url, cors) {
+  const q = url.searchParams, clube = q.get("clube") || "", contra = q.get("contra") || "", temporada = q.get("temporada") || "", liga = q.get("liga") || "";
+  const limite = Math.min(200, Math.max(1, parseInt(q.get("limite") || "50", 10) || 50));
+  const ruim = (!clube && !temporada) || (clube && !TIME_OK.test(clube)) || (contra && !TIME_OK.test(contra)) || (temporada && !/^\d{4}$/.test(temporada)) || (liga && !/^[a-z0-9._]{2,40}$/.test(liga));
+  if (ruim) return new Response(JSON.stringify({ erro: "use ?clube=<id> e/ou ?temporada=AAAA (opcionais: contra, liga, limite)" }), { status: 400, headers: cors });
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  const chave = `https://cache.cazestats.interno/jogos?${[clube, contra, temporada, liga, limite].join("|")}`;
+  const hit = cache && (await cache.match(chave));
+  if (hit) return new Response(hit.body, { headers: { ...cors, "cache-control": "public, max-age=120", "x-cache": "HIT" } });
+  const onde = [], args = [];
+  const arg = (v) => (args.push(v), `?${args.length}`);
+  if (clube && contra) onde.push(`((casa_id = ${arg(clube)} AND fora_id = ${arg(contra)}) OR (casa_id = ${arg(contra)} AND fora_id = ${arg(clube)}))`);
+  else if (clube) onde.push(`(casa_id = ${arg(clube)} OR fora_id = ${arg(clube)})`);
+  if (temporada) onde.push(`temporada = ${arg(temporada)}`);
+  if (liga) onde.push(`liga = ${arg(liga)}`);
+  const sql = `SELECT id, ${COLUNAS.join(", ")} FROM jogos WHERE ${onde.join(" AND ")} ORDER BY data DESC, hora DESC LIMIT ${limite}`;
+  const { results } = await env.DB.prepare(sql).bind(...args).all();
+  const jogos = results || [];
+  // resumo do ponto de vista do clube pedido (vitórias, empates, derrotas e gols nos jogos encerrados)
+  let resumo = null;
+  if (clube) {
+    resumo = { jogos: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0 };
+    for (const j of jogos) {
+      if (j.estado !== "post" || j.gols_casa == null || j.gols_fora == null) continue;
+      const casa = j.casa_id === clube, gp = casa ? j.gols_casa : j.gols_fora, gc = casa ? j.gols_fora : j.gols_casa;
+      resumo.jogos++; resumo.gp += gp; resumo.gc += gc;
+      resumo[gp > gc ? "v" : gp < gc ? "d" : "e"]++;
+    }
+  }
+  const corpo = JSON.stringify({ filtro: { clube, contra, temporada, liga, limite }, resumo, jogos });
+  if (cache) await cache.put(chave, new Response(corpo, { headers: { "cache-control": "public, max-age=120", "content-type": "application/json" } }));
+  return new Response(corpo, { headers: { ...cors, "cache-control": "public, max-age=120", "x-cache": "MISS" } });
 }
 
 /* ---------- 4) agendador do robô ---------- */

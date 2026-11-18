@@ -39,3 +39,30 @@ CREATE TABLE IF NOT EXISTS arquivos (
   tamanho INTEGER NOT NULL,
   dados   TEXT    NOT NULL       -- o JSON, como o robô gravou
 );
+
+-- histórico dos jogos: cada jogo de cada competição que o site acompanha, guardado para sempre (nunca apagado).
+-- Os arquivos de dados são regravados a cada rodada e só têm a temporada atual; aqui as temporadas se acumulam.
+-- id = número do jogo na ESPN. *_id = id do clube no site ("cruzeiro") ou "espn:<id>" para os outros times.
+CREATE TABLE IF NOT EXISTS jogos (
+  id         TEXT    PRIMARY KEY,
+  liga       TEXT    NOT NULL,   -- "bra.1", "bra.2", "conmebol.libertadores"...
+  competicao TEXT    NOT NULL,   -- "Brasileirão", "Série B"...
+  temporada  TEXT    NOT NULL,   -- "2026"
+  data       TEXT    NOT NULL,   -- "2026-11-08"
+  hora       TEXT,
+  fase       TEXT,
+  casa_id    TEXT,
+  casa       TEXT    NOT NULL,
+  fora_id    TEXT,
+  fora       TEXT    NOT NULL,
+  gols_casa  INTEGER,
+  gols_fora  INTEGER,
+  pen_casa   INTEGER,
+  pen_fora   INTEGER,
+  estado     TEXT    NOT NULL,   -- "pre", "in", "post"
+  local      TEXT,
+  atualizado INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS jogos_casa ON jogos (casa_id, data);
+CREATE INDEX IF NOT EXISTS jogos_fora ON jogos (fora_id, data);
+CREATE INDEX IF NOT EXISTS jogos_temporada ON jogos (temporada, liga);

@@ -14,6 +14,8 @@
      POST /escalacao, GET /escalacao/<id>    escalação compartilhada por link curto (banco D1)
      GET /dados/<nome>.json                  dados públicos do site guardados no banco D1 (cache de borda de 30 a 60 s)
      PUT /dados/<nome>.json, GET /dados/_lista   só o robô de dados (segredo ROBO_CHAVE)
+     GET /jogos?clube=&contra=&temporada=&liga=  histórico dos jogos (todas as temporadas) com resumo V/E/D
+     POST /jogos                                 só o robô: lote de jogos para o histórico
    Cron (wrangler.toml): a cada 30 min dispara o robô de dados do GitHub e limpa registros antigos do banco.
 
    Economia de consultas (o plano grátis dá ~100 por dia):
@@ -25,7 +27,7 @@
        (UTC, quando a API-Football renova o limite) e o site volta para a ESPN sozinho.
    ========================================================================== */
 
-import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo, roboAutorizado, gravaArquivo, listaArquivos, serveArquivo } from "./plataforma.mjs";
+import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo, roboAutorizado, gravaArquivo, listaArquivos, serveArquivo, gravaJogos, consultaJogos } from "./plataforma.mjs";
 
 const BASE = "https://v3.football.api-sports.io";
 
@@ -261,6 +263,16 @@ export default {
       pendente[k] = Math.min(1e6, (pendente[k] || 0) + 1);
       await gravaBuscas(env);
       return json({ ok: true });
+    }
+    // histórico dos jogos: o robô grava (POST, com a chave) e qualquer um consulta (GET)
+    if (path === "/jogos") {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      if (req.method === "POST") {
+        if (!roboAutorizado(req, env)) return json({ erro: "não autorizado" }, 401);
+        const r = await gravaJogos(env, req);
+        return r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, gravados: r.gravados });
+      }
+      if (req.method === "GET" || req.method === "HEAD") return consultaJogos(env, new URL(req.url), cors);
     }
     // dados do site no banco: o robô grava (PUT, com a chave) e qualquer um lê (GET)
     if (path.startsWith("/dados/")) {

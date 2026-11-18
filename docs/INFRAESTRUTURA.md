@@ -73,8 +73,14 @@ dados), servidos pelo Worker com cache de borda de 30 a 60 s; o site lê do banc
 
 Por que D1 e não Supabase neste momento: já estava criado e ligado ao Worker; é grátis sem cartão; fica na mesma rede do
 Worker (sem ida a outro provedor a cada leitura); e o Supabase grátis pausa o projeto depois de 1 semana sem uso. O Supabase
-continua sendo o caminho para quando entrar **login** (abaixo). Próximo passo natural no D1: uma tabela `jogos` com o histórico
-de cada temporada, que hoje se perde quando o robô regrava os arquivos.
+continua sendo o caminho para quando entrar **login** (abaixo).
+
+**Histórico dos jogos (tabela `jogos`, 18/11/2026).** Os arquivos de dados só têm a temporada atual e são regravados a cada
+rodada; a tabela guarda cada jogo para sempre (id = número do jogo na ESPN). Fontes: `dados/competicoes/*.json` (Série B a D,
+copas, estaduais) e `dados/club-form.json` (a Série A, montada a partir dos dois clubes de cada jogo), juntadas em
+`server/historico_jogos.py`. Consulta: `GET <Worker>/jogos?clube=cruzeiro&contra=atletico-mg&temporada=2026&liga=bra.1`,
+com resumo de vitórias, empates, derrotas e gols. A gravação é um único comando SQL por lote (`json_each`) e não regrava
+jogo que não mudou, para caber no plano grátis (50 consultas por pedido e 100 mil linhas gravadas por dia).
 
 ## Login opcional e escalações salvas (revisto em 12/11/2026)
 
