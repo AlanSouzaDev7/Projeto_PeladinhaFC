@@ -87,6 +87,42 @@
     HEATMAP.paint(cv, blobs.map(([x, y, sx, sy, w]) => [x, y, sx, sy, w]), {});
   }
 
+  /* ---------- linha do tempo da carreira, no fundo do topo ----------
+     Os clubes por onde o jogador passou, em ordem, com os anos (dados/carreiras/<clube>.json, do Wikidata; escudos da
+     ESPN, do Commons ou desenhados). A linha se desenha, os escudos entram um a um e uma luz percorre a linha de tempos
+     em tempos. Na mesma visita, ao trocar de aba, a entrada não se repete. */
+  const jaVistas = new Set();
+  const anoOk = (v) => (Number.isInteger(v) && v > 1900 && v < 2100 ? v : null);
+  function anosDe(x, ultimo) {
+    const i = anoOk(x.i), f = anoOk(x.f);
+    if (!i) return ultimo ? "hoje" : f ? `até ${f}` : "";
+    if (!f) return ultimo ? `desde ${i}` : `${i}–`;
+    return f === i ? `${i}` : `${i}–${String(f).slice(2)}`;
+  }
+  function carreiraHTML(p, lista, primeira) {
+    const nos = lista.map((x, i) => {
+      const ultimo = i === lista.length - 1, site = x.s && byId[x.s];
+      const nome = site ? site.name : String(x.c || "");
+      const escudo = site ? crest(site, 26) : window.GFX.crestOutro(nome, typeof x.l === "string" ? x.l : null, 26);
+      const anos = anosDe(x, ultimo);
+      return `<li style="--i:${i}"${ultimo ? ' class="atual"' : ""} title="${esc(nome)}${anos ? ` · ${esc(anos)}` : ""}"><span class="jgl-esc">${escudo}</span><small>${esc(anos)}</small></li>`;
+    }).join("");
+    const resumo = lista.map((x, i) => `${x.s && byId[x.s] ? byId[x.s].name : x.c} (${anosDe(x, i === lista.length - 1)})`).join(", ");
+    return `<div class="jg-linha${primeira ? "" : " ja-vista"}" role="img" aria-label="${esc(`Carreira de ${p.nome}: ${resumo}`)}"><ol>${nos}<i class="jgl-luz" aria-hidden="true"></i></ol></div>`;
+  }
+  async function pintaCarreira(el, p) {
+    const d = await DADOS.carrega(`carreiras/${p.cid}`);
+    if (!el.isConnected) return;
+    const lista = Array.isArray(d?.[p.aid]) ? d[p.aid].filter((x) => x && (x.c || x.s)) : [];
+    const topo = el.querySelector(".jg-topo");
+    topo.querySelector(".jg-linha")?.remove();
+    if (lista.length < 2) return topo.classList.remove("com-linha"); // só o clube atual não é linha do tempo
+    const primeira = !jaVistas.has(p.key);
+    jaVistas.add(p.key);
+    topo.insertAdjacentHTML("afterbegin", carreiraHTML(p, lista, primeira));
+    topo.classList.add("com-linha");
+  }
+
   /* ---------- páginas ---------- */
   const ABAS = [["geral", "Visão geral"], ["ultimos", "Últimos 10"], ["temporada", "Temporada"], ["calor", "Mapa de calor"], ["comparar", "Comparar"]];
   function page(aid, tab = "geral", extra) {
@@ -239,6 +275,7 @@
     if (!el.isConnected) return;
     const j = D?.jogadores?.[p.aid];
     const corpo = el.querySelector("[data-jg-corpo]");
+    pintaCarreira(el, p).catch(() => {}); // linha do tempo da carreira (fundo do topo); sem dados, nada aparece
     if (!j) {
       el.querySelector("[data-jg-kpis]").innerHTML = "";
       corpo.innerHTML = `<div class="card"><div class="empty" style="padding:40px">Ainda não há estatísticas deste jogador na temporada.</div></div>`;

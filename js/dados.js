@@ -30,6 +30,7 @@
     "competicoes/*": "COMPETICOES",
     "mercado/*": "MERCADO",
     "escalacoes-jogos/*": "ESCALACOES_JOGOS",
+    "carreiras/*": "CARREIRAS",
   };
   const NOME_OK = /^[a-z][a-z-]{1,30}(\/[a-z0-9][a-z0-9-]{0,30})?$/;
   const promessas = new Map();

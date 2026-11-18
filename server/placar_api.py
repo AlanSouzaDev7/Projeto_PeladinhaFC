@@ -704,8 +704,9 @@ import financas as FIN  # noqa: E402
 import escalacoes as ESCL  # noqa: E402
 import dados_json as DJ  # noqa: E402
 import escalacoes_jogos as EJ  # noqa: E402
+import carreiras as CAR  # noqa: E402
 import fotos as FOTO  # noqa: E402
-MERC.P = FE.P = FIN.P = ESCL.P = FOTO.P = DJ.P = EJ.P = sys.modules[__name__]
+MERC.P = FE.P = FIN.P = ESCL.P = FOTO.P = DJ.P = EJ.P = CAR.P = sys.modules[__name__]
 MERC.FE, MERC.FIN, MERC.FOTO = FE, FIN, FOTO
 import wiki_series as WIKI  # noqa: E402
 ESC.P = sys.modules[__name__]
@@ -2461,6 +2462,11 @@ def write_snapshot():
         EJ.gravar()
     except Exception as ex:
         avisar_falha("escalações dos jogos", ex)
+    # carreira de cada jogador (linha do tempo dos clubes na página do jogador): Wikidata, uma vez por semana
+    try:
+        CAR.gravar()
+    except Exception as ex:
+        log("falha ao gravar as carreiras", ex)
     # cópia em JSON de todos os arquivos de dados (carregador único do site e app 433Fut)
     try:
         DJ.exportar()

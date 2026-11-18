@@ -76,6 +76,9 @@ jobs:
       - name: Histórico de jogos (conversão e carga das temporadas)
         timeout-minutes: 2
         run: python -X utf8 tests/historico_casos.py
+      - name: Carreiras dos jogadores (quem é quem e linha do tempo)
+        timeout-minutes: 2
+        run: python -X utf8 tests/carreiras_casos.py
       - name: Worker do placar ao vivo
         timeout-minutes: 2
         run: node tests/worker.mjs

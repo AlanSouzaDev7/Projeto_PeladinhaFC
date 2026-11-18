@@ -755,3 +755,35 @@
 .foto-c { position: relative; display: block; border-radius: 50%; overflow: hidden; box-sizing: border-box; }
 .foto-c .foto-p { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; display: block; }
 .foto-r { position: absolute; max-width: none; max-height: none; object-fit: fill; display: block; }
+
+/* ---------- linha do tempo da carreira, no fundo do topo do jogador (js/jogador.js, pintaCarreira) ---------- */
+.jg-topo { position: relative; overflow: hidden; }
+.jg-topo > * { position: relative; z-index: 1; }
+.jg-topo > .jg-linha { position: absolute; z-index: 0; top: 0; bottom: 0; left: 40%; right: 340px; display: flex; align-items: center; justify-content: flex-end;
+  overflow: hidden; pointer-events: none; -webkit-mask-image: linear-gradient(90deg, transparent, #000 28%); mask-image: linear-gradient(90deg, transparent, #000 28%); }
+.jg-linha ol { position: relative; display: flex; align-items: flex-start; gap: 12px; margin: 0; padding: 0 6px; list-style: none; }
+.jg-linha ol::before { content: ""; position: absolute; left: 0; right: 0; top: 18px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tc) 55%, var(--line)) 18%, var(--tc));
+  transform-origin: left center; animation: jgl-linha 0.9s var(--ease) both; }
+.jg-linha li { display: grid; justify-items: center; gap: 6px; width: 54px; flex: none; animation: jgl-no 0.5s var(--ease-bounce) both; animation-delay: calc(0.3s + var(--i) * 110ms); }
+.jgl-esc { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line);
+  box-shadow: 0 0 0 4px var(--surface); }
+.jgl-esc img, .jgl-esc svg { width: 26px; height: 26px; object-fit: contain; }
+.jg-linha small { font: 600 10.5px / 1.15 var(--font-mono, monospace); color: var(--text-3); white-space: nowrap; }
+.jg-linha li.atual .jgl-esc { border-color: var(--tc); box-shadow: 0 0 0 4px var(--surface), 0 0 18px color-mix(in srgb, var(--tc) 55%, transparent); }
+.jg-linha li.atual small { color: var(--text-2); }
+.jgl-luz { position: absolute; top: 15px; left: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 12px var(--tc);
+  opacity: 0; animation: jgl-luz 7s linear 2.2s infinite; }
+.jg-linha.ja-vista li, .jg-linha.ja-vista ol::before { animation: none; }
+@keyframes jgl-linha { from { transform: scaleX(0); } }
+@keyframes jgl-no { from { opacity: 0; transform: translateY(10px) scale(0.6); } }
+@keyframes jgl-luz { 0% { left: 0; opacity: 0; } 8% { opacity: 1; } 62% { left: calc(100% - 8px); opacity: 1; } 70%, 100% { left: calc(100% - 8px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .jg-linha li, .jg-linha ol::before { animation: none; }
+  .jgl-luz { display: none; }
+}
+@media (max-width: 900px) {
+  /* sem espaço livre ao lado: a linha vira uma faixa entre o nome e os números */
+  .jg-topo > .jg-linha { position: relative; grid-column: 1 / -1; grid-row: 2; left: auto; right: auto; top: auto; bottom: auto; padding: 2px 0; }
+  .jg-topo.com-linha .jg-topo-kpis { grid-row: 3; }
+}

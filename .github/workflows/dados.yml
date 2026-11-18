@@ -61,6 +61,7 @@ jobs:
             server/cache/financas.json
             server/cache/fontes-elenco.json
             server/cache/escalacoes.json
+            server/cache/carreiras.json
           key: partidas-${{ github.run_id }}
           restore-keys: partidas-
 
@@ -125,6 +126,7 @@ jobs:
             server/cache/financas.json
             server/cache/fontes-elenco.json
             server/cache/escalacoes.json
+            server/cache/carreiras.json
           key: partidas-${{ github.run_id }}
 
       - name: Publicar se algo mudou
