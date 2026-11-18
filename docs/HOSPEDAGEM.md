@@ -105,6 +105,21 @@ $b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create
 
 Na rodada seguinte do robô, o passo "Enviar os dados ao banco" fica verde e o passo "Publicar o site" é pulado.
 
+### 7. Alerta de gol do clube favorito (uma vez)
+
+O botão "Avisar gols" na página de cada clube usa o Web Push dos navegadores (grátis). O Worker confere os placares da ESPN
+a cada minuto (cron `* * * * *`, só quando há alguém inscrito) e avisa os inscritos do clube que marcou
+(`worker/alertas.mjs`, tabelas `alertas`, `placares` e `gols` no D1). Falta criar o par de chaves VAPID, que assina os
+avisos. Na pasta do projeto, um comando cria e grava as duas chaves no Worker sem mostrar a privada:
+
+```bash
+node worker/gerar-vapid.mjs
+```
+
+Limites: 35 avisos por minuto por gol (o resto sai no minuto seguinte; o plano grátis permite 50 pedidos externos por
+execução). No iPhone, o push só funciona com o site adicionado à tela de início (iOS 16.4+). No app 433Fut o botão não
+aparece (a WebView do Android não recebe push da web; no app seria preciso o Firebase Cloud Messaging).
+
 ## Quanto aguenta (estimativa com o plano grátis)
 
 | Cenário | Antes | Com Cloudflare |

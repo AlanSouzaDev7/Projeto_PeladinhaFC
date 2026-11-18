@@ -85,6 +85,9 @@ jobs:
       - name: Robô enviando os dados ao banco D1 (Worker local, SQLite simulado)
         timeout-minutes: 3
         run: node tests/enviar-d1.mjs
+      - name: Alerta de gol (Worker, ESPN e push simulados)
+        timeout-minutes: 2
+        run: node tests/alertas.mjs
       - name: Testes de invasão da API
         timeout-minutes: 5
         run: node tests/seguranca/api.mjs

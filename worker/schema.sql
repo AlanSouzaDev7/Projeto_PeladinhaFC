@@ -66,3 +66,28 @@ CREATE TABLE IF NOT EXISTS jogos (
 CREATE INDEX IF NOT EXISTS jogos_casa ON jogos (casa_id, data);
 CREATE INDEX IF NOT EXISTS jogos_fora ON jogos (fora_id, data);
 CREATE INDEX IF NOT EXISTS jogos_temporada ON jogos (temporada, liga);
+
+-- alerta de gol do clube favorito (worker/alertas.mjs): inscrições de Web Push por clube, placares vistos e gols avisados
+CREATE TABLE IF NOT EXISTS alertas (
+  endpoint TEXT    NOT NULL,      -- endereço do serviço de push do navegador (Google, Mozilla, Apple, Microsoft)
+  clube    TEXT    NOT NULL,
+  criado   INTEGER NOT NULL,
+  PRIMARY KEY (endpoint, clube)
+);
+CREATE INDEX IF NOT EXISTS alertas_clube ON alertas (clube, endpoint);
+CREATE TABLE IF NOT EXISTS placares (
+  jogo   TEXT    PRIMARY KEY,     -- id do jogo na ESPN
+  casa   INTEGER NOT NULL,
+  fora   INTEGER NOT NULL,
+  quando INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS gols (
+  id     TEXT    PRIMARY KEY,     -- jogo:placar:clube
+  clube  TEXT    NOT NULL,
+  jogo   TEXT    NOT NULL,
+  titulo TEXT    NOT NULL,
+  corpo  TEXT    NOT NULL,
+  quando INTEGER NOT NULL,
+  cursor TEXT    NOT NULL DEFAULT ''  -- até qual inscrito já foi avisado ('fim' = todos)
+);
+CREATE INDEX IF NOT EXISTS gols_quando ON gols (quando);

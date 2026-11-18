@@ -16,6 +16,7 @@
      PUT /dados/<nome>.json, GET /dados/_lista   só o robô de dados (segredo ROBO_CHAVE)
      GET /jogos?clube=&contra=&temporada=&liga=  histórico dos jogos (todas as temporadas) com resumo V/E/D
      POST /jogos                                 só o robô: lote de jogos para o histórico
+     POST /alerta, GET /gols/recentes            alerta de gol do clube favorito (worker/alertas.mjs, Web Push)
    Cron (wrangler.toml): a cada 30 min dispara o robô de dados do GitHub e limpa registros antigos do banco.
 
    Economia de consultas (o plano grátis dá ~100 por dia):
@@ -27,6 +28,7 @@
        (UTC, quando a API-Football renova o limite) e o site volta para a ESPN sozinho.
    ========================================================================== */
 
+import { inscrever, verificaGols, enviaPushes, golsRecentes, limpaGols } from "./alertas.mjs";
 import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo, roboAutorizado, gravaArquivo, listaArquivos, serveArquivo, gravaJogos, consultaJogos } from "./plataforma.mjs";
 
 const BASE = "https://v3.football.api-sports.io";
@@ -264,6 +266,18 @@ export default {
       await gravaBuscas(env);
       return json({ ok: true });
     }
+    // alerta de gol: o navegador se inscreve (POST /alerta) e o service worker lê os gols recentes (GET /gols/recentes)
+    if (path === "/alerta" && req.method === "POST") {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      if (+(req.headers.get("content-length") || 0) > 4096) return json({ erro: "inscrição grande demais" }, 413);
+      const r = await inscrever(env, await req.text());
+      return r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, clubes: r.clubes });
+    }
+    if (path === "/gols/recentes" && (req.method === "GET" || req.method === "HEAD")) {
+      if (!env.DB) return json({ erro: "banco não configurado", gols: [] }, 503);
+      return new Response(JSON.stringify({ gols: await golsRecentes(env) }), { headers: { ...cors, "cache-control": "public, max-age=10" } });
+    }
+    if (path === "/alerta/chave") return json({ chave: env.VAPID_PUBLICA || null });
     // histórico dos jogos: o robô grava (POST, com a chave) e qualquer um consulta (GET)
     if (path === "/jogos") {
       if (!env.DB) return json({ erro: "banco não configurado" }, 503);
@@ -321,7 +335,12 @@ export default {
   },
   // gatilho de cron (wrangler.toml, [triggers]): agendador confiável do robô de dados (ponto 6) e limpeza do banco
   async scheduled(evento, env, ctx) {
+    if (evento.cron === "* * * * *") {
+      // a cada minuto: placares da ESPN -> gols novos -> avisos aos inscritos (alerta de gol do favorito)
+      if (env.DB) ctx.waitUntil(verificaGols(env).then(() => enviaPushes(env)).catch((e) => console.error("alertas:", e && e.message)));
+      return;
+    }
     ctx.waitUntil(disparaRobo(env).then((r) => console.log("robô:", r)));
-    if (env.DB) ctx.waitUntil(limpaAntigos(env));
+    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env)]));
   },
 };

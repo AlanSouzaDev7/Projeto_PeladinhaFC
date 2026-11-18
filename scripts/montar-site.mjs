@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SAIDA = path.resolve(RAIZ, process.argv[2] || "_site");
 const SITE = process.env.SITE_URL || "https://cazestats.pages.dev/";
-const ENTRA = ["index.html", "manifest.webmanifest", "css", "js", "assets", "dados", "img", "media", "prints"];
+const ENTRA = ["index.html", "sw.js", "manifest.webmanifest", "css", "js", "assets", "dados", "img", "media", "prints"];
 
 fs.rmSync(SAIDA, { recursive: true, force: true });
 fs.mkdirSync(SAIDA, { recursive: true });
@@ -37,6 +37,8 @@ fs.writeFileSync(path.join(SAIDA, "_headers"), `/*
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), camera=(), microphone=()
 /index.html
+  Cache-Control: no-cache
+/sw.js
   Cache-Control: no-cache
 /
   Cache-Control: no-cache

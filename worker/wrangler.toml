@@ -21,7 +21,7 @@ RESERVA = "2"
 
 # agendador do robô de dados (ponto 6): a cada 30 min, sem depender do agendamento do GitHub
 [triggers]
-crons = ["*/30 * * * *"]
+crons = ["* * * * *", "*/30 * * * *"]  # a cada minuto: alerta de gol; a cada 30 min: robô e limpeza
 
 # banco D1 (criado em 18/11/2026; tabelas em worker/schema.sql)
 [[d1_databases]]
