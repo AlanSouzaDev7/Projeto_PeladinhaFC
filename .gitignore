@@ -17,3 +17,5 @@ worker/.wrangler/
 worker/.dev.vars
 tests/mobile/shots/
 _site/
+app/www/
+app/node_modules/

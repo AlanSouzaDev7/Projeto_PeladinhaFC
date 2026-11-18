@@ -1535,8 +1535,8 @@
       </div>
       <div>
         <div class="eyebrow">Sobre o projeto</div>
-        <h1 class="display">Um placar<br/>com alma de arquibancada</h1>
-        <p style="color:var(--text-2);font-size:16px;max-width:640px">CazéStats.TV é um estudo de interface para plataformas de resultados esportivos: a densidade de informação das listas de partidas, o cuidado com gráficos de desempenho e, acima de tudo, a identidade de cada clube brasileiro aplicada à interface.</p>
+        <h1 class="display">Placar, tabela e<br/>números do seu clube</h1>
+        <p style="color:var(--text-2);font-size:16px;max-width:640px">O CazéStats.TV mostra o futebol brasileiro como a arquibancada acompanha: o placar primeiro, a tabela logo depois e os números de cada jogador e de cada clube da Série A, com a cara de cada time. Feito por Alan Evangelista de Souza Martins.</p>
         <div class="card reveal" style="margin-top:22px"><div class="card-h">Habilidades em campo</div><div class="card-b">
           ${skills.map(([s, v]) => `<div class="skill"><header><span>${s}</span><span>${v}</span></header><div class="bar"><i data-w="${v}"></i></div></div>`).join("")}
         </div></div>

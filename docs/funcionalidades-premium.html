@@ -1,0 +1,105 @@
+<!doctype html>
+<!-- © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>CazéStats.TV — Funcionalidades premium</title>
+<style>
+  @font-face { font-family: "Space Grotesk"; src: url(../assets/fontes/space-grotesk-latin-wght-normal.woff2) format("woff2"); font-weight: 300 700; }
+  @font-face { font-family: "Inter"; src: url(../assets/fontes/inter-latin-wght-normal.woff2) format("woff2"); font-weight: 100 900; }
+  @font-face { font-family: "JetBrains Mono"; src: url(../assets/fontes/jetbrains-mono-latin-wght-normal.woff2) format("woff2"); font-weight: 100 800; }
+  @page { size: A4; margin: 16mm 14mm; }
+  :root { --azul: #3b4eea; --noite: #0b0b0d; --cal: #f1ede1; --lima: #c6f432; --gramado: #1f9d55; --taca: #b8893a; --linha: #d9d3c2; --texto2: #3c3d43; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 400 10.5pt/1.5 "Inter", sans-serif; color: var(--noite); background: #fff; }
+  h1, h2, h3 { font-family: "Space Grotesk", sans-serif; letter-spacing: -0.02em; margin: 0; }
+  .capa { background: var(--noite); color: var(--cal); padding: 26px 28px 22px; border-radius: 16px; display: flex; gap: 18px; align-items: center; }
+  .capa svg { width: 64px; height: 64px; flex: none; }
+  .capa h1 { font-size: 26pt; line-height: 1.05; }
+  .capa p { margin: 6px 0 0; color: #c4c1b8; }
+  .faixa { margin-top: 10px; background: var(--azul); color: var(--cal); border-radius: 12px; padding: 10px 16px; font: 500 9pt "JetBrains Mono", monospace; letter-spacing: 0.04em; }
+  .resumo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 6px; }
+  .resumo div { border: 1px solid var(--linha); border-radius: 12px; padding: 10px 12px; }
+  .resumo b { display: block; font: 700 18pt "Space Grotesk", sans-serif; }
+  .resumo small { color: var(--texto2); }
+  h2 { font-size: 15pt; margin: 20px 0 8px; padding-bottom: 6px; border-bottom: 2px solid var(--noite); }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  th { text-align: left; font: 500 8pt "JetBrains Mono", monospace; text-transform: uppercase; letter-spacing: 0.05em; color: var(--texto2); border-bottom: 1px solid var(--linha); padding: 6px 6px; }
+  td { border-bottom: 1px solid #ece7d9; padding: 7px 6px; vertical-align: top; }
+  td b { font-family: "Space Grotesk", sans-serif; }
+  .preco { font: 600 9.5pt "JetBrains Mono", monospace; white-space: nowrap; }
+  .p1 { color: #fff; background: #d23a1f; } .p2 { background: #ffc83d; } .p3 { background: var(--cal); }
+  .prio { display: inline-block; padding: 1px 7px; border-radius: 999px; font: 600 8pt "JetBrains Mono", monospace; }
+  .nota { margin-top: 16px; font-size: 9pt; color: var(--texto2); border-left: 3px solid var(--taca); padding: 6px 10px; background: #faf8f2; }
+  tr { break-inside: avoid; }
+  .rodape { margin-top: 18px; font-size: 8pt; color: var(--texto2); }
+</style>
+</head>
+<body>
+  <div class="capa">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3B4EEA"/><rect x="25.5" y="19.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="45.5" y="19.5" width="9" height="9" rx="3" fill="#C6F432"/><rect x="65.5" y="19.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="25.5" y="37.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="45.5" y="37.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="65.5" y="37.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="18.5" y="55.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="36.5" y="55.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="54.5" y="55.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="72.5" y="55.5" width="9" height="9" rx="3" fill="#F1EDE1"/><rect x="45.5" y="73.5" width="9" height="9" rx="3" fill="#F1EDE1"/></svg>
+    <div>
+      <h1>Funcionalidades premium</h1>
+      <p>CazéStats.TV (site) e 433Fut (app Android) · o que precisa de capital inicial, quanto custa e o que destrava</p>
+    </div>
+  </div>
+  <div class="faixa">NOVEMBRO 2026 · AUTOR: ALAN EVANGELISTA DE SOUZA MARTINS · TUDO O QUE O PROJETO FAZ HOJE ROLA DE GRAÇA</div>
+
+  <div class="resumo">
+    <div><b>R$ 0</b><small>custo atual: site, robô, app, hospedagem Cloudflare grátis e banco D1 grátis</small></div>
+    <div><b>~US$ 21/mês</b><small>mínimo para dados ao vivo licenciados (API-Football Pro) e Workers pago</small></div>
+    <div><b>sob consulta</b><small>licenças para vender: dados de evento (Opta), fotos (agência) e marcas</small></div>
+  </div>
+
+  <h2>1. Dados de jogo (o coração do produto)</h2>
+  <table>
+    <thead><tr><th>Prioridade</th><th>Funcionalidade</th><th>Fornecedor</th><th>Custo de referência</th><th>O que destrava</th></tr></thead>
+    <tbody>
+      <tr><td><span class="prio p1">1</span></td><td><b>Placar ao vivo licenciado</b></td><td>API-Football Pro</td><td class="preco">US$ 16/mês*</td><td>placar, lances e escalações com contrato; Séries C e D ao vivo; estaduais de PR, BA, SC, PA, Copa do Nordeste e Copa Verde; fotos de quase todo jogador inscrito (inclusive da base). O código já suporta (chave API_FOOTBALL_KEY).</td></tr>
+      <tr><td><span class="prio p1">1</span></td><td><b>Dados de evento com coordenadas</b></td><td>Opta (Stats Perform), Sportmonks, StatsBomb</td><td class="preco">sob consulta</td><td>mapa de calor, notas, Raio-X e minuto a minuto com licença (risco J4). Exigir coordenadas de cada lance no contrato.</td></tr>
+      <tr><td><span class="prio p2">2</span></td><td><b>Mais volume de API</b></td><td>API-Football Ultra / Mega</td><td class="preco">US$ 26 a 36/mês*</td><td>75 mil a 150 mil consultas por dia: placar a cada 15 s em todos os jogos do dia.</td></tr>
+      <tr><td><span class="prio p3">3</span></td><td><b>Cadastro e fotos do TheSportsDB sem chave de teste</b></td><td>TheSportsDB (Patreon)</td><td class="preco">~US$ 9/mês</td><td>tira a chave de teste "123" de produção (risco J6) e libera os elencos completos.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Fotos, escudos e marcas (licenças para vender)</h2>
+  <table>
+    <thead><tr><th>Prioridade</th><th>Funcionalidade</th><th>Fornecedor</th><th>Custo de referência</th><th>O que destrava</th></tr></thead>
+    <tbody>
+      <tr><td><span class="prio p1">1</span></td><td><b>Registro da marca</b></td><td>INPI + advogado de marcas</td><td class="preco">a partir de ~R$ 142 (taxa)</td><td>proteção do nome e do símbolo 4-3-3; consulta prévia do nome CazéStats.TV (risco de marca com a CazéTV).</td></tr>
+      <tr><td><span class="prio p1">1</span></td><td><b>Fotos de jogadores com licença comercial</b></td><td>AGIF, Gazeta Press, Getty Images</td><td class="preco">sob consulta</td><td>troca as fotos privadas (que saem com MODO_VENDA=1) por fotos licenciadas da temporada.</td></tr>
+      <tr><td><span class="prio p2">2</span></td><td><b>Escudos oficiais</b></td><td>clubes / pacote do provedor de dados</td><td class="preco">sob consulta</td><td>escudos oficiais com licença (risco J3); sem ela, o site desenha os próprios.</td></tr>
+      <tr><td><span class="prio p3">3</span></td><td><b>Hinos e áudio oficial</b></td><td>editoras e gravadoras</td><td class="preco">sob consulta</td><td>hino no gol do clube (o código já toca media/hinos/&lt;clube&gt;.mp3 se houver arquivo licenciado).</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Infraestrutura e alcance</h2>
+  <table>
+    <thead><tr><th>Prioridade</th><th>Funcionalidade</th><th>Fornecedor</th><th>Custo de referência</th><th>O que destrava</th></tr></thead>
+    <tbody>
+      <tr><td><span class="prio p2">2</span></td><td><b>Domínio próprio</b></td><td>Registro.br</td><td class="preco">~R$ 40/ano</td><td>endereço cazestats.com.br no lugar de .pages.dev (melhor para vender e para busca).</td></tr>
+      <tr><td><span class="prio p2">2</span></td><td><b>Workers pago</b></td><td>Cloudflare</td><td class="preco">US$ 5/mês</td><td>acima de 100 mil requisições por dia na API (muito público em dia de jogo).</td></tr>
+      <tr><td><span class="prio p2">2</span></td><td><b>Login e escalações salvas na nuvem</b></td><td>Supabase Pro</td><td class="preco">US$ 25/mês</td><td>contas, favoritos e escalações sincronizados entre aparelhos; o plano grátis pausa sem uso.</td></tr>
+      <tr><td><span class="prio p2">2</span></td><td><b>App na Google Play</b></td><td>Google Play Console</td><td class="preco">US$ 25 (uma vez)</td><td>publicar o 433Fut na loja (hoje o APK é instalado à mão).</td></tr>
+      <tr><td><span class="prio p3">3</span></td><td><b>App na App Store</b></td><td>Apple Developer Program</td><td class="preco">US$ 99/ano</td><td>versão iPhone do 433Fut.</td></tr>
+      <tr><td><span class="prio p3">3</span></td><td><b>Escalações e lesões pelo X</b></td><td>X API (plano Basic)</td><td class="preco">~US$ 200/mês</td><td>ler os perfis oficiais dos clubes e dos setoristas (o plano grátis não permite leitura). O Instagram (Graph API) é grátis com conta profissional.</td></tr>
+      <tr><td><span class="prio p3">3</span></td><td><b>Busca de notícias com contrato</b></td><td>API de notícias paga (ex.: NewsAPI)</td><td class="preco">~US$ 449/mês</td><td>substitui o Google Notícias como fonte do robô (risco J5).</td></tr>
+    </tbody>
+  </table>
+
+  <div class="nota">* Preço da API-Football conferido na página oficial em 14/11/2026 (Free US$ 0 com 100 consultas/dia; Pro US$ 16; Ultra US$ 26; Mega US$ 36, sem impostos).
+  Os demais valores são de referência e devem ser conferidos no site de cada fornecedor antes de contratar. "Sob consulta" = preço negociado caso a caso.</div>
+
+  <h2>Ordem sugerida de investimento</h2>
+  <table>
+    <tbody>
+      <tr><td><b>1º</b></td><td>Consulta de marca (INPI/advogado) antes de divulgar o nome.</td></tr>
+      <tr><td><b>2º</b></td><td>API-Football Pro (US$ 16/mês): destrava placar licenciado, Séries C/D e fotos da base de uma vez.</td></tr>
+      <tr><td><b>3º</b></td><td>Domínio próprio (R$ 40/ano) e conta Google Play (US$ 25): presença profissional do site e do app.</td></tr>
+      <tr><td><b>4º</b></td><td>Na negociação com uma empresa: dados de evento (Opta/Sportmonks), fotos (agência) e escudos entram no contrato.</td></tr>
+    </tbody>
+  </table>
+
+  <p class="rodape">CazéStats.TV e 433Fut © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Riscos para apresentação: docs/RISCOS-APRESENTACAO.md · Hospedagem gratuita: docs/HOSPEDAGEM.md</p>
+</body>
+</html>
