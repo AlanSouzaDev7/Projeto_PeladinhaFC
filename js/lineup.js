@@ -63,19 +63,38 @@
   }
   const initial = (cid) => fromLastMatch(cid) || suggest(cid, "4-2-3-1");
 
-  /* ---------- persistência ---------- */
-  const KEY = (cid) => `placar:xi2:${cid}`;
-  function load(cid) {
+  /* ---------- persistência ----------
+     Sem chave: a escalação do clube (aba Elenco), que vale até o próximo jogo.
+     Com chave (campinho tático da partida, "placar:xi-jogo:<jogo>:<clube>"): uma escalação por jogo e por time, que
+     parte da escalação daquele jogo (registrada em CONTEXTOS pela página que abriu o campinho). */
+  const KEY = (cid, chave) => chave || `placar:xi2:${cid}`;
+  const CONTEXTOS = {};
+  const CHAVE_OK = /^placar:xi-jogo:[\w.-]{1,40}:[a-z-]{2,20}$/;
+  function contexto(chave, dados) { if (CHAVE_OK.test(chave)) CONTEXTOS[chave] = dados; return chave; }
+  function load(cid, chave) {
     try {
-      const s = SEG.le(localStorage.getItem(KEY(cid)));
-      // a edição vale até o próximo jogo: saiu escalação nova do técnico, ela volta a ser o ponto de partida
-      if (s && F[s.f] && s.xi.length === 11 && (!s.base || s.base === baseAtual(cid))) return s;
+      const s = SEG.le(localStorage.getItem(KEY(cid, chave)));
+      // a edição do clube vale até o próximo jogo: saiu escalação nova do técnico, ela volta a ser o ponto de partida
+      if (s && F[s.f] && s.xi.length === 11 && (chave || !s.base || s.base === baseAtual(cid))) return s;
     } catch { /* sem armazenamento */ }
-    return initial(cid);
+    const c = chave && CONTEXTOS[chave];
+    return (c && c.inicial && c.inicial()) || initial(cid);
   }
   const baseAtual = (cid) => { const L = LAST[cid]; return L ? `${L.date}|${L.vs}` : ""; };
-  function save(cid, s) { try { localStorage.setItem(KEY(cid), JSON.stringify({ ...s, base: baseAtual(cid) })); } catch { /* sem armazenamento */ } }
-  function reset(cid) { try { localStorage.removeItem(KEY(cid)); } catch { /* sem armazenamento */ } }
+  function save(cid, s, chave) { try { localStorage.setItem(KEY(cid, chave), JSON.stringify(chave ? s : { ...s, base: baseAtual(cid) })); } catch { /* sem armazenamento */ } }
+  function reset(cid, chave) { try { localStorage.removeItem(KEY(cid, chave)); } catch { /* sem armazenamento */ } }
+  /* escalação de um jogo (dados/escalacoes-jogos ou escalação anunciada) -> estado do campinho */
+  function deJogo(cid, jogo) {
+    if (!jogo || !F[jogo.f]) return null;
+    const porLugar = Object.fromEntries(jogo.xi.map(([lugar, id]) => [lugar, String(id)]));
+    const xi = F[jogo.f].map((s) => porLugar[s[5]] || null);
+    if (xi.filter(Boolean).length < 9) return null;
+    const usados = new Set(xi);
+    const banco = [...(jogo.entraram || []).map(([id]) => String(id)), ...(jogo.bench || []).map(String)].filter((id) => !usados.has(id) && usados.add(id));
+    players(cid).forEach((p) => { if (banco.length < 12 && !usados.has(p.id)) { banco.push(p.id); usados.add(p.id); } });
+    while (banco.length < 12) banco.push(null);
+    return { f: jogo.f, xi, bench: banco.slice(0, 12) };
+  }
 
   /* trocar de formação mantendo os mesmos 11, encaixados pelo setor */
   function reform(cid, s, f) {
@@ -100,23 +119,25 @@
     ? `<span class="tk" style="--tc:${c.colors[0]};--tb:${c.colors[1]};--to:${onColor(c.colors[0])}">${p.n ?? "–"}</span>`
     : `<span class="tk empty">+</span>`;
 
-  function builder(cid, first = true) {
-    const c = byId[cid], s = load(cid), ps = players(cid), map = Object.fromEntries(ps.map((p) => [p.id, p]));
+  function builder(cid, first = true, chave = "") {
+    const c = byId[cid], s = load(cid, chave), ps = players(cid), map = Object.fromEntries(ps.map((p) => [p.id, p]));
+    const ctx = chave ? CONTEXTOS[chave] || {} : null;
     const inXI = new Set(s.xi), inBench = new Set(s.bench);
     const base = (d) => 96 - d * 1.14; // usa mais o comprimento do campo: linhas mais separadas
     const just = (a, i) => (ui.last && ui.last.some((x) => x.area === a && x.i === i) ? "just" : "");
     const list = ps.filter((p) => ui.filter === "all" || p.pos === ui.filter);
-    const L = LAST[cid];
+    const L = ctx ? null : LAST[cid];
     const fromMatch = L && !s.pos && JSON.stringify({ f: s.f, xi: s.xi, bench: s.bench }) === JSON.stringify(fromLastMatch(cid));
-    const html = `<div class="lineup ${first ? "first" : ""}" data-lineup="${cid}">
+    const html = `<div class="lineup ${first ? "first" : ""}${ctx ? " lu-jogo" : ""}" data-lineup="${cid}"${chave ? ` data-lu-chave="${SEG.esc(chave)}"` : ""}>
       <div class="lu-bar">
         <div class="chips">${FORMS.map((f) => `<button class="chip ${f === s.f ? "on" : ""}" data-lu-form="${f}">${f}</button>`).join("")}</div>
         <div class="lu-actions">
           ${s.pos ? `<button class="chip" data-lu-unpos title="Volta cada jogador para o lugar da formação">⌖ Alinhar na formação</button>` : ""}
           ${L ? `<button class="chip" data-lu-reset title="Volta para a escalação do último jogo">↺ Último jogo</button>` : ""}
-          <a class="chip" href="#/bora-pro-jogo/${cid}/${cid === "palmeiras" ? "flamengo" : "palmeiras"}">Bora pro jogo ›</a>
+          ${ctx ? `<button class="chip" data-lu-reset title="Volta para a escalação ${SEG.esc(ctx.rotulo || "do jogo")}">↺ Escalação ${SEG.esc(ctx.rotulo || "do jogo")}</button>` : `<a class="chip" href="#/bora-pro-jogo/${cid}/${cid === "palmeiras" ? "flamengo" : "palmeiras"}">Bora pro jogo ›</a>`}
         </div>
       </div>
+      ${ctx && ctx.fonte ? `<div class="lu-source">${SEG.esc(ctx.fonte)}</div>` : ""}
       ${L ? `<div class="lu-source">${fromMatch ? "Escalação titular do último jogo" : "Sua escalação · baseada no último jogo"}: ${SEG.esc(L.comp)}, ${L.home ? `${c.abbr} ${SEG.esc(L.score.replace("-", " x "))} ${SEG.esc(L.vs)}` : `${SEG.esc(L.vs)} ${SEG.esc(L.score.split("-").reverse().join(" x "))} ${c.abbr}`} · ${SEG.esc(L.date.split("-").reverse().join("/"))} · ${SEG.esc(L.formation)}</div>` : ""}
       <div class="lu-grid">
         <div>
@@ -165,13 +186,13 @@
   }
 
   /* coloca o jogador no lugar; quem estava ali vai para onde ele estava (ou sai do time) */
-  function place(cid, area, i, pid) {
-    const s = load(cid);
+  function place(cid, area, i, pid, chave) {
+    const s = load(cid, chave);
     const at = s.xi.indexOf(pid) >= 0 ? ["xi", s.xi.indexOf(pid)] : s.bench.indexOf(pid) >= 0 ? ["bench", s.bench.indexOf(pid)] : null;
     const cur = s[area][i] ?? null;
     if (at) s[at[0]][at[1]] = cur;
     s[area][i] = pid;
-    save(cid, s);
+    save(cid, s, chave);
     ui.last = [{ area, i }, ...(at ? [{ area: at[0], i: at[1] }] : [])];
   }
 
@@ -184,7 +205,7 @@
     if (!lu || e.button > 0) return;
     const row = e.target.closest("[data-player]");
     const slot = e.target.closest("[data-slot]");
-    const s = load(lu.dataset.lineup);
+    const s = load(lu.dataset.lineup, lu.dataset.luChave);
     const pid = row ? row.dataset.player : slot ? s[slot.dataset.slot][+slot.dataset.i] : null;
     if (!pid) return;
     drag = { lu, pid, from: row || slot, x: e.clientX, y: e.clientY, on: false, touch: e.pointerType === "touch", t: Date.now(), id: e.pointerId };
@@ -232,15 +253,15 @@
   }
   function finish(x, y) {
     if (!drag.on) return cleanup();
-    const t = target(x, y), lu = drag.lu, cid = lu.dataset.lineup;
+    const t = target(x, y), lu = drag.lu, cid = lu.dataset.lineup, chave = lu.dataset.luChave;
     if (t && t.classList.contains("lu-pitch")) {
-      const r = t.getBoundingClientRect(), s = load(cid), i = +drag.from.dataset.i;
+      const r = t.getBoundingClientRect(), s = load(cid, chave), i = +drag.from.dataset.i;
       const clamp = (v) => Math.round(Math.max(4, Math.min(96, v)) * 10) / 10;
       s.pos = s.pos || F[s.f].map(([, , l, dd, da]) => [l, 94 - ((dd + da) / 2) * 1.08]);
       s.pos[i] = [clamp(((x - r.left) / r.width) * 100), clamp(((y - r.top) / r.height) * 100)];
-      save(cid, s);
+      save(cid, s, chave);
       ui.last = [{ area: "xi", i }];
-    } else if (t) place(cid, t.dataset.slot, +t.dataset.i, drag.pid);
+    } else if (t) place(cid, t.dataset.slot, +t.dataset.i, drag.pid, chave);
     cleanup();
     if (t) rerender(lu);
   }
@@ -255,9 +276,10 @@
   }
   function rerender(el) {
     const y = scrollY, list = el.querySelector(".lu-list ul"), ly = list ? list.scrollTop : 0;
-    el.outerHTML = builder(el.dataset.lineup, false);
+    const chave = el.dataset.luChave || "", sel = chave ? `[data-lu-chave="${CSS.escape(chave)}"]` : "[data-lineup]:not([data-lu-chave])";
+    el.outerHTML = builder(el.dataset.lineup, false, chave);
     scrollTo(0, y);
-    const nl = document.querySelector(`[data-lineup] .lu-list ul`);
+    const nl = document.querySelector(`${sel} .lu-list ul`);
     if (nl) nl.scrollTop = ly;
   }
 
@@ -408,11 +430,11 @@
   document.addEventListener("click", (e) => {
     const lu = e.target.closest("[data-lineup]");
     if (lu) {
-      const cid = lu.dataset.lineup;
+      const cid = lu.dataset.lineup, chave = lu.dataset.luChave;
       const fb = e.target.closest("[data-lu-form]");
-      if (fb) { save(cid, reform(cid, load(cid), fb.dataset.luForm)); return rerender(lu); }
-      if (e.target.closest("[data-lu-reset]")) { reset(cid); return rerender(lu); }
-      if (e.target.closest("[data-lu-unpos]")) { const s = load(cid); delete s.pos; save(cid, s); return rerender(lu); }
+      if (fb) { save(cid, reform(cid, load(cid, chave), fb.dataset.luForm), chave); return rerender(lu); }
+      if (e.target.closest("[data-lu-reset]")) { reset(cid, chave); return rerender(lu); }
+      if (e.target.closest("[data-lu-unpos]")) { const s = load(cid, chave); delete s.pos; save(cid, s, chave); return rerender(lu); }
       const ft = e.target.closest("[data-lu-filter]");
       if (ft) { ui.filter = ft.dataset.luFilter; return rerender(lu); }
     }
@@ -540,5 +562,5 @@
     }
   }
 
-  window.LINEUP = { builder, pageBora, mount, load, players, FORMS, F, last: (cid) => LAST[cid] };
+  window.LINEUP = { builder, pageBora, mount, load, players, FORMS, F, last: (cid) => LAST[cid], contexto, deJogo, fromLastMatch };
 })();

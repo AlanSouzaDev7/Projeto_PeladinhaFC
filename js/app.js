@@ -996,7 +996,7 @@
     const words = c.name.split(" ");
     const m = state.matches.find((x) => x.home === id || x.away === id);
     const rival = byId[c.rival];
-    const tabs = [["geral", "Visão geral"], ["partidas", "Partidas"], ["elenco", "Elenco"], ["mercado", "Janela"], ["estatisticas", "Estatísticas"], ["comparar", "Comparar"], ["tabela", "Tabela"]];
+    const tabs = [["geral", "Visão geral"], ["partidas", "Partidas"], ["escalacoes", "Escalações"], ["elenco", "Elenco"], ["mercado", "Janela"], ["estatisticas", "Estatísticas"], ["comparar", "Comparar"], ["tabela", "Tabela"]];
     let body = "";
 
     if (tab === "geral") {
@@ -1063,6 +1063,7 @@
     if (tab === "partidas") body = `<div data-history="${id}">${historyHTML(id, window.CLUB_FORM?.clubs?.[id])}</div>`;
 
     if (tab === "elenco") body = LINEUP.builder(id);
+    if (tab === "escalacoes") body = TATICA.abaClube(id);
     if (tab === "mercado") body = MERCADO_UI.page(id, extra);
     if (tab === "estatisticas") body = `<div data-raiox="${id}">${raioxHTML(id)}</div>${playerStatsHTML(id, true)}`;
 
@@ -1141,7 +1142,8 @@
           <div class="card"><div class="card-h">Na tabela</div>${standingsTable(both, null, true)}${sourceNote}</div>
           ${scorersDuel(m)}
         </div>
-      </div>`;
+      </div>
+      ${window.TATICA ? TATICA.cardPartida(m) : ""}`;
   }
 
   /* ---------- arbitragem do jogo pelas manchetes (GET /api/arbitragem ou js/live-data.js, a cada 30 min) ---------- */
@@ -1852,6 +1854,7 @@
     if (state.route.page === "simulador") simBind(view);
     if (state.route.page === "jogador") JOGADOR.mount(view);
     JOGADOR.montaNotas?.(view); // notas da partida (página do jogo)
+    window.TATICA?.mount(view); // campinho tático da partida e aba Escalações do clube
     COPA.mount(view); // página de competição; nas outras, só centraliza a barra de competições
     MERCADO_UI.mount(view); // janela de transferências (aba "Janela" do clube)
     // fotos dos jogadores (licença livre, Wikimedia Commons) nas listas de estatísticas; o nome abre a página do jogador
