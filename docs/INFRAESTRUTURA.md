@@ -82,6 +82,12 @@ copas, estaduais) e `dados/club-form.json` (a Série A, montada a partir dos doi
 com resumo de vitórias, empates, derrotas e gols. A gravação é um único comando SQL por lote (`json_each`) e não regrava
 jogo que não mudou, para caber no plano grátis (50 consultas por pedido e 100 mil linhas gravadas por dia).
 
+**Temporadas anteriores (18/11/2026).** Carga única de 2023, 2024 e 2025 pelo workflow "Histórico: temporadas anteriores"
+(`server/temporadas_anteriores.py`): 4.531 jogos encerrados de Série A e B, Libertadores, Sul-Americana, Copa do Brasil e
+dos quatro estaduais. Lê só os dias com jogo, pelo calendário de cada temporada na ESPN; estadual com calendário incompleto
+(Carioca 2025) lê a janela de janeiro a abril. Para acrescentar outra temporada: `gh workflow run historico.yml -f anos="2022"`.
+Séries C e D ficam de fora (a ESPN não cobre; no site elas vêm da Wikipédia).
+
 ## Login opcional e escalações salvas (revisto em 12/11/2026)
 
 **Ainda não é obrigatório ter banco de dados**: tudo que o torcedor monta (janela de transferências, escalação do clube, simulador) fica no navegador dele (`localStorage`, uma chave por recurso, como `placar:janela-cruzeiro`) e o link de compartilhar carrega o elenco inteiro no endereço. Os dados públicos (elencos, jogos, finanças) seguem como arquivos estáticos gerados pelo robô, que é o jeito mais barato e rápido de servir.

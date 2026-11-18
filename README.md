@@ -18,7 +18,8 @@ Feito com **HTML, CSS e JavaScript puro** (sem frameworks) e uma **API em Python
 | **Campinho tático editável da partida** (qualquer jogador do elenco: titular, reserva ou não relacionado) e **aba Escalações** do clube (escalação de cada jogo) | `js/taticas.js`, `server/escalacoes_jogos.py` |
 | Pontos fracos resolvidos: CI com lint e testes, erros registrados, proxy confiável, CSS dividido por área, marca d'água de autoria | `.github/workflows/testes.yml`, `eslint.config.mjs`, `pyproject.toml` |
 | **Hospedagem gratuita Cloudflare** pronta (Pages + Worker com cache compartilhado, repasse da ESPN, banco D1 e agendador do robô) | `docs/HOSPEDAGEM.md`, `worker/` |
-| **Histórico dos jogos** no banco D1 (18/11): todas as temporadas acumuladas, com confronto direto e resumo V/E/D (`GET /jogos?clube=cruzeiro&contra=atletico-mg` no Worker) | `server/historico_jogos.py`, `worker/plataforma.mjs` |
+| **Histórico dos jogos** no banco D1 (18/11): desde 2023 (carga das temporadas anteriores pelo workflow Histórico) e acumulando, com confronto direto e resumo V/E/D (`GET /jogos?clube=cruzeiro&contra=atletico-mg` no Worker) | `server/historico_jogos.py`, `worker/plataforma.mjs` |
+| **Confronto direto na página da partida** (18/11): todas as competições desde 2023, com resumo de vitórias, empates e gols | `js/confronto.js` |
 | **Dados no banco D1** (18/11): o robô envia só o que mudou, o site lê do banco e usa a cópia estática se ele falhar; o site deixa de ser republicado a cada rodada | `server/enviar_d1.py`, `js/dados.js`, `worker/` |
 | Riscos para lembrar ao apresentar a uma empresa (nunca bloqueiam funções) | `docs/RISCOS-APRESENTACAO.md` |
 | Funcionalidades que precisam de capital inicial | `docs/FUNCIONALIDADES-PREMIUM.pdf` |
