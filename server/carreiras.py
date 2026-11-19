@@ -28,7 +28,7 @@ P = None  # módulo placar_api, ligado em placar_api.py
 RAIZ = Path(__file__).resolve().parent.parent
 SAIDA = RAIZ / "dados" / "carreiras"
 CACHE = RAIZ / "server" / "cache" / "carreiras.json"
-VERSAO = 1
+VERSAO = 2  # 2: carreira montada jogador por jogador (Wikipédia, Wikidata, ESPN)
 SPARQL = "https://query.wikidata.org/sparql?"
 # seleções, olímpicos e times de base não entram na linha do tempo de clubes
 FORA = re.compile(r"\b(sele[cç][aã]o|national|nacional|ol[ií]mpic|olympic|sub[- ]?\d\d|u[- ]?\d\d|under[- ]?\d\d)\b|\s(B|II)$", re.I)
@@ -224,32 +224,126 @@ def _ler_cache():
         return {}
 
 
-def gravar(forcar=False):
-    """Atualiza dados/carreiras/*.json (semanal, ou quando o elenco de um clube muda)."""
+POR_RODADA = 150  # pesquisas de jogador por rodada do robô (a primeira carga completa é feita fora do robô)
+VALIDADE = 30 * 86400  # cada carreira é pesquisada de novo a cada 30 dias (ou quando o jogador muda de clube)
+
+
+def _site_do_clube(titulo, nome, nomes_site):
+    import carreiras_wiki as W
+    for cid, oficial in nomes_site.items():
+        if W.clube_bate(titulo, oficial) or W.clube_bate(nome, oficial):
+            return cid
+    return None
+
+
+def _logo_da_espn(titulo, nome, espn):
+    """Escudo exato pela lista de times da ESPN do próprio jogador (o nome do clube tem que bater)."""
+    import carreiras_wiki as W
+    alvo = W.distintivas(titulo) | W.distintivas(nome)
+    for _i, _f, nm, logo in espn:
+        pal = W.distintivas(nm)
+        if logo and pal and len(pal & alvo) / len(pal) >= 0.6:
+            return logo
+    return None
+
+
+def junta(lista):
+    """Passagens seguidas pelo mesmo clube viram um trecho só (Corinthians 2014 + 2015–2026 = 2014–2026)."""
+    out = []
+    for x in lista:
+        if out and out[-1]["q"] == x["q"]:
+            a = out[-1]
+            a["i"] = min(v for v in (a["i"], x["i"]) if v) if (a["i"] or x["i"]) else None
+            a["f"] = None if (a["f"] is None or x["f"] is None) else max(a["f"], x["f"])
+            a["e"] = a.get("e") and x.get("e")
+        else:
+            out.append(dict(x))
+    return out
+
+
+def monta_jogador(aid, nome, idade, cid, nomes_site, qid=None, wikidata=None, busca=None, ogol=None):
+    """Carreira de um jogador: Wikipédia (pt/en) > ogol > Wikidata > ESPN; escudos do site, da ESPN, do ogol ou desenhados.
+    ogol = {nome: (slug, id)} do elenco do clube no ogol (carreiras_ogol.elenco).
+    Devolve (lista, fonte); lista vazia quando nenhuma fonte dá pelo menos 2 clubes com segurança."""
+    import carreiras_wiki as W
+    W.P = W.P or P
+    espn = W.pela_espn(aid)
+    wiki = W.pela_wikipedia(nome, idade, nomes_site[cid], W.titulo_do_wikidata(qid) if qid else None)
+    if not wiki and qid:  # o item do Wikidata não tem artigo: tenta a busca
+        wiki = W.pela_wikipedia(nome, idade, nomes_site[cid])
+    lista, fonte = [], None
+    if wiki and len(wiki["clubes"]) >= 2:
+        fonte = wiki["fonte"]
+        for i, f, titulo, nm, emp in wiki["clubes"]:
+            site = _site_do_clube(titulo, nm, nomes_site)
+            chave = site or " ".join(sorted(W.distintivas(titulo))) or titulo
+            logo = None
+            if not site:
+                logo = _logo_da_espn(titulo, nm, espn)
+                if not logo and busca is not None:
+                    e = espn_por_nome(titulo, busca)
+                    logo = f"https://a.espncdn.com/i/teamlogos/soccer/500/{e}.png" if e else None
+            lista.append({"c": P.clean_text(nm, 50), "q": chave, "i": i, "f": f, "l": logo, "s": site, "e": 1 if emp else 0})
+        lista = junta(lista)
+    og = None
+    if not lista and ogol:
+        import carreiras_ogol as O
+        O.P = O.P or P
+        achado = O.acha(nome, ogol)
+        if achado:
+            trechos = O.carreira(*achado, nascido=(int(time.strftime("%Y")) - idade) if idade else None)
+            if trechos and O.nome_bate(trechos[-1][2], nomes_site[cid], W.distintivas):  # a temporada mais recente é no clube do site
+                og = trechos
+    if og and len(og) >= 2:
+        fonte = "ogol"
+        for i, f, nm, _eq, logo_ogol in og:
+            site = _site_do_clube(nm, nm, nomes_site) or (cid if O.nome_bate(nm, nomes_site[cid], W.distintivas) else None)
+            logo = None
+            if not site:
+                logo = _logo_da_espn(nm, nm, espn)
+                if not logo and busca is not None:
+                    e = espn_por_nome(nm, busca)
+                    logo = f"https://a.espncdn.com/i/teamlogos/soccer/500/{e}.png" if e else None
+                logo = logo or logo_ogol
+            lista.append({"c": nm, "q": site or " ".join(sorted(W.distintivas(nm))) or nm, "i": i, "f": f, "l": logo, "s": site, "e": 0})
+        lista = junta(lista)
+        if lista and lista[-1]["s"] == cid:
+            lista[-1]["f"] = None  # o trecho atual continua aberto
+    elif not lista and wikidata and len(wikidata) >= 2:
+        fonte, lista = "wikidata", [dict(x) for x in wikidata]
+    elif not lista and len(espn) >= 2:
+        fonte = "espn"
+        for i, f, nm, logo in espn:
+            site = _site_do_clube(nm, nm, nomes_site)
+            lista.append({"c": nm, "q": site or " ".join(sorted(W.distintivas(nm))) or nm, "i": i, "f": f, "l": None if site else logo, "s": site, "e": 0})
+        lista = junta(lista)
+    if lista and lista[-1]["s"] != cid:  # o clube atual fecha a linha (contratação recente que a fonte ainda não tem)
+        lista.append({"c": nomes_site[cid], "q": cid, "i": None, "f": None, "l": None, "s": cid, "e": 0})
+    return (lista if len(lista) >= 2 else []), fonte
+
+
+def gravar(forcar=False, limite=POR_RODADA, refazer_vazios=False):
+    """Atualiza dados/carreiras/*.json, jogador por jogador (limite de pesquisas por rodada; None = todos)."""
     import jogadores as J
     J.P = J.P or P
     squads = (json.loads((RAIZ / "dados" / "squads.json").read_text(encoding="utf-8")) or {}).get("SQUADS") or {}
-    cache = _ler_cache() if not forcar else {}
-    velho = cache.get("v") != VERSAO or cache.get("quando", 0) < time.time() - 7 * 86400
-    clubes = {} if velho else dict(cache.get("clubes") or {})
-    if not cache and not forcar and SAIDA.exists():
-        # sem cache (robô do GitHub na primeira vez): parte dos arquivos já publicados em dados/carreiras/, como se
-        # tivessem sido feitos agora; só os clubes com elenco diferente do arquivo são refeitos (evita 13 min de uma vez)
-        for f in SAIDA.glob("*.json"):
-            cid = f.stem
-            try:
-                jog = json.loads(f.read_text(encoding="utf-8"))
-            except ValueError:
-                continue
-            elenco_ids = sorted(str(r[4]) for r in squads.get(cid, []) if r[4])
-            if set(jog) <= set(elenco_ids):
-                clubes[cid] = {"ids": elenco_ids, "jogadores": jog}
-        velho, cache = False, {"quando": time.time()}
-        mudou_semente = True
-    else:
-        mudou_semente = False
-    busca = dict(cache.get("busca_espn") or {})  # nome do clube -> id na ESPN (ou null): permanente
+    cache = {} if forcar else _ler_cache()
+    agora = time.time()
+    if cache.get("v") != VERSAO:
+        cache = {"busca_espn": cache.get("busca_espn") or {}, "clubes_wd": {}, "jogadores": {}}
+        if not forcar and SAIDA.exists():
+            # primeira vez com esta versão (ou robô sem cache): parte dos arquivos publicados, que valem por 30 dias
+            for f in SAIDA.glob("*.json"):
+                try:
+                    for aid, lista in json.loads(f.read_text(encoding="utf-8")).items():
+                        cache["jogadores"][aid] = {"cid": f.stem, "t": agora, "fonte": "arquivo", "lista": lista}
+                except ValueError:
+                    continue
+    busca = dict(cache.get("busca_espn") or {})
     busca["_feitas"] = 0
+    jog = cache.setdefault("jogadores", {})
+    wd = cache.setdefault("clubes_wd", {})
+    nomes_site = {cid: J.NOME_OFICIAL.get(cid, cid) for cid in P.CLUBS}
     site_por_qid = {}
     for cid in P.CLUBS:
         try:
@@ -258,38 +352,59 @@ def gravar(forcar=False):
                 site_por_qid[q] = cid
         except Exception as ex:
             P.log("carreiras (clube)", cid, ex)
-    mudou = False
+    feitas = 0
     for cid, elenco in squads.items():
+        pendentes = [r for r in elenco if r[4] and (forcar or not jog.get(str(r[4])) or jog[str(r[4])].get("cid") != cid or jog[str(r[4])].get("t", 0) < agora - VALIDADE
+                                                    or (refazer_vazios and len(jog[str(r[4])].get("lista") or []) < 2))]
+        if not pendentes or (limite is not None and feitas >= limite):
+            continue
+        # Wikidata do clube (uma consulta por clube): dá o item de cada jogador (link do artigo) e a carreira de reserva
         ids = sorted(str(r[4]) for r in elenco if r[4])
-        if clubes.get(cid, {}).get("ids") == ids:
-            continue
-        q = next((k for k, v in site_por_qid.items() if v == cid), None)
-        if not q:
-            continue
+        if wd.get(cid, {}).get("ids") != ids or wd.get(cid, {}).get("t", 0) < agora - VALIDADE:
+            q = next((k for k, v in site_por_qid.items() if v == cid), None)
+            try:
+                achados = casar(candidatos(q), elenco) if q else {}
+                faltam = [(r[1], r[3], str(r[4])) for r in elenco if r[4] and str(r[4]) not in achados and r[3] and len(r[1]) > 3]
+                achados.update(por_nome(faltam))
+                car = carreiras(sorted(set(achados.values())), site_por_qid, busca)
+                wd[cid] = {"ids": ids, "t": agora, "qids": achados, "listas": {a: car.get(qq, []) for a, qq in achados.items()}}
+            except Exception as ex:
+                P.log("carreiras (Wikidata)", cid, ex)
+                wd.setdefault(cid, {"ids": [], "t": 0, "qids": {}, "listas": {}})
+        import carreiras_ogol as O
+        O.P = O.P or P
         try:
-            achados = casar(candidatos(q), elenco)
-            faltam = [(r[1], r[3], str(r[4])) for r in elenco if r[4] and str(r[4]) not in achados and r[3] and len(r[1]) > 3]
-            achados.update(por_nome(faltam))
-            car = carreiras(sorted(set(achados.values())), site_por_qid, busca)
+            ogol = O.elenco(cid)
         except Exception as ex:
-            P.log("carreiras", cid, ex)
-            continue
-        jog = {}
-        for aid, pq in achados.items():
-            lista = [dict(x) for x in car.get(pq, [])]
-            if not lista or lista[-1]["s"] != cid:
-                lista.append({"c": J.NOME_OFICIAL.get(cid, cid), "q": q, "i": None, "f": None, "l": None, "s": cid})  # o clube atual fecha a linha
-            jog[aid] = lista
-        clubes[cid] = {"ids": ids, "jogadores": jog}
-        mudou = True
-    busca.pop("_feitas", None)
-    if mudou or velho or mudou_semente:
+            P.log("carreiras (ogol)", cid, ex)
+            ogol = {}
+        for num, nome, pos, idade, aid in pendentes:
+            if limite is not None and feitas >= limite:
+                break
+            aid = str(aid)
+            try:
+                lista, fonte = monta_jogador(aid, nome, idade, cid, nomes_site, wd[cid]["qids"].get(aid), wd[cid]["listas"].get(aid), busca, ogol)
+            except Exception as ex:
+                P.log("carreiras (jogador)", nome, ex)
+                continue
+            jog[aid] = {"cid": cid, "t": agora, "fonte": fonte, "lista": lista}
+            feitas += 1
+        # progresso gravado a cada clube: se a pesquisa for interrompida, a próxima continua daqui (não recomeça do zero)
         CACHE.parent.mkdir(parents=True, exist_ok=True)
-        CACHE.write_text(json.dumps({"v": VERSAO, "quando": time.time() if velho else cache.get("quando", time.time()), "clubes": clubes, "busca_espn": busca},
-                                    ensure_ascii=False), encoding="utf-8")
+        CACHE.write_text(json.dumps({**cache, "v": VERSAO, "busca_espn": {k: v for k, v in busca.items() if k != "_feitas"}}, ensure_ascii=False), encoding="utf-8")
+        print(f"carreiras: {cid} pronto ({feitas} jogadores pesquisados nesta rodada)", flush=True)
+    busca.pop("_feitas", None)
+    cache.update(v=VERSAO, busca_espn=busca)
+    CACHE.parent.mkdir(parents=True, exist_ok=True)
+    CACHE.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
     SAIDA.mkdir(parents=True, exist_ok=True)
     total = 0
-    for cid, d in clubes.items():
-        (SAIDA / f"{cid}.json").write_text(json.dumps(d["jogadores"], ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        total += len(d["jogadores"])
+    for cid, elenco in squads.items():
+        saida = {}
+        for r in elenco:
+            x = jog.get(str(r[4]))
+            if x and x.get("cid") == cid and len(x.get("lista") or []) >= 2:
+                saida[str(r[4])] = x["lista"]
+        (SAIDA / f"{cid}.json").write_text(json.dumps(saida, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        total += len(saida)
     return total

@@ -756,34 +756,45 @@
 .foto-c .foto-p { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; display: block; }
 .foto-r { position: absolute; max-width: none; max-height: none; object-fit: fill; display: block; }
 
-/* ---------- linha do tempo da carreira, no fundo do topo do jogador (js/jogador.js, pintaCarreira) ---------- */
+/* ---------- linha do tempo da carreira, no fundo do topo do jogador (js/jogador.js, pintaCarreira) ----------
+   No estilo da faixa de notícias do site (FUTEBOL AGORA): bloco "Carreira" com corte diagonal e uma fita que anda em
+   looping (Web Animations API, só transform). Cada escudo cresce 45% ao passar pelo foco, perto do bloco, um de cada vez.
+   Escudos de 38 px em círculos de 55 px; empréstimo: círculo tracejado. */
 .jg-topo { position: relative; overflow: hidden; }
 .jg-topo > * { position: relative; z-index: 1; }
-.jg-topo > .jg-linha { position: absolute; z-index: 0; top: 0; bottom: 0; left: 40%; right: 340px; display: flex; align-items: center; justify-content: flex-end;
-  overflow: hidden; pointer-events: none; -webkit-mask-image: linear-gradient(90deg, transparent, #000 28%); mask-image: linear-gradient(90deg, transparent, #000 28%); }
-.jg-linha ol { position: relative; display: flex; align-items: flex-start; gap: 12px; margin: 0; padding: 0 6px; list-style: none; }
-.jg-linha ol::before { content: ""; position: absolute; left: 0; right: 0; top: 18px; height: 2px; border-radius: 2px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tc) 55%, var(--line)) 18%, var(--tc));
-  transform-origin: left center; animation: jgl-linha 0.9s var(--ease) both; }
-.jg-linha li { display: grid; justify-items: center; gap: 6px; width: 54px; flex: none; animation: jgl-no 0.5s var(--ease-bounce) both; animation-delay: calc(0.3s + var(--i) * 110ms); }
-.jgl-esc { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line);
-  box-shadow: 0 0 0 4px var(--surface); }
-.jgl-esc img, .jgl-esc svg { width: 26px; height: 26px; object-fit: contain; }
-.jg-linha small { font: 600 10.5px / 1.15 var(--font-mono, monospace); color: var(--text-3); white-space: nowrap; }
-.jg-linha li.atual .jgl-esc { border-color: var(--tc); box-shadow: 0 0 0 4px var(--surface), 0 0 18px color-mix(in srgb, var(--tc) 55%, transparent); }
-.jg-linha li.atual small { color: var(--text-2); }
-.jgl-luz { position: absolute; top: 15px; left: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 12px var(--tc);
-  opacity: 0; animation: jgl-luz 7s linear 2.2s infinite; }
-.jg-linha.ja-vista li, .jg-linha.ja-vista ol::before { animation: none; }
-@keyframes jgl-linha { from { transform: scaleX(0); } }
-@keyframes jgl-no { from { opacity: 0; transform: translateY(10px) scale(0.6); } }
-@keyframes jgl-luz { 0% { left: 0; opacity: 0; } 8% { opacity: 1; } 62% { left: calc(100% - 8px); opacity: 1; } 70%, 100% { left: calc(100% - 8px); opacity: 0; } }
+.jg-topo > .jg-linha { position: absolute; z-index: 0; top: 50%; left: 38%; right: 340px; height: 104px; margin-top: -52px; display: grid; grid-template-columns: auto minmax(0, 1fr);
+  pointer-events: none; animation: jgl-entra 0.7s var(--ease) both; }
+.jgl-tag { position: relative; z-index: 2; display: grid; align-content: center; gap: 4px; padding: 0 30px 0 14px; color: #fff;
+  background: linear-gradient(160deg, rgb(255 255 255 / 0.18), transparent 50%), linear-gradient(120deg, var(--tc), color-mix(in srgb, var(--tc) 62%, #000));
+  clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%); border-radius: 12px 0 0 12px; }
+.jgl-tag::after { content: ""; position: absolute; top: 0; bottom: 0; right: 7px; width: 3px; background: rgb(255 255 255 / 0.8); transform: skewX(-18deg); }
+.jgl-tag b { font: 900 17px / 1 var(--font-display); font-stretch: 75%; letter-spacing: 0.06em; text-transform: uppercase; }
+.jgl-tag span { font: 600 10.5px / 1 var(--font-mono, monospace); letter-spacing: 0.08em; opacity: 0.85; }
+.jgl-fita { position: relative; min-width: 0; margin-left: -16px; overflow: hidden; border-radius: 0 12px 12px 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--surface-2) 92%, transparent), color-mix(in srgb, var(--surface-2) 55%, transparent));
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 60px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 60px), transparent); }
+/* o foco: uma faixa clara fixa logo depois do bloco, por onde cada escudo passa e cresce */
+.jgl-fita::before { content: ""; position: absolute; z-index: 0; top: 8px; bottom: 8px; left: var(--foco, 92px); width: 86px; margin-left: -43px; border-radius: 14px;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tc) 30%, transparent), transparent); }
+.jgl-trilho { position: relative; z-index: 1; display: flex; align-items: center; gap: 26px; width: max-content; height: 100%; margin: 0; padding: 0 0 0 40px; list-style: none;
+  will-change: transform; backface-visibility: hidden; }
+.jgl-trilho li { display: grid; justify-items: center; gap: 6px; width: 70px; flex: none; }
+.jgl-esc { width: 55px; height: 55px; display: grid; place-items: center; border-radius: 50%; background: var(--surface); border: 1.5px solid var(--line);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.28); transform: scale(1); transition: transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1), border-color 0.3s, box-shadow 0.3s; will-change: transform; }
+.jgl-esc img, .jgl-esc svg { width: 38px; height: 38px; object-fit: contain; }
+.jgl-trilho li.emp .jgl-esc { border-style: dashed; border-color: color-mix(in srgb, var(--text-3) 70%, transparent); }
+.jgl-trilho small { font: 600 11px / 1.15 var(--font-mono, monospace); color: var(--text-3); white-space: nowrap; transition: color 0.3s, transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.jgl-trilho li.atual .jgl-esc { border-color: var(--tc); }
+/* o escudo no foco: 45% maior, borda e brilho na cor do clube */
+.jgl-trilho li.foco .jgl-esc { transform: scale(1.45); border-color: var(--tc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tc) 35%, transparent), 0 10px 26px rgb(0 0 0 / 0.4); }
+.jgl-trilho li.foco small { color: var(--text); transform: translateY(9px); }
+@keyframes jgl-entra { from { opacity: 0; transform: translateX(24px); } }
 @media (prefers-reduced-motion: reduce) {
-  .jg-linha li, .jg-linha ol::before { animation: none; }
-  .jgl-luz { display: none; }
+  .jg-topo > .jg-linha { animation: none; }
+  .jgl-esc, .jgl-trilho small { transition: none; }
 }
 @media (max-width: 900px) {
-  /* sem espaço livre ao lado: a linha vira uma faixa entre o nome e os números */
-  .jg-topo > .jg-linha { position: relative; grid-column: 1 / -1; grid-row: 2; left: auto; right: auto; top: auto; bottom: auto; padding: 2px 0; }
+  /* sem espaço livre ao lado: a fita vira uma faixa entre o nome e os números */
+  .jg-topo > .jg-linha { position: relative; grid-column: 1 / -1; grid-row: 2; top: auto; left: auto; right: auto; margin-top: 0; height: 96px; }
   .jg-topo.com-linha .jg-topo-kpis { grid-row: 3; }
 }

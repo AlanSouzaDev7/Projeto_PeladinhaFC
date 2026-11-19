@@ -98,7 +98,7 @@
       <text x="20" y="${ini.length > 2 ? 22.5 : 23.5}" text-anchor="middle" font-family="var(--font-label), sans-serif" font-weight="800" font-size="${ini.length > 2 ? 11 : 13.5}" fill="${txt}" paint-order="stroke" stroke="${cor}" stroke-width="1.2">${esc(ini)}</text></svg>`;
   }
   // imagens aceitas: ESPN, Wikimedia Commons (só livres) e API-Football
-  const LOGO_OK = /^https:\/\/(a\.espncdn\.com|upload\.wikimedia\.org\/wikipedia\/commons|media\.api-sports\.io)\//;
+  const LOGO_OK = /^https:\/\/(a\.espncdn\.com|upload\.wikimedia\.org\/wikipedia\/commons|media\.api-sports\.io|www\.ogol\.com\.br\/img\/logos\/equipas)\//;
   function crestOutro(nome, logo, size = 28, cores = null) {
     if (window.PLACAR_CONFIG?.escudosOficiais === true && logo && LOGO_OK.test(logo)) return `<img class="crest" src="${esc(logo)}" alt="Escudo do ${esc(nome)}" width="${size}" height="${size}" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-nome="${esc(nome)}" data-size="${size}"/>`;
     return iniCrest(nome, size, cores);

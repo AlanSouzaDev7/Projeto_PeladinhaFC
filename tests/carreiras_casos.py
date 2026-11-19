@@ -34,4 +34,20 @@ caso("o último vínculo sem saída continua aberto (clube atual)", lista[2]["f"
 caso("seleções e base ficam fora", all(C.FORA.search(n) for n in ["Seleção Brasileira de Futebol", "Brazil national under-20 football team", "Fluminense Sub-20", "FC Porto B"]))
 caso("clubes normais entram", not any(C.FORA.search(n) for n in ["Fluminense Football Club", "Club Atlético Boca Juniors", "Paris Saint-Germain"]))
 caso("nome genérico sai da busca da ESPN", C.GENERICO.sub(" ", "Chelsea Football Club").strip() == "Chelsea")
+# ---------- pesquisa individual (Wikipédia / ESPN), sem rede ----------
+import carreiras_wiki as W  # noqa: E402
+
+caso("anos: intervalo, aberto e ano único", (W._anos("2006–2007"), W._anos("2026–"), W._anos("2013")) == ((2006, 2007), (2026, None), (2013, 2013)))
+caso("clube atual bate pelo nome oficial", W.clube_bate("[[Clube Atlético Mineiro|Atlético]]", "Clube Atlético Mineiro") and W.clube_bate("CR Flamengo", "Clube de Regatas do Flamengo"))
+caso("Atlético-MG não se confunde com Athletico-PR", not W.clube_bate("Club Athletico Paranaense", "Clube Atlético Mineiro"))
+caso("nome antigo do Athletico também vale", W.clube_bate("Atlético Paranaense", "Club Athletico Paranaense"))
+caso("link do clube: título e nome exibido", W._link("→ [[Esporte Clube Vitória|Vitória]] ([[Empréstimo (esportes)|emp.]])") == ("Esporte Clube Vitória", "Vitória"))
+W._expande = lambda lang, textos: textos  # sem rede: os textos já vêm "expandidos"
+pt = {"ano": "2006–2007<br>2007<br>2009–2012", "clubes": "[[Sport Club Corinthians Paulista|Corinthians]]<br>→ [[Esporte Clube Vitória|Vitória]] (emp.)<br>[[Seleção Brasileira de Futebol|Brasil]]"}
+lista = W.clubes_da_caixa("pt", pt)
+caso("caixa em português: clubes, anos e empréstimo; seleção fora", [(x[0], x[1], x[3], x[4]) for x in lista] == [(2006, 2007, "Corinthians", False), (2007, 2007, "Vitória", True)])
+en = {"years1": "2016–2019", "clubs1": "[[Fluminense FC|Fluminense]]", "years2": "2019–2020", "clubs2": "→ [[ACF Fiorentina|Fiorentina]] (loan)"}
+caso("caixa em inglês: years1/clubs1", [(x[3], x[4]) for x in W.clubes_da_caixa("en", en)] == [("Fluminense", False), ("Fiorentina", True)])
+j = C.junta([{"q": "cor", "i": 2014, "f": 2014}, {"q": "cor", "i": 2015, "f": 2026}, {"q": "cru", "i": 2025, "f": None}])
+caso("passagens seguidas pelo mesmo clube viram uma só", [(x["q"], x["i"], x["f"]) for x in j] == [("cor", 2014, 2026), ("cru", 2025, None)])
 print(f"\n{ok} casos das carreiras passaram")

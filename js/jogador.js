@@ -88,10 +88,9 @@
   }
 
   /* ---------- linha do tempo da carreira, no fundo do topo ----------
-     Os clubes por onde o jogador passou, em ordem, com os anos (dados/carreiras/<clube>.json, do Wikidata; escudos da
-     ESPN, do Commons ou desenhados). A linha se desenha, os escudos entram um a um e uma luz percorre a linha de tempos
-     em tempos. Na mesma visita, ao trocar de aba, a entrada não se repete. */
-  const jaVistas = new Set();
+     Os clubes por onde o jogador passou, em ordem, com os anos (dados/carreiras/<clube>.json: Wikipédia, ogol, Wikidata
+     ou ESPN; escudos do site, da ESPN, do ogol ou desenhados). No estilo da faixa de notícias do site: a fita anda em
+     looping (Web Animations API, como js/ticker.js) e cada escudo cresce ao passar pelo foco, um de cada vez. */
   const anoOk = (v) => (Number.isInteger(v) && v > 1900 && v < 2100 ? v : null);
   function anosDe(x, ultimo) {
     const i = anoOk(x.i), f = anoOk(x.f);
@@ -99,16 +98,57 @@
     if (!f) return ultimo ? `desde ${i}` : `${i}–`;
     return f === i ? `${i}` : `${i}–${String(f).slice(2)}`;
   }
-  function carreiraHTML(p, lista, primeira) {
-    const nos = lista.map((x, i) => {
-      const ultimo = i === lista.length - 1, site = x.s && byId[x.s];
-      const nome = site ? site.name : String(x.c || "");
-      const escudo = site ? crest(site, 26) : window.GFX.crestOutro(nome, typeof x.l === "string" ? x.l : null, 26);
-      const anos = anosDe(x, ultimo);
-      return `<li style="--i:${i}"${ultimo ? ' class="atual"' : ""} title="${esc(nome)}${anos ? ` · ${esc(anos)}` : ""}"><span class="jgl-esc">${escudo}</span><small>${esc(anos)}</small></li>`;
+  const nomeDe = (x) => (x.s && byId[x.s] ? byId[x.s].name : String(x.c || ""));
+  function itensHTML(lista) {
+    return lista.map((x, i) => {
+      const ultimo = i === lista.length - 1, site = x.s && byId[x.s], nome = nomeDe(x);
+      const escudo = site ? crest(site, 38) : window.GFX.crestOutro(nome, typeof x.l === "string" ? x.l : null, 38);
+      const anos = anosDe(x, ultimo), emp = x.e === 1 && !ultimo;
+      const cls = [ultimo ? "atual" : "", emp ? "emp" : ""].filter(Boolean).join(" ");
+      return `<li${cls ? ` class="${cls}"` : ""} title="${esc(nome)}${anos ? ` · ${esc(anos)}` : ""}${emp ? " · empréstimo" : ""}"><span class="jgl-esc">${escudo}</span><small>${esc(anos)}</small></li>`;
     }).join("");
-    const resumo = lista.map((x, i) => `${x.s && byId[x.s] ? byId[x.s].name : x.c} (${anosDe(x, i === lista.length - 1)})`).join(", ");
-    return `<div class="jg-linha${primeira ? "" : " ja-vista"}" role="img" aria-label="${esc(`Carreira de ${p.nome}: ${resumo}`)}"><ol>${nos}<i class="jgl-luz" aria-hidden="true"></i></ol></div>`;
+  }
+  function carreiraHTML(p, lista) {
+    const resumo = lista.map((x, i) => `${nomeDe(x)} (${anosDe(x, i === lista.length - 1)})`).join(", ");
+    return `<div class="jg-linha" role="img" aria-label="${esc(`Carreira de ${p.nome}: ${resumo}`)}">
+      <div class="jgl-tag"><b>Carreira</b><span>${lista.length} clubes</span></div>
+      <div class="jgl-fita"><ol class="jgl-trilho">${itensHTML(lista)}</ol></div></div>`;
+  }
+  // fita em looping + foco: repete os clubes até cobrir a fita duas vezes e anda uma "volta" (a largura de uma cópia)
+  function animaFita(linha, lista) {
+    const fita = linha.querySelector(".jgl-fita"), trilho = linha.querySelector(".jgl-trilho");
+    const parado = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const uma = trilho.scrollWidth;
+    if (!uma || !fita.clientWidth) return;
+    if (parado || !trilho.animate) {
+      trilho.style.marginLeft = `${Math.max(0, fita.clientWidth - uma)}px`; // parado: o clube atual fica à direita
+      return;
+    }
+    const copias = Math.max(2, Math.ceil((fita.clientWidth * 2) / uma) + 1);
+    trilho.innerHTML = itensHTML(lista).repeat(copias);
+    const passo = trilho.scrollWidth / copias; // largura exata de uma cópia
+    const anim = trilho.animate([{ transform: "translate3d(0, 0, 0)" }, { transform: `translate3d(${-passo}px, 0, 0)` }],
+      { duration: Math.max(6000, (passo / 42) * 1000), iterations: Infinity, easing: "linear" });
+    // foco: a cada quadro, o escudo mais perto do ponto de foco ganha a classe "foco" (cresce 45% por transição).
+    // Sem medir a tela a cada quadro: o centro de cada escudo é lido uma vez e o deslocamento vem do relógio da animação.
+    const itens = [...trilho.children], foco = 92, dur = anim.effect.getTiming().duration;
+    const centros = itens.map((li) => li.offsetLeft + li.offsetWidth / 2);
+    let atual = null;
+    const quadro = () => {
+      if (!linha.isConnected) return anim.cancel();
+      const desloca = (((anim.currentTime || 0) % dur) / dur) * passo;
+      let melhor = null, dist = 1e9;
+      centros.forEach((c, k) => {
+        const d = Math.abs(c - desloca - foco);
+        if (d < dist) { dist = d; melhor = itens[k]; }
+      });
+      if (melhor !== atual) {
+        atual?.classList.remove("foco");
+        if (dist < 50) { melhor.classList.add("foco"); atual = melhor; } else atual = null;
+      }
+      requestAnimationFrame(quadro);
+    };
+    requestAnimationFrame(quadro);
   }
   async function pintaCarreira(el, p) {
     const d = await DADOS.carrega(`carreiras/${p.cid}`);
@@ -116,11 +156,10 @@
     const lista = Array.isArray(d?.[p.aid]) ? d[p.aid].filter((x) => x && (x.c || x.s)) : [];
     const topo = el.querySelector(".jg-topo");
     topo.querySelector(".jg-linha")?.remove();
-    if (lista.length < 2) return topo.classList.remove("com-linha"); // só o clube atual não é linha do tempo
-    const primeira = !jaVistas.has(p.key);
-    jaVistas.add(p.key);
-    topo.insertAdjacentHTML("afterbegin", carreiraHTML(p, lista, primeira));
+    if (lista.length < 2) return topo.classList.remove("com-linha"); // só o clube atual (jogador da base) não é linha do tempo
+    topo.insertAdjacentHTML("afterbegin", carreiraHTML(p, lista));
     topo.classList.add("com-linha");
+    setTimeout(() => animaFita(topo.querySelector(".jg-linha"), lista), 0); // depois do layout (rAF não roda em aba escondida)
   }
 
   /* ---------- páginas ---------- */
