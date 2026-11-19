@@ -109,12 +109,13 @@
     }).join("");
   }
   function carreiraHTML(p, lista) {
+    const clubes = new Set(lista.map((x) => x.s || x.q || x.c)).size; // ida e volta ao mesmo clube conta uma vez
     const resumo = lista.map((x, i) => {
       const anos = anosDe(x, i === lista.length - 1);
       return anos ? `${nomeDe(x)} (${anos})` : nomeDe(x);
     }).join(", ");
     return `<div class="jg-linha" role="img" aria-label="${esc(`Carreira de ${p.nome}: ${resumo}`)}">
-      <div class="jgl-tag"><b>Carreira</b><span>${lista.length} clubes</span></div>
+      <div class="jgl-tag"><b>Carreira</b><span>${clubes} ${clubes === 1 ? "clube" : "clubes"}</span></div>
       <div class="jgl-fita"><ol class="jgl-trilho">${itensHTML(lista)}</ol></div></div>`;
   }
   // fita em looping + foco: repete os clubes até cobrir a fita duas vezes e anda uma "volta" (a largura de uma cópia)
@@ -123,8 +124,8 @@
     const parado = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const uma = trilho.scrollWidth;
     if (!uma || !fita.clientWidth) return;
-    if (parado || !trilho.animate) {
-      trilho.style.marginLeft = `${Math.max(0, fita.clientWidth - uma)}px`; // parado: o clube atual fica à direita
+    if (parado || !trilho.animate || lista.length < 2) { // um clube só: nada para passar na fita
+      if (lista.length > 1) trilho.style.marginLeft = `${Math.max(0, fita.clientWidth - uma)}px`; // parado: o clube atual fica à direita
       return;
     }
     const copias = Math.max(2, Math.ceil((fita.clientWidth * 2) / uma) + 1);
@@ -159,7 +160,7 @@
     const lista = Array.isArray(d?.[p.aid]) ? d[p.aid].filter((x) => x && (x.c || x.s)) : [];
     const topo = el.querySelector(".jg-topo");
     topo.querySelector(".jg-linha")?.remove();
-    if (lista.length < 2) return topo.classList.remove("com-linha"); // só o clube atual (jogador da base) não é linha do tempo
+    if (!lista.length) return topo.classList.remove("com-linha"); // jogador da base: sem linha do tempo
     topo.insertAdjacentHTML("afterbegin", carreiraHTML(p, lista));
     topo.classList.add("com-linha");
     setTimeout(() => animaFita(topo.querySelector(".jg-linha"), lista), 0); // depois do layout (rAF não roda em aba escondida)
@@ -180,6 +181,7 @@
           <h1>${esc(p.nome)}</h1>
           <a class="jg-clube" href="#/clube/${c.id}">${crest(c, 26)}<span>${c.name}</span></a>
           <div data-jg-cred></div>
+          ${window.COMPARTILHAR ? `<div class="cp-wrap">${COMPARTILHAR.botao("jogador", p.key)}</div>` : ""}
         </div>
         <div class="jg-topo-kpis" data-jg-kpis><span class="jg-load">Carregando a temporada…</span></div>
       </section>

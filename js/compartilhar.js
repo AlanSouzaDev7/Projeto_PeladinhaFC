@@ -1,0 +1,169 @@
+/* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
+/* ==========================================================================
+   CazéStats.TV — card para compartilhar (imagem 1080 x 1350, retrato do Instagram)
+     · partida: escudos, placar (ou data e hora) e a chance de vitória antes do jogo
+     · jogador: nome, clube e os números da temporada
+     · bolão: apelido, pontos e posição no ranking
+   Desenhado num <canvas> no próprio aparelho (nada vai para servidor). No celular abre o menu de compartilhar
+   (WhatsApp, Instagram...); onde não dá, baixa a imagem. Escudos: o mesmo arquivo da página (Wikimedia, que libera
+   o uso em canvas) ou, se não carregar, o escudo desenhado pelo site.
+   ========================================================================== */
+(() => {
+  "use strict";
+  const L = 1080, A = 1350, SITE = "cazestats.pages.dev";
+  const fontes = {};
+  const fonte = (peso, px, tipo = "texto") => `${peso} ${px}px ${fontes[tipo] || "system-ui, sans-serif"}`;
+  const pegaFontes = () => {
+    const cs = getComputedStyle(document.documentElement);
+    fontes.texto = cs.getPropertyValue("--font").trim() || "system-ui, sans-serif";
+    fontes.titulo = cs.getPropertyValue("--font-display").trim() || fontes.texto;
+  };
+  const origens = {}; // quem sabe montar os dados de cada tipo (o app registra a busca do jogo)
+  const esc = (t) => SEG.esc(t);
+
+  /* ---------- desenho ---------- */
+  function carregaImg(src, cors = true) {
+    return new Promise((ok, falha) => {
+      const im = new Image();
+      if (cors) im.crossOrigin = "anonymous";
+      im.onload = () => ok(im);
+      im.onerror = () => falha(new Error("imagem não carregou"));
+      im.src = src;
+    });
+  }
+  async function escudo(club) {
+    const src = /src="([^"]+)"/.exec(window.GFX.crest(club, 300))?.[1];
+    if (src && /^https:\/\//.test(src)) { try { return await carregaImg(src); } catch { /* cai no desenhado */ } }
+    const svg = window.GFX.svgCrest(club, 300);
+    const url = URL.createObjectURL(new Blob([svg.includes("xmlns") ? svg : svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"')], { type: "image/svg+xml" }));
+    try { return await carregaImg(url, false); } finally { setTimeout(() => URL.revokeObjectURL(url), 5000); }
+  }
+  function fundo(ctx, c1, c2) {
+    const g = ctx.createLinearGradient(0, 0, L, A);
+    g.addColorStop(0, c1); g.addColorStop(1, c2);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, L, A);
+    const v = ctx.createLinearGradient(0, 0, 0, A); // escurece para o texto ler bem sobre qualquer cor de clube
+    v.addColorStop(0, "rgba(8,8,12,0.55)"); v.addColorStop(0.55, "rgba(8,8,12,0.72)"); v.addColorStop(1, "rgba(8,8,12,0.92)");
+    ctx.fillStyle = v; ctx.fillRect(0, 0, L, A);
+  }
+  function texto(ctx, t, x, y, { peso = 800, px = 48, tipo = "texto", cor = "#fff", alinha = "center", max = L - 120 } = {}) {
+    let tam = px;
+    ctx.font = fonte(peso, tam, tipo);
+    while (ctx.measureText(t).width > max && tam > 18) { tam -= 2; ctx.font = fonte(peso, tam, tipo); }
+    ctx.fillStyle = cor; ctx.textAlign = alinha; ctx.textBaseline = "alphabetic";
+    ctx.fillText(t, x, y);
+  }
+  function moldura(ctx, subtitulo) {
+    texto(ctx, "CazéStats.TV", 70, 120, { px: 52, tipo: "titulo", alinha: "left" });
+    if (subtitulo) texto(ctx, subtitulo, L - 70, 118, { peso: 700, px: 30, cor: "rgba(255,255,255,0.75)", alinha: "right", max: 520 });
+    ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(70, A - 150, L - 140, 2);
+    texto(ctx, SITE, L / 2, A - 85, { peso: 700, px: 34, cor: "rgba(255,255,255,0.85)" });
+  }
+  function barra(ctx, x, y, w, h, partes) {
+    let px = x;
+    for (const [p, cor] of partes) { const lw = (w * p) / 100; ctx.fillStyle = cor; ctx.fillRect(px, y, Math.max(0, lw - 4), h); px += lw; }
+  }
+  const novoCanvas = () => { const c = document.createElement("canvas"); c.width = L; c.height = A; return c; };
+
+  async function cardPartida(m) {
+    const h = byId[m.home], a = byId[m.away], cv = novoCanvas(), ctx = cv.getContext("2d");
+    fundo(ctx, h.colors[0], a.colors[0]);
+    moldura(ctx, `Brasileirão · ${m.round}ª rodada`);
+    const [eh, ea] = await Promise.all([escudo(h), escudo(a)]);
+    ctx.drawImage(eh, 110, 300, 340, 340); ctx.drawImage(ea, L - 450, 300, 340, 340);
+    texto(ctx, h.name, 280, 710, { px: 44, max: 400 }); texto(ctx, a.name, L - 280, 710, { px: 44, max: 400 });
+    const comecou = m.status === "ft" || (m.status === "progress" && m.hs != null);
+    if (comecou) {
+      texto(ctx, `${m.hs}  x  ${m.as}`, L / 2, 905, { px: 190, tipo: "titulo" });
+      texto(ctx, m.status === "ft" ? "Fim de jogo" : `Ao vivo${m.clock ? ` · ${m.clock}` : ""}`, L / 2, 990, { peso: 700, px: 40, cor: m.status === "ft" ? "rgba(255,255,255,0.8)" : "#7CFF9B" });
+    } else {
+      texto(ctx, "x", L / 2, 520, { px: 90, cor: "rgba(255,255,255,0.7)" });
+      texto(ctx, m.time ? `${m.date ? m.date.split("-").reverse().slice(0, 2).join("/") + " · " : ""}${m.time}` : "Horário a definir", L / 2, 880, { px: 70, tipo: "titulo" });
+      if (window.CHANCE && window.CLUB_FORM) {
+        const c = CHANCE.calcula(m), [pc, pe, pf] = CHANCE._cem([c.casa, c.empate, c.fora]);
+        texto(ctx, "Chance de vitória", L / 2, 1000, { peso: 700, px: 34, cor: "rgba(255,255,255,0.75)" });
+        barra(ctx, 110, 1030, L - 220, 22, [[pc, h.colors[0] === "#ffffff" ? h.colors[1] : h.colors[0]], [pe, "rgba(255,255,255,0.45)"], [pf, a.colors[0] === "#ffffff" ? a.colors[1] : a.colors[0]]]);
+        texto(ctx, `${pc}%`, 110, 1110, { px: 48, alinha: "left" }); texto(ctx, `${pe}%`, L / 2, 1110, { px: 48 }); texto(ctx, `${pf}%`, L - 110, 1110, { px: 48, alinha: "right" });
+      }
+    }
+    if (m.venue) texto(ctx, m.venue, L / 2, 1170, { peso: 600, px: 32, cor: "rgba(255,255,255,0.7)" });
+    return { canvas: cv, nome: `${h.id}-x-${a.id}` };
+  }
+  async function cardJogador(key) {
+    const p = window.JOGADOR?.get(key);
+    if (!p) throw new Error("jogador não encontrado");
+    const c = byId[p.cid], cv = novoCanvas(), ctx = cv.getContext("2d");
+    fundo(ctx, c.colors[0], c.colors[1] || c.colors[0]);
+    moldura(ctx, "Temporada");
+    ctx.drawImage(await escudo(c), L / 2 - 170, 210, 340, 340);
+    if (p.num != null) texto(ctx, `#${p.num}`, L / 2, 640, { peso: 800, px: 54, cor: "rgba(255,255,255,0.7)" });
+    texto(ctx, p.nome, L / 2, 740, { px: 110, tipo: "titulo" });
+    texto(ctx, c.name, L / 2, 810, { peso: 700, px: 40, cor: "rgba(255,255,255,0.8)" });
+    // os números são os do topo da página do jogador (jogos, minutos, gols, assistências da temporada)
+    const ks = [...document.querySelectorAll(`[data-jogador="${CSS.escape(key)}"] [data-jg-kpis] .jg-k`)].map((k) => [k.querySelector("b")?.textContent.trim(), k.querySelector("small")?.textContent.trim()]).filter(([v, l]) => v && l).slice(0, 4);
+    ks.forEach(([v, l], i) => {
+      const x = 70 + ((L - 140) / ks.length) * (i + 0.5);
+      texto(ctx, v, x, 1010, { px: 96, tipo: "titulo", max: (L - 140) / ks.length - 20 });
+      texto(ctx, l, x, 1070, { peso: 700, px: 32, cor: "rgba(255,255,255,0.75)", max: (L - 140) / ks.length - 20 });
+    });
+    return { canvas: cv, nome: `${p.cid}-${p.nome}` };
+  }
+  async function cardBolao() {
+    const d = window.BOLAO?.ultimo?.();
+    if (!d?.voce) throw new Error("entre no ranking para compartilhar a sua posição");
+    const cv = novoCanvas(), ctx = cv.getContext("2d");
+    fundo(ctx, "#1d4ed8", "#00a859");
+    moldura(ctx, d.nome ? `Liga ${d.nome}` : "Bolão");
+    texto(ctx, "Bolão", L / 2, 330, { peso: 700, px: 54, cor: "rgba(255,255,255,0.8)" });
+    texto(ctx, d.voce.apelido, L / 2, 450, { px: 96, tipo: "titulo" });
+    texto(ctx, `${d.voce.pos}º`, L / 2, 760, { px: 300, tipo: "titulo" });
+    texto(ctx, `de ${d.total} ${d.total === 1 ? "torcedor" : "torcedores"}`, L / 2, 840, { peso: 700, px: 44, cor: "rgba(255,255,255,0.8)" });
+    texto(ctx, `${d.voce.pontos} pontos · ${d.voce.exatos} placar${d.voce.exatos === 1 ? "" : "es"} exato${d.voce.exatos === 1 ? "" : "s"}`, L / 2, 1000, { px: 54 });
+    texto(ctx, "Dá para me alcançar? Faça seus palpites no site.", L / 2, 1090, { peso: 600, px: 36, cor: "rgba(255,255,255,0.75)" });
+    return { canvas: cv, nome: `bolao-${d.voce.apelido}` };
+  }
+
+  /* ---------- compartilhar ou baixar ---------- */
+  const arquivo = (nome) => `cazestats-${String(nome).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.png`;
+  async function entrega({ canvas, nome }) {
+    const blob = await new Promise((ok) => canvas.toBlob(ok, "image/png"));
+    if (!blob) throw new Error("não deu para gerar a imagem");
+    const file = new File([blob], arquivo(nome), { type: "image/png" });
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: "CazéStats.TV" }); return "Imagem pronta para compartilhar."; } catch (e) { if (e?.name === "AbortError") return ""; }
+    }
+    const url = URL.createObjectURL(blob), link = Object.assign(document.createElement("a"), { href: url, download: file.name });
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    return "Imagem baixada. É só postar.";
+  }
+
+  function botao(tipo, id = "") {
+    return `<button type="button" class="cp-btn" data-cp="${esc(tipo)}" data-cp-id="${esc(id)}"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M18 16a3 3 0 0 0-2.4 1.2l-6.7-3.4a3 3 0 0 0 0-1.6l6.7-3.4A3 3 0 1 0 15 7l-6.7 3.4a3 3 0 1 0 0 3.2L15 17a3 3 0 1 0 3-1Z"/></svg><span>Compartilhar imagem</span></button><span class="cp-msg" role="status" aria-live="polite"></span>`;
+  }
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-cp]");
+    if (!b) return;
+    e.preventDefault();
+    const msg = b.nextElementSibling?.classList.contains("cp-msg") ? b.nextElementSibling : null;
+    b.disabled = true;
+    if (msg) msg.textContent = "Montando a imagem…";
+    try {
+      pegaFontes();
+      await document.fonts?.ready;
+      const tipo = b.dataset.cp, id = b.dataset.cpId;
+      const card = tipo === "partida" ? await cardPartida(origens.partida?.(id) || (() => { throw new Error("jogo não encontrado"); })())
+        : tipo === "jogador" ? await cardJogador(id) : await cardBolao();
+      const r = await entrega(card);
+      if (msg) msg.textContent = r;
+    } catch (err) {
+      if (msg) msg.textContent = `Não deu para montar a imagem (${String(err?.message || err).slice(0, 60)}).`;
+    } finally {
+      b.disabled = false;
+    }
+  });
+
+  // _monta: só desenha (sem compartilhar nem baixar); usado para conferir a imagem
+  const _monta = async (tipo, id) => { pegaFontes(); await document.fonts?.ready; return tipo === "partida" ? cardPartida(origens.partida(id)) : tipo === "jogador" ? cardJogador(id) : cardBolao(); };
+  window.COMPARTILHAR = { botao, origem: (tipo, fn) => { origens[tipo] = fn; }, _arquivo: arquivo, _monta };
+})();

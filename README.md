@@ -23,6 +23,8 @@ Feito com **HTML, CSS e JavaScript puro** (sem frameworks) e uma **API em Python
 | **Alertas do clube favorito** (18–19/11): botão "Ativar avisos" na página do clube; notificação de gol, início, intervalo, escalação confirmada e fim de jogo, à escolha do torcedor (Web Push, grátis) | `js/alertas.js`, `sw.js`, `worker/alertas.mjs` |
 | **Agenda do favorito** (19/11): botão "Agenda no celular" na página do clube; o torcedor assina o calendário de jogos no Google Agenda ou no iPhone e ele se atualiza sozinho quando a data ou o horário mudam | `js/agenda.js`, `worker/agenda.mjs` |
 | **Bolão** (19/11): palpite de placar na página de cada jogo (até a bola rolar), pontos (exato 10, vencedor e saldo 7, resultado 5), ranking geral e ligas entre amigos com código de convite. Precisa da conta Google; no ranking aparece só o apelido | `js/bolao.js`, `worker/bolao.mjs` |
+| **Chance de vitória** (19/11): vitória, empate e derrota na página da partida, por um modelo de Poisson com os gols em casa e fora no Brasileirão e a forma recente; ao vivo, parte do placar e do tempo que falta | `js/chance.js` |
+| **Card para compartilhar** (19/11): imagem 1080 x 1350 da partida, do jogador ou da posição no bolão, desenhada no aparelho; no celular abre o menu de compartilhar | `js/compartilhar.js` |
 | **Confronto direto na página da partida** (18/11): todas as competições desde 2023, com resumo de vitórias, empates e gols | `js/confronto.js` |
 | **Dados no banco D1** (18/11): o robô envia só o que mudou, o site lê do banco e usa a cópia estática se ele falhar; o site deixa de ser republicado a cada rodada | `server/enviar_d1.py`, `js/dados.js`, `worker/` |
 | Riscos para lembrar ao apresentar a uma empresa (nunca bloqueiam funções) | `docs/RISCOS-APRESENTACAO.md` |

@@ -83,6 +83,7 @@
     return `<table class="bl-tabela"><thead><tr><th scope="col">Pos.</th><th scope="col">Torcedor</th><th scope="col">Pontos</th><th scope="col" title="Placares exatos">Exatos</th><th scope="col">Jogos</th></tr></thead>
       <tbody>${r.linhas.map(linha).join("")}${fora}</tbody></table>${r.total > r.linhas.length ? `<p class="bl-txt">${n(r.total)} torcedores no ranking; aparecem os 100 primeiros.</p>` : ""}`;
   }
+  let ultimoR = null;
   const convite = (codigo) => `${location.origin}${location.pathname}#/bolao/entrar/${codigo}`;
   async function preenchePagina(el) {
     const id = el.dataset.id, tab = (el.dataset.tab || "").toUpperCase();
@@ -103,6 +104,7 @@
     try {
       [r, d] = await Promise.all([api(`/bolao/ranking${liga ? `?liga=${encodeURIComponent(liga)}` : ""}`), logado() ? meu() : null]);
     } catch (e) { el.innerHTML = `<p class="bl-txt">Não deu para carregar o bolão (${esc(e.message)}).</p>`; return; }
+    ultimoR = r; // o card para compartilhar usa a posição deste ranking
     const abas = [["", "Geral"], ...(d?.ligas || []).map((l) => [l.codigo, l.nome])];
     const ligaAtual = d?.ligas.find((l) => l.codigo === liga);
     el.innerHTML = `<div class="bl-grade">
@@ -112,6 +114,7 @@
         ${liga ? `<p class="bl-txt">Código da liga: <b class="bl-cod">${esc(liga)}</b> ${ligaAtual ? `· ${n(ligaAtual.membros)} participante${n(ligaAtual.membros) === 1 ? "" : "s"}` : ""}</p>
           <div class="bl-acoes">${ligaAtual ? `<button type="button" class="bl-btn" data-bl="convidar" data-cod="${esc(liga)}">Copiar convite</button><button type="button" class="bl-btn sec" data-bl="sair" data-cod="${esc(liga)}">Sair da liga</button>` : logado() ? `<button type="button" class="bl-btn" data-bl="entrar-liga" data-cod="${esc(liga)}">Entrar nesta liga</button>` : ""}</div>` : ""}
         ${tabelaRanking(r)}
+        ${r.voce && window.COMPARTILHAR ? `<div class="cp-wrap">${COMPARTILHAR.botao("bolao", liga)}</div>` : ""}
         <p class="bl-txt bl-msg" role="status" aria-live="polite"></p>
       </div>
       <div class="bl-lado">${logado() ? ladoLogado(d) : `<div class="card bl-card"><h2 class="bl-h">Participe</h2><p class="bl-txt">Entre com Google, escolha um apelido e dê palpites na página de cada jogo. Não mostramos seu nome nem seu e-mail.</p>${entrarBtn()}</div>`}</div>
@@ -204,5 +207,5 @@
   // entrou ou saiu da conta (js/conta.js): o bolão aberto na tela se redesenha
   window.addEventListener("conta:mudou", redesenha);
 
-  window.BOLAO = { card, mount, page, ligado };
+  window.BOLAO = { card, mount, page, ligado, ultimo: () => ultimoR };
 })();

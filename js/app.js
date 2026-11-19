@@ -1127,6 +1127,7 @@
         <div style="text-align:center;margin-bottom:18px" data-live="pill"><span class="${m.status === "progress" ? "pill" : "pill muted"}">Brasileirão · ${m.round}ª rodada</span></div>
         ${scoreline(m, true, 128)}
         <div class="mh-marks" data-marks hidden></div>
+        ${window.COMPARTILHAR ? `<div class="cp-wrap">${COMPARTILHAR.botao("partida", m.id)}</div>` : ""}
         ${m.venue ? `<p style="text-align:center;color:var(--text-2);margin:16px 0 0">${ICON.stadium.replace("<svg", '<svg style="display:inline;vertical-align:-2px;margin-right:4px"')}${SEG.esc(estadio(m.venue))}</p>` : ""}
       </section>
       <div class="grid-2">
@@ -1140,6 +1141,7 @@
           <div class="card"><div class="card-h">Comparação no campeonato <small>${SEG.esc(REAL.source)} · ${SEG.esc(REAL.updated)}</small></div><div class="card-b">${compareHTML(m)}</div></div>
         </div>
         <div>
+          ${window.CHANCE ? CHANCE.card(m, { casa: display(byId[m.home]), fora: display(byId[m.away]) }) : ""}
           ${voteCard(m)}
           ${window.BOLAO ? BOLAO.card(m) : ""}
           <div class="card"><div class="card-h">Na tabela</div>${standingsTable(both, null, true)}${sourceNote}</div>
@@ -1862,6 +1864,12 @@
     window.TATICA?.mount(view); // campinho tático da partida e aba Escalações do clube
     window.CONFRONTO?.mount(view); // confronto direto da partida (histórico do banco)
     window.BOLAO?.mount(view); // bolão: palpite na partida e página #/bolao
+    window.COMPARTILHAR?.origem("partida", findMatch); // card para compartilhar: o jogo com o placar da hora
+    // chance de vitória: precisa dos jogos da temporada dos clubes (js/club-form.js, baixado sob demanda)
+    if (state.route.page === "partida" && window.CHANCE && $("[data-chance-vazio]", view)) loadClubForm().then(() => {
+      const el = $("[data-chance-vazio]", view), m = findMatch(state.route.id);
+      if (el && m && window.CLUB_FORM) el.outerHTML = CHANCE.card(m, { casa: display(byId[m.home]), fora: display(byId[m.away]) });
+    });
     window.HISTORICO?.mount(view); // aba Histórico do clube (todos os jogos desde 2023)
     COPA.mount(view); // página de competição; nas outras, só centraliza a barra de competições
     MERCADO_UI.mount(view); // janela de transferências (aba "Janela" do clube)
