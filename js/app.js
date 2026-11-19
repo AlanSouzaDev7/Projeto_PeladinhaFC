@@ -1141,6 +1141,7 @@
         </div>
         <div>
           ${voteCard(m)}
+          ${window.BOLAO ? BOLAO.card(m) : ""}
           <div class="card"><div class="card-h">Na tabela</div>${standingsTable(both, null, true)}${sourceNote}</div>
           ${scorersDuel(m)}
           ${window.CONFRONTO ? CONFRONTO.card(m) : ""}
@@ -1657,6 +1658,7 @@
       r.page === "simulador" ? pageSim(r.id) :
       r.page === "jogador" ? JOGADOR.page(r.id, r.tab, r.extra) :
       r.page === "copa" ? COPA.page(r.id, r.tab, r.extra) :
+      r.page === "bolao" && window.BOLAO ? BOLAO.page(r.id, r.tab) :
       r.page === "sobre" ? pageAbout() :
       r.page === "privacidade" ? PRIVACIDADE.page() : pageNotFound();
   /* competição em tela: Brasileirão (o site de sempre) ou Libertadores, Sul-Americana, Copa do Brasil e estaduais
@@ -1686,7 +1688,7 @@
     stamp(view);
     const navKey = r.page === "" || r.page === "partida" || r.page === "copa" ? "home" : r.page === "clube" || r.page === "jogador" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? "Partida — CazéStats.TV" : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
+    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? "Partida — CazéStats.TV" : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "bolao" ? "Bolão — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
     enhance();
   }
 
@@ -1859,6 +1861,7 @@
     JOGADOR.montaNotas?.(view); // notas da partida (página do jogo)
     window.TATICA?.mount(view); // campinho tático da partida e aba Escalações do clube
     window.CONFRONTO?.mount(view); // confronto direto da partida (histórico do banco)
+    window.BOLAO?.mount(view); // bolão: palpite na partida e página #/bolao
     window.HISTORICO?.mount(view); // aba Histórico do clube (todos os jogos desde 2023)
     COPA.mount(view); // página de competição; nas outras, só centraliza a barra de competições
     MERCADO_UI.mount(view); // janela de transferências (aba "Janela" do clube)

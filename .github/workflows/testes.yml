@@ -90,6 +90,8 @@ jobs:
         run: node tests/alertas.mjs
       - name: Agenda do favorito (calendário .ics)
         run: node tests/agenda.mjs
+      - name: Bolão (palpites, pontos, ranking e ligas)
+        run: node tests/bolao.mjs
       - name: Conta com Google e sincronização (comprovantes e banco simulados)
         timeout-minutes: 2
         run: node tests/conta.mjs

@@ -13,6 +13,8 @@
    (o ID do cliente, GOOGLE_CLIENT_ID) e validade.
    ========================================================================== */
 
+import { apagaDoBolao } from "./bolao.mjs";
+
 const CHAVES_GOOGLE = "https://www.googleapis.com/oauth2/v3/certs";
 const EMISSORES = new Set(["accounts.google.com", "https://accounts.google.com"]);
 // o que pode ser salvo: o mesmo que o site guarda no aparelho como conteúdo do torcedor (js/conta.js)
@@ -111,6 +113,7 @@ export async function sair(env, sessao) {
 }
 export async function apagarConta(env, usuario) {
   await env.DB.batch([
+    ...apagaDoBolao(env, usuario),
     env.DB.prepare("DELETE FROM salvos WHERE usuario = ?1").bind(usuario),
     env.DB.prepare("DELETE FROM sessoes WHERE usuario = ?1").bind(usuario),
     env.DB.prepare("DELETE FROM usuarios WHERE id = ?1").bind(usuario),

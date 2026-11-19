@@ -26,7 +26,8 @@
     ],
     ["Wikimedia Commons e Flickr", "só se você tocar no crédito de uma foto (as fotos livres são cópias guardadas no próprio projeto)"],
     ["GitHub Pages (alansouzadev7.github.io)", "hospedagem do site e dos arquivos de dados"],
-    ["Cloudflare Workers", 'placar ao vivo e contagem do "Em alta", só quando configurado'],
+    ["Cloudflare Workers e D1", 'placar ao vivo, contagem do "Em alta", conta, alertas, agenda e bolão'],
+    ["Google (accounts.google.com)", "só ao tocar em Entrar com Google"],
   ];
 
   function page() {
@@ -35,14 +36,21 @@
         <p class="priv-aviso" role="note"><b>Rascunho a revisar por advogado.</b> Este texto ainda não foi revisado juridicamente e pode mudar.</p></div></div>
       <div class="priv">
         <section class="card"><div class="card-h">Resumo</div><div class="card-b">
-          <p>CazéStats.TV não pede cadastro, não usa cookies e não tem ferramenta de análise de audiência. Suas preferências ficam no seu aparelho.
-          O único dado enviado pelo site é a contagem anônima do que foi buscado, quando o "Em alta" estiver ligado.</p></div></section>
+          <p>CazéStats.TV não exige cadastro, não usa cookies e não tem ferramenta de análise de audiência. Suas preferências ficam no seu aparelho.
+          Sem conta, o único dado enviado é a contagem anônima do que foi buscado. A conta (Entrar com Google), os alertas e o bolão são opcionais e estão explicados abaixo.</p></div></section>
         <section class="card"><div class="card-h">O que fica no seu aparelho</div><div class="card-b">
           <p>Guardado só no navegador ou no app, no seu aparelho. Não sai dele e você pode apagar limpando os dados do site ou do app.</p>
           <ul class="priv-lista">${li(CHAVES)}</ul></div></section>
         <section class="card"><div class="card-h">O que é enviado</div><div class="card-b">
           <p><b>Contagem do "Em alta".</b> Ao abrir um clube ou jogador pela busca, o aparelho envia o tipo e o código do item (por exemplo, "clube: cruzeiro"),
-          no máximo uma vez a cada 6 horas por item. Não vai nome, e-mail, localização nem identificador do aparelho. Só acontece quando o serviço do "Em alta" está configurado.</p></div></section>
+          no máximo uma vez a cada 6 horas por item. Não vai nome, e-mail, localização nem identificador do aparelho. Só acontece quando o serviço do "Em alta" está configurado.</p>
+          <p><b>Conta (opcional).</b> Ao entrar com Google, o servidor guarda só um código da conta (um resumo cifrado do identificador do Google), sem nome, e-mail ou foto,
+          e o que você salvou no site (favoritos, escalações, janela, palpites de 1 x 2) para aparecer nos seus outros aparelhos.</p>
+          <p><b>Bolão (opcional, com conta).</b> Ficam guardados seus palpites de placar, o apelido que você escolher e as ligas em que você está.
+          O apelido, os pontos e a posição aparecem no ranking para qualquer pessoa; os palpites de cada jogo não são mostrados aos outros.</p>
+          <p><b>Alertas (opcionais).</b> Ao ativar avisos de um clube, o servidor guarda o endereço de notificação do navegador, os clubes e os tipos de aviso escolhidos.
+          Desligar os avisos apaga a inscrição.</p>
+          <p><b>Apagar tudo.</b> No menu da conta, "Apagar minha conta" remove do servidor a conta, o que ela salvou, os palpites, o apelido e a participação nas ligas.</p></div></section>
         <section class="card"><div class="card-h">Serviços de terceiros</div><div class="card-b">
           <p>Para mostrar dados e imagens, o seu aparelho se conecta a estes serviços. Como em qualquer acesso à internet, eles recebem o endereço IP da conexão e seguem as próprias políticas de privacidade.</p>
           <ul class="priv-lista">${li(TERCEIROS)}</ul>

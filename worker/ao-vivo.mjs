@@ -16,6 +16,7 @@
      PUT /dados/<nome>.json, GET /dados/_lista   só o robô de dados (segredo ROBO_CHAVE)
      GET /jogos?clube=&contra=&temporada=&liga=  histórico dos jogos (todas as temporadas) com resumo V/E/D
      POST /jogos                                 só o robô: lote de jogos para o histórico
+     /bolao/eu, /bolao/palpite, /bolao/ranking, /bolao/liga   bolão com ranking e ligas entre amigos (worker/bolao.mjs)
      GET /agenda/<clube>.ics                  agenda do favorito: calendário de jogos para assinar (worker/agenda.mjs)
      POST /alerta, GET /gols/recentes            alertas do favorito: gol, início, intervalo, escalação, fim (Web Push)
      /conta/entrar, /conta/dados, /conta/sair, DELETE /conta   conta com Google e sincronização (worker/conta.mjs)
@@ -31,6 +32,7 @@
    ========================================================================== */
 
 import { entrar, usuarioDa, lerDados, gravarDados, sair, apagarConta, limpaSessoes } from "./conta.mjs";
+import { eu, gravaApelido, gravaPalpite, ranking, criaLiga, entraLiga, saiLiga } from "./bolao.mjs";
 import { inscrever, verificaGols, enviaPushes, golsRecentes, limpaGols } from "./alertas.mjs";
 import { agenda } from "./agenda.mjs";
 import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo, roboAutorizado, gravaArquivo, listaArquivos, serveArquivo, gravaJogos, consultaJogos } from "./plataforma.mjs";
@@ -288,6 +290,22 @@ export default {
       if (path === "/conta/sair" && req.method === "POST") { await sair(env, sessao); return json({ ok: true }); }
       if (path === "/conta" && req.method === "DELETE") { await apagarConta(env, sessao.id); return json({ ok: true }); }
       return json({ erro: "método não permitido" }, 405);
+    }
+    // bolão: palpites de placar, ranking geral e ligas entre amigos (worker/bolao.mjs). O ranking é público; o resto pede a conta.
+    if (path.startsWith("/bolao/")) {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      if (+(req.headers.get("content-length") || 0) > 2048) return json({ erro: "pedido grande demais" }, 413);
+      const sessao = await usuarioDa(env, req);
+      const responde = (r) => (r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, ...r, status: undefined }));
+      if (path === "/bolao/ranking" && req.method === "GET") return responde(await ranking(env, sessao?.id, new URL(req.url).searchParams.get("liga") || ""));
+      if (!sessao) return json({ erro: "Entre com Google para participar do bolão." }, 401);
+      if (path === "/bolao/eu" && req.method === "GET") return responde(await eu(env, sessao.id));
+      if (path === "/bolao/apelido" && req.method === "PUT") return responde(await gravaApelido(env, sessao.id, await req.text()));
+      if (path === "/bolao/palpite" && req.method === "PUT") return responde(await gravaPalpite(env, sessao.id, await req.text()));
+      if (path === "/bolao/liga" && req.method === "POST") return responde(await criaLiga(env, sessao.id, await req.text()));
+      if (path === "/bolao/liga/entrar" && req.method === "POST") return responde(await entraLiga(env, sessao.id, await req.text()));
+      if (path === "/bolao/liga/sair" && req.method === "POST") return responde(await saiLiga(env, sessao.id, await req.text()));
+      return json({ erro: "não encontrado" }, 404);
     }
     // alerta de gol: o navegador se inscreve (POST /alerta) e o service worker lê os gols recentes (GET /gols/recentes)
     if (path === "/alerta" && req.method === "POST") {

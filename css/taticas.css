@@ -156,3 +156,56 @@
 .conta-aviso { position: fixed; z-index: 70; left: 50%; bottom: 84px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px;
   border-radius: 999px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 16px 32px -12px rgb(0 0 0 / 0.6); font-size: 13px; font-weight: 600; }
 .conta-aviso button { padding: 6px 12px; border-radius: 999px; border: 0; background: var(--text); color: var(--bg, #0b0b0d); font-weight: 800; cursor: pointer; }
+
+/* ---------- bolão (js/bolao.js): cartão da partida e página #/bolao ---------- */
+.bl-txt { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-2); }
+.bl-txt a, .bolao .card-h a { color: var(--accent); font-weight: 700; }
+.bl-btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 16px; border-radius: 999px; border: 0; cursor: pointer;
+  font: 800 13.5px/1 var(--font); background: var(--accent); color: var(--on-c1, #fff); text-decoration: none; }
+.bl-btn.sec { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
+.bl-btn:disabled { opacity: 0.6; cursor: progress; }
+.bolao .card-b { display: grid; gap: 12px; }
+.bl-placar { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.bl-time { display: grid; justify-items: center; gap: 6px; font: 800 13px/1 var(--font); color: var(--text-2); }
+.bl-passo { display: flex; align-items: center; gap: 6px; }
+.bl-passo button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 18px/1 var(--font); cursor: pointer; }
+.bl-passo output { min-width: 1.6ch; text-align: center; font: 800 34px/1 var(--font-display); color: var(--text); font-variant-numeric: tabular-nums; }
+.bl-x { font: 700 14px/1 var(--font); color: var(--text-3); align-self: flex-end; padding-bottom: 10px; }
+.bl-res { margin: 0; font-size: 14px; color: var(--text); }
+.bl-pts { color: var(--accent); }
+.bl-pts.zero { color: var(--text-3); }
+.bolao-pagina { padding-top: 24px; padding-bottom: 48px; }
+.bl-topo h1 { margin: 0 0 6px; font: 800 clamp(30px, 6vw, 46px)/1 var(--font-display); }
+.bl-topo p { margin: 0 0 12px; color: var(--text-2); max-width: 60ch; }
+.bl-regra { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; padding: 0; list-style: none; }
+.bl-regra li { padding: 6px 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line-soft); font-size: 13px; color: var(--text-2); }
+.bl-regra b { color: var(--accent); font-variant-numeric: tabular-nums; }
+.bl-grade { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.bl-lado { display: grid; gap: 16px; }
+.bl-card { padding: 16px; display: grid; gap: 12px; }
+.bl-h { margin: 0; font: 800 17px/1.2 var(--font); color: var(--text); }
+.bl-abas { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.bl-abas a { flex: none; padding: 7px 14px; border-radius: 999px; font: 700 13px/1 var(--font); color: var(--text-2); text-decoration: none; border: 1px solid var(--line); }
+.bl-abas a.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.bl-tabela { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.bl-tabela th, .bl-tabela td { padding: 9px 6px; text-align: right; border-bottom: 1px solid var(--line-soft); }
+.bl-tabela th[scope=row], .bl-tabela thead th:nth-child(2) { text-align: left; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.bl-tabela td:first-child, .bl-tabela thead th:first-child { text-align: left; color: var(--text-3); width: 3.2em; }
+.bl-tabela thead th { font-size: 11.5px; font-weight: 700; color: var(--text-3); }
+.bl-tabela tr.voce { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.bl-tabela tr.voce small { color: var(--text-3); font-weight: 600; }
+.bl-tabela tr.bl-sep td { text-align: center; color: var(--text-3); border: 0; padding: 2px; }
+.bl-cod { font: 800 15px/1 var(--font-display); letter-spacing: 0.12em; color: var(--text); }
+.bl-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.bl-total { margin: 0; font-size: 14px; color: var(--text-2); }
+.bl-total b { font: 800 36px/1 var(--font-display); color: var(--text); margin-right: 4px; }
+.bl-form { display: grid; gap: 6px; }
+.bl-linha { display: flex; gap: 8px; }
+.bl-linha input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 600 14px/1.2 var(--font); }
+.bl-ligas, .bl-palps { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.bl-ligas li, .bl-palps li { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; font-size: 13.5px; color: var(--text-2); }
+.bl-ligas a { color: var(--text); font-weight: 700; }
+.bl-ligas small { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.bl-palps em { font-style: normal; font-weight: 800; color: var(--accent); flex: none; }
+.conta-bolao { display: block; margin: 4px 0 10px; font-weight: 800; color: var(--accent); }
+@media (max-width: 760px) { .bl-grade { grid-template-columns: 1fr; } }

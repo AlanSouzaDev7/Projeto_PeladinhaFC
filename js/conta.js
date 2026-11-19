@@ -108,6 +108,7 @@
     painel.innerHTML = s
       ? `<p class="conta-ola">Olá, <b>${esc(s.nome || "torcedor")}</b></p>
          <p class="conta-txt">Favoritos, escalações, janela e palpites ficam salvos na sua conta e aparecem nos outros aparelhos em que você entrar.${q ? ` Última sincronização: ${new Date(q).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}.` : ""}</p>
+         <a class="conta-bolao" href="#/bolao">Bolão: palpites e ranking</a>
          <div class="conta-acoes"><button type="button" data-conta="sincronizar">Sincronizar agora</button><button type="button" data-conta="sair">Sair</button></div>
          <button type="button" class="conta-apagar" data-conta="apagar">Apagar minha conta e os dados salvos</button>
          <p class="conta-msg" role="status" aria-live="polite"></p>`
@@ -151,6 +152,7 @@
       if (!r.ok) throw new Error(d.erro || `servidor respondeu ${r.status}`);
       gravaJSON(SESSAO, { sessao: d.sessao, nome: d.nome, foto: d.foto });
       desenha();
+      window.dispatchEvent(new Event("conta:mudou")); // o bolão e outras partes que dependem da conta se redesenham
       msg("Entrou! Sincronizando…");
       const mudou = await sincroniza();
       if (mudou) location.reload(); // trouxe dados de outro aparelho: a página redesenha com eles
@@ -196,10 +198,10 @@
       if (!a) return;
       try {
         if (a === "sincronizar") { msg("Sincronizando…"); (await sincroniza()) ? location.reload() : msg("Tudo sincronizado."); }
-        if (a === "sair") { await pede("/conta/sair", { metodo: "POST" }).catch(() => {}); rm0.call(localStorage, SESSAO); desenha(); mostraPainel(); }
+        if (a === "sair") { await pede("/conta/sair", { metodo: "POST" }).catch(() => {}); rm0.call(localStorage, SESSAO); desenha(); mostraPainel(); window.dispatchEvent(new Event("conta:mudou")); }
         if (a === "apagar" && confirm("Apagar a conta e tudo que ela salvou no servidor? Os dados deste aparelho continuam aqui.")) {
           await pede("/conta", { metodo: "DELETE" });
-          rm0.call(localStorage, SESSAO); desenha(); mostraPainel(); msg("Conta apagada.");
+          rm0.call(localStorage, SESSAO); desenha(); mostraPainel(); msg("Conta apagada."); window.dispatchEvent(new Event("conta:mudou"));
         }
       } catch (err) {
         msg(String(err.message || err));
@@ -213,5 +215,7 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", liga);
   else liga();
 
-  window.CONTA = { sessao, sincroniza, ligado: LIGADO, _chaveOk: (k) => CHAVE_OK.test(k) };
+  // abre o painel de entrar (usado pelo bolão); fora do clique que o pediu, para o clique não fechar o painel na hora
+  const abre = () => { if (painel) setTimeout(mostraPainel, 0); };
+  window.CONTA = { sessao, sincroniza, abre, ligado: LIGADO, _chaveOk: (k) => CHAVE_OK.test(k) };
 })();

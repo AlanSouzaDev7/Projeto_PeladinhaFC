@@ -129,6 +129,12 @@ npx wrangler d1 execute cazestats --remote --file worker/migracoes/002-avisos-do
 
 A escalação é procurada no resumo do jogo da ESPN a partir de 75 minutos antes, no máximo 4 jogos por minuto.
 
+**Bolão (19/11).** Palpites, apelidos e ligas ficam em quatro tabelas novas. Uma vez só:
+
+```bash
+npx wrangler d1 execute cazestats --remote --file worker/migracoes/003-bolao.sql
+```
+
 ### 8. Entrar com Google (conta opcional e sincronização)
 
 O botão de conta no cabeçalho (js/conta.js) usa o "Entrar com Google". O Worker confere o comprovante do Google e guarda
