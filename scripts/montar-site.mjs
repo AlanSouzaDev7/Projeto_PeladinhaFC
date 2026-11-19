@@ -43,9 +43,9 @@ fs.writeFileSync(path.join(SAIDA, "_headers"), `/*
 /
   Cache-Control: no-cache
 /css/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=3600
 /js/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=3600
 /assets/*
   Cache-Control: public, max-age=2592000
 /img/*
