@@ -1,7 +1,8 @@
 /* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. */
-/* CazéStats.TV — service worker do alerta de gol (registrado por js/alertas.js, só quando a pessoa liga um alerta).
-   O Worker manda um aviso SEM conteúdo; aqui ele vira notificação: lê os gols recentes (GET <api>/gols/recentes) e mostra
-   os dos clubes que a pessoa segue (lista guardada no Cache Storage por js/alertas.js). Não guarda páginas em cache. */
+/* CazéStats.TV — service worker dos alertas do favorito (registrado por js/alertas.js, só quando a pessoa liga um alerta).
+   O Worker manda um aviso SEM conteúdo; aqui ele vira notificação: lê os avisos recentes (GET <api>/gols/recentes: gol,
+   início, intervalo, escalação, fim) e mostra os dos clubes e tipos que a pessoa escolheu (guardados no Cache Storage por
+   js/alertas.js). Não guarda páginas em cache. */
 const API = new URL(self.location.href).searchParams.get("api") || "";
 const ARMARIO = "cazestats-alertas";
 
@@ -22,6 +23,7 @@ async function grava(chave, valor) {
 
 async function avisa() {
   const seguidos = new Set(await le("/alertas/clubes.json", []));
+  const tipos = new Set(await le("/alertas/tipos.json", ["gol"]));
   let gols = [];
   try {
     const r = await fetch(`${API}/gols/recentes`, { cache: "no-store" });
@@ -30,16 +32,16 @@ async function avisa() {
     /* sem rede: cai no aviso genérico abaixo */
   }
   const vistos = new Set(await le("/alertas/vistos.json", []));
-  const novos = gols.filter((g) => seguidos.has(g.clube) && Date.now() - g.quando < 10 * 60e3 && !vistos.has(g.id)).reverse();
+  const novos = gols.filter((g) => seguidos.has(g.clube) && tipos.has(g.tipo || "gol") && Date.now() - g.quando < 10 * 60e3 && !vistos.has(g.id)).reverse();
   if (!novos.length) {
     // o navegador exige uma notificação por aviso recebido; sem gol novo na lista (atraso do cache), um aviso genérico
-    return self.registration.showNotification("CazéStats.TV", { body: "Saiu gol do seu time! Toque para ver o placar.", tag: "gol", icon: "assets/marca/icone-192.png", data: { url: "./#/" } });
+    return self.registration.showNotification("CazéStats.TV", { body: "Novidade do seu time! Toque para ver o placar.", tag: "aviso", icon: "assets/marca/icone-192.png", data: { url: "./#/" } });
   }
   for (const g of novos) {
     vistos.add(g.id);
     await self.registration.showNotification(String(g.titulo).slice(0, 80), {
       body: String(g.corpo).slice(0, 160), tag: String(g.id), icon: "assets/marca/icone-192.png", badge: "assets/marca/icone-192.png",
-      vibrate: [120, 60, 120], data: { url: `./#/clube/${encodeURIComponent(g.clube)}` },
+      vibrate: g.tipo === "gol" || !g.tipo ? [120, 60, 120] : [80], data: { url: `./#/clube/${encodeURIComponent(g.clube)}` },
     });
   }
   await grava("/alertas/vistos.json", [...vistos].slice(-60));

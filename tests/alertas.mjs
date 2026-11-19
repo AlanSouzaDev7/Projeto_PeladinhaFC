@@ -77,4 +77,67 @@ await t("o service worker lê os gols recentes; a chave pública fica disponíve
   assert.deepEqual(d.gols.map((g) => g.clube).sort(), ["atletico-mg", "cruzeiro"]);
   assert.equal((await (await req("/alerta/chave")).json()).chave, pub);
 });
+/* ---------- mais alertas do favorito: início, intervalo, escalação e fim ---------- */
+const DB2 = d1Simulado(), env2 = { ...env, DB: DB2 };
+const req2 = (caminho, corpo) => worker.fetch(new Request(`https://w.test${caminho}`, { method: "POST", body: JSON.stringify(corpo) }), env2);
+const INICIO = Date.parse("2026-11-22T21:30:00Z");
+let est = { state: "pre", name: "STATUS_SCHEDULED" }, gc = 0, gf = 0, titulares = 0;
+const espn2 = async (url) => ({
+  ok: true,
+  json: async () => {
+    if (url.includes("/summary")) {
+      const r = (id, ha, pref) => ({ homeAway: ha, team: { id }, roster: Array.from({ length: 18 }, (_, i) => ({ starter: i < titulares, athlete: { shortName: `${pref} ${i + 1}` } })) });
+      return { rosters: [r("2026", "home", "SP"), r("2029", "away", "PAL")] };
+    }
+    return url.includes("/bra.1/") ? { events: [{ id: "401999777", date: "2026-11-22T21:30Z", status: { type: est, displayClock: "" }, competitions: [{
+      competitors: [{ homeAway: "home", team: { id: "2026", shortDisplayName: "São Paulo" }, score: String(gc) },
+                    { homeAway: "away", team: { id: "2029", shortDisplayName: "Palmeiras" }, score: String(gf) }], details: [] }] }] } : { events: [] };
+  },
+});
+const avisos = () => DB2._db.prepare("SELECT tipo, clube, titulo, corpo FROM gols ORDER BY rowid").all();
+
+await t("inscrição guarda os tipos escolhidos; site antigo (sem tipos) continua só com gol", async () => {
+  assert.deepEqual((await (await req2("/alerta", { sub: sub(501), clubes: ["sao-paulo"], tipos: ["fim", "inicio", "inventado", "escalacao"] })).json()).tipos, ["inicio", "escalacao", "fim"]);
+  await req2("/alerta", { sub: sub(502), clubes: ["sao-paulo"] });
+  assert.equal(DB2._db.prepare("SELECT tipos FROM alertas WHERE endpoint LIKE '%502'").get().tipos, "gol");
+  assert.equal((await req2("/alerta", { sub: sub(503), clubes: ["sao-paulo"], tipos: [] })).status, 400);
+  await req2("/alerta", { sub: sub(504), clubes: ["palmeiras"], tipos: ["gol", "intervalo", "fim"] });
+});
+await t("escalação: só a partir de 75 min antes, uma vez por clube, e só para quem quer esse aviso", async () => {
+  await verificaGols(env2, espn2, INICIO - 3 * 3600e3); // primeiro estado visto: só guarda
+  titulares = 11;
+  await verificaGols(env2, espn2, INICIO - 2 * 3600e3); // longe do jogo: nem procura
+  assert.equal(avisos().length, 0);
+  await verificaGols(env2, espn2, INICIO - 60 * 60e3);
+  const a = avisos();
+  assert.deepEqual(a.map((x) => [x.tipo, x.clube]), [["escalacao", "sao-paulo"]]); // Palmeiras: inscrito não quer escalação
+  assert.equal(a[0].titulo, "Escalação do São Paulo");
+  assert.match(a[0].corpo, /^x Palmeiras, 18:30: SP 1, SP 2, .*SP 11$/);
+  await verificaGols(env2, espn2, INICIO - 50 * 60e3);
+  assert.equal(avisos().length, 1);
+});
+await t("início, gol, intervalo e fim viram avisos com o resultado de cada lado", async () => {
+  est = { state: "in", name: "STATUS_FIRST_HALF" };
+  await verificaGols(env2, espn2, INICIO + 60e3);
+  gf = 1;
+  await verificaGols(env2, espn2, INICIO + 20 * 60e3);
+  est = { state: "in", name: "STATUS_HALFTIME" };
+  await verificaGols(env2, espn2, INICIO + 50 * 60e3);
+  est = { state: "post", name: "STATUS_FULL_TIME" }; gc = 1;
+  await verificaGols(env2, espn2, INICIO + 115 * 60e3);
+  const por = Object.fromEntries(avisos().map((x) => [`${x.tipo}:${x.clube}`, x]));
+  assert.equal(por["inicio:sao-paulo"].titulo, "Começou: São Paulo x Palmeiras");
+  assert.equal(por["inicio:sao-paulo"].corpo, "Bola rolando · Brasileirão");
+  assert.equal(por["intervalo:palmeiras"].corpo, "Palmeiras vence no 1º tempo");
+  assert.equal(por["intervalo:sao-paulo"].corpo, "São Paulo perde no 1º tempo");
+  assert.equal(por["fim:sao-paulo"].titulo, "Fim de jogo: São Paulo 1 x 1 Palmeiras");
+  assert.equal(por["fim:palmeiras"].corpo, "Empate · Brasileirão");
+  assert.ok(por["gol:palmeiras"] && por["gol:sao-paulo"]);
+});
+await t("envio: cada aviso só vai para quem escolheu aquele tipo", async () => {
+  const recebidos = {};
+  await enviaPushes(env2, async (url) => { recebidos[url.slice(-3)] = (recebidos[url.slice(-3)] || 0) + 1; return { ok: true, status: 201 }; });
+  // 501 (São Paulo: escalação, início, fim) = 3; 502 (São Paulo, só gol) = 1; 504 (Palmeiras: gol, intervalo, fim) = 3
+  assert.deepEqual(recebidos, { 501: 3, 502: 1, 504: 3 });
+});
 console.log(`\n${ok} testes do alerta de gol passaram`);

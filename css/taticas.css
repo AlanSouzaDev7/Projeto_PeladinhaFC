@@ -100,7 +100,7 @@
   .hs-adv small { display: none; }
 }
 
-/* ---------- botão "Avisar gols" no topo do clube (js/alertas.js) ---------- */
+/* ---------- botão "Ativar avisos" no topo do clube e o que avisar (js/alertas.js) ---------- */
 .alerta-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 14px; }
 .alerta-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px 9px 12px; border-radius: 999px; cursor: pointer;
   border: 1px solid rgb(255 255 255 / 0.35); background: rgb(0 0 0 / 0.35); color: #fff; font: 800 13.5px/1 var(--font);
@@ -111,6 +111,15 @@
 .alerta-btn.on svg { animation: sino 0.9s var(--ease) 1; transform-origin: 50% 10%; }
 .alerta-btn:disabled { opacity: 0.6; cursor: progress; }
 .alerta-msg { font-size: 12.5px; font-weight: 600; color: rgb(255 255 255 / 0.9); text-shadow: 0 1px 6px rgb(0 0 0 / 0.6); max-width: 46ch; }
+.alerta-tipos { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+.alerta-tipos[hidden] { display: none; }
+.alerta-tipo { padding: 6px 12px; border-radius: 999px; cursor: pointer; font: 700 12.5px/1 var(--font); color: rgb(255 255 255 / 0.85);
+  border: 1px dashed rgb(255 255 255 / 0.45); background: rgb(0 0 0 / 0.3); transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.alerta-tipo[aria-pressed="true"] { background: rgb(255 255 255 / 0.92); color: #0b0b0d; border: 1px solid #fff; }
+.alerta-tipo[aria-pressed="true"]::before { content: "✓ "; }
+.alerta-tipo:hover { border-color: #fff; }
+.alerta-tipo:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.alerta-tipo:disabled { opacity: 0.6; cursor: progress; }
 @keyframes sino { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(18deg); } 40% { transform: rotate(-14deg); } 60% { transform: rotate(9deg); } 80% { transform: rotate(-5deg); } }
 @media (prefers-reduced-motion: reduce) { .alerta-btn.on svg { animation: none; } }
 

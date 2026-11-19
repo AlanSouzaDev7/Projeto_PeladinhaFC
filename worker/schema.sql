@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS alertas (
   endpoint TEXT    NOT NULL,      -- endereço do serviço de push do navegador (Google, Mozilla, Apple, Microsoft)
   clube    TEXT    NOT NULL,
   criado   INTEGER NOT NULL,
+  tipos    TEXT    NOT NULL DEFAULT 'gol',  -- o que avisar: gol,inicio,intervalo,escalacao,fim (worker/migracoes/002)
   PRIMARY KEY (endpoint, clube)
 );
 CREATE INDEX IF NOT EXISTS alertas_clube ON alertas (clube, endpoint);
@@ -79,7 +80,9 @@ CREATE TABLE IF NOT EXISTS placares (
   jogo   TEXT    PRIMARY KEY,     -- id do jogo na ESPN
   casa   INTEGER NOT NULL,
   fora   INTEGER NOT NULL,
-  quando INTEGER NOT NULL
+  quando INTEGER NOT NULL,
+  estado TEXT    NOT NULL DEFAULT '',  -- pre, in, ht (intervalo) ou post: a mudança vira aviso de início, intervalo e fim
+  escalacao INTEGER NOT NULL DEFAULT 0  -- escalações já avisadas: 1 mandante, 2 visitante
 );
 CREATE TABLE IF NOT EXISTS gols (
   id     TEXT    PRIMARY KEY,     -- jogo:placar:clube
@@ -88,7 +91,8 @@ CREATE TABLE IF NOT EXISTS gols (
   titulo TEXT    NOT NULL,
   corpo  TEXT    NOT NULL,
   quando INTEGER NOT NULL,
-  cursor TEXT    NOT NULL DEFAULT ''  -- até qual inscrito já foi avisado ('fim' = todos)
+  cursor TEXT    NOT NULL DEFAULT '',  -- até qual inscrito já foi avisado ('fim' = todos)
+  tipo   TEXT    NOT NULL DEFAULT 'gol' -- gol, inicio, intervalo, escalacao ou fim (a tabela guarda todos os avisos)
 );
 CREATE INDEX IF NOT EXISTS gols_quando ON gols (quando);
 

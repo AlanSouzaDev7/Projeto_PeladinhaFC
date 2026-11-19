@@ -16,7 +16,7 @@
      PUT /dados/<nome>.json, GET /dados/_lista   só o robô de dados (segredo ROBO_CHAVE)
      GET /jogos?clube=&contra=&temporada=&liga=  histórico dos jogos (todas as temporadas) com resumo V/E/D
      POST /jogos                                 só o robô: lote de jogos para o histórico
-     POST /alerta, GET /gols/recentes            alerta de gol do clube favorito (worker/alertas.mjs, Web Push)
+     POST /alerta, GET /gols/recentes            alertas do favorito: gol, início, intervalo, escalação, fim (Web Push)
      /conta/entrar, /conta/dados, /conta/sair, DELETE /conta   conta com Google e sincronização (worker/conta.mjs)
    Cron (wrangler.toml): a cada 30 min dispara o robô de dados do GitHub e limpa registros antigos do banco.
 
@@ -292,7 +292,7 @@ export default {
       if (!env.DB) return json({ erro: "banco não configurado" }, 503);
       if (+(req.headers.get("content-length") || 0) > 4096) return json({ erro: "inscrição grande demais" }, 413);
       const r = await inscrever(env, await req.text());
-      return r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, clubes: r.clubes });
+      return r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, clubes: r.clubes, tipos: r.tipos });
     }
     if (path === "/gols/recentes" && (req.method === "GET" || req.method === "HEAD")) {
       if (!env.DB) return json({ erro: "banco não configurado", gols: [] }, 503);
