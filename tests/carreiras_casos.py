@@ -50,4 +50,10 @@ en = {"years1": "2016–2019", "clubs1": "[[Fluminense FC|Fluminense]]", "years2
 caso("caixa em inglês: years1/clubs1", [(x[3], x[4]) for x in W.clubes_da_caixa("en", en)] == [("Fluminense", False), ("Fiorentina", True)])
 j = C.junta([{"q": "cor", "i": 2014, "f": 2014}, {"q": "cor", "i": 2015, "f": 2026}, {"q": "cru", "i": 2025, "f": None}])
 caso("passagens seguidas pelo mesmo clube viram uma só", [(x["q"], x["i"], x["f"]) for x in j] == [("cor", 2014, 2026), ("cru", 2025, None)])
+f = lambda c, i, fim, s=None, e=0: {"c": c, "q": s or c, "i": i, "f": fim, "l": None, "s": s, "e": e}  # noqa: E731
+caso("um clube só, com ano de início: vira linha de um trecho (não é base)", C.fecha([f("SPFC", 2022, None, "sao-paulo")], "sao-paulo", "São Paulo") == [f("SPFC", 2022, None, "sao-paulo")])
+caso("só o clube atual sem data: jogador da base, sem linha", C.fecha([f("SPFC", None, None, "sao-paulo")], "sao-paulo", "São Paulo") == [])
+volta = C.fecha([f("Chape", 2021, None, "chapecoense"), f("Portimonense", 2022, 2022, None, 1)], "chapecoense", "Chapecoense")
+caso("voltou de empréstimo: o clube atual fecha a linha de novo", [x["c"] for x in volta] == ["Chape", "Portimonense", "Chapecoense"])
+caso("emprestado que voltou: o vínculo em aberto conta como clube atual", W.clube_bate("Portimonense S.C. Associação Chapecoense de Futebol", "Associação Chapecoense de Futebol"))
 print(f"\n{ok} casos das carreiras passaram")

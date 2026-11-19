@@ -261,65 +261,94 @@ def junta(lista):
     return out
 
 
+def _escudo_fora(titulo, nm, espn, busca, reserva=None):
+    """Escudo de um clube que não está no site: ESPN do atleta > busca na ESPN > o da fonte."""
+    logo = _logo_da_espn(titulo, nm, espn)
+    if not logo and busca is not None:
+        e = espn_por_nome(titulo, busca)
+        logo = f"https://a.espncdn.com/i/teamlogos/soccer/500/{e}.png" if e else None
+    return logo or reserva
+
+
+def fecha(lista, cid, nome_atual):
+    """O clube atual fecha a linha (contratação recente que a fonte ainda não tem; ou volta de empréstimo).
+    Vale com 2+ trechos, ou com 1 só se for o clube atual com ano de início (profissional de um clube só).
+    Sem isso (só o clube atual, sem data), é jogador da base: fica sem linha do tempo."""
+    lista = junta(lista)
+    if lista and lista[-1]["s"] != cid:
+        lista.append({"c": nome_atual, "q": cid, "i": None, "f": None, "l": None, "s": cid, "e": 0})
+    elif lista and lista[-1]["s"] == cid:
+        lista[-1]["f"] = None  # o trecho atual continua aberto
+    if len(lista) >= 2 or (len(lista) == 1 and lista[0]["s"] == cid and lista[0]["i"]):
+        return lista
+    return []
+
+
 def monta_jogador(aid, nome, idade, cid, nomes_site, qid=None, wikidata=None, busca=None, ogol=None):
     """Carreira de um jogador: Wikipédia (pt/en) > ogol > Wikidata > ESPN; escudos do site, da ESPN, do ogol ou desenhados.
     ogol = {nome: (slug, id)} do elenco do clube no ogol (carreiras_ogol.elenco).
-    Devolve (lista, fonte); lista vazia quando nenhuma fonte dá pelo menos 2 clubes com segurança."""
+    Vale a primeira fonte com 2+ clubes; se nenhuma tiver, a primeira com a passagem pelo clube atual (um clube só).
+    Devolve (lista, fonte); lista vazia = jogador da base (nenhuma fonte o mostra jogando como profissional)."""
     import carreiras_wiki as W
     W.P = W.P or P
     espn = W.pela_espn(aid)
-    wiki = W.pela_wikipedia(nome, idade, nomes_site[cid], W.titulo_do_wikidata(qid) if qid else None)
-    if not wiki and qid:  # o item do Wikidata não tem artigo: tenta a busca
-        wiki = W.pela_wikipedia(nome, idade, nomes_site[cid])
-    lista, fonte = [], None
-    if wiki and len(wiki["clubes"]) >= 2:
-        fonte = wiki["fonte"]
+    candidatas = []  # (fonte, lista já fechada), na ordem de preferência
+
+    def pela_wiki():
+        wiki = W.pela_wikipedia(nome, idade, nomes_site[cid], W.titulo_do_wikidata(qid) if qid else None)
+        if not wiki and qid:  # o item do Wikidata não tem artigo: tenta a busca
+            wiki = W.pela_wikipedia(nome, idade, nomes_site[cid])
+        if not wiki:
+            return None
+        lista = []
         for i, f, titulo, nm, emp in wiki["clubes"]:
             site = _site_do_clube(titulo, nm, nomes_site)
-            chave = site or " ".join(sorted(W.distintivas(titulo))) or titulo
-            logo = None
-            if not site:
-                logo = _logo_da_espn(titulo, nm, espn)
-                if not logo and busca is not None:
-                    e = espn_por_nome(titulo, busca)
-                    logo = f"https://a.espncdn.com/i/teamlogos/soccer/500/{e}.png" if e else None
-            lista.append({"c": P.clean_text(nm, 50), "q": chave, "i": i, "f": f, "l": logo, "s": site, "e": 1 if emp else 0})
-        lista = junta(lista)
-    og = None
-    if not lista and ogol:
+            logo = None if site else _escudo_fora(titulo, nm, espn, busca)
+            lista.append({"c": P.clean_text(nm, 50), "q": site or " ".join(sorted(W.distintivas(titulo))) or titulo, "i": i, "f": f, "l": logo, "s": site, "e": 1 if emp else 0})
+        return wiki["fonte"], lista
+
+    def pelo_ogol():
+        if not ogol:
+            return None
         import carreiras_ogol as O
         O.P = O.P or P
         achado = O.acha(nome, ogol)
-        if achado:
-            trechos = O.carreira(*achado, nascido=(int(time.strftime("%Y")) - idade) if idade else None)
-            if trechos and O.nome_bate(trechos[-1][2], nomes_site[cid], W.distintivas):  # a temporada mais recente é no clube do site
-                og = trechos
-    if og and len(og) >= 2:
-        fonte = "ogol"
+        if not achado:
+            return None
+        try:
+            og = O.carreira(*achado, nascido=(int(time.strftime("%Y")) - idade) if idade else None)
+        except Exception as ex:  # página sem a tabela: segue para as outras fontes (antes perdia o jogador inteiro)
+            P.log("carreiras (ogol)", nome, ex)
+            return None
+        if not og or not O.nome_bate(og[-1][2], nomes_site[cid], W.distintivas):  # a temporada mais recente é no clube do site
+            return None
+        lista = []
         for i, f, nm, _eq, logo_ogol in og:
             site = _site_do_clube(nm, nm, nomes_site) or (cid if O.nome_bate(nm, nomes_site[cid], W.distintivas) else None)
-            logo = None
-            if not site:
-                logo = _logo_da_espn(nm, nm, espn)
-                if not logo and busca is not None:
-                    e = espn_por_nome(nm, busca)
-                    logo = f"https://a.espncdn.com/i/teamlogos/soccer/500/{e}.png" if e else None
-                logo = logo or logo_ogol
+            logo = None if site else _escudo_fora(nm, nm, espn, busca, logo_ogol)
             lista.append({"c": nm, "q": site or " ".join(sorted(W.distintivas(nm))) or nm, "i": i, "f": f, "l": logo, "s": site, "e": 0})
-        lista = junta(lista)
-        if lista and lista[-1]["s"] == cid:
-            lista[-1]["f"] = None  # o trecho atual continua aberto
-    elif not lista and wikidata and len(wikidata) >= 2:
-        fonte, lista = "wikidata", [dict(x) for x in wikidata]
-    elif not lista and len(espn) >= 2:
-        fonte = "espn"
+        return "ogol", lista
+
+    def pelo_wikidata():
+        return ("wikidata", [dict(x) for x in wikidata]) if wikidata else None
+
+    def pela_espn():
+        lista = []
         for i, f, nm, logo in espn:
             site = _site_do_clube(nm, nm, nomes_site)
             lista.append({"c": nm, "q": site or " ".join(sorted(W.distintivas(nm))) or nm, "i": i, "f": f, "l": None if site else logo, "s": site, "e": 0})
-        lista = junta(lista)
-    if lista and lista[-1]["s"] != cid:  # o clube atual fecha a linha (contratação recente que a fonte ainda não tem)
-        lista.append({"c": nomes_site[cid], "q": cid, "i": None, "f": None, "l": None, "s": cid, "e": 0})
-    return (lista if len(lista) >= 2 else []), fonte
+        return ("espn", lista) if lista else None
+
+    for fonte_de in (pela_wiki, pelo_ogol, pelo_wikidata, pela_espn):
+        r = fonte_de()
+        if not r:
+            continue
+        lista = fecha(r[1], cid, nomes_site[cid])
+        if len(lista) >= 2:
+            return lista, r[0]
+        if lista:
+            candidatas.append((r[0], lista))
+    return (candidatas[0][1], candidatas[0][0]) if candidatas else ([], None)
 
 
 def gravar(forcar=False, limite=POR_RODADA, refazer_vazios=False):
@@ -355,7 +384,7 @@ def gravar(forcar=False, limite=POR_RODADA, refazer_vazios=False):
     feitas = 0
     for cid, elenco in squads.items():
         pendentes = [r for r in elenco if r[4] and (forcar or not jog.get(str(r[4])) or jog[str(r[4])].get("cid") != cid or jog[str(r[4])].get("t", 0) < agora - VALIDADE
-                                                    or (refazer_vazios and len(jog[str(r[4])].get("lista") or []) < 2))]
+                                                    or (refazer_vazios and not jog[str(r[4])].get("lista")))]
         if not pendentes or (limite is not None and feitas >= limite):
             continue
         # Wikidata do clube (uma consulta por clube): dá o item de cada jogador (link do artigo) e a carreira de reserva
@@ -403,7 +432,7 @@ def gravar(forcar=False, limite=POR_RODADA, refazer_vazios=False):
         saida = {}
         for r in elenco:
             x = jog.get(str(r[4]))
-            if x and x.get("cid") == cid and len(x.get("lista") or []) >= 2:
+            if x and x.get("cid") == cid and x.get("lista"):  # já validada em fecha() (2+ trechos ou um clube só com data)
                 saida[str(r[4])] = x["lista"]
         (SAIDA / f"{cid}.json").write_text(json.dumps(saida, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         total += len(saida)

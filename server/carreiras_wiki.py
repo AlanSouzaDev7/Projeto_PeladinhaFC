@@ -188,7 +188,10 @@ def pela_wikipedia(nome, idade, nome_oficial, titulos=None, ano_atual=None):
         lista = clubes_da_caixa(lang, params)
         if not lista:
             continue
-        atual_txt = (_expande(lang, [atual])[0] if atual else "") + " " + lista[-1][2] + " " + lista[-1][3]
+        # clube atual: o da caixa, o último da lista ou um vínculo em aberto que não é empréstimo (quem voltou de
+        # empréstimo aparece como "2021– Chapecoense" e depois "2022 Portimonense (emp.)")
+        abertos = [x for x in lista if x[1] is None and not x[4]]
+        atual_txt = " ".join([_expande(lang, [atual])[0] if atual else "", lista[-1][2], lista[-1][3]] + [x[2] + " " + x[3] for x in abertos])
         if not clube_bate(atual_txt, nome_oficial):
             continue  # a caixa é de outro jogador (ou está desatualizada demais para confiar)
         if not titulos and not nasc:
