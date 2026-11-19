@@ -10,7 +10,7 @@ compatibility_date = "2024-09-23"
 ORIGEM = "*"
 # repositório cujo robô de dados o agendador dispara
 GITHUB_REPO = "AlanSouzaDev7/Projeto_PeladinhaFC"
-GOOGLE_CLIENT_ID = ""  # ID do cliente OAuth do Google (público; "Entrar com Google"). Vazio: login desligado
+GOOGLE_CLIENT_ID = "545408326652-m42ttef21gt1oroe8ooaff7p2uv5uoc3.apps.googleusercontent.com"  # ID do cliente OAuth do Google (público; "Entrar com Google"). Vazio: login desligado
 # placar e lances da API-Football: no máximo a cada N segundos (plano grátis, 100 consultas/dia: 240 ou mais)
 INTERVALO_SEGUNDOS = "240"
 LISTA_SEGUNDOS = "1800"

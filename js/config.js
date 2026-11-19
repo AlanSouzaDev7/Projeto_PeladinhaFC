@@ -11,7 +11,7 @@ window.PLACAR_CONFIG = {
   api: "https://cazestats-api.alanmartinsdesouza07.workers.dev",
   aoVivo: "",
   /* googleClientId: ID do cliente OAuth do Google ("Entrar com Google", js/conta.js). É público (vai no site). Vazio: sem login. */
-  googleClientId: "",
+  googleClientId: "545408326652-m42ttef21gt1oroe8ooaff7p2uv5uoc3.apps.googleusercontent.com",
   intervalo: 15,
   /* hinos: ids dos clubes com o instrumental do hino LICENCIADO em media/hinos/<id>.mp3 (ex.: ["cruzeiro"]).
      Vazio: o gol toca a fanfarra própria de cada clube (js/sons.js). */
