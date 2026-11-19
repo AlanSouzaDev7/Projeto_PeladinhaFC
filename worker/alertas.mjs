@@ -23,8 +23,8 @@ const CLUBES = new Set(Object.values(CLUBE_POR_ESPN));
 const LIGAS = ["bra.1", "bra.copa_do_brazil", "conmebol.libertadores", "conmebol.sudamericana"];
 const ESTADUAIS = ["bra.camp.paulista", "bra.camp.carioca", "bra.camp.mineiro", "bra.camp.gaucho"]; // de janeiro a abril
 // destinos aceitos: só os serviços de push dos navegadores (ninguém usa o Worker para chamar outro site)
-const PUSH_OK = /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9.-]+\.notify\.windows\.com|web\.push\.apple\.com|[a-z0-9.-]+\.push\.apple\.com)\//;
-export const ENVIOS_POR_MINUTO = 35;
+export const PUSH_OK = /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9.-]+\.notify\.windows\.com|web\.push\.apple\.com|[a-z0-9.-]+\.push\.apple\.com)\//;
+export const ENVIOS_POR_MINUTO = 30; // + até 8 placares, 4 escalações e 6 avisos do bolão: cabe nos 50 pedidos externos
 // tipos de aviso que o torcedor escolhe (o mesmo para todos os clubes que segue)
 export const TIPOS = ["gol", "inicio", "intervalo", "escalacao", "fim"];
 // escalação: procurada a partir de 75 min antes do jogo, no máximo 4 jogos por minuto (cabe nos 50 pedidos externos:
@@ -172,7 +172,7 @@ async function escalacoes(env, buscar, agora, jogos, antes, ops) {
 /* ---------- envio (VAPID, aviso sem conteúdo) ---------- */
 const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const txt64 = (s) => b64url(new TextEncoder().encode(s));
-async function assinatura(env, aud, cache) {
+export async function assinatura(env, aud, cache) {
   if (cache[aud]) return cache[aud];
   const chave = await crypto.subtle.importKey("jwk", JSON.parse(env.VAPID_PRIVADA), { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
   const corpo = `${txt64(JSON.stringify({ typ: "JWT", alg: "ES256" }))}.${txt64(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: SITE }))}`;

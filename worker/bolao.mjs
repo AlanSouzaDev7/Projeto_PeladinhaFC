@@ -165,6 +165,8 @@ export async function saiLiga(env, usuario, txt) {
 export function apagaDoBolao(env, usuario) {
   return [
     env.DB.prepare("DELETE FROM palpites WHERE usuario = ?1").bind(usuario),
+    env.DB.prepare("DELETE FROM bolao_push WHERE usuario = ?1").bind(usuario),
+    env.DB.prepare("DELETE FROM bolao_avisos WHERE usuario = ?1").bind(usuario),
     env.DB.prepare("DELETE FROM apelidos WHERE usuario = ?1").bind(usuario),
     env.DB.prepare("DELETE FROM ligas_membros WHERE usuario = ?1").bind(usuario),
     env.DB.prepare("DELETE FROM ligas WHERE NOT EXISTS (SELECT 1 FROM ligas_membros m WHERE m.codigo = ligas.codigo)"),

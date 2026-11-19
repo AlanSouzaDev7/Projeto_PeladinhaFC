@@ -126,6 +126,17 @@
       <div class="bl-linha"><input id="bl-apelido" name="apelido" maxlength="20" minlength="3" required autocomplete="nickname" value="${esc(atual || "")}" placeholder="ex.: Raposa1921"/><button class="bl-btn">${atual ? "Trocar" : "Salvar"}</button></div>
       <p class="bl-txt bl-msg" role="status" aria-live="polite"></p></form>`;
   }
+  // avisos do bolão neste aparelho (lembrete 1 hora antes dos jogos dos favoritos sem palpite, e os pontos de cada jogo)
+  const AVISOS = "cazestats:bolao-avisos"; // fora do prefixo "placar:": é deste aparelho, não sincroniza
+  const avisosLigados = () => { try { return localStorage.getItem(AVISOS) === "1"; } catch { return false; } };
+  function avisosHTML() {
+    if (!window.ALERTAS || window.PLACAR_APP) return "";
+    const on = avisosLigados();
+    return `<div class="card bl-card"><h2 class="bl-h">Avisos do bolão</h2>
+      <p class="bl-txt">Lembrete 1 hora antes dos jogos dos seus clubes favoritos (a estrela) quando faltar o palpite, e os pontos de cada jogo quando ele acabar.</p>
+      <div class="bl-acoes"><button type="button" class="bl-btn${on ? " sec" : ""}" data-bl="avisos" aria-pressed="${on}">${on ? "Desligar avisos" : "Ligar avisos neste aparelho"}</button></div>
+      <p class="bl-txt bl-msg" role="status" aria-live="polite"></p></div>`;
+  }
   function ladoLogado(d) {
     const palps = d.palpites.slice(0, 15).map((p) => `<li><span>${esc(p.time_casa || "?")} <b>${n(p.casa)} x ${n(p.fora)}</b> ${esc(p.time_fora || "?")}</span>
       <em>${p.pontos == null ? (p.estado === "post" || p.estado === "in" ? "em jogo" : "aguardando") : `+${n(p.pontos)}`}</em></li>`).join("");
@@ -135,6 +146,7 @@
         <form class="bl-form" data-bl-form="criar"><label class="bl-txt" for="bl-nova">Criar liga</label><div class="bl-linha"><input id="bl-nova" name="nome" maxlength="40" minlength="3" required placeholder="Nome da liga"/><button class="bl-btn">Criar</button></div></form>
         <form class="bl-form" data-bl-form="codigo"><label class="bl-txt" for="bl-cod">Entrar com um código</label><div class="bl-linha"><input id="bl-cod" name="codigo" maxlength="6" minlength="6" required autocapitalize="characters" placeholder="ABC234"/><button class="bl-btn">Entrar</button></div></form>
         <p class="bl-txt bl-msg" role="status" aria-live="polite"></p></div>
+      ${avisosHTML()}
       <div class="card bl-card"><h2 class="bl-h">Meus palpites</h2>${palps ? `<ul class="bl-palps">${palps}</ul>` : `<p class="bl-txt">Ainda sem palpites. Abra um jogo da rodada e dê o seu.</p>`}</div>`;
   }
 
@@ -173,6 +185,19 @@
         meuP = null; location.hash = "#/bolao";
       }
       if (acao === "entrar-liga") { location.hash = `#/bolao/entrar/${b.dataset.cod}`; }
+      if (acao === "avisos") {
+        const A = window.ALERTAS, ligar = !avisosLigados();
+        if (!A.suporta()) throw new Error(A.iOS && !A.instalado ? "no iPhone, adicione o site à tela de início e ative por lá" : "este navegador não recebe avisos");
+        if (ligar && Notification.permission !== "granted" && (await Notification.requestPermission()) !== "granted") throw new Error("sem permissão para notificar");
+        const sub = await A.inscricao();
+        await api("/bolao/avisar", { metodo: "POST", corpo: { sub: sub.toJSON(), ligar } });
+        await A.marcaBolao(ligar);
+        try { localStorage.setItem(AVISOS, ligar ? "1" : "0"); } catch { /* vale só nesta visita */ }
+        b.textContent = ligar ? "Desligar avisos" : "Ligar avisos neste aparelho";
+        b.classList.toggle("sec", ligar);
+        b.setAttribute("aria-pressed", String(ligar));
+        msgDe(b, ligar ? "Pronto: lembrete antes dos jogos dos favoritos e os pontos de cada jogo." : "Avisos do bolão desligados neste aparelho.");
+      }
     } catch (err) {
       msgDe(b, err.message);
     } finally {

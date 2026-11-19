@@ -147,3 +147,21 @@ CREATE TABLE IF NOT EXISTS ligas_membros (
   PRIMARY KEY (codigo, usuario)
 );
 CREATE INDEX IF NOT EXISTS ligas_membros_usuario ON ligas_membros (usuario);
+
+-- avisos do bolão (worker/bolao-avisos.mjs)
+CREATE TABLE IF NOT EXISTS bolao_push (
+  endpoint TEXT    PRIMARY KEY,   -- endereço de push do aparelho (o mesmo do alerta de gol)
+  usuario  TEXT    NOT NULL,
+  criado   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS bolao_push_usuario ON bolao_push (usuario);
+CREATE TABLE IF NOT EXISTS bolao_avisos (
+  id      TEXT    PRIMARY KEY,    -- lembrete:<jogo>:<usuario> ou pontos:<jogo>:<usuario> (cada aviso sai uma vez)
+  usuario TEXT    NOT NULL,
+  titulo  TEXT    NOT NULL,
+  corpo   TEXT    NOT NULL,
+  url     TEXT    NOT NULL,
+  quando  INTEGER NOT NULL,
+  cursor  TEXT    NOT NULL DEFAULT ''   -- 'fim' = já enviado
+);
+CREATE INDEX IF NOT EXISTS bolao_avisos_quando ON bolao_avisos (quando);

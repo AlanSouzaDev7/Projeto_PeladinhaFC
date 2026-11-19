@@ -1103,6 +1103,15 @@
   }
 
   function findMatch(id) {
+    // "espn-<id>": endereço dos avisos do bolão (o servidor só conhece o id do jogo na ESPN)
+    const espn = /^espn-(\d+)$/.exec(id)?.[1];
+    if (espn) {
+      for (const rd of [ROUND, ...ROUNDS.filter((r) => r !== ROUND)]) {
+        const m = (rd === ROUND ? state.matches : realMatches(rd)).find((x) => String(x.espn || "") === espn);
+        if (m) return m;
+      }
+      return null;
+    }
     const rd = +(id.match(/-r(\d+)$/) || [])[1];
     return (rd === ROUND ? state.matches : realMatches(rd)).find((m) => m.id === id);
   }

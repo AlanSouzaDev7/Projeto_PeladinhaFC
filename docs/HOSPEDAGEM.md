@@ -135,6 +135,12 @@ A escalação é procurada no resumo do jogo da ESPN a partir de 75 minutos ante
 npx wrangler d1 execute cazestats --remote --file worker/migracoes/003-bolao.sql
 ```
 
+**Avisos do bolão (19/11).** Lembrete 1 hora antes dos jogos dos favoritos sem palpite e os pontos de cada jogo. Uma vez só:
+
+```bash
+npx wrangler d1 execute cazestats --remote --file worker/migracoes/004-avisos-do-bolao.sql
+```
+
 ### 8. Entrar com Google (conta opcional e sincronização)
 
 O botão de conta no cabeçalho (js/conta.js) usa o "Entrar com Google". O Worker confere o comprovante do Google e guarda

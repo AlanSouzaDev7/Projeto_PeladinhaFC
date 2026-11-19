@@ -109,5 +109,55 @@ await t("apagar a conta apaga palpites, apelido e ligas do bolão", async () => 
     assert.equal(DB._db.prepare(`SELECT COUNT(*) n FROM ${tab}`).get().n, n, tab);
   }
 });
+/* ---------- avisos do bolão: lembrete antes do jogo e pontos ganhos ---------- */
+const vapid = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+env.VAPID_PRIVADA = JSON.stringify(await crypto.subtle.exportKey("jwk", vapid.privateKey));
+env.VAPID_PUBLICA = Buffer.from(await crypto.subtle.exportKey("raw", vapid.publicKey)).toString("base64url");
+const { montaAvisos, enviaAvisos } = await import("../worker/bolao-avisos.mjs");
+const ap = (n) => ({ endpoint: `https://fcm.googleapis.com/fcm/send/bolao-${n}` });
+await t("avisos: ligar exige conta e serviço de push conhecido", async () => {
+  assert.equal((await pede("/bolao/avisar", { metodo: "POST", corpo: { sub: ap(1) } })).status, 401);
+  assert.equal((await pede("/bolao/avisar", { metodo: "POST", token: caio, corpo: { sub: { endpoint: "https://evil.example/x" } } })).status, 400);
+  assert.equal((await pede("/bolao/avisar", { metodo: "POST", token: caio, corpo: { sub: ap("caio") } })).ligado, true);
+  assert.equal((await pede("/bolao/avisar", { metodo: "POST", token: beto, corpo: { sub: ap("beto") } })).ligado, true);
+});
+await t("lembrete: ~1 hora antes do jogo de um favorito, só para quem não palpitou", async () => {
+  const agora = Date.now(), ini = new Date(agora + 60 * 60e3 - 3 * 3600e3); // hora de Brasília
+  const data = ini.toISOString().slice(0, 10), hora = ini.toISOString().slice(11, 16);
+  jogo("903", data, hora, "pre");
+  await pede("/conta/dados", { metodo: "PUT", token: caio, corpo: { itens: [{ chave: "placar:favs", dados: '["cruzeiro"]', atualizado: agora - 1000 }] } });
+  await pede("/conta/dados", { metodo: "PUT", token: beto, corpo: { itens: [{ chave: "placar:favs", dados: '["cruzeiro"]', atualizado: agora - 1000 }] } });
+  await pede("/bolao/palpite", { metodo: "PUT", token: beto, corpo: { jogo: "903", casa: 1, fora: 1 } }); // o Beto já palpitou
+  const fim = new Date(agora - 2 * 3600e3 - 3 * 3600e3); // o jogo 900 (encerrado) começou há 2 horas
+  DB._db.prepare("UPDATE jogos SET data = ?, hora = ? WHERE id = '900'").run(fim.toISOString().slice(0, 10), fim.toISOString().slice(11, 16));
+  await montaAvisos(env, agora);
+  const lemb = DB._db.prepare("SELECT id, titulo, url FROM bolao_avisos WHERE id LIKE 'lembrete:%'").all();
+  assert.equal(lemb.length, 1);
+  assert.match(lemb[0].titulo, /^Falta 1 hora: Cruzeiro x Atlético-MG/);
+  assert.equal(lemb[0].url, "#/partida/espn-903");
+});
+await t("pontos: aviso com o placar e os pontos do palpite (jogo encerrado)", async () => {
+  const p = DB._db.prepare("SELECT titulo, corpo FROM bolao_avisos WHERE id LIKE 'pontos:900:%'").all();
+  assert.deepEqual(p.map((x) => x.titulo).sort(), ["+7 pontos no bolão", "0 ponto no bolão"]); // Beto 1x0 (saldo), Caio 0x2
+  assert.match(p.find((x) => x.titulo.startsWith("+7")).corpo, /Cruzeiro 2 x 1 Atlético-MG · seu palpite: 1 x 0 \(vencedor e saldo\)/);
+  const antes = DB._db.prepare("SELECT COUNT(*) n FROM bolao_avisos").get().n;
+  await montaAvisos(env); // de novo: nada repetido
+  assert.equal(DB._db.prepare("SELECT COUNT(*) n FROM bolao_avisos").get().n, antes);
+});
+await t("envio aos aparelhos da conta; o service worker lê só os avisos da conta dele", async () => {
+  const chamados = [];
+  await enviaAvisos(env, async (url) => { chamados.push(url.slice(-5)); return { ok: true, status: 201 }; });
+  assert.deepEqual(chamados.sort(), ["-beto", "-caio", "-caio"]); // Beto: pontos; Caio: lembrete e pontos
+  assert.equal(await enviaAvisos(env, async () => ({ ok: true, status: 201 })), 0); // já enviados
+  const r = await pede("/bolao/avisos/recentes", { metodo: "POST", corpo: { endpoint: ap("caio").endpoint } });
+  assert.equal(r.avisos.length, 2);
+  assert.equal((await pede("/bolao/avisos/recentes", { metodo: "POST", corpo: { endpoint: ap("ninguem").endpoint } })).avisos.length, 0);
+});
+await t("desligar e apagar a conta removem os aparelhos e os avisos", async () => {
+  assert.equal((await pede("/bolao/avisar", { metodo: "POST", token: beto, corpo: { sub: ap("beto"), ligar: false } })).ligado, false);
+  await pede("/conta", { metodo: "DELETE", token: caio });
+  assert.equal(DB._db.prepare("SELECT COUNT(*) n FROM bolao_push").get().n, 0);
+  assert.equal(DB._db.prepare("SELECT COUNT(*) n FROM bolao_avisos").get().n, 1); // sobra só o do Beto (a conta dele continua)
+});
 globalThis.fetch = fetchOriginal;
 console.log(`\n${ok} testes do bolão passaram`);

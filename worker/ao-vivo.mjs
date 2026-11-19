@@ -33,6 +33,7 @@
 
 import { entrar, usuarioDa, lerDados, gravarDados, sair, apagarConta, limpaSessoes } from "./conta.mjs";
 import { eu, gravaApelido, gravaPalpite, ranking, criaLiga, entraLiga, saiLiga } from "./bolao.mjs";
+import { avisar, recentes, montaAvisos, enviaAvisos, limpaAvisos } from "./bolao-avisos.mjs";
 import { inscrever, verificaGols, enviaPushes, golsRecentes, limpaGols } from "./alertas.mjs";
 import { agenda } from "./agenda.mjs";
 import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo, roboAutorizado, gravaArquivo, listaArquivos, serveArquivo, gravaJogos, consultaJogos } from "./plataforma.mjs";
@@ -298,6 +299,8 @@ export default {
       const sessao = await usuarioDa(env, req);
       const responde = (r) => (r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, ...r, status: undefined }));
       if (path === "/bolao/ranking" && req.method === "GET") return responde(await ranking(env, sessao?.id, new URL(req.url).searchParams.get("liga") || ""));
+      // o service worker do aparelho busca os avisos do bolão (sem sessão: o endereço de push identifica o aparelho)
+      if (path === "/bolao/avisos/recentes" && req.method === "POST") return responde(await recentes(env, await req.text()));
       if (!sessao) return json({ erro: "Entre com Google para participar do bolão." }, 401);
       if (path === "/bolao/eu" && req.method === "GET") return responde(await eu(env, sessao.id));
       if (path === "/bolao/apelido" && req.method === "PUT") return responde(await gravaApelido(env, sessao.id, await req.text()));
@@ -305,6 +308,7 @@ export default {
       if (path === "/bolao/liga" && req.method === "POST") return responde(await criaLiga(env, sessao.id, await req.text()));
       if (path === "/bolao/liga/entrar" && req.method === "POST") return responde(await entraLiga(env, sessao.id, await req.text()));
       if (path === "/bolao/liga/sair" && req.method === "POST") return responde(await saiLiga(env, sessao.id, await req.text()));
+      if (path === "/bolao/avisar" && req.method === "POST") return responde(await avisar(env, sessao.id, await req.text()));
       return json({ erro: "não encontrado" }, 404);
     }
     // alerta de gol: o navegador se inscreve (POST /alerta) e o service worker lê os gols recentes (GET /gols/recentes)
@@ -386,9 +390,12 @@ export default {
     if (evento.cron === "* * * * *") {
       // a cada minuto: placares da ESPN -> gols novos -> avisos aos inscritos (alerta de gol do favorito)
       if (env.DB) ctx.waitUntil(verificaGols(env).then(() => enviaPushes(env)).catch((e) => console.error("alertas:", e && e.message)));
+      // avisos do bolão: monta a cada 5 minutos (só banco) e envia um pouco por minuto
+      const min = new Date(evento.scheduledTime || Date.now()).getUTCMinutes();
+      if (env.DB) ctx.waitUntil((min % 5 === 0 ? montaAvisos(env) : Promise.resolve(0)).then(() => enviaAvisos(env)).catch((e) => console.error("bolão:", e && e.message)));
       return;
     }
     ctx.waitUntil(disparaRobo(env).then((r) => console.log("robô:", r)));
-    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env), limpaSessoes(env)]));
+    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env), limpaSessoes(env), limpaAvisos(env)]));
   },
 };

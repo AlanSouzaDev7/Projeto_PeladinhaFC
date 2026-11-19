@@ -140,5 +140,12 @@
     }
   });
 
-  window.ALERTAS = { botao, seguidos, suporta, tipos: tiposEscolhidos };
+  // o bolão liga os avisos dele com a mesma inscrição de push (js/bolao.js); o service worker precisa saber
+  const marcaBolao = async (ligado) => {
+    try {
+      const c = await caches.open("cazestats-alertas");
+      await c.put("/alertas/bolao.json", new Response(JSON.stringify(!!ligado), { headers: { "content-type": "application/json" } }));
+    } catch { /* sem Cache Storage: o aparelho mostra o aviso genérico */ }
+  };
+  window.ALERTAS = { botao, seguidos, suporta, tipos: tiposEscolhidos, inscricao, marcaBolao, iOS, instalado };
 })();

@@ -24,18 +24,35 @@ async function grava(chave, valor) {
 async function avisa() {
   const seguidos = new Set(await le("/alertas/clubes.json", []));
   const tipos = new Set(await le("/alertas/tipos.json", ["gol"]));
-  let gols = [];
+  let gols = [], bolao = [];
+  // avisos do bolão (lembrete e pontos) são da conta dona deste aparelho: o endereço de push identifica o aparelho
+  const avisosDoBolao = async () => {
+    if (!(await le("/alertas/bolao.json", false))) return [];
+    const sub = await self.registration.pushManager.getSubscription();
+    if (!sub) return [];
+    const r = await fetch(`${API}/bolao/avisos/recentes`, { method: "POST", cache: "no-store", body: JSON.stringify({ endpoint: sub.endpoint }) });
+    return r.ok ? (await r.json()).avisos || [] : [];
+  };
   try {
-    const r = await fetch(`${API}/gols/recentes`, { cache: "no-store" });
+    const [r, b] = await Promise.all([fetch(`${API}/gols/recentes`, { cache: "no-store" }), avisosDoBolao().catch(() => [])]);
     gols = r.ok ? (await r.json()).gols || [] : [];
+    bolao = b;
   } catch {
     /* sem rede: cai no aviso genérico abaixo */
   }
   const vistos = new Set(await le("/alertas/vistos.json", []));
   const novos = gols.filter((g) => seguidos.has(g.clube) && tipos.has(g.tipo || "gol") && Date.now() - g.quando < 10 * 60e3 && !vistos.has(g.id)).reverse();
+  const doBolao = bolao.filter((a) => Date.now() - a.quando < 15 * 60e3 && !vistos.has(a.id) && /^#\/[\w/-]*$/.test(String(a.url || ""))).reverse();
+  for (const a of doBolao) {
+    vistos.add(a.id);
+    await self.registration.showNotification(String(a.titulo).slice(0, 80), {
+      body: String(a.corpo).slice(0, 160), tag: String(a.id), icon: "assets/marca/icone-192.png", badge: "assets/marca/icone-192.png", vibrate: [80], data: { url: `./${a.url}` },
+    });
+  }
+  if (!novos.length && doBolao.length) return grava("/alertas/vistos.json", [...vistos].slice(-60));
   if (!novos.length) {
     // o navegador exige uma notificação por aviso recebido; sem gol novo na lista (atraso do cache), um aviso genérico
-    return self.registration.showNotification("CazéStats.TV", { body: "Novidade do seu time! Toque para ver o placar.", tag: "aviso", icon: "assets/marca/icone-192.png", data: { url: "./#/" } });
+    return self.registration.showNotification("CazéStats.TV", { body: "Novidade no CazéStats.TV. Toque para ver.", tag: "aviso", icon: "assets/marca/icone-192.png", data: { url: "./#/" } });
   }
   for (const g of novos) {
     vistos.add(g.id);
