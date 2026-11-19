@@ -1089,7 +1089,7 @@
               <span style="--i:3">${ICON.ball}${r.pos}º lugar · ${r.p} pts</span>
             </div>
             <div class="palette">${c.colors.map((col, i) => `<i style="background:${col};--i:${i}" title="${col}"></i>`).join("")}</div>
-            ${window.ALERTAS ? `<div class="alerta-wrap">${ALERTAS.botao(id)}</div>` : ""}
+            ${window.ALERTAS || window.AGENDA ? `<div class="alerta-wrap">${window.AGENDA ? AGENDA.botao(id) : ""}${window.ALERTAS ? ALERTAS.botao(id) : ""}</div>` : ""}
           </div>
           <div class="hero-gb">${GOALBUG.html(c, SCENES.motto(id), { atraso: HERO_SCENES.has(id) ? HERO_SCENES.crestTime(id) - 0.75 : 0 })}</div>
         </div>

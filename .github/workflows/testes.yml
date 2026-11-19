@@ -88,6 +88,8 @@ jobs:
       - name: Alerta de gol (Worker, ESPN e push simulados)
         timeout-minutes: 2
         run: node tests/alertas.mjs
+      - name: Agenda do favorito (calendário .ics)
+        run: node tests/agenda.mjs
       - name: Conta com Google e sincronização (comprovantes e banco simulados)
         timeout-minutes: 2
         run: node tests/conta.mjs

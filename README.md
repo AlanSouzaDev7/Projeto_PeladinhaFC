@@ -21,6 +21,7 @@ Feito com **HTML, CSS e JavaScript puro** (sem frameworks) e uma **API em Python
 | **Histórico dos jogos** no banco D1 (18/11): desde 2023 (carga das temporadas anteriores pelo workflow Histórico) e acumulando, com confronto direto e resumo V/E/D (`GET /jogos?clube=cruzeiro&contra=atletico-mg` no Worker) | `server/historico_jogos.py`, `worker/plataforma.mjs` |
 | **Conta com Google e sincronização** (18/11): favoritos, escalações, janela e palpites salvos na conta e em todos os aparelhos; sem guardar e-mail | `js/conta.js`, `worker/conta.mjs` |
 | **Alertas do clube favorito** (18–19/11): botão "Ativar avisos" na página do clube; notificação de gol, início, intervalo, escalação confirmada e fim de jogo, à escolha do torcedor (Web Push, grátis) | `js/alertas.js`, `sw.js`, `worker/alertas.mjs` |
+| **Agenda do favorito** (19/11): botão "Agenda no celular" na página do clube; o torcedor assina o calendário de jogos no Google Agenda ou no iPhone e ele se atualiza sozinho quando a data ou o horário mudam | `js/agenda.js`, `worker/agenda.mjs` |
 | **Confronto direto na página da partida** (18/11): todas as competições desde 2023, com resumo de vitórias, empates e gols | `js/confronto.js` |
 | **Dados no banco D1** (18/11): o robô envia só o que mudou, o site lê do banco e usa a cópia estática se ele falhar; o site deixa de ser republicado a cada rodada | `server/enviar_d1.py`, `js/dados.js`, `worker/` |
 | Riscos para lembrar ao apresentar a uma empresa (nunca bloqueiam funções) | `docs/RISCOS-APRESENTACAO.md` |

@@ -16,6 +16,7 @@
      PUT /dados/<nome>.json, GET /dados/_lista   só o robô de dados (segredo ROBO_CHAVE)
      GET /jogos?clube=&contra=&temporada=&liga=  histórico dos jogos (todas as temporadas) com resumo V/E/D
      POST /jogos                                 só o robô: lote de jogos para o histórico
+     GET /agenda/<clube>.ics                  agenda do favorito: calendário de jogos para assinar (worker/agenda.mjs)
      POST /alerta, GET /gols/recentes            alertas do favorito: gol, início, intervalo, escalação, fim (Web Push)
      /conta/entrar, /conta/dados, /conta/sair, DELETE /conta   conta com Google e sincronização (worker/conta.mjs)
    Cron (wrangler.toml): a cada 30 min dispara o robô de dados do GitHub e limpa registros antigos do banco.
@@ -31,6 +32,7 @@
 
 import { entrar, usuarioDa, lerDados, gravarDados, sair, apagarConta, limpaSessoes } from "./conta.mjs";
 import { inscrever, verificaGols, enviaPushes, golsRecentes, limpaGols } from "./alertas.mjs";
+import { agenda } from "./agenda.mjs";
 import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo, roboAutorizado, gravaArquivo, listaArquivos, serveArquivo, gravaJogos, consultaJogos } from "./plataforma.mjs";
 
 const BASE = "https://v3.football.api-sports.io";
@@ -299,6 +301,13 @@ export default {
       return new Response(JSON.stringify({ gols: await golsRecentes(env) }), { headers: { ...cors, "cache-control": "public, max-age=10" } });
     }
     if (path === "/alerta/chave") return json({ chave: env.VAPID_PUBLICA || null });
+    // agenda do favorito: calendário que o Google Agenda / iPhone assinam e atualizam sozinhos (worker/agenda.mjs)
+    const ag = /^\/agenda\/([a-z-]{2,30})\.ics$/.exec(path);
+    if (ag && (req.method === "GET" || req.method === "HEAD")) {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      const { "content-type": _ct, "cache-control": _cc, ...corsSo } = cors;
+      return agenda(env, ag[1], corsSo);
+    }
     // histórico dos jogos: o robô grava (POST, com a chave) e qualquer um consulta (GET)
     if (path === "/jogos") {
       if (!env.DB) return json({ erro: "banco não configurado" }, 503);
