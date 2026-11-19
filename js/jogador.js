@@ -109,7 +109,10 @@
     }).join("");
   }
   function carreiraHTML(p, lista) {
-    const resumo = lista.map((x, i) => `${nomeDe(x)} (${anosDe(x, i === lista.length - 1)})`).join(", ");
+    const resumo = lista.map((x, i) => {
+      const anos = anosDe(x, i === lista.length - 1);
+      return anos ? `${nomeDe(x)} (${anos})` : nomeDe(x);
+    }).join(", ");
     return `<div class="jg-linha" role="img" aria-label="${esc(`Carreira de ${p.nome}: ${resumo}`)}">
       <div class="jgl-tag"><b>Carreira</b><span>${lista.length} clubes</span></div>
       <div class="jgl-fita"><ol class="jgl-trilho">${itensHTML(lista)}</ol></div></div>`;
