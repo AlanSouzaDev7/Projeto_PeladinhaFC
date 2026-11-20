@@ -100,7 +100,7 @@
   const ha = (ms) => { const m = Math.max(0, Math.round((Date.now() - n(ms)) / 60e3)); return m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} d`; };
   const COR = { a: "var(--accent)", b: "var(--text-3)", r: "#ef4444" }; // páginas em destaque; pedidos ao servidor em cinza
 
-  function desenha(el, d, saude) {
+  function desenha(el, d, saude, chk) {
     const t = d.trafego, seg = d.seguranca;
     const graves24 = (seg.tipos24h || []).filter((x) => GRAVE.has(x.tipo)).reduce((s, x) => s + n(x.n), 0);
     const cresc = t.crescimento == null ? "sem semana anterior" : `${t.crescimento > 0 ? "+" : ""}${t.crescimento}% contra a semana anterior`;
@@ -109,7 +109,7 @@
       <div class="kpis adm-kpis">
         ${kpi(agoraMin, "Páginas nos últimos 5 min")}${kpi(t.hoje, "Páginas hoje")}${kpi(t.dias7, "Últimos 7 dias", cresc)}${kpi(t.dias30, "Últimos 30 dias")}
         ${kpi(d.contas.total, "Contas", `${fmt(d.contas.ativos7)} ativas em 7 dias`)}${kpi(d.alertas.aparelhos, "Aparelhos com alertas")}
-        ${kpi(graves24, "Alertas de segurança (24 h)", graves24 ? "veja a seção Segurança" : "nada suspeito", graves24 > 0)}${kpi(d.erros24h, "Erros no navegador (24 h)", "", d.erros24h > 20)}
+        ${kpi(graves24, "Alertas de segurança (24 h)", graves24 ? "veja a seção Segurança" : "nada suspeito", graves24 > 0)}${chk ? kpi(n(chk.total), "Avisos nos dados", n(chk.total) ? "veja Qualidade dos dados" : "tudo coerente", n(chk.total) > 0) : ""}${kpi(d.erros24h, "Erros no navegador (24 h)", "", d.erros24h > 20)}
       </div>
       <section class="card adm-sec"><div class="card-h">Tempo real <small>última hora, minuto a minuto · atualiza a cada 15 s</small></div><div class="card-b">
         ${grafico(hora, { chaves: ["paginas", "api"], cores: [COR.a, COR.b], nomes: ["Páginas abertas", "Pedidos ao servidor"], rotuloX: (p) => horaLocal(p.minuto) })}</div></section>
@@ -143,6 +143,7 @@
           </tbody></table></div>` : ""}
         <p class="st-txt">O site em si (páginas e arquivos) fica na rede da Cloudflare, que barra ataques de volume antes de chegarem aqui; esta seção mostra o que chegou ao servidor e foi recusado.</p>
       </div></section>
+      ${checagemHTML(chk)}
       <div class="adm-duas">
         <section class="card adm-sec"><div class="card-h">Torcedores e engajamento</div><div class="card-b"><div class="kpis">
           ${kpi(d.contas.ativos30, "Contas ativas em 30 dias", d.contas.total ? `${Math.round((d.contas.ativos30 / d.contas.total) * 100)}% do total` : "")}${kpi(d.contas.sessoes, "Sessões abertas")}
@@ -162,6 +163,20 @@
       <p class="st-txt">Atualizado ${new Date(n(d.gerado)).toLocaleTimeString("pt-BR")}. Métricas anônimas: tipo de página, função usada, origem e aparelho, sem cookie e sem guardar IP.</p>`;
   }
 
+  // qualidade dos dados: o que a checagem automática do robô apontou (server/checagem.py, dados/checagem.json)
+  const NOME_CHK = { jogador: "Números de jogadores", tabela: "Classificação", carreira: "Carreiras" };
+  function checagemHTML(chk) {
+    if (!chk || !Number.isFinite(Number(chk.total))) return `<section class="card adm-sec"><div class="card-h">Qualidade dos dados</div><div class="card-b"><p class="st-txt">A checagem aparece depois da próxima rodada do robô.</p></div></section>`;
+    const tipos = Object.entries(chk.porTipo || {}).map(([k, v]) => ({ chave: k, n: v }));
+    const avisos = (chk.avisos || []).slice(0, 15);
+    return `<section class="card adm-sec"><div class="card-h">Qualidade dos dados <small>checagem automática do robô · ${esc(chk.updated || "")}</small></div><div class="card-b">
+      ${n(chk.total) ? `${lista(tipos, (x) => NOME_CHK[x.chave] || x.chave)}
+        <div class="adm-tab-rola"><table class="adm-tab"><thead><tr><th>Onde</th><th>O que não faz sentido</th></tr></thead><tbody>
+        ${avisos.map((a) => `<tr><td>${esc(nomeClube(a.clube))}${a.nome ? ` · ${esc(a.nome)}` : ""}</td><td>${esc(a.motivo)}</td></tr>`).join("")}</tbody></table></div>
+        ${n(chk.total) > avisos.length ? `<p class="st-txt">Mostrando ${avisos.length} de ${fmt(chk.total)} avisos.</p>` : ""}` : `<p class="st-txt">Nenhum número estranho nos dados. ✔</p>`}
+    </div></section>`;
+  }
+
   let timer = null;
   async function preenche(el) {
     if (!window.CONTA?.ligado) { el.innerHTML = `<p class="st-txt">A conta está desligada neste site.</p>`; return; }
@@ -169,7 +184,8 @@
       el.innerHTML = `<section class="card"><div class="card-b"><p class="st-txt">Entre com a conta Google do dono.</p><button type="button" class="bl-btn" data-pn="entrar">Entrar com Google</button></div></section>`;
       return;
     }
-    const [{ status, d }, saude] = await Promise.all([pede("/painel"), fetch(`${API}/status`, { cache: "no-store" }).then((r) => r.json()).catch(() => null)]);
+    const [{ status, d }, saude, chk] = await Promise.all([pede("/painel"), fetch(`${API}/status`, { cache: "no-store" }).then((r) => r.json()).catch(() => null),
+      fetch(`${API}/dados/checagem`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null)]);
     if (status === 403) {
       const eu = await pede("/painel/eu");
       el.innerHTML = `<section class="card"><div class="card-b"><p class="st-txt">Esta conta não tem acesso. Código da conta (não é senha nem e-mail):</p><p class="pn-codigo"><code>${esc(eu.d.codigo || "")}</code></p></div></section>`;
@@ -177,7 +193,7 @@
     }
     if (status !== 200) { el.innerHTML = `<p class="st-txt">Não deu para carregar (${esc(d.erro || `servidor respondeu ${status}`)}).</p>`; return; }
     const y = scrollY;
-    desenha(el, d, saude);
+    desenha(el, d, saude, chk);
     scrollTo(0, y);
     document.querySelector("[data-adm-vivo]")?.classList.add("on");
   }

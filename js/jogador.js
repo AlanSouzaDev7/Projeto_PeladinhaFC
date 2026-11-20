@@ -201,7 +201,7 @@
   // linha de estatística comparável: [rótulo, chave, por 90?]
   const LINHAS = [["Jogos", "j"], ["Titular", "tit"], ["Minutos", "min"], ["Gols", "g", 1], ["Assistências", "a", 1], ["Finalizações", "ch", 1], ["No alvo", "alvo", 1],
     ["Ações com bola no campo", "toques", 1], ["Passes", "passes", 1], ["Cruzamentos", "cruz", 1], ["Dribles tentados", "dribles", 1], ["Desarmes", "desarmes", 1],
-    ["Interceptações", "intercept", 1], ["Cortes", "cortes", 1], ["Duelos aéreos", "aereos", 1], ["Perdas de posse", "perdas", 1], ["Defesas (goleiro)", "defesas", 1],
+    ["Interceptações", "intercept", 1], ["Cortes", "cortes", 1], ["Chutes bloqueados", "bloq", 1], ["Duelos aéreos", "aereos", 1], ["Perdas de posse", "perdas", 1], ["Defesas (goleiro)", "defesas", 1],
     ["Amarelos", "ca"], ["Vermelhos", "cv"]];
 
   function geral(p, j, D) {

@@ -79,6 +79,8 @@ jobs:
       - name: Carreiras dos jogadores (quem é quem e linha do tempo)
         timeout-minutes: 2
         run: python -X utf8 tests/carreiras_casos.py
+      - name: Checagem dos dados (defesas x chutes bloqueados, números sem sentido)
+        run: python -X utf8 tests/checagem_casos.py
       - name: Worker do placar ao vivo
         timeout-minutes: 2
         run: node tests/worker.mjs

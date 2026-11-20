@@ -2467,6 +2467,13 @@ def write_snapshot():
         CAR.gravar()
     except Exception as ex:
         log("falha ao gravar as carreiras", ex)
+    # checagem automática: números que não fazem sentido (dados/checagem.json, mostrado na administração)
+    try:
+        import checagem as CHK
+        r = CHK.gravar()
+        log("checagem:", r["total"], "avisos", r["porTipo"])
+    except Exception as ex:
+        log("falha na checagem dos dados", ex)
     # cópia em JSON de todos os arquivos de dados (carregador único do site e app 433Fut)
     try:
         DJ.exportar()

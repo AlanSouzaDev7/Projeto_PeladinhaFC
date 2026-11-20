@@ -36,7 +36,9 @@ ACOES = {"Pass": "passes", "Cross": "cruz", "Tackle": "desarmes", "Attempted tac
          "Ball touch": "toques1", "Blocked Pass": "passesBloq", "Shot Off Target": "fin", "Shot On Target": "fin", "Shot Blocked": "fin",
          "Goal": "fin", "Foul": "faltas", "Throw In": "laterais", "Corner Awarded": "escanteios", "Free Kick": "faltasCob", "Offside": "impedimentos"}
 CAMPOS_JOGO = ["eid", "date", "comp", "opp", "home", "gf", "ga", "tit", "min", "g", "a", "ch", "alvo", "ca", "cv",
-               "toques", "passes", "cruz", "desarmes", "intercept", "cortes", "dribles", "aereos", "defesas", "perdas", "nota", "vivo"]
+               "toques", "passes", "cruz", "desarmes", "intercept", "cortes", "dribles", "aereos", "defesas", "perdas", "nota", "vivo", "bloq"]
+# "Save" da ESPN: no goleiro é defesa; no jogador de linha é chute bloqueado (bloq). Antes de 20/11 tudo virava "defesas"
+# e zagueiros apareciam com dezenas de defesas de goleiro (achado pela checagem automática, server/checagem.py).
 
 
 # ---------------------------------------------------------------------------
@@ -63,7 +65,7 @@ def nota_jogo(j, pos):
     n += max(0, alvo - (j.get("g") or 0)) * 0.15 + max(0, ch - alvo) * 0.03
     n += (j.get("dribles") or 0) * 0.08 + (j.get("cruz") or 0) * 0.03 + min(0.4, (j.get("toques") or 0) * 0.006)
     n += (j.get("desarmes") or 0) * 0.12 + (j.get("intercept") or 0) * 0.10 + (j.get("cortes") or 0) * 0.06 + (j.get("aereos") or 0) * 0.05
-    n += (j.get("defesas") or 0) * (0.25 if pos == "G" else 0)
+    n += (j.get("defesas") or 0) * (0.25 if pos == "G" else 0) + (j.get("bloq") or 0) * 0.08
     ga = j.get("ga")
     if ga is not None and pos in "GD":
         sofridos = ga * min(1.0, mins / 90)
@@ -96,7 +98,7 @@ def notas_time(clube_jogadores, campos):
         melhor = max(xs, key=lambda x: (x[1], x[2]))
         out[eid] = [round(max(3.0, min(10.0, media)), 1), melhor[0], melhor[1]]
     return out
-SOMA = ["j", "tit", "min", "g", "a", "ch", "alvo", "pen", "ca", "cv", "toques", "passes", "cruz", "desarmes", "intercept", "cortes", "dribles", "aereos", "defesas", "perdas", "jl"]
+SOMA = ["j", "tit", "min", "g", "a", "ch", "alvo", "pen", "ca", "cv", "toques", "passes", "cruz", "desarmes", "intercept", "cortes", "dribles", "aereos", "defesas", "perdas", "bloq", "jl"]
 NIVEIS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"  # 62 níveis por célula
 
 
@@ -616,6 +618,10 @@ def montar(squads, todas, lan, fotos):
             outros = sorted((j for j in por_jogador.get(str(aid), []) if j["_cid"] != cid), key=lambda j: j["date"] or "")
             comps, grade, grade10 = {}, {}, {}
             for j in lista:
+                if (pos or "M")[:1] == "G":
+                    j["bloq"] = 0
+                else:
+                    j["bloq"], j["defesas"] = j.get("defesas", 0) or 0, 0
                 j["nota"] = nota_jogo(j, pos)
                 t = comps.setdefault(j["comp"], {k: 0 for k in SOMA})
                 t["j"] += 1
