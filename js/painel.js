@@ -17,7 +17,7 @@
   /* ---------- métricas anônimas ---------- */
   const envia = (corpo) => { if (API && navigator.sendBeacon) try { navigator.sendBeacon(`${API}/visita`, JSON.stringify(corpo)); } catch { /* sem métrica: tudo bem */ } };
   const ROTAS = { "": "inicio", clubes: "clubes", tabela: "tabela", simulador: "simulador", "bora-pro-jogo": "bora", bolao: "bolao", partida: "jogo", jogador: "jogador",
-    copa: "copa", sobre: "sobre", status: "status", creditos: "creditos", widgets: "widgets", privacidade: "privacidade", xg: "xg" };
+    copa: "copa", sobre: "sobre", status: "status", creditos: "creditos", widgets: "widgets", privacidade: "privacidade", xg: "xg", previsao: "previsao" };
   let ultima = "";
   function visita(r) {
     if (r.page === ROTA_ADMIN) return; // a administração não entra nas estatísticas
