@@ -69,6 +69,29 @@
   }
   const api = { virada, tabelaApos, destaques };
   raiz.RODADA_CALC = api;
+  /* seleção da rodada (4-3-3): os de maior nota em cada posição, entre os candidatos dos jogos da rodada
+     (dados/notas-jogos.json, server/selecao.py). Desempate: participações em gol, depois minutos, depois o nome.
+     Craque da rodada: a maior nota do time. Linhas: [aid, clube, nome, pos, nota, gols, assist, min] */
+  const VAGAS = { G: 1, D: 4, M: 3, F: 3 };
+  function selecao(porJogo, eids) {
+    const todos = [];
+    for (const eid of eids || []) for (const r of (porJogo && porJogo[eid]) || []) todos.push({ aid: r[0], clube: r[1], nome: r[2], pos: r[3], nota: r[4], g: r[5], a: r[6], min: r[7], eid: String(eid) });
+    todos.sort((x, y) => y.nota - x.nota || (y.g + y.a) - (x.g + x.a) || y.min - x.min || String(x.nome).localeCompare(String(y.nome), "pt-BR"));
+    const time = { G: [], D: [], M: [], F: [] }, ja = new Set();
+    for (const j of todos) {
+      const chave = `${j.aid}-${j.clube}`; // o mesmo jogador pode ter dois jogos na rodada (jogo adiado)
+      if (time[j.pos] && time[j.pos].length < VAGAS[j.pos] && !ja.has(chave)) { time[j.pos].push(j); ja.add(chave); }
+    }
+    const escalados = [...time.G, ...time.D, ...time.M, ...time.F];
+    if (!escalados.length) return null;
+    const craque = escalados.reduce((m, j) => (j.nota > m.nota || (j.nota === m.nota && j.g + j.a > m.g + m.a) ? j : m));
+    const porClube = {};
+    for (const j of escalados) porClube[j.clube] = (porClube[j.clube] || 0) + 1;
+    const [clubeMais, nMais] = Object.entries(porClube).sort((a, b) => b[1] - a[1])[0];
+    return { time, craque, completo: escalados.length === 11, media: Math.round((escalados.reduce((t, j) => t + j.nota, 0) / escalados.length) * 10) / 10, clubeMais: nMais > 2 ? { id: clubeMais, n: nMais } : null };
+  }
+  api.selecao = selecao;
+
   if (typeof module === "object" && module.exports) module.exports = api;
 
   /* ---------- página (só no navegador) ---------- */
@@ -118,7 +141,8 @@
     D.artilheiros?.forEach((a) => itens.push(item(a.gols >= 3 ? "Hat-trick" : "Fez dois", `${esc(a.nome)} (${esc(ab(a.clube))}), ${a.gols} gols`)));
     if (D.lider) itens.push(item("Líder", esc(byId[D.lider]?.name || D.lider)));
     const mov = (l, seta) => l.map((x) => `<li>${escudo(x.id, 18)}<span>${esc(ab(x.id))}</span><b>${x.de}º → ${x.para}º ${seta}</b></li>`).join("");
-    el.innerHTML = `<div class="grid-2">
+    el.innerHTML = `<section class="card rd-sel" data-rd-selecao><div class="card-h">Seleção da rodada <small>4-3-3 pelas notas do CazéStats.TV</small></div><div class="card-b"><p class="st-txt">Escalando…</p></div></section>
+      <div class="grid-2">
       <section class="card"><div class="card-h">Resultados <small>${D.encerrados} de ${D.total} jogos encerrados${D.gols != null ? ` · ${D.gols} gols` : ""}</small></div><div class="card-b"><ul class="rd-jogos">${jogos.map(linhaJogo).join("")}</ul></div></section>
       <div>
         <section class="card"><div class="card-h">Destaques</div><div class="card-b">${itens.length ? `<ul class="rd-dest">${itens.join("")}</ul>` : `<p class="st-txt">Os destaques aparecem com os jogos encerrados.</p>`}</div></section>
@@ -128,7 +152,31 @@
         ${window.COMPARTILHAR ? `<div class="cp-wrap">${COMPARTILHAR.botao("rodada", String(rd))}</div>` : ""}
       </div></div>`;
     extras(el, jogos.filter((m) => m.status === "ft" && m.espn)).catch(() => {});
+    pintaSelecao(el, rd, jogos).catch(() => {});
   }
+  const NOTA_COR = (n) => (n >= 8 ? "n-top" : n >= 7 ? "n-boa" : n >= 6.5 ? "n-ok" : n >= 6 ? "n-med" : "n-ruim");
+  const notaTxt = (n) => n.toFixed(1).replace(".", ",");
+  async function pintaSelecao(el, rd, jogos) {
+    const box = el.querySelector("[data-rd-selecao] .card-b");
+    const ft = jogos.filter((m) => m.status === "ft" && m.espn).map((m) => String(m.espn));
+    const D = window.NOTAS_JOGOS || (await DADOS.carrega("notas-jogos").catch(() => null), window.NOTAS_JOGOS);
+    if (!box?.isConnected) return;
+    const S = D && selecao(D.jogos, ft);
+    if (!S) { box.innerHTML = `<p class="st-txt">A seleção aparece quando as notas dos jogos encerrados forem lidas.</p>`; return; }
+    selecoes[rd] = S;
+    const peca = (j) => `<a class="rd-jg${j === S.craque ? " craque" : ""}" href="#/jogador/${esc(j.aid)}-${esc(j.clube)}">
+        <span class="nota ${NOTA_COR(j.nota)}">${notaTxt(j.nota)}</span>${escudo(j.clube, 26)}<b>${esc(j.nome)}</b>
+        <small>${esc(ab(j.clube))}${j.g ? ` · ${j.g} gol${j.g > 1 ? "s" : ""}` : ""}${j.a ? ` · ${j.a} assist.` : ""}</small></a>`;
+    const linha = (pos) => `<div class="rd-linha" data-n="${S.time[pos].length}">${S.time[pos].map(peca).join("")}</div>`;
+    const c = S.craque;
+    box.innerHTML = `<div class="rd-sel-grid"><div class="rd-campo" role="group" aria-label="Seleção da ${rd}ª rodada em 4-3-3">${linha("F")}${linha("M")}${linha("D")}${linha("G")}</div>
+      <div class="rd-sel-lado"><p class="rd-craque"><span>Craque da rodada</span><b>${esc(c.nome)}</b><small>${esc(byId[c.clube]?.name || c.clube)} · nota ${notaTxt(c.nota)}${c.g ? ` · ${c.g} gol${c.g > 1 ? "s" : ""}` : ""}${c.a ? ` · ${c.a} assist.` : ""}</small></p>
+        <ul class="rd-dest"><li><span>Nota média</span><b>${notaTxt(S.media)}</b></li>${S.clubeMais ? `<li><span>Mais escalado</span><b>${esc(byId[S.clubeMais.id]?.name || S.clubeMais.id)}, ${S.clubeMais.n} jogadores</b></li>` : ""}
+        ${S.completo ? "" : `<li><span>Time incompleto</span><b>faltam notas de alguns jogos</b></li>`}</ul>
+        ${window.COMPARTILHAR ? `<div class="cp-wrap">${COMPARTILHAR.botao("selecao", String(rd))}</div>` : ""}
+        <p class="st-txt">Os de maior nota em cada posição, com pelo menos 30 minutos em campo. Desempate: gols e assistências.</p></div></div>`;
+  }
+  const selecoes = {};
   // craque mais votado e xG de cada jogo encerrado (um pedido por jogo; aparecem conforme chegam)
   async function extras(el, ft) {
     const ul = el.querySelector("[data-rd-craques]"), linhas = [];
@@ -156,5 +204,5 @@
     el.dataset.rdOk = "1";
     preenche(el);
   }
-  raiz.RODADA = { page, mount, rodadaPadrao };
+  raiz.RODADA = { page, mount, rodadaPadrao, selecaoDa: (rd) => selecoes[rd] || null };
 })(typeof window !== "undefined" ? window : globalThis);

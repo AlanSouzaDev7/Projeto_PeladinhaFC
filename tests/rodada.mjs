@@ -38,4 +38,22 @@ t("rodada sem jogos encerrados: sem destaques", () => {
   assert.equal(D.encerrados, 0);
   assert.equal(D.goleada, undefined);
 });
+t("seleção da rodada: 4-3-3 pelas notas, desempate por gol, sem repetir jogador e craque", () => {
+  const L = (aid, clube, pos, nota, g = 0, a = 0, min = 90) => [aid, clube, `J${aid}`, pos, nota, g, a, min];
+  const porJogo = {
+    1: [L("g1", "a", "G", 7), L("d1", "a", "D", 8), L("d2", "a", "D", 7.5), L("m1", "a", "M", 7), L("f1", "a", "F", 9, 2)],
+    2: [L("g2", "b", "G", 7.4), L("d3", "b", "D", 7.5, 1), L("d4", "b", "D", 6), L("d5", "b", "D", 5.5), L("m2", "b", "M", 7), L("m3", "b", "M", 6.8), L("f2", "b", "F", 7), L("f3", "b", "F", 6.1)],
+    3: [L("f1", "a", "F", 8.5)], // o mesmo atacante num jogo adiado: entra uma vez só
+  };
+  const S = R.selecao(porJogo, ["1", "2", "3"]);
+  assert.deepEqual(S.time.G.map((j) => j.aid), ["g2"]);
+  assert.deepEqual(S.time.D.map((j) => j.aid), ["d1", "d3", "d2", "d4"], "empate em 7,5: quem fez gol vem antes");
+  assert.deepEqual(S.time.M.map((j) => j.aid), ["m1", "m2", "m3"]);
+  assert.deepEqual(S.time.F.map((j) => j.aid), ["f1", "f2", "f3"]);
+  assert.equal(S.craque.aid, "f1");
+  assert.equal(S.completo, true);
+  assert.deepEqual(S.clubeMais, { id: "b", n: 7 });
+  assert.equal(R.selecao(porJogo, ["99"]), null);
+  assert.equal(R.selecao(porJogo, ["1"]).completo, false);
+});
 console.log(`\n${ok} testes do resumo da rodada passaram`);

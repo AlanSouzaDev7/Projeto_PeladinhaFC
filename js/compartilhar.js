@@ -154,6 +154,31 @@
     if (frase) texto(ctx, frase, L / 2, A - 190, { peso: 600, px: 30, cor: "rgba(255,255,255,0.85)", max: L - 140 });
     return { canvas: cv, nome: `rodada-${rd}` };
   }
+  async function cardSelecao(rd) {
+    const S = window.RODADA?.selecaoDa?.(Number(rd));
+    if (!S) throw new Error("abra o resumo da rodada para montar a seleção");
+    const cv = novoCanvas(), ctx = cv.getContext("2d");
+    fundo(ctx, "#0f5132", "#14532d");
+    moldura(ctx, `Brasileirão · ${rd}ª rodada`);
+    texto(ctx, `Seleção da ${rd}ª rodada`, L / 2, 230, { px: 60, tipo: "titulo" });
+    // campo: linhas do ataque ao goleiro
+    ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 4;
+    ctx.strokeRect(90, 280, L - 180, 820); ctx.beginPath(); ctx.moveTo(90, 690); ctx.lineTo(L - 90, 690); ctx.stroke();
+    const linhas = [["F", 380], ["M", 590], ["D", 800], ["G", 1000]];
+    for (const [pos, y] of linhas) {
+      const js = S.time[pos], passo = (L - 180) / (js.length + 1);
+      js.forEach((j, i) => {
+        const x = 90 + passo * (i + 1), craque = j === S.craque;
+        ctx.fillStyle = craque ? "#f5b800" : "rgba(255,255,255,0.92)";
+        ctx.beginPath(); ctx.arc(x, y - 40, 34, 0, Math.PI * 2); ctx.fill();
+        texto(ctx, j.nota.toFixed(1).replace(".", ","), x, y - 28, { px: 30, tipo: "titulo", cor: craque ? "#2b2100" : "#0f3d2e" });
+        texto(ctx, j.nome.split(" ").slice(-1)[0], x, y + 30, { peso: 700, px: 30, max: passo - 10 });
+        texto(ctx, byId[j.clube]?.abbr || j.clube, x, y + 66, { peso: 600, px: 24, cor: "rgba(255,255,255,0.7)" });
+      });
+    }
+    texto(ctx, `Craque da rodada: ${S.craque.nome} (${byId[S.craque.clube]?.abbr || S.craque.clube}), nota ${S.craque.nota.toFixed(1).replace(".", ",")}`, L / 2, A - 190, { peso: 700, px: 34, max: L - 140 });
+    return { canvas: cv, nome: `selecao-rodada-${rd}` };
+  }
   async function cardBolao() {
     const d = window.BOLAO?.ultimo?.();
     if (!d?.voce) throw new Error("entre no ranking para compartilhar a sua posição");
@@ -199,7 +224,7 @@
       await document.fonts?.ready;
       const tipo = b.dataset.cp, id = b.dataset.cpId;
       const card = tipo === "partida" ? await cardPartida(origens.partida?.(id) || (() => { throw new Error("jogo não encontrado"); })())
-        : tipo === "jogador" ? await cardJogador(id) : tipo === "comparacao" ? await cardComparacao(id) : tipo === "rodada" ? await cardRodada(id) : await cardBolao();
+        : tipo === "jogador" ? await cardJogador(id) : tipo === "comparacao" ? await cardComparacao(id) : tipo === "rodada" ? await cardRodada(id) : tipo === "selecao" ? await cardSelecao(id) : await cardBolao();
       const r = await entrega(card);
       if (msg) msg.textContent = r;
     } catch (err) {
@@ -210,6 +235,6 @@
   });
 
   // _monta: só desenha (sem compartilhar nem baixar); usado para conferir a imagem
-  const _monta = async (tipo, id) => { pegaFontes(); await document.fonts?.ready; return tipo === "partida" ? cardPartida(origens.partida(id)) : tipo === "jogador" ? cardJogador(id) : tipo === "comparacao" ? cardComparacao(id) : tipo === "rodada" ? cardRodada(id) : cardBolao(); };
+  const _monta = async (tipo, id) => { pegaFontes(); await document.fonts?.ready; return tipo === "partida" ? cardPartida(origens.partida(id)) : tipo === "jogador" ? cardJogador(id) : tipo === "comparacao" ? cardComparacao(id) : tipo === "rodada" ? cardRodada(id) : tipo === "selecao" ? cardSelecao(id) : cardBolao(); };
   window.COMPARTILHAR = { botao, origem: (tipo, fn) => { origens[tipo] = fn; }, _arquivo: arquivo, _monta };
 })();

@@ -2486,6 +2486,13 @@ def write_snapshot():
         log("xg:", len(r["clubes"]), "clubes,", len(r["jogadores"]), "jogadores")
     except Exception as ex:
         log("falha no resumo do xG", ex)
+    # seleção da rodada: os melhores de cada jogo por posição (dados/notas-jogos.json, resumo da rodada)
+    try:
+        import selecao as SEL
+        r = SEL.resumo()
+        log("seleção: candidatos de", len(r["jogos"]), "jogos")
+    except Exception as ex:
+        log("falha nos candidatos da seleção", ex)
 
 
 def news_query(q):
