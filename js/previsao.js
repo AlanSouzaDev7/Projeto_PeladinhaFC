@@ -153,5 +153,5 @@
     raizV.querySelectorAll("[data-pv-clube]:not([data-pv-ok])").forEach((x) => { x.dataset.pvOk = "1"; preencheClube(x).catch(() => {}); });
     raizV.querySelectorAll("[data-pv-jogo]:not([data-pv-ok])").forEach((x) => { x.dataset.pvOk = "1"; preencheJogo(x).catch(() => {}); });
   }
-  raiz.PREVISAO = { page, mount, cardClube, cardJogo };
+  raiz.PREVISAO = { page, mount, cardClube, cardJogo, chances: () => base().then((d) => d.res) }; // chances: usada pelo Pergunte ao CazéStats
 })(typeof window !== "undefined" ? window : globalThis);

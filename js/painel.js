@@ -17,7 +17,7 @@
   /* ---------- métricas anônimas ---------- */
   const envia = (corpo) => { if (API && navigator.sendBeacon) try { navigator.sendBeacon(`${API}/visita`, JSON.stringify(corpo)); } catch { /* sem métrica: tudo bem */ } };
   const ROTAS = { "": "inicio", clubes: "clubes", tabela: "tabela", simulador: "simulador", "bora-pro-jogo": "bora", bolao: "bolao", partida: "jogo", jogador: "jogador",
-    copa: "copa", sobre: "sobre", status: "status", creditos: "creditos", widgets: "widgets", privacidade: "privacidade", xg: "xg", previsao: "previsao", rodada: "rodada" };
+    copa: "copa", sobre: "sobre", status: "status", creditos: "creditos", widgets: "widgets", privacidade: "privacidade", xg: "xg", previsao: "previsao", rodada: "rodada", pergunte: "pergunte" };
   let ultima = "";
   function visita(r) {
     if (r.page === ROTA_ADMIN) return; // a administração não entra nas estatísticas
@@ -34,7 +34,7 @@
   }
   // funções mais usadas: só o nome da função, quando o torcedor usa
   const USOS = [["[data-cp]", "compartilhar"], ["details.agenda > summary, [data-agenda-copiar]", "agenda"], ["[data-vote]", "palpite-1x2"], ["[data-craque]", "craque"],
-    ["[data-alerta], [data-alerta-tipo]", "alerta"], ["[data-instalar]", "instalar"], ["[data-wg-copiar]", "widget-copiado"], ['[data-bl="salvar"]', "bolao-palpite"], ["[data-fav]", "favorito"]];
+    ["[data-alerta], [data-alerta-tipo]", "alerta"], ["[data-instalar]", "instalar"], ["[data-wg-copiar]", "widget-copiado"], ['[data-bl="salvar"]', "bolao-palpite"], ["[data-fav]", "favorito"], ["[data-rp]", "replay"], [".nota-exp", "nota-explicada"]];
   document.addEventListener("click", (e) => {
     for (const [sel, uso] of USOS) if (e.target.closest(sel)) { envia({ rota: `uso:${uso}` }); break; }
   }, true);
@@ -223,5 +223,5 @@
   });
   window.addEventListener("conta:mudou", () => document.querySelectorAll("[data-admin]").forEach((el) => preenche(el)));
 
-  window.PAINEL = { page, mount, visita, ROTA_ADMIN };
+  window.PAINEL = { page, mount, visita, ROTA_ADMIN, uso: (nome) => envia({ rota: `uso:${nome}` }) };
 })();

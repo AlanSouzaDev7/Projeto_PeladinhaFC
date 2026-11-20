@@ -10,8 +10,8 @@
    ========================================================================== */
 import { bloqueiaInsistentes, listaBloqueios } from "./protecao.mjs";
 
-const PAGINAS = new Set(["inicio", "clubes", "tabela", "simulador", "bora", "bolao", "jogo", "jogador", "copa", "sobre", "status", "creditos", "widgets", "privacidade", "admin", "xg", "previsao", "rodada"]);
-const USOS = new Set(["compartilhar", "agenda", "palpite-1x2", "craque", "alerta", "instalar", "widget-copiado", "bolao-palpite", "bolao-liga", "busca", "favorito", "simulador", "comparar"]);
+const PAGINAS = new Set(["inicio", "clubes", "tabela", "simulador", "bora", "bolao", "jogo", "jogador", "copa", "sobre", "status", "creditos", "widgets", "privacidade", "admin", "xg", "previsao", "rodada", "pergunte"]);
+const USOS = new Set(["compartilhar", "agenda", "palpite-1x2", "craque", "alerta", "instalar", "widget-copiado", "bolao-palpite", "bolao-liga", "busca", "favorito", "simulador", "comparar", "pergunte", "pergunte-sem-resposta", "replay", "nota-explicada"]);
 const ABAS = new Set(["geral", "partidas", "escalacoes", "historico", "elenco", "mercado", "estatisticas", "comparar", "tabela", "ultimos", "temporada", "calor"]);
 const VARREDURA = /\.(php|asp|aspx|jsp|cgi|env|git|sql|bak|ini|ya?ml)\b|wp-|wordpress|phpmyadmin|\/admin|\/\.|xmlrpc|cgi-bin|etc\/passwd|\.\.|\/vendor\/|\/actuator|\/console|\/server-status/i;
 let pend = {}, minutos = {}, eventos = [], gravadoEm = 0;

@@ -118,6 +118,8 @@ jobs:
         run: node tests/nota.mjs
       - name: Replay do gol (13 gols reais)
         run: node tests/replay.mjs
+      - name: Pergunte ao CazéStats (perguntas e respostas com dados reais)
+        run: node tests/pergunte.mjs
       - name: Conta com Google e sincronização (comprovantes e banco simulados)
         timeout-minutes: 2
         run: node tests/conta.mjs

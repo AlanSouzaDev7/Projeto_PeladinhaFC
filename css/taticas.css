@@ -569,3 +569,32 @@
 .rp-play { grid-row: 1 / 3; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); position: relative; }
 .rp-play::after { content: ""; position: absolute; left: 10px; top: 8px; border: 5px solid transparent; border-left: 8px solid #fff; border-right: 0; }
 .rp-nota { margin: 10px 0 0; font-size: 12px; color: var(--text-3); }
+
+/* ---------- Pergunte ao CazéStats (js/pergunte.js) ---------- */
+.pg-caixa { max-width: 760px; }
+.pg-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.pg-form input { height: 48px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 500 16px var(--font); }
+.pg-form input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pg-enviar { height: 48px; padding: 0 20px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; font: 700 15px var(--font); cursor: pointer; }
+.pg-sug { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.pg-sug button { min-height: 36px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-soft); background: var(--surface); color: var(--text-2, var(--text)); font: 600 13px var(--font); cursor: pointer; text-align: left; }
+.pg-sug button:hover, .pg-sug button:focus-visible { border-color: var(--accent); color: var(--text); }
+.pg-conversa { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 14px; }
+.pg-conversa li { display: grid; gap: 6px; }
+.pg-q { margin: 0; justify-self: end; max-width: 85%; padding: 8px 14px; border-radius: 16px 16px 4px 16px; background: var(--accent); color: #fff; font-weight: 600; }
+.pg-r { justify-self: start; max-width: 92%; padding: 12px 14px; border-radius: 16px 16px 16px 4px; background: var(--surface); border: 1px solid var(--line-soft); }
+.pg-r p { margin: 0; line-height: 1.5; }
+.pg-r .pg-sug { margin: 10px 0 0; }
+.pg-links { margin-top: 8px !important; display: flex; flex-wrap: wrap; gap: 12px; }
+.pg-links a { color: var(--accent); font-weight: 700; text-decoration: none; }
+.pg-nota { margin-top: 16px; font-size: 12.5px; color: var(--text-3); }
+.sr-pergunte .sr-pg-ic { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; font: 800 17px var(--font-display); }
+.pg-atalho { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 10px; margin-bottom: 14px; padding: 8px 8px 8px 12px; border-radius: 999px; border: 1px solid var(--line-soft); background: var(--surface); }
+.pg-atalho input { min-width: 0; height: 36px; border: 0; background: none; color: var(--text); font: 500 15px var(--font); }
+.pg-atalho input:focus-visible { outline: none; }
+.pg-atalho:focus-within { border-color: var(--accent); }
+.pg-atalho .sr-pg-ic { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; font: 800 17px var(--font-display); }
+.pg-atalho button { height: 36px; padding: 0 16px; border-radius: 999px; border: 0; background: var(--accent); color: #fff; font: 700 14px var(--font); cursor: pointer; }
+@media (max-width: 420px) { .pg-atalho input::placeholder { font-size: 13px; } .pg-atalho button { padding: 0 12px; } }
+/* depois da primeira pergunta as sugestões iniciais somem (as respostas sem resposta trazem as delas) */
+.pg-caixa:has(.pg-conversa li) > .pg-sug { display: none; }
