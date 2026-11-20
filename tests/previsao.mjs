@@ -29,4 +29,18 @@ t("mesma semente, mesmo resultado; o time mais forte tende a somar mais pontos",
   assert.deepEqual(r1, r2);
   assert.ok(r1.find((c) => c.id === "a").pontos > r1.find((c) => c.id === "b").pontos + 2);
 });
+t("objetivo: o primeiro que ainda está em jogo (título, G6, escapar do Z4, Sul-Americana)", () => {
+  assert.equal(P.objetivo({ titulo: 0.4, g6: 1, z4: 0, sula: 0 }).chave, "titulo");
+  assert.equal(P.objetivo({ titulo: 0, g6: 0.7, z4: 0, sula: 0.3 }).chave, "g6");
+  assert.equal(P.objetivo({ titulo: 0, g6: 0, z4: 0.2, sula: 0 }).chave, "fica");
+  assert.equal(P.objetivo({ titulo: 1, g6: 1, z4: 0, sula: 0 }), null);
+});
+t("impacto de um jogo: vencer vale mais que empatar, que vale mais que perder", () => {
+  const tabela = [tab("a", 60, 18), tab("b", 59, 18), tab("c", 30, 8), tab("d", 29, 8)];
+  const jogos = [{ id: "j1", home: "a", away: "b", xh: 1.3, xa: 1.2 }, { id: "j2", home: "c", away: "a", xh: 1, xa: 1.4 }, { id: "j3", home: "b", away: "d", xh: 1.5, xa: 0.9 }];
+  const obj = P.objetivo(P.simula(tabela, jogos, 2000, 5).find((c) => c.id === "a"));
+  const i = P.impacto(tabela, jogos, "j1", "a", obj, 3000, 5);
+  assert.equal(obj.chave, "titulo");
+  assert.ok(i.vitoria > i.empate && i.empate > i.derrota);
+});
 console.log(`\n${ok} testes da previsão passaram`);

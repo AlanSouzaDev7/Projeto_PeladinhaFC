@@ -1013,6 +1013,7 @@
           <div class="kpi" style="--i:3"><small>Saldo</small><b data-count="${r.sg}" data-sign>0</b><em>${r.gf} marcados · ${r.ga} sofridos</em></div>
         </div>
         ${calendarCard(id)}
+        ${window.PREVISAO ? PREVISAO.cardClube(id) : ""}
         <div class="grid-2">
           <div>
             <div class="card reveal">
@@ -1160,6 +1161,7 @@
         </div>
         <div>
           ${ondeAssistirHTML(m)}
+          ${window.PREVISAO ? PREVISAO.cardJogo(m) : ""}
           ${window.CHANCE ? CHANCE.card(m, { casa: display(byId[m.home]), fora: display(byId[m.away]) }) : ""}
           ${voteCard(m)}
           ${window.BOLAO ? BOLAO.card(m) : ""}

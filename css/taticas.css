@@ -390,3 +390,26 @@
 .pv-c { width: 26px; border-radius: 4px; font-size: 11px; color: var(--text); background: color-mix(in srgb, var(--accent) calc(var(--a) * 100%), transparent); }
 .pv-c.g6 { background: color-mix(in srgb, #22c55e calc(var(--a) * 100%), transparent); }
 .pv-c.z4 { background: color-mix(in srgb, #ef4444 calc(var(--a) * 100%), transparent); }
+
+.pv-card .card-b { display: grid; gap: 10px; }
+.pv-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; text-align: center; }
+.pv-kpis b { display: block; font: 800 22px/1 var(--font-display); color: var(--text); font-variant-numeric: tabular-nums; }
+.pv-kpis small { font-size: 11.5px; color: var(--text-3); font-weight: 700; }
+.pv-kpis .z b { color: #f87171; }
+.pv-dist { display: flex; align-items: flex-end; gap: 3px; height: 70px; }
+.pv-dist i { flex: 1; height: var(--h); border-radius: 3px 3px 0 0; background: var(--accent); }
+.pv-dist i.g6 { background: #22c55e; } .pv-dist i.z4 { background: #ef4444; }
+.pv-jogos { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.pv-jogos li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.pv-jogos a { display: inline-flex; align-items: center; gap: 6px; color: var(--text); font-weight: 700; text-decoration: none; }
+.pv-jogos a small { color: var(--text-3); font-weight: 600; margin-left: 4px; }
+.pv-imp { display: inline-flex; gap: 4px; }
+.pv-imp b { min-width: 3.4em; padding: 4px 6px; border-radius: 6px; text-align: center; font: 800 12.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+.pv-imp .v { background: rgb(34 197 94 / 0.18); color: #22c55e; } .pv-imp .e { background: var(--surface-2); color: var(--text); } .pv-imp .d { background: rgb(239 68 68 / 0.16); color: #f87171; }
+.pv-lados { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.pv-lado { display: grid; gap: 6px; }
+.pv-lado > b { display: inline-flex; align-items: center; gap: 6px; font: 800 14px/1.2 var(--font); color: var(--text); }
+.pv-lado small { font-size: 12px; color: var(--text-2); }
+.pv-imp-l { display: inline-flex; gap: 4px; font-size: 10.5px; color: var(--text-3); }
+.pv-imp-l span { min-width: 3.4em; text-align: center; padding: 0 6px; }
+@media (max-width: 520px) { .pv-kpis { grid-template-columns: repeat(3, 1fr); } .pv-lados { grid-template-columns: 1fr; } }
