@@ -50,6 +50,8 @@
           O apelido, os pontos e a posição aparecem no ranking para qualquer pessoa; os palpites de cada jogo não são mostrados aos outros.</p>
           <p><b>Voz da torcida (opcional).</b> Ao votar em quem vence ou no Craque do jogo, o servidor guarda o voto com um código aleatório
           do aparelho (resumido, não dá para voltar ao original) e um resumo da conexão com o jogo, só para limitar fraude. O endereço IP não é guardado.</p>
+          <p><b>Visitas.</b> A cada página aberta, o site conta só o tipo da página e o dia (por exemplo, "jogo" ou "clube: Cruzeiro"),
+          para saber o que é mais usado. Não vai cookie, IP guardado, identificador do aparelho nem nada que diga quem visitou.</p>
           <p><b>Alertas (opcionais).</b> Ao ativar avisos de um clube, o servidor guarda o endereço de notificação do navegador, os clubes e os tipos de aviso escolhidos.
           Desligar os avisos apaga a inscrição.</p>
           <p><b>Apagar tudo.</b> No menu da conta, "Apagar minha conta" remove do servidor a conta, o que ela salvou, os palpites, o apelido e a participação nas ligas.</p></div></section>

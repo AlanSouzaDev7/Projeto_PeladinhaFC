@@ -185,3 +185,11 @@ CREATE TABLE IF NOT EXISTS saude (
   chave  TEXT    PRIMARY KEY,     -- "cron"
   quando INTEGER NOT NULL
 );
+
+-- visitas anônimas (worker/painel.mjs)
+CREATE TABLE IF NOT EXISTS visitas (
+  dia  TEXT    NOT NULL,          -- AAAA-MM-DD (Brasília)
+  rota TEXT    NOT NULL,          -- tipo da página: inicio, jogo, bolao, clube:cruzeiro...
+  n    INTEGER NOT NULL,
+  PRIMARY KEY (dia, rota)
+);

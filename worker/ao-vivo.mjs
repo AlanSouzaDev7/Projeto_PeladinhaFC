@@ -17,6 +17,7 @@
      GET /jogos?clube=&contra=&temporada=&liga=  histórico dos jogos (todas as temporadas) com resumo V/E/D
      POST /jogos                                 só o robô: lote de jogos para o histórico
      GET /status                              saúde do sistema (worker/status.mjs)
+     POST /visita, GET /painel                visitas anônimas e painel do dono (worker/painel.mjs)
      POST /torcida/voto, GET /torcida/<jogo>  voz da torcida: quem vence e Craque do jogo (worker/torcida.mjs)
      /bolao/eu, /bolao/palpite, /bolao/ranking, /bolao/liga   bolão com ranking e ligas entre amigos (worker/bolao.mjs)
      GET /agenda/<clube>.ics                  agenda do favorito: calendário de jogos para assinar (worker/agenda.mjs)
@@ -38,6 +39,7 @@ import { eu, gravaApelido, gravaPalpite, ranking, criaLiga, entraLiga, saiLiga }
 import { avisar, recentes, montaAvisos, enviaAvisos, limpaAvisos } from "./bolao-avisos.mjs";
 import { vota, resultado as resultadoTorcida, limpaVotos } from "./torcida.mjs";
 import { status, batimento } from "./status.mjs";
+import { contaVisita, gravaVisitas, ehDono, painel } from "./painel.mjs";
 import { inscrever, verificaGols, enviaPushes, golsRecentes, limpaGols } from "./alertas.mjs";
 import { agenda } from "./agenda.mjs";
 import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo, roboAutorizado, gravaArquivo, listaArquivos, serveArquivo, gravaJogos, consultaJogos } from "./plataforma.mjs";
@@ -295,6 +297,23 @@ export default {
       if (path === "/conta/sair" && req.method === "POST") { await sair(env, sessao); return json({ ok: true }); }
       if (path === "/conta" && req.method === "DELETE") { await apagarConta(env, sessao.id); return json({ ok: true }); }
       return json({ erro: "método não permitido" }, 405);
+    }
+    // visitas anônimas (tipo de página e dia; sem cookie, sem IP) e painel do dono (worker/painel.mjs)
+    if (path === "/visita" && req.method === "POST") {
+      if (!env.DB) return new Response(null, { status: 204, headers: cors });
+      if (+(req.headers.get("content-length") || 0) > 200) return json({ erro: "pedido grande demais" }, 413);
+      contaVisita(await req.text());
+      await gravaVisitas(env).catch(() => {});
+      return new Response(null, { status: 204, headers: cors });
+    }
+    if (path === "/painel" || path === "/painel/eu") {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      const sessao = await usuarioDa(env, req);
+      if (!sessao) return json({ erro: "Entre com a conta Google do dono." }, 401);
+      if (path === "/painel/eu") return json({ codigo: sessao.id, dono: ehDono(env, sessao.id) });
+      if (!ehDono(env, sessao.id)) return json({ erro: "Esta conta não é a do dono do CazéStats.TV." }, 403);
+      await gravaVisitas(env, true).catch(() => {});
+      return json(await painel(env));
     }
     // saúde do sistema: quando cada parte trabalhou pela última vez (página #/status do site)
     if (path === "/status" && (req.method === "GET" || req.method === "HEAD")) {

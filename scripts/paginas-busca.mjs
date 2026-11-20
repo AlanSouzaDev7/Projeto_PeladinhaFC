@@ -19,7 +19,7 @@ const escH = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
 const ld = (o) => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, "\\u003c")}</script>`;
 const lerJSON = (arq, padrao) => { try { return JSON.parse(fs.readFileSync(arq, "utf8")); } catch { return padrao; } };
 
-function clubesDoSite(raiz) {
+export function clubesDoSite(raiz) {
   const ctx = { window: {}, console };
   ctx.globalThis = ctx;
   vm.createContext(ctx);

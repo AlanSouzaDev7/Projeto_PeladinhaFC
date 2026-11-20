@@ -147,6 +147,14 @@ npx wrangler d1 execute cazestats --remote --file worker/migracoes/004-avisos-do
 npx wrangler d1 execute cazestats --remote --file worker/migracoes/005-torcida.sql
 ```
 
+**Painel do dono (19/11).** Visitas anônimas por tipo de página e dia. Uma vez só:
+
+```bash
+npx wrangler d1 execute cazestats --remote --file worker/migracoes/006-visitas.sql
+```
+
+Quem vê o painel (`#/painel`): os códigos de conta em `DONOS` no `worker/wrangler.toml`. A própria página mostra o código de quem está logado.
+
 ### 8. Entrar com Google (conta opcional e sincronização)
 
 O botão de conta no cabeçalho (js/conta.js) usa o "Entrar com Google". O Worker confere o comprovante do Google e guarda

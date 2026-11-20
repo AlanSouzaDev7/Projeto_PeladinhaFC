@@ -12,12 +12,12 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { geraPaginas } from "./paginas-busca.mjs";
+import { geraPaginas, clubesDoSite } from "./paginas-busca.mjs";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SAIDA = path.resolve(RAIZ, process.argv[2] || "_site");
 const SITE = process.env.SITE_URL || "https://cazestats.pages.dev/";
-const ENTRA = ["index.html", "sw.js", "manifest.webmanifest", "css", "js", "assets", "dados", "img", "media", "prints"];
+const ENTRA = ["index.html", "sw.js", "manifest.webmanifest", "css", "js", "assets", "dados", "img", "media", "prints", "widget"];
 
 fs.rmSync(SAIDA, { recursive: true, force: true });
 fs.mkdirSync(SAIDA, { recursive: true });
@@ -33,6 +33,8 @@ html = html.replace(/(href|src)="((?:css|js)\/[^"?]+\.(?:css|js))"/g, (_, attr, 
 fs.writeFileSync(path.join(SAIDA, "index.html"), html);
 // páginas para buscadores e prévia de link: /jogo/..., /clube/..., /jogador/... (scripts/paginas-busca.mjs)
 const PAGINAS = geraPaginas({ raiz: RAIZ, saida: SAIDA, site: SITE, html });
+// widget para outros sites: nome curto, sigla e cores de cada clube (widget/widget.js)
+fs.writeFileSync(path.join(SAIDA, "widget", "clubes.json"), JSON.stringify(Object.fromEntries(clubesDoSite(RAIZ).map((c) => [c.id, { a: c.abbr, s: c.short, c: c.colors }]))));
 
 fs.writeFileSync(path.join(SAIDA, "_headers"), `/*
   X-Content-Type-Options: nosniff
@@ -44,6 +46,10 @@ fs.writeFileSync(path.join(SAIDA, "_headers"), `/*
 /sw.js
   Cache-Control: no-cache
 /jogo/*
+  Cache-Control: public, max-age=300
+/widget/*
+  ! X-Frame-Options
+  Content-Security-Policy: frame-ancestors *
   Cache-Control: public, max-age=300
 /clube/*
   Cache-Control: public, max-age=3600

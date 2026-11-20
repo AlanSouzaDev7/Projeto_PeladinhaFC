@@ -1713,6 +1713,8 @@
       r.page === "bolao" && window.BOLAO ? BOLAO.page(r.id, r.tab) :
       r.page === "status" && window.STATUS ? STATUS.pageStatus() :
       r.page === "creditos" && window.STATUS ? STATUS.pageCreditos() :
+      r.page === "painel" && window.PAINEL ? PAINEL.page() :
+      r.page === "widgets" && window.WIDGETS ? WIDGETS.page() :
       r.page === "sobre" ? pageAbout() :
       r.page === "privacidade" ? PRIVACIDADE.page() : pageNotFound();
   /* competição em tela: Brasileirão (o site de sempre) ou Libertadores, Sul-Americana, Copa do Brasil e estaduais
@@ -1742,7 +1744,7 @@
     stamp(view);
     const navKey = r.page === "" || r.page === "partida" || r.page === "copa" ? "home" : r.page === "clube" || r.page === "jogador" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? (findMatch(r.id) ? `${byId[findMatch(r.id).home].abbr} x ${byId[findMatch(r.id).away].abbr} — CazéStats.TV` : "Partida — CazéStats.TV") : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "bolao" ? "Bolão — CazéStats.TV" : r.page === "status" ? "Status — CazéStats.TV" : r.page === "creditos" ? "Fontes e créditos — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
+    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? (findMatch(r.id) ? `${byId[findMatch(r.id).home].abbr} x ${byId[findMatch(r.id).away].abbr} — CazéStats.TV` : "Partida — CazéStats.TV") : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "bolao" ? "Bolão — CazéStats.TV" : r.page === "painel" ? "Painel do dono — CazéStats.TV" : r.page === "widgets" ? "Widgets — CazéStats.TV" : r.page === "status" ? "Status — CazéStats.TV" : r.page === "creditos" ? "Fontes e créditos — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
     enhance();
   }
 
@@ -1918,6 +1920,9 @@
     window.BOLAO?.mount(view); // bolão: palpite na partida e página #/bolao
     window.TORCIDA?.mount(view); // voz da torcida: quem vence e Craque do jogo
     window.STATUS?.mount(view); // página de status do sistema
+    window.PAINEL?.mount(view); // painel do dono
+    window.WIDGETS?.mount(view); // gerador de widgets
+    window.PAINEL?.visita(state.route); // contagem anônima: só o tipo da página
     window.COMPARTILHAR?.origem("partida", findMatch); // card para compartilhar: o jogo com o placar da hora
     // chance de vitória: precisa dos jogos da temporada dos clubes (js/club-form.js, baixado sob demanda)
     if (state.route.page === "partida" && window.CHANCE && $("[data-chance-vazio]", view)) loadClubForm().then(() => {
