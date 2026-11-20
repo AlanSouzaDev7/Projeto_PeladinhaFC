@@ -76,9 +76,17 @@
         <ul class="bl-regra">${regra}</ul></header>
       <div data-bolao-pagina data-id="${esc(id || "")}" data-tab="${esc(tab || "")}"><p class="bl-txt">Carregando o bolão…</p></div></section>`;
   }
+  // rodadas do bolão: os jogos encerrados de cada rodada, pelos ids da ESPN (os mesmos dos palpites)
+  const jogosDaRodada = (rd) => (window.PD?.realMatches?.(rd) || []).filter((m) => m.espn && m.status === "ft").map((m) => String(m.espn));
+  function ultimaRodada() {
+    for (let rd = window.PD?.ROUND || 0; rd >= 1; rd--) if (jogosDaRodada(rd).length) return rd;
+    return 0;
+  }
   function tabelaRanking(r) {
-    if (!r.linhas.length) return `<p class="bl-txt">${r.liga ? "Ninguém da liga pontuou ainda." : "O ranking aparece depois do primeiro jogo encerrado com palpites."}</p>`;
-    const linha = (x) => `<tr class="${x.voce ? "voce" : ""}"><td>${n(x.pos)}º</td><th scope="row">${esc(x.apelido)}${x.voce ? " <small>(você)</small>" : ""}</th><td><b>${n(x.pontos)}</b></td><td>${n(x.exatos)}</td><td>${n(x.jogos)}</td></tr>`;
+    if (!r.linhas.length) return `<p class="bl-txt">${r.rodada ? "Ninguém pontuou nos jogos encerrados desta rodada." : r.liga ? "Ninguém da liga pontuou ainda." : "O ranking aparece depois do primeiro jogo encerrado com palpites."}</p>`;
+    // rei da rodada: quem fez mais pontos nos jogos dela (empate divide a coroa)
+    const rei = (x) => r.rodada && x.pos === 1 && x.pontos > 0;
+    const linha = (x) => `<tr class="${x.voce ? "voce" : ""}${rei(x) ? " bl-rei" : ""}"><td>${n(x.pos)}º</td><th scope="row">${esc(x.apelido)}${x.voce ? " <small>(você)</small>" : ""}${rei(x) ? ' <span class="bl-coroa">Rei da rodada</span>' : ""}</th><td><b>${n(x.pontos)}</b></td><td>${n(x.exatos)}</td><td>${n(x.jogos)}</td></tr>`;
     const fora = r.voce && !r.linhas.some((x) => x.voce) ? `<tr class="bl-sep"><td colspan="5">…</td></tr>${linha(r.voce)}` : "";
     return `<table class="bl-tabela"><thead><tr><th scope="col">Pos.</th><th scope="col">Torcedor</th><th scope="col">Pontos</th><th scope="col" title="Placares exatos">Exatos</th><th scope="col">Jogos</th></tr></thead>
       <tbody>${r.linhas.map(linha).join("")}${fora}</tbody></table>${r.total > r.linhas.length ? `<p class="bl-txt">${n(r.total)} torcedores no ranking; aparecem os 100 primeiros.</p>` : ""}`;
@@ -100,21 +108,30 @@
       return;
     }
     const liga = id === "liga" && tab ? tab : "";
+    // ranking da rodada: #/bolao/rodada/<n> (sem número, a última rodada com jogo encerrado)
+    const ultima = ultimaRodada(), rd = id === "rodada" ? Number(tab) || ultima : 0;
+    const jogos = rd ? jogosDaRodada(rd) : [];
     let r, d = null;
     try {
-      [r, d] = await Promise.all([api(`/bolao/ranking${liga ? `?liga=${encodeURIComponent(liga)}` : ""}`), logado() ? meu() : null]);
+      const q = liga ? `?liga=${encodeURIComponent(liga)}` : rd ? `?jogos=${jogos.join(",")}` : "";
+      [r, d] = await Promise.all([rd && !jogos.length ? { linhas: [], total: 0, rodada: true } : api(`/bolao/ranking${q}`), logado() ? meu() : null]);
     } catch (e) { el.innerHTML = `<p class="bl-txt">Não deu para carregar o bolão (${esc(e.message)}).</p>`; return; }
+    if (rd) { r.rodada = true; r.nome = `${rd}ª rodada`; }
     ultimoR = r; // o card para compartilhar usa a posição deste ranking
-    const abas = [["", "Geral"], ...(d?.ligas || []).map((l) => [l.codigo, l.nome])];
+    const chave = rd ? "rodada" : liga;
+    const abas = [["", "Geral", "#/bolao"], ...(ultima ? [["rodada", "Rodada", `#/bolao/rodada/${ultima}`]] : []), ...(d?.ligas || []).map((l) => [l.codigo, l.nome, `#/bolao/liga/${l.codigo}`])];
     const ligaAtual = d?.ligas.find((l) => l.codigo === liga);
+    const navRodada = rd ? `<nav class="bl-rodadas" aria-label="Escolher rodada">${rd > 1 ? `<a href="#/bolao/rodada/${rd - 1}" aria-label="Rodada anterior">‹</a>` : "<span></span>"}
+        <b>${rd}ª rodada</b>${rd < ultima ? `<a href="#/bolao/rodada/${rd + 1}" aria-label="Próxima rodada">›</a>` : "<span></span>"}</nav>
+        <p class="bl-txt">Pontos só dos ${n(jogos.length)} jogo${jogos.length === 1 ? "" : "s"} encerrado${jogos.length === 1 ? "" : "s"} da rodada. Quem soma mais é o rei da rodada.</p>` : "";
     el.innerHTML = `<div class="bl-grade">
       <div class="card bl-card">
-        <nav class="bl-abas" aria-label="Rankings">${abas.map(([c, n]) => `<a href="${c ? `#/bolao/liga/${c}` : "#/bolao"}" class="${c === liga ? "on" : ""}" ${c === liga ? 'aria-current="page"' : ""}>${esc(n)}</a>`).join("")}</nav>
-        <h2 class="bl-h">${liga ? esc(r.nome || "Liga") : "Ranking geral"}</h2>
+        <nav class="bl-abas" aria-label="Rankings">${abas.map(([c, nome, href]) => `<a href="${href}" class="${c === chave ? "on" : ""}" ${c === chave ? 'aria-current="page"' : ""}>${esc(nome)}</a>`).join("")}</nav>
+        ${rd ? navRodada : `<h2 class="bl-h">${liga ? esc(r.nome || "Liga") : "Ranking geral"}</h2>`}
         ${liga ? `<p class="bl-txt">Código da liga: <b class="bl-cod">${esc(liga)}</b> ${ligaAtual ? `· ${n(ligaAtual.membros)} participante${n(ligaAtual.membros) === 1 ? "" : "s"}` : ""}</p>
           <div class="bl-acoes">${ligaAtual ? `<button type="button" class="bl-btn" data-bl="convidar" data-cod="${esc(liga)}">Copiar convite</button><button type="button" class="bl-btn sec" data-bl="sair" data-cod="${esc(liga)}">Sair da liga</button>` : logado() ? `<button type="button" class="bl-btn" data-bl="entrar-liga" data-cod="${esc(liga)}">Entrar nesta liga</button>` : ""}</div>` : ""}
         ${tabelaRanking(r)}
-        ${r.voce && window.COMPARTILHAR ? `<div class="cp-wrap">${COMPARTILHAR.botao("bolao", liga)}</div>` : ""}
+        ${r.voce && window.COMPARTILHAR ? `<div class="cp-wrap">${COMPARTILHAR.botao("bolao", liga || (rd ? `r${rd}` : ""))}</div>` : ""}
         <p class="bl-txt bl-msg" role="status" aria-live="polite"></p>
       </div>
       <div class="bl-lado">${logado() ? ladoLogado(d) : `<div class="card bl-card"><h2 class="bl-h">Participe</h2><p class="bl-txt">Entre com Google, escolha um apelido e dê palpites na página de cada jogo. Não mostramos seu nome nem seu e-mail.</p>${entrarBtn()}</div>`}</div>
@@ -137,10 +154,19 @@
       <div class="bl-acoes"><button type="button" class="bl-btn${on ? " sec" : ""}" data-bl="avisos" aria-pressed="${on}">${on ? "Desligar avisos" : "Ligar avisos neste aparelho"}</button></div>
       <p class="bl-txt bl-msg" role="status" aria-live="polite"></p></div>`;
   }
+  function conquistasHTML(s) {
+    if (!s) return "";
+    const ganhas = s.conquistas.filter((c) => c.ganhou).length;
+    const num = (v, t) => `<div><b>${v}</b><small>${t}</small></div>`;
+    return `<div class="card bl-card"><h2 class="bl-h">Suas conquistas <small>${n(ganhas)} de ${n(s.conquistas.length)}</small></h2>
+      <div class="bl-nums">${num(`${n(s.aproveitamento)}%`, "dos jogos pontuando")}${num(n(s.sequencia), "seguidos agora")}${num(n(s.maiorSequencia), "maior sequência")}${num(n(s.exatos), "placares exatos")}</div>
+      <ul class="bl-medalhas">${s.conquistas.map((c) => `<li class="${c.ganhou ? "ok" : ""}" title="${esc(c.desc)}"><span class="bl-med" aria-hidden="true"></span><b>${esc(c.nome)}</b><small>${esc(c.desc)}${c.ganhou ? "" : " · falta"}</small></li>`).join("")}</ul></div>`;
+  }
   function ladoLogado(d) {
     const palps = d.palpites.slice(0, 15).map((p) => `<li><span>${esc(p.time_casa || "?")} <b>${n(p.casa)} x ${n(p.fora)}</b> ${esc(p.time_fora || "?")}</span>
       <em>${p.pontos == null ? (p.estado === "post" || p.estado === "in" ? "em jogo" : "aguardando") : `+${n(p.pontos)}`}</em></li>`).join("");
     return `<div class="card bl-card"><p class="bl-total"><b>${n(d.pontos)}</b> pontos</p>${apelidoForm(d.apelido)}</div>
+      ${conquistasHTML(d.numeros)}
       <div class="card bl-card"><h2 class="bl-h">Ligas entre amigos</h2>
         ${d.ligas.length ? `<ul class="bl-ligas">${d.ligas.map((l) => `<li><a href="#/bolao/liga/${esc(l.codigo)}">${esc(l.nome)}</a> <small>${n(l.membros)} · ${esc(l.codigo)}</small></li>`).join("")}</ul>` : `<p class="bl-txt">Crie uma liga e mande o convite para a galera.</p>`}
         <form class="bl-form" data-bl-form="criar"><label class="bl-txt" for="bl-nova">Criar liga</label><div class="bl-linha"><input id="bl-nova" name="nome" maxlength="40" minlength="3" required placeholder="Nome da liga"/><button class="bl-btn">Criar</button></div></form>

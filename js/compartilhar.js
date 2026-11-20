@@ -159,8 +159,8 @@
     if (!d?.voce) throw new Error("entre no ranking para compartilhar a sua posição");
     const cv = novoCanvas(), ctx = cv.getContext("2d");
     fundo(ctx, "#1d4ed8", "#00a859");
-    moldura(ctx, d.nome ? `Liga ${d.nome}` : "Bolão");
-    texto(ctx, "Bolão", L / 2, 330, { peso: 700, px: 54, cor: "rgba(255,255,255,0.8)" });
+    moldura(ctx, d.rodada ? `Bolão · ${d.nome}` : d.nome ? `Liga ${d.nome}` : "Bolão");
+    texto(ctx, d.rodada && d.voce.pos === 1 && d.voce.pontos > 0 ? "Rei da rodada" : d.rodada ? `Bolão da ${d.nome}` : "Bolão", L / 2, 330, { peso: 700, px: 54, cor: "rgba(255,255,255,0.8)" });
     texto(ctx, d.voce.apelido, L / 2, 450, { px: 96, tipo: "titulo" });
     texto(ctx, `${d.voce.pos}º`, L / 2, 760, { px: 300, tipo: "titulo" });
     texto(ctx, `de ${d.total} ${d.total === 1 ? "torcedor" : "torcedores"}`, L / 2, 840, { peso: 700, px: 44, cor: "rgba(255,255,255,0.8)" });

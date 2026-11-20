@@ -341,7 +341,7 @@ const app = {
       if (+(req.headers.get("content-length") || 0) > 2048) return json({ erro: "pedido grande demais" }, 413);
       const sessao = await usuarioDa(env, req);
       const responde = (r) => (r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, ...r, status: undefined }));
-      if (path === "/bolao/ranking" && req.method === "GET") return responde(await ranking(env, sessao?.id, new URL(req.url).searchParams.get("liga") || ""));
+      if (path === "/bolao/ranking" && req.method === "GET") { const q = new URL(req.url).searchParams; return responde(await ranking(env, sessao?.id, q.get("liga") || "", q.get("jogos") || "")); }
       // o service worker do aparelho busca os avisos do bolão (sem sessão: o endereço de push identifica o aparelho)
       if (path === "/bolao/avisos/recentes" && req.method === "POST") return responde(await recentes(env, await req.text()));
       if (!sessao) return json({ erro: "Entre com Google para participar do bolão." }, 401);

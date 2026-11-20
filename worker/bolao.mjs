@@ -32,9 +32,11 @@ const PONTOS_SQL = `CASE
     WHEN ((p.casa > p.fora) - (p.casa < p.fora)) <> ((j.gols_casa > j.gols_fora) - (j.gols_casa < j.gols_fora)) THEN 0
     WHEN p.casa <> p.fora AND p.casa - p.fora = j.gols_casa - j.gols_fora THEN ${PONTOS.saldo}
     ELSE ${PONTOS.resultado} END`;
-const TOTAIS = `WITH pts AS (SELECT p.usuario, ${PONTOS_SQL} AS pt FROM palpites p JOIN jogos j ON j.id = p.jogo
-    WHERE j.estado = 'post' AND j.gols_casa IS NOT NULL AND j.gols_fora IS NOT NULL),
+// somas por torcedor; com "jogos" (ranking de uma rodada), só os jogos da lista (placeholders a partir de ?inicio)
+const totais = (jogos = [], inicio = 1) => `WITH pts AS (SELECT p.usuario, ${PONTOS_SQL} AS pt FROM palpites p JOIN jogos j ON j.id = p.jogo
+    WHERE j.estado = 'post' AND j.gols_casa IS NOT NULL AND j.gols_fora IS NOT NULL${jogos.length ? ` AND p.jogo IN (${jogos.map((_, i) => `?${inicio + i}`).join(",")})` : ""}),
   tot AS (SELECT usuario, SUM(pt) AS pontos, SUM(pt = ${PONTOS.exato}) AS exatos, COUNT(*) AS jogos FROM pts GROUP BY usuario)`;
+const TOTAIS = totais();
 
 const corpoJSON = (txt) => { try { return JSON.parse(txt || ""); } catch { return null; } };
 const erro = (status, msg) => ({ status, erro: msg });
@@ -45,6 +47,42 @@ async function apelidoDe(env, usuario) {
   return (await env.DB.prepare("SELECT apelido FROM apelidos WHERE usuario = ?1").bind(usuario).first())?.apelido || null;
 }
 
+/* conquistas (medalhas) e números do torcedor, pelos palpites e placares finais */
+export const MEDALHAS = [
+  { id: "exato-1", nome: "Na mosca", desc: "Acertou o primeiro placar exato", ok: (s) => s.exatos >= 1 },
+  { id: "exato-5", nome: "Mira afiada", desc: "5 placares exatos", ok: (s) => s.exatos >= 5 },
+  { id: "exato-10", nome: "Vidente", desc: "10 placares exatos", ok: (s) => s.exatos >= 10 },
+  { id: "seq-3", nome: "Embalado", desc: "3 jogos seguidos pontuando", ok: (s) => s.maiorSequencia >= 3 },
+  { id: "seq-5", nome: "Imparável", desc: "5 jogos seguidos pontuando", ok: (s) => s.maiorSequencia >= 5 },
+  { id: "zebra", nome: "Faro de zebra", desc: "Acertou um resultado que menos de 20% dos torcedores acertaram", ok: (s) => s.zebras >= 1 },
+  { id: "goleada", nome: "Profeta da goleada", desc: "Placar exato de um jogo com 4 gols ou mais", ok: (s) => s.goleadas >= 1 },
+  { id: "fiel-10", nome: "Fiel", desc: "Palpitou em 10 jogos", ok: (s) => s.palpites >= 10 },
+  { id: "fiel-30", nome: "Torcedor de arquibancada", desc: "Palpitou em 30 jogos", ok: (s) => s.palpites >= 30 },
+  { id: "fiel-50", nome: "Sócio-torcedor", desc: "Palpitou em 50 jogos", ok: (s) => s.palpites >= 50 },
+];
+export async function numeros(env, usuario) {
+  const { results } = await env.DB.prepare(`SELECT p.jogo, p.casa, p.fora, j.gols_casa AS gc, j.gols_fora AS gf, j.estado, j.data, j.hora FROM palpites p
+    LEFT JOIN jogos j ON j.id = p.jogo WHERE p.usuario = ?1 ORDER BY j.data, j.hora`).bind(usuario).all();
+  const todos = results || [], fim = todos.filter((r) => r.estado === "post" && r.gc != null && r.gf != null);
+  const sinal = (a, b) => Math.sign(a - b);
+  // quantos acertaram o resultado de cada jogo encerrado em que o torcedor palpitou
+  const { results: share } = await env.DB.prepare(`SELECT p.jogo, COUNT(*) AS total, SUM(((p.casa > p.fora) - (p.casa < p.fora)) = ((j.gols_casa > j.gols_fora) - (j.gols_casa < j.gols_fora))) AS acertos
+    FROM palpites p JOIN jogos j ON j.id = p.jogo WHERE j.estado = 'post' AND j.gols_casa IS NOT NULL AND p.jogo IN (SELECT jogo FROM palpites WHERE usuario = ?1) GROUP BY p.jogo`).bind(usuario).all();
+  const acerto = new Map((share || []).map((r) => [r.jogo, r]));
+  let seq = 0, maior = 0, exatos = 0, pontuou = 0, zebras = 0, goleadas = 0, pts = 0;
+  for (const r of fim) {
+    const pt = pontos({ casa: r.casa, fora: r.fora }, { casa: r.gc, fora: r.gf });
+    pts += pt;
+    if (pt > 0) { seq++; pontuou++; } else seq = 0;
+    maior = Math.max(maior, seq);
+    if (pt === PONTOS.exato) { exatos++; if (r.gc + r.gf >= 4) goleadas++; }
+    const a = acerto.get(r.jogo);
+    if (pt > 0 && sinal(r.casa, r.fora) === sinal(r.gc, r.gf) && a && a.total >= 5 && a.acertos / a.total < 0.2) zebras++;
+  }
+  const s = { palpites: todos.length, encerrados: fim.length, pontos: pts, exatos, aproveitamento: fim.length ? Math.round((pontuou / fim.length) * 100) : 0, sequencia: seq, maiorSequencia: maior, zebras, goleadas };
+  return { ...s, conquistas: MEDALHAS.map((m) => ({ id: m.id, nome: m.nome, desc: m.desc, ganhou: m.ok(s) })) };
+}
+
 export async function eu(env, usuario) {
   const apelido = await apelidoDe(env, usuario);
   const { results: palps } = await env.DB.prepare(`SELECT p.jogo, p.casa, p.fora, j.casa AS time_casa, j.fora AS time_fora, j.data, j.hora, j.estado, j.gols_casa, j.gols_fora,
@@ -53,7 +91,7 @@ export async function eu(env, usuario) {
   const { results: ligas } = await env.DB.prepare(`SELECT l.codigo, l.nome, l.dono = ?1 AS dono, (SELECT COUNT(*) FROM ligas_membros x WHERE x.codigo = l.codigo) AS membros
     FROM ligas_membros m JOIN ligas l ON l.codigo = m.codigo WHERE m.usuario = ?1 ORDER BY m.entrou`).bind(usuario).all();
   const lista = palps || [];
-  return { status: 200, apelido, pontos: lista.reduce((s, p) => s + (p.pontos || 0), 0), palpites: lista, ligas: (ligas || []).map((l) => ({ ...l, dono: !!l.dono })) };
+  return { status: 200, apelido, pontos: lista.reduce((s, p) => s + (p.pontos || 0), 0), palpites: lista, ligas: (ligas || []).map((l) => ({ ...l, dono: !!l.dono })), numeros: await numeros(env, usuario) };
 }
 
 export async function gravaApelido(env, usuario, txt) {
@@ -80,10 +118,13 @@ export async function gravaPalpite(env, usuario, txt, agora = Date.now()) {
 }
 
 /* ranking: geral (só quem já escolheu apelido e tem jogo encerrado) ou da liga (todos os membros, mesmo com 0) */
-export async function ranking(env, usuario, liga) {
+export async function ranking(env, usuario, liga, jogosTxt = "") {
   if (liga && !CODIGO_OK.test(liga)) return erro(400, "Código de liga inválido.");
+  // ranking de uma rodada: o site manda os ids dos jogos dela (até 20)
+  const jogos = String(jogosTxt || "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (jogos.length > 20 || jogos.some((x) => !/^\d{1,12}$/.test(x))) return erro(400, "Lista de jogos inválida.");
   const cache = typeof caches !== "undefined" ? caches.default : null;
-  const chave = `https://cache.cazestats.interno/bolao/ranking/${liga || "geral"}`;
+  const chave = `https://cache.cazestats.interno/bolao/ranking/${liga || "geral"}/${jogos.join("-") || "todos"}`;
   let linhas = null, nome = null;
   const hit = cache && (await cache.match(chave));
   if (hit) ({ linhas, nome } = await hit.json());
@@ -92,12 +133,12 @@ export async function ranking(env, usuario, liga) {
       const l = await env.DB.prepare("SELECT nome FROM ligas WHERE codigo = ?1").bind(liga).first();
       if (!l) return erro(404, "Liga não encontrada. Confira o código.");
       nome = l.nome;
-      ({ results: linhas } = await env.DB.prepare(`${TOTAIS} SELECT a.usuario, a.apelido, COALESCE(t.pontos, 0) AS pontos, COALESCE(t.exatos, 0) AS exatos, COALESCE(t.jogos, 0) AS jogos
+      ({ results: linhas } = await env.DB.prepare(`${totais(jogos, 2)} SELECT a.usuario, a.apelido, COALESCE(t.pontos, 0) AS pontos, COALESCE(t.exatos, 0) AS exatos, COALESCE(t.jogos, 0) AS jogos
         FROM ligas_membros m JOIN apelidos a ON a.usuario = m.usuario LEFT JOIN tot t ON t.usuario = m.usuario WHERE m.codigo = ?1
-        ORDER BY pontos DESC, exatos DESC, jogos ASC, a.apelido`).bind(liga).all());
+        ORDER BY pontos DESC, exatos DESC, jogos ASC, a.apelido`).bind(liga, ...jogos).all());
     } else {
-      ({ results: linhas } = await env.DB.prepare(`${TOTAIS} SELECT a.usuario, a.apelido, t.pontos, t.exatos, t.jogos FROM tot t JOIN apelidos a ON a.usuario = t.usuario
-        ORDER BY t.pontos DESC, t.exatos DESC, t.jogos ASC, a.apelido LIMIT 5000`).all());
+      ({ results: linhas } = await env.DB.prepare(`${totais(jogos, 1)} SELECT a.usuario, a.apelido, t.pontos, t.exatos, t.jogos FROM tot t JOIN apelidos a ON a.usuario = t.usuario
+        ORDER BY t.pontos DESC, t.exatos DESC, t.jogos ASC, a.apelido LIMIT 5000`).bind(...jogos).all());
     }
     linhas = linhas || [];
     if (cache) await cache.put(chave, new Response(JSON.stringify({ linhas, nome }), { headers: { "cache-control": "public, max-age=60" } }));
@@ -109,7 +150,7 @@ export async function ranking(env, usuario, liga) {
     return { pos, apelido: r.apelido, pontos: r.pontos, exatos: r.exatos, jogos: r.jogos, voce: !!usuario && r.usuario === usuario };
   });
   const voce = comPos.find((r) => r.voce) || null;
-  return { status: 200, liga: liga || null, nome, total: comPos.length, linhas: comPos.slice(0, 100), voce };
+  return { status: 200, liga: liga || null, nome, rodada: jogos.length > 0, total: comPos.length, linhas: comPos.slice(0, 100), voce };
 }
 export async function limpaRanking(liga) {
   const cache = typeof caches !== "undefined" ? caches.default : null;
