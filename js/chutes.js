@@ -11,6 +11,8 @@
 (function (raiz) {
   "use strict";
   const TIPOS = { goal: "gol", "shot-on-target": "alvo", "shot-off-target": "fora", "shot-blocked": "bloqueado", "shot-hit-woodwork": "trave", "hit-woodwork": "trave" };
+  // calibração (20/11/2026): sem ela, o xG total do Brasileirão ficava 30% abaixo dos gols; igual em server/xg.py
+  const CALIBRA = 1.25;
   const norm = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
   /* chance de gol pela posição (x, y de 0 a 100, atacando para x = 100) */
@@ -20,7 +22,7 @@
     const a = Math.atan2(7.32 * dx, dx * dx + dy * dy - (7.32 / 2) ** 2); // ângulo que o gol "abre" visto da bola
     const ang = a < 0 ? a + Math.PI : a;
     const v = 1 / (1 + Math.exp(-(-1.0 + 1.6 * ang - 0.1 * dist)));
-    return Math.min(0.95, Math.max(0.01, v * (cabeca ? 0.6 : 1)));
+    return Math.min(0.95, Math.max(0.01, v * CALIBRA * (cabeca ? 0.6 : 1)));
   }
 
   function calcula(commentary, casa, fora) {

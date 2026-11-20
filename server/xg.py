@@ -2,7 +2,8 @@
 """CazéStats.TV — xG estimado: chance de um chute virar gol pela posição (o mesmo modelo de js/chutes.js).
 
 Posição de 0 a 100 com o time atacando para x = 100; campo de 105 x 68 m. Modelo logístico de distância e ângulo
-que o gol "abre" visto da bola; cabeceio vale 60%; pênalti, 0,76. É uma estimativa do CazéStats.TV.
+que o gol "abre" visto da bola, calibrado (x1,25) para o total de xG bater com o total de gols do
+Brasileirão; cabeceio vale 60%; pênalti, 0,76. É uma estimativa do CazéStats.TV.
 Também monta dados/xg.json (ranking de clubes e jogadores no Brasileirão) a partir de dados/jogadores/*.json.
 Uso: python -X utf8 server/xg.py   (grava o resumo e imprime os primeiros)
 """
@@ -14,6 +15,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 CHUTES = {"Shot On Target", "Shot Off Target", "Shot Blocked", "Goal", "Shot Hit Woodwork", "Hit Woodwork"}
 PENALTI = 0.76
+# calibração (20/11/2026): sem ela, o xG total do Brasileirão ficava 30% abaixo dos gols (928 gols x 712 de xG)
+CALIBRA = 1.25
 
 
 def xg(x, y, cabeca=False):
@@ -22,7 +25,7 @@ def xg(x, y, cabeca=False):
     a = math.atan2(7.32 * dx, dx * dx + dy * dy - (7.32 / 2) ** 2)
     ang = a + math.pi if a < 0 else a
     v = 1 / (1 + math.exp(-(-1.0 + 1.6 * ang - 0.1 * dist)))
-    return min(0.95, max(0.01, v * (0.6 if cabeca else 1)))
+    return min(0.95, max(0.01, v * CALIBRA * (0.6 if cabeca else 1)))
 
 
 def do_lance(tipo, texto, x, y):
@@ -55,7 +58,7 @@ def resumo(raiz=RAIZ, comp="Brasileirão", min_chutes=8):
                                   "ch": c.get("ch", 0), "g": c.get("g", 0), "xg": round(c.get("xg") or 0, 2), "dif": round((c.get("g") or 0) - (c.get("xg") or 0), 2)})
     clubes.sort(key=lambda c: -c.get("xg", 0))
     jogadores.sort(key=lambda j: -j["xg"])
-    saida = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "comp": comp, "modelo": "distância e ângulo para o gol; cabeceio 60%; pênalti 0,76",
+    saida = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "comp": comp, "modelo": "distância e ângulo para o gol, calibrado com os gols do Brasileirão; cabeceio 60%; pênalti 0,76",
              "clubes": clubes, "jogadores": jogadores[:120]}
     (Path(raiz) / "dados" / "xg.json").write_text(json.dumps(saida, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     return saida

@@ -31,7 +31,7 @@ P = None  # módulo placar_api (helpers: get_json, log, CLUBS, COMP_NAME, match_
 
 GX, GY = 24, 16  # grade do mapa de calor: 24 faixas de profundidade x 16 de largura
 ESPN_CORE = "https://sports.core.api.espn.com/v2/sports/soccer/leagues"
-LANCES_VERSAO = 3  # 3: xG de cada chute (server/xg.py); os jogos antigos são baixados de novo uma vez
+LANCES_VERSAO = 4  # 3: xG de cada chute (server/xg.py); 4: xG calibrado. Mudar a versão faz o robô baixar os jogos de novo uma vez
 # tipo de lance da ESPN -> número no site
 ACOES = {"Pass": "passes", "Cross": "cruz", "Tackle": "desarmes", "Attempted tackle": "desarmesT", "Interception": "intercept",
          "Clear": "cortes", "Take On": "dribles", "Aerial": "aereos", "Dispossessed": "perdas", "Save": "defesas",
@@ -586,7 +586,7 @@ def montar(squads, todas, lan, fotos):
         placar, casa = m.get("placar") or {}, m.get("home")
         ids = list((m.get("teams") or {}).keys())
         P_ = (lan.get(eid) or {})
-        if (P_.get("v") or 0) >= 3 and not m.get("vivo"):
+        if (P_.get("v") or 0) >= 4 and not m.get("vivo"):
             soma_xg = {tid: sum(((P_.get("p") or {}).get(str(r[0])) or {}).get("c", {}).get("xg", 0) for r in rows) for tid, rows in (m.get("teams") or {}).items()}
             for tid in soma_xg:
                 cid_t = by_espn.get(str(tid))
