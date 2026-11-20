@@ -33,7 +33,6 @@ Feito com **HTML, CSS e JavaScript puro** (sem frameworks) e uma **API em Python
 | **Páginas para buscadores e prévia de link** (19/11): uma página estática por jogo, clube e jogador (`/jogo/...`, `/clube/...`, `/jogador/...`) com título, descrição, prévia, canônico, schema.org e texto inicial; sitemap com todas | `scripts/paginas-busca.mjs`, `scripts/montar-site.mjs` |
 | **Resumo automático da partida** (19/11): prévia, ao vivo ou crônica curta escrita por regras, na página do jogo e nas páginas para buscadores | `js/resumo.js` |
 | **Site instalável e modo offline** (19/11): service worker guarda o site; sem internet abre a última versão vista, com aviso; botão Instalar o app no rodapé | `sw.js`, `js/offline.js` |
-| **Painel do dono** (19/11): `#/painel` com visitas anônimas (tipo de página e dia, sem cookie nem IP), contas, alertas por clube, bolão e votos; só para as contas em `DONOS` | `js/painel.js`, `worker/painel.mjs` |
 | **Widgets para outros sites** (19/11): tabela, jogos de um clube e placar de um jogo em `<iframe>` (`/widget/`), com a marca e link de volta; gerador em `#/widgets` | `widget/`, `js/widgets.js` |
 | **Confronto direto na página da partida** (18/11): todas as competições desde 2023, com resumo de vitórias, empates e gols | `js/confronto.js` |
 | **Dados no banco D1** (18/11): o robô envia só o que mudou, o site lê do banco e usa a cópia estática se ele falhar; o site deixa de ser republicado a cada rodada | `server/enviar_d1.py`, `js/dados.js`, `worker/` |

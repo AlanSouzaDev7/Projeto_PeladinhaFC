@@ -17,7 +17,7 @@
      GET /jogos?clube=&contra=&temporada=&liga=  histórico dos jogos (todas as temporadas) com resumo V/E/D
      POST /jogos                                 só o robô: lote de jogos para o histórico
      GET /status                              saúde do sistema (worker/status.mjs)
-     POST /visita, GET /painel                visitas anônimas e painel do dono (worker/painel.mjs)
+     POST /visita, GET /painel                métricas anônimas e administração (worker/painel.mjs)
      POST /torcida/voto, GET /torcida/<jogo>  voz da torcida: quem vence e Craque do jogo (worker/torcida.mjs)
      /bolao/eu, /bolao/palpite, /bolao/ranking, /bolao/liga   bolão com ranking e ligas entre amigos (worker/bolao.mjs)
      GET /agenda/<clube>.ics                  agenda do favorito: calendário de jogos para assinar (worker/agenda.mjs)
@@ -39,7 +39,7 @@ import { eu, gravaApelido, gravaPalpite, ranking, criaLiga, entraLiga, saiLiga }
 import { avisar, recentes, montaAvisos, enviaAvisos, limpaAvisos } from "./bolao-avisos.mjs";
 import { vota, resultado as resultadoTorcida, limpaVotos } from "./torcida.mjs";
 import { status, batimento } from "./status.mjs";
-import { contaVisita, gravaVisitas, ehDono, painel } from "./painel.mjs";
+import { contaVisita, gravaVisitas, ehDono, painel, observa, limpaPainel } from "./painel.mjs";
 import { inscrever, verificaGols, enviaPushes, golsRecentes, limpaGols } from "./alertas.mjs";
 import { agenda } from "./agenda.mjs";
 import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo, roboAutorizado, gravaArquivo, listaArquivos, serveArquivo, gravaJogos, consultaJogos } from "./plataforma.mjs";
@@ -233,7 +233,7 @@ async function emAlta(env) {
 export const _busca = { BUSCA_OK, horaUTC, reset: () => { pendente = {}; gravadoEm = 0; } };
 
 /* ---------------- Worker ---------------- */
-export default {
+const app = {
   async fetch(req, env) {
     const cors = { "access-control-allow-origin": env.ORIGEM || "*", "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS", "access-control-allow-headers": "authorization, content-type", "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
       "vary": "Origin", "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "no-referrer",
@@ -298,11 +298,11 @@ export default {
       if (path === "/conta" && req.method === "DELETE") { await apagarConta(env, sessao.id); return json({ ok: true }); }
       return json({ erro: "método não permitido" }, 405);
     }
-    // visitas anônimas (tipo de página e dia; sem cookie, sem IP) e painel do dono (worker/painel.mjs)
+    // métricas anônimas (tipo de página e dia; sem cookie, sem IP) e administração (worker/painel.mjs)
     if (path === "/visita" && req.method === "POST") {
       if (!env.DB) return new Response(null, { status: 204, headers: cors });
       if (+(req.headers.get("content-length") || 0) > 200) return json({ erro: "pedido grande demais" }, 413);
-      contaVisita(await req.text());
+      contaVisita(await req.text(), req);
       await gravaVisitas(env).catch(() => {});
       return new Response(null, { status: 204, headers: cors });
     }
@@ -438,6 +438,17 @@ export default {
       return;
     }
     ctx.waitUntil(disparaRobo(env).then((r) => console.log("robô:", r)));
-    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env), limpaSessoes(env), limpaAvisos(env), limpaVotos(env)]));
+    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env), limpaSessoes(env), limpaAvisos(env), limpaVotos(env), limpaPainel(env)]));
   },
+};
+
+/* cada resposta passa pelo observador (worker/painel.mjs): tráfego da API por minuto e eventos de segurança */
+export default {
+  async fetch(req, env, ctx) {
+    const resp = await app.fetch(req, env);
+    const obs = observa(env, req, resp).catch(() => {});
+    if (ctx?.waitUntil) ctx.waitUntil(obs); else await obs;
+    return resp;
+  },
+  scheduled: (evento, env, ctx) => app.scheduled(evento, env, ctx),
 };

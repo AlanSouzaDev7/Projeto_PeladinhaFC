@@ -87,5 +87,10 @@
     // avisa a página de fora a altura certa (opcional: quem cola o widget pode ajustar o iframe)
     try { parent.postMessage({ cazestats: "altura", altura: document.documentElement.scrollHeight }, "*"); } catch { /* fora de iframe */ }
   }
+  // métrica anônima: o tipo do widget e o site onde ele foi colado (o endereço do site, não de quem vê)
+  try {
+    const site = document.referrer ? new URL(document.referrer).hostname : "";
+    if (API && navigator.sendBeacon) navigator.sendBeacon(`${API}/visita`, JSON.stringify({ rota: `widget:${tipo}`, site }));
+  } catch { /* sem métrica: tudo bem */ }
   json("clubes.json").then((c) => { CLUBES = c; }).catch(() => {}).finally(() => { atualiza(); setInterval(atualiza, 60e3); });
 })();

@@ -42,10 +42,37 @@ await t("visitas: só tipos de página conhecidos, somadas por dia, sem guardar 
   _visitas.reset();
   for (const rota of ["inicio", "inicio", "clube:cruzeiro", "jogo", "<script>", "clube:../../x"]) await pede("/visita", { metodo: "POST", corpo: { rota } });
   const p = await pede("/painel", { token: dono });
-  const m = Object.fromEntries(p.visitas.porRota.map((r) => [r.rota, r.n]));
+  const m = Object.fromEntries(p.trafego.porRota.map((r) => [r.rota, r.n]));
   assert.deepEqual(m, { inicio: 2, "clube:cruzeiro": 1, jogo: 1 });
-  assert.equal(p.visitas.hoje, 4);
+  assert.equal(p.trafego.hoje, 4);
+  assert.equal(p.trafego.tempoReal.reduce((s, x) => s + x.paginas, 0), 4, "tempo real conta as páginas do minuto");
   assert.deepEqual(Object.keys(DB._db.prepare("SELECT * FROM visitas LIMIT 1").get()).sort(), ["dia", "n", "rota"]);
+});
+await t("uso das funções, abas, aparelho e origem (primeira página), widgets e os sites que colaram", async () => {
+  for (const corpo of [{ rota: "uso:compartilhar" }, { rota: "uso:compartilhar" }, { rota: "aba:historico" }, { rota: "uso:inventado" },
+    { rota: "jogo", primeira: true, ref: "https://www.google.com/" }, { rota: "jogo", primeira: true, ref: "https://l.instagram.com/x" }, { rota: "jogo", app: true },
+    { rota: "widget:tabela", site: "blog-do-torcedor.com.br" }, { rota: "widget:tabela", site: "<script>" }]) await pede("/visita", { metodo: "POST", corpo });
+  const p = await pede("/painel", { token: dono });
+  const mapa = (l) => Object.fromEntries(l.map((x) => [x.chave, x.n]));
+  assert.deepEqual(mapa(p.uso.funcoes), { compartilhar: 2 });
+  assert.deepEqual(mapa(p.uso.abas), { historico: 1 });
+  assert.deepEqual(mapa(p.publico.origens), { google: 1, "redes-sociais": 1 });
+  assert.equal(mapa(p.publico.aparelhos).app, 1);
+  assert.deepEqual(mapa(p.uso.sitesComWidget), { "blog-do-torcedor.com.br": 1 });
+});
+await t("segurança: varredura, login inválido e admin negado viram eventos, com origem anônima", async () => {
+  for (const c of ["/wp-admin/setup.php", "/.env", "/phpmyadmin"]) await worker.fetch(new Request(`https://w.test${c}`, { headers: { "cf-connecting-ip": "203.0.113.9" } }), env);
+  await worker.fetch(new Request("https://w.test/conta/entrar", { method: "POST", body: JSON.stringify({ credential: "a.b.c" }), headers: { "cf-connecting-ip": "203.0.113.9" } }), env);
+  await pede("/painel", { token: fa }); // conta comum: negado
+  const p = await pede("/painel", { token: dono });
+  const tipos = Object.fromEntries(p.seguranca.tipos24h.map((x) => [x.tipo, x.n]));
+  assert.equal(tipos.varredura, 3);
+  assert.equal(tipos["login-invalido"], 1);
+  assert.ok(tipos["admin-negado"] >= 1);
+  const o = p.seguranca.origens.find((x) => x.n >= 4);
+  assert.match(o.origem, /^[0-9a-f]{10}$/);
+  assert.ok(!JSON.stringify(p).includes("203.0.113.9"), "o IP não aparece nem fica guardado");
+  assert.ok(!JSON.stringify(DB._db.prepare("SELECT * FROM seguranca").all()).includes("203.0.113.9"));
 });
 await t("painel: contas, alertas por clube, bolão e torcida somados (sem dado de pessoa)", async () => {
   DB._db.prepare("INSERT INTO alertas (endpoint, clube, criado, tipos) VALUES ('https://fcm.googleapis.com/a', 'cruzeiro', 1, 'gol'), ('https://fcm.googleapis.com/b', 'cruzeiro', 1, 'gol'), ('https://fcm.googleapis.com/b', 'bahia', 1, 'gol')").run();

@@ -304,3 +304,31 @@
 .wg-form textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; resize: vertical; }
 .wg-previa iframe { display: block; width: 100%; max-width: 480px; border: 0; border-radius: 12px; background: #0b0b0d; }
 @media (max-width: 760px) { .wg-grade { grid-template-columns: 1fr; } }
+
+/* ---------- administração (js/painel.js) ---------- */
+.adm-topo { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.adm-vivo { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); font: 700 12.5px/1 var(--font); color: var(--text-2); }
+.adm-vivo i { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+.adm-vivo.on i { background: #22c55e; animation: adm-pulso 1.6s ease-in-out infinite; }
+@keyframes adm-pulso { 50% { box-shadow: 0 0 0 6px rgb(34 197 94 / 0); opacity: 0.6; } 0%, 100% { box-shadow: 0 0 0 0 rgb(34 197 94 / 0.5); } }
+@media (prefers-reduced-motion: reduce) { .adm-vivo.on i { animation: none; } }
+.adm-kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 16px; }
+.adm-alerta { border-color: rgb(239 68 68 / 0.6) !important; background: rgb(239 68 68 / 0.08) !important; }
+.adm-alerta b { color: #ef4444; }
+.adm-sec { margin-bottom: 16px; }
+.adm-sec .card-b { display: grid; gap: 12px; }
+.adm-duas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.adm-tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.adm-duas.sem-gap { gap: 24px; }
+.adm-graf { margin: 0; }
+.adm-graf svg { display: block; width: 100%; height: auto; }
+.adm-graf figcaption { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.adm-leg { display: flex; gap: 14px; margin-top: 6px; font-size: 12px; color: var(--text-2); }
+.adm-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.adm-tab-rola { overflow-x: auto; }
+.adm-tab { width: 100%; border-collapse: collapse; font-size: 13px; }
+.adm-tab th, .adm-tab td { padding: 8px 6px; border-bottom: 1px solid var(--line-soft); text-align: left; white-space: nowrap; }
+.adm-tab th { font-size: 11.5px; color: var(--text-3); font-weight: 700; }
+.adm-tab code { font-size: 12px; }
+.adm-tab tr.grave td { color: #f87171; }
+@media (max-width: 860px) { .adm-duas, .adm-tres { grid-template-columns: 1fr; } }
