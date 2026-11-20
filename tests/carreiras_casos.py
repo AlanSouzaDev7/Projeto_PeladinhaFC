@@ -56,4 +56,7 @@ caso("só o clube atual sem data: jogador da base, sem linha", C.fecha([f("SPFC"
 volta = C.fecha([f("Chape", 2021, None, "chapecoense"), f("Portimonense", 2022, 2022, None, 1)], "chapecoense", "Chapecoense")
 caso("voltou de empréstimo: o clube atual fecha a linha de novo", [x["c"] for x in volta] == ["Chape", "Portimonense", "Chapecoense"])
 caso("emprestado que voltou: o vínculo em aberto conta como clube atual", W.clube_bate("Portimonense S.C. Associação Chapecoense de Futebol", "Associação Chapecoense de Futebol"))
+jog = {"1": {"cid": "sao-paulo", "t": 5, "fonte": None, "lista": []}, "2": {"cid": "cruzeiro", "t": 5, "fonte": "espn", "lista": [{"c": "X"}, {"c": "Y"}]}}
+n = C.mescla_publicados(jog, {"sao-paulo": {"1": [{"c": "São Paulo", "i": 2022}], "3": [{"c": "A"}, {"c": "B"}]}, "cruzeiro": {"2": [{"c": "velho"}]}}, 99)
+caso("carreira publicada volta para o cache vazio; a do cache, quando existe, é mantida", n == 2 and jog["1"]["lista"][0]["c"] == "São Paulo" and jog["3"]["cid"] == "sao-paulo" and jog["2"]["lista"][0]["c"] == "X")
 print(f"\n{ok} casos das carreiras passaram")

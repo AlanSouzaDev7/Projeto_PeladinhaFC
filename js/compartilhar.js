@@ -108,6 +108,32 @@
     });
     return { canvas: cv, nome: `${p.cid}-${p.nome}` };
   }
+  async function cardComparacao(chaves) {
+    const [ka, kb] = String(chaves).split("|"), pa = window.JOGADOR?.get(ka), pb = window.JOGADOR?.get(kb);
+    const card = document.querySelector(`[data-cmp-a="${CSS.escape(ka)}"][data-cmp-b="${CSS.escape(kb)}"]`);
+    if (!pa || !pb || !card) throw new Error("abra a comparação para compartilhar");
+    const ca = byId[pa.cid], cb = byId[pb.cid], cv = novoCanvas(), ctx = cv.getContext("2d");
+    fundo(ctx, ca.colors[0], cb.colors[0]);
+    moldura(ctx, "Comparação · por 90 minutos");
+    const [ea, eb] = await Promise.all([escudo(ca), escudo(cb)]);
+    ctx.drawImage(ea, 120, 190, 200, 200); ctx.drawImage(eb, L - 320, 190, 200, 200);
+    texto(ctx, pa.nome, 220, 450, { px: 50, tipo: "titulo", max: 420 }); texto(ctx, pb.nome, L - 220, 450, { px: 50, tipo: "titulo", max: 420 });
+    texto(ctx, "x", L / 2, 320, { px: 80, cor: "rgba(255,255,255,0.6)" });
+    // as linhas por 90 minutos da própria comparação (as que têm número dos dois lados)
+    const linhas = [...card.querySelectorAll(".jg-cmp-l li")].map((li) => {
+      const b = li.querySelectorAll(":scope > b"), nome = li.querySelector(".jg-cl > span")?.textContent.replace("/90", "").trim();
+      return { nome, a: b[0]?.textContent.trim(), b: b[1]?.textContent.trim(), m: li.className };
+    }).filter((x) => x.nome && /,/.test(`${x.a}${x.b}`)).slice(0, 8);
+    linhas.forEach((x, i) => {
+      const y = 560 + i * 72;
+      ctx.fillStyle = "rgba(255,255,255,0.06)"; ctx.fillRect(90, y - 46, L - 180, 60);
+      texto(ctx, x.a, 150, y, { px: 40, alinha: "left", cor: x.m.includes("m-a") ? "#7CFF9B" : "#fff" });
+      texto(ctx, x.nome, L / 2, y, { peso: 600, px: 30, cor: "rgba(255,255,255,0.85)", max: 520 });
+      texto(ctx, x.b, L - 150, y, { px: 40, alinha: "right", cor: x.m.includes("m-b") ? "#7CFF9B" : "#fff" });
+    });
+    texto(ctx, card.querySelector("[data-cmp-veredito]")?.textContent || "", L / 2, A - 190, { px: 34, max: L - 160 });
+    return { canvas: cv, nome: `${pa.nome}-x-${pb.nome}` };
+  }
   async function cardBolao() {
     const d = window.BOLAO?.ultimo?.();
     if (!d?.voce) throw new Error("entre no ranking para compartilhar a sua posição");
@@ -153,7 +179,7 @@
       await document.fonts?.ready;
       const tipo = b.dataset.cp, id = b.dataset.cpId;
       const card = tipo === "partida" ? await cardPartida(origens.partida?.(id) || (() => { throw new Error("jogo não encontrado"); })())
-        : tipo === "jogador" ? await cardJogador(id) : await cardBolao();
+        : tipo === "jogador" ? await cardJogador(id) : tipo === "comparacao" ? await cardComparacao(id) : await cardBolao();
       const r = await entrega(card);
       if (msg) msg.textContent = r;
     } catch (err) {
@@ -164,6 +190,6 @@
   });
 
   // _monta: só desenha (sem compartilhar nem baixar); usado para conferir a imagem
-  const _monta = async (tipo, id) => { pegaFontes(); await document.fonts?.ready; return tipo === "partida" ? cardPartida(origens.partida(id)) : tipo === "jogador" ? cardJogador(id) : cardBolao(); };
+  const _monta = async (tipo, id) => { pegaFontes(); await document.fonts?.ready; return tipo === "partida" ? cardPartida(origens.partida(id)) : tipo === "jogador" ? cardJogador(id) : tipo === "comparacao" ? cardComparacao(id) : cardBolao(); };
   window.COMPARTILHAR = { botao, origem: (tipo, fn) => { origens[tipo] = fn; }, _arquivo: arquivo, _monta };
 })();

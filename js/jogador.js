@@ -287,10 +287,36 @@
       <div class="source">Como é feito: cada ação do jogador com posição registrada (passe, desarme, cruzamento, drible, corte, duelo aéreo, finalização) vira um ponto no campo, do ponto de vista do time (atacando para a direita). Fonte: lances da ESPN, em todas as competições com cobertura lance a lance.</div>`;
   }
 
+  /* sugestões de comparação: quem disputa a mesma posição no clube e no rival do clube */
+  function sugestoes(p, outroKey) {
+    const I = [...indice().values()].filter((x) => x.pos === p.pos && x.key !== p.key && x.key !== outroKey);
+    const rival = byId[p.cid]?.rival;
+    const doClube = I.filter((x) => x.cid === p.cid).slice(0, 3), doRival = rival ? I.filter((x) => x.cid === rival).slice(0, 3) : [];
+    const chip = (x) => `<a class="jg-sug" href="#/jogador/${esc(p.key)}/comparar/${esc(x.key)}">${crest(byId[x.cid], 18)}<span>${esc(x.nome)}</span></a>`;
+    return doClube.length || doRival.length ? `<div class="jg-sugs">${doClube.length ? `<span class="jg-sug-t">Disputa de posição no ${esc(byId[p.cid].abbr)}</span>${doClube.map(chip).join("")}` : ""}${doRival.length ? `<span class="jg-sug-t">Mesma posição no rival</span>${doRival.map(chip).join("")}` : ""}</div>` : "";
+  }
+  /* radar de perfil: seis dimensões por 90 minutos, cada uma comparada com o maior valor dos dois */
+  function perfil(a, b, ma, mb) {
+    const v = (C, m) => {
+      const s = (k) => soma(C, k), q = (x) => p90(x, m);
+      const passes = s("passes"), perdas = s("perdas");
+      return [q(s("g") * 3 + s("alvo")), q(s("a") * 3 + s("cruz") * 0.5 + passes * 0.05), q(s("dribles")), q(s("desarmes") + s("intercept") + s("cortes")), q(s("aereos")), passes + perdas ? passes / (passes + perdas) : 0];
+    };
+    const A = v(a, ma), B = v(b, mb), EIXOS = ["Ataque", "Criação", "Drible", "Defesa", "Jogo aéreo", "Posse segura"];
+    const R = 70, cx = 110, cy = 92, pt = (i, f) => { const ang = -Math.PI / 2 + (i * 2 * Math.PI) / 6; return [cx + Math.cos(ang) * R * f, cy + Math.sin(ang) * R * f]; };
+    const norm = A.map((x, i) => Math.max(x, B[i]) || 1);
+    const poli = (V) => V.map((x, i) => pt(i, Math.max(0.06, x / norm[i])).map((n) => n.toFixed(1)).join(",")).join(" ");
+    const grade = [0.33, 0.66, 1].map((f) => `<polygon points="${[0, 1, 2, 3, 4, 5].map((i) => pt(i, f).map((n) => n.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="currentColor" stroke-opacity=".15"/>`).join("");
+    const rot = EIXOS.map((e, i) => { const [x, y] = pt(i, 1.22); return `<text x="${x.toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="middle" font-size="9" fill="currentColor" fill-opacity=".75">${e}</text>`; }).join("");
+    return { svg: (corA, corB) => `<svg class="jg-radar" viewBox="0 0 220 190" role="img" aria-label="Perfil dos dois jogadores">${grade}
+      <polygon points="${poli(A)}" fill="${corA}" fill-opacity=".28" stroke="${corA}" stroke-width="2"/><polygon points="${poli(B)}" fill="${corB}" fill-opacity=".22" stroke="${corB}" stroke-width="2" stroke-dasharray="4 3"/>${rot}</svg>`, A, B };
+  }
+
   function comparar(p, j, D, outroId, J2, D2) {
     const o = outroId && get(outroId);
     const escolha = `<div class="card jg-escolha"><div class="card-h">Comparar ${esc(p.nome)} com…</div>
       <div class="jg-busca"><input type="search" data-jg-cmp placeholder="Nome do jogador" aria-label="Jogador para comparar" autocomplete="off" /><div class="jg-busca-res" data-jg-cmp-res role="listbox"></div></div>
+      ${sugestoes(p, o?.key)}
       <p class="source" style="margin-top:8px">Qualquer jogador dos 20 clubes. Os números são por 90 minutos, para comparar quem jogou mais e quem jogou menos.</p></div>`;
     if (!o) return escolha;
     if (!J2) return escolha + `<div class="card"><div class="empty" style="padding:30px">Carregando ${esc(o.nome)}…</div></div>`;
@@ -302,11 +328,42 @@
       return `<li class="${melhor ? `m-${melhor}` : ""}"><b>${fmt(va, por ? 2 : 0)}</b><span class="jg-cl"><span>${l}${por ? " <small>/90</small>" : ""}</span><span class="jg-cb"><i style="--p:${(va / mx) * 100}%;--c:${display(ca)}"></i><i style="--p:${(vb / mx) * 100}%;--c:${display(cb)}"></i></span></span><b>${fmt(vb, por ? 2 : 0)}</b></li>`;
     }).join("");
     const lado = (q, J, c) => `<a class="jg-cmp-t" href="#/jogador/${esc(q.key)}">${avatar(q, J, c, 84)}<b>${esc(q.nome)}</b><small>${crest(c, 18)} ${c.abbr} · ${POS[q.pos] || ""}</small></a>`;
-    return escolha + `<div class="card jg-cmp"><div class="jg-cmp-top">${lado(p, j, ca)}<span class="jg-vs">×</span>${lado(o, J2, cb)}</div>
+    // veredito: em quantos números por 90 minutos cada um é melhor (cartões e perdas: menos é melhor)
+    let va = 0, vb = 0;
+    for (const [, k, por] of LINHAS) {
+      if (!por || (!soma(a, k) && !soma(b, k))) continue;
+      const x = p90(soma(a, k), ma), y = p90(soma(b, k), mb), menos = k === "perdas";
+      if (x !== y) ((menos ? x < y : x > y) ? va++ : vb++);
+    }
+    const na = mediaNota((j.jogos || []).map((r) => jogoObj(D.campos, r))), nb = J2 && D2 ? mediaNota((J2.jogos || []).map((r) => jogoObj(D2.campos, r))) : null;
+    const veredito = va === vb ? "Empate técnico nos números por 90 minutos" : `${va > vb ? p.nome : o.nome} é melhor em ${Math.max(va, vb)} de ${va + vb} números por 90 minutos`;
+    const rad = perfil(a, b, ma, mb);
+    const corA = display(ca), corB = display(cb) === corA ? "var(--accent)" : display(cb); // mesma cor nos dois clubes: o segundo usa a cor do site
+    return escolha + `<div class="card jg-cmp" data-cmp-a="${esc(p.key)}" data-cmp-b="${esc(o.key)}"><div class="jg-cmp-top">${lado(p, j, ca)}<span class="jg-vs">×</span>${lado(o, J2, cb)}</div>
+      <p class="jg-veredito" data-cmp-veredito>${esc(veredito)}</p>
+      <div class="jg-cmp-extra">
+        <div class="jg-cmp-notas"><div><b>${na == null ? "–" : notaHTML(Math.round(na * 10) / 10)}</b><small>nota média</small></div><div><b>${nb == null ? "–" : notaHTML(Math.round(nb * 10) / 10)}</b><small>nota média</small></div></div>
+        <figure class="jg-cmp-radar">${rad.svg(corA, corB)}<figcaption><span><i style="background:${corA}"></i>${esc(p.nome)}</span><span><i class="tracejado" style="border-color:${corB}"></i>${esc(o.nome)}</span></figcaption></figure>
+        <div class="jg-cmp-carreira" data-cmp-carreira><small>Carregando a carreira…</small></div>
+      </div>
+      ${window.COMPARTILHAR ? `<div class="cp-wrap">${COMPARTILHAR.botao("comparacao", `${p.key}|${o.key}`)}</div>` : ""}
       <ul class="jg-cmp-l">${rows}</ul>
       <div class="jg-cmp-calor"><div><h5>${esc(p.nome)}</h5>${j.calor ? calorHTML(`Mapa de calor de ${p.nome}`).replace('class="jg-campo"', 'class="jg-campo" data-grade="calor" data-de="a"') : `<p class="empty">Sem lances.</p>`}</div>
         <div><h5>${esc(o.nome)}</h5>${J2.calor ? calorHTML(`Mapa de calor de ${o.nome}`).replace('class="jg-campo"', 'class="jg-campo" data-grade="calor" data-de="b"') : `<p class="empty">Sem lances.</p>`}</div></div>
       <div class="source">Temporada inteira, todas as competições com súmula na ESPN · por 90 min = valor x 90 ÷ minutos jogados</div></div>`;
+  }
+
+  async function carreirasLadoALado(corpo, p, o) {
+    const el = corpo.querySelector("[data-cmp-carreira]");
+    if (!el) return;
+    const [ca, cb] = await Promise.all([DADOS.carrega(`carreiras/${p.cid}`), DADOS.carrega(`carreiras/${o.cid}`)]);
+    const resumo = (q, d) => {
+      const l = Array.isArray(d?.[q.aid]) ? d[q.aid] : [];
+      const nomes = [...new Set(l.map((x) => (x.s && byId[x.s] ? byId[x.s].abbr : x.c)).filter(Boolean))];
+      const desde = l.map((x) => x.i).filter(Number.isInteger).sort()[0];
+      return nomes.length ? `<div><b>${nomes.length} ${nomes.length === 1 ? "clube" : "clubes"}${desde ? ` · desde ${desde}` : ""}</b><small>${esc(nomes.join(" → "))}</small></div>` : `<div><b>–</b><small>carreira não encontrada</small></div>`;
+    };
+    if (el.isConnected) el.innerHTML = `<h5>Carreira</h5><div class="jg-cmp-car">${resumo(p, ca)}${resumo(o, cb)}</div>`;
   }
 
   /* ---------- montar (depois que a página foi desenhada) ---------- */
@@ -338,6 +395,7 @@
     }
     corpo.innerHTML = aba === "ultimos" ? ultimos(p, j, D) : aba === "temporada" ? temporada(p, j, D, estado.filtro) : aba === "calor" ? calor(p, j, D) : aba === "comparar" ? comparar(p, j, D, outro?.aid, J2, D2) : geral(p, j, D);
     requestAnimationFrame(() => pintar(corpo, j, D, J2, D2));
+    if (aba === "comparar" && outro && J2) carreirasLadoALado(corpo, p, outro).catch(() => {});
     ligar(el, p, j, D);
   }
   function pintar(corpo, j, D, J2, D2) {

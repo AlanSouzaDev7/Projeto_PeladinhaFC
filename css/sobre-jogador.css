@@ -798,3 +798,23 @@
   .jg-topo > .jg-linha { position: relative; grid-column: 1 / -1; grid-row: 2; top: auto; left: auto; right: auto; margin-top: 0; height: 96px; }
   .jg-topo.com-linha .jg-topo-kpis { grid-row: 3; }
 }
+
+/* ---------- comparador de jogadores (js/jogador.js, aba Comparar) ---------- */
+.jg-sugs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.jg-sug-t { flex-basis: 100%; font: 700 12px/1.2 var(--font); color: var(--text-3); margin-top: 4px; }
+.jg-sug { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 12.5px/1 var(--font); text-decoration: none; }
+.jg-sug:hover { border-color: var(--text-2); }
+.jg-veredito { margin: 4px 0 12px; text-align: center; font: 800 16px/1.3 var(--font); color: var(--text); }
+.jg-cmp-extra { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 14px; align-items: center; margin-bottom: 14px; }
+.jg-cmp-notas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center; }
+.jg-cmp-notas b { display: block; font-size: 22px; }
+.jg-cmp-notas small, .jg-cmp-car small { display: block; font-size: 12px; color: var(--text-3); }
+.jg-cmp-radar { margin: 0; text-align: center; color: var(--text); }
+.jg-radar { width: 100%; max-width: 280px; height: auto; }
+.jg-cmp-radar figcaption { display: flex; justify-content: center; gap: 14px; font-size: 12px; color: var(--text-2); }
+.jg-cmp-radar i { display: inline-block; width: 12px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.jg-cmp-radar i.tracejado { background: none; border: 2px dashed; }
+.jg-cmp-carreira h5 { margin: 0 0 6px; font: 800 13px/1.2 var(--font); color: var(--text); }
+.jg-cmp-car { display: grid; gap: 8px; }
+.jg-cmp-car b { font-size: 13.5px; color: var(--text); }
+@media (max-width: 760px) { .jg-cmp-extra { grid-template-columns: 1fr; } }

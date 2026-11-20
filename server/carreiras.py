@@ -351,6 +351,20 @@ def monta_jogador(aid, nome, idade, cid, nomes_site, qid=None, wikidata=None, bu
     return (candidatas[0][1], candidatas[0][0]) if candidatas else ([], None)
 
 
+def mescla_publicados(jog, publicados, agora):
+    """Carreiras já publicadas (dados/carreiras/*.json) entram no cache quando o cache não tem lista para o jogador.
+    Assim uma carreira encontrada nunca é trocada por "vazio" (em 19/11 o robô, com um cache antigo, apagou 271 delas).
+    publicados = {clube: {aid: lista}}. Devolve quantas entraram."""
+    n = 0
+    for cid, d in publicados.items():
+        for aid, lista in (d or {}).items():
+            atual = jog.get(str(aid))
+            if lista and (not atual or not atual.get("lista")):
+                jog[str(aid)] = {"cid": cid, "t": (atual or {}).get("t", agora), "fonte": (atual or {}).get("fonte") or "arquivo", "lista": lista}
+                n += 1
+    return n
+
+
 def gravar(forcar=False, limite=POR_RODADA, refazer_vazios=False):
     """Atualiza dados/carreiras/*.json, jogador por jogador (limite de pesquisas por rodada; None = todos)."""
     import jogadores as J
@@ -368,6 +382,14 @@ def gravar(forcar=False, limite=POR_RODADA, refazer_vazios=False):
                         cache["jogadores"][aid] = {"cid": f.stem, "t": agora, "fonte": "arquivo", "lista": lista}
                 except ValueError:
                     continue
+    if not forcar and SAIDA.exists():
+        publicados = {}
+        for f in SAIDA.glob("*.json"):
+            try:
+                publicados[f.stem] = json.loads(f.read_text(encoding="utf-8"))
+            except ValueError:
+                continue
+        mescla_publicados(cache.setdefault("jogadores", {}), publicados, agora)
     busca = dict(cache.get("busca_espn") or {})
     busca["_feitas"] = 0
     jog = cache.setdefault("jogadores", {})
