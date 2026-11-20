@@ -1,7 +1,7 @@
 /* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
-   433Fut — identidade visual aplicada ao site dentro do app Android (Manual de Identidade Visual v1.0, nov. 2026).
-   Só entra no pacote do app (scripts/montar-www.mjs), depois de css/styles.css: troca as variáveis de tema e veste
+   CazéStats.TV — identidade visual do app Android (Manual de Identidade Visual v1.0, nov. 2026).
+   Faz parte do site, mas só vale dentro do app (classe .app-nativo, ligada por js/app-nativo.js): troca as variáveis de tema e veste
    os componentes com as regras do manual. As páginas de clube continuam com as cores de cada clube (conteúdo).
      · Paleta (seção 06): Azul Camisa, Noite de Estádio e Cal (primárias); Gramado, Gramado Escuro, Refletor e
        Vestiário (secundárias); cartões, Taça, Céu, Arquibancada e Rede (terciárias, em pequenas doses).

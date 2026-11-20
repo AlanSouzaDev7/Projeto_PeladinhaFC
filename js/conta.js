@@ -7,13 +7,15 @@
      de copa — as mesmas chaves que o Worker aceita) sobe para a conta e desce nos outros aparelhos. A hora de cada
      mudança é anotada quando o site grava (Storage.setItem); em cada item vale a versão mais recente.
    · Sem conta, nada muda: tudo continua só no aparelho. Sair mantém os dados no aparelho; "Apagar conta" apaga no servidor.
-   · Desligado enquanto PLACAR_CONFIG.googleClientId estiver vazio, e no app 433Fut (o Google não permite login em WebView).
+   · Desligado enquanto PLACAR_CONFIG.googleClientId estiver vazio. No app Android o Google não permite entrar dentro do
+     app: o botão abre o navegador e a sessão volta por um código de uso único (js/app-nativo.js, entrar-app.html).
    ========================================================================== */
 (() => {
   "use strict";
   const API = ((window.PLACAR_CONFIG && window.PLACAR_CONFIG.api) || "").replace(/\/+$/, "");
   const CLIENTE = (window.PLACAR_CONFIG && window.PLACAR_CONFIG.googleClientId) || "";
-  const LIGADO = !!(API && CLIENTE && !window.PLACAR_APP);
+  const APP = !!window.PLACAR_APP;
+  const LIGADO = !!(API && CLIENTE);
   const SESSAO = "cazestats:conta", META = "cazestats:sync"; // fora do prefixo "placar:": não sincronizam
   const CHAVE_OK = /^placar:(favs|simulador|votes|theme|bora|tema-bora|janela-[a-z-]{2,30}|xi2:[\w:.-]{1,80}|xi-jogo:[\w:.-]{1,80}|copa-sim-[\w-]{1,40})$/;
   const esc = (t) => SEG.esc(t);
@@ -118,7 +120,10 @@
          <p class="conta-msg" role="status" aria-live="polite"></p>`;
     painel.hidden = false;
     botao.setAttribute("aria-expanded", "true");
-    if (!s) botaoGoogle(painel.querySelector("[data-conta-google]"));
+    if (!s && APP) { // no app: o login abre no navegador do sistema
+      const alvo = painel.querySelector("[data-conta-google]");
+      alvo.innerHTML = `<button type="button" class="conta-app-entrar" data-conta="entrar-app">Entrar com Google</button><span class="conta-msg">Abre o navegador e volta para o app.</span>`;
+    } else if (!s) botaoGoogle(painel.querySelector("[data-conta-google]"));
   }
   const fecha = () => { if (painel) { painel.hidden = true; botao.setAttribute("aria-expanded", "false"); } };
   const msg = (t) => { const el = painel?.querySelector(".conta-msg[role=status]"); if (el) el.textContent = t; };
@@ -150,17 +155,25 @@
       const r = await fetch(`${API}/conta/entrar`, { method: "POST", body: JSON.stringify({ credential }) });
       const d = await SEG.json(r);
       if (!r.ok) throw new Error(d.erro || `servidor respondeu ${r.status}`);
-      gravaJSON(SESSAO, { sessao: d.sessao, nome: d.nome, foto: d.foto });
-      desenha();
-      window.dispatchEvent(new Event("conta:mudou")); // o bolão e outras partes que dependem da conta se redesenham
-      msg("Entrou! Sincronizando…");
-      const mudou = await sincroniza();
-      if (mudou) location.reload(); // trouxe dados de outro aparelho: a página redesenha com eles
-      else { mostraPainel(); msg("Tudo sincronizado."); }
+      await recebeSessao(d);
     } catch (e) {
       msg(String(e.message || e));
     }
   }
+  /* sessão nova (do botão do Google no site ou do login do app pelo navegador) */
+  async function recebeSessao(d) {
+    if (!/^[\w-]{30,60}$/.test(String(d?.sessao || ""))) throw new Error("sessão inválida");
+    gravaJSON(SESSAO, { sessao: d.sessao, nome: d.nome, foto: /^https:\/\/lh\d\.googleusercontent\.com\//.test(String(d.foto || "")) ? d.foto : "" });
+    desenha();
+    window.dispatchEvent(new Event("conta:mudou")); // o bolão e outras partes que dependem da conta se redesenham
+    if (painel?.hidden) mostraPainel(); // no app a pessoa volta do navegador com o painel fechado
+    msg("Entrou! Sincronizando…");
+    const mudou = await sincroniza();
+    if (mudou) location.reload(); // trouxe dados de outro aparelho: a página redesenha com eles
+    else { mostraPainel(); msg("Tudo sincronizado."); }
+  }
+  // aviso no painel da conta (usado pelo login do app quando o código vence ou falha)
+  function avisa(t) { if (!painel) return; if (painel.hidden) mostraPainel(); msg(t); }
 
   function aviso() {
     if (document.getElementById("conta-aviso")) return;
@@ -198,6 +211,7 @@
       if (!a) return;
       try {
         if (a === "sincronizar") { msg("Sincronizando…"); (await sincroniza()) ? location.reload() : msg("Tudo sincronizado."); }
+        if (a === "entrar-app") { msg("Abrindo o navegador…"); await window.APP_NATIVO?.entrar?.(); return; }
         if (a === "sair") { await pede("/conta/sair", { metodo: "POST" }).catch(() => {}); rm0.call(localStorage, SESSAO); desenha(); mostraPainel(); window.dispatchEvent(new Event("conta:mudou")); }
         if (a === "apagar" && confirm("Apagar a conta e tudo que ela salvou no servidor? Os dados deste aparelho continuam aqui.")) {
           await pede("/conta", { metodo: "DELETE" });
@@ -217,5 +231,5 @@
 
   // abre o painel de entrar (usado pelo bolão); fora do clique que o pediu, para o clique não fechar o painel na hora
   const abre = () => { if (painel) setTimeout(mostraPainel, 0); };
-  window.CONTA = { sessao, sincroniza, abre, ligado: LIGADO, _chaveOk: (k) => CHAVE_OK.test(k) };
+  window.CONTA = { sessao, sincroniza, abre, recebeSessao, avisa, ligado: LIGADO, _chaveOk: (k) => CHAVE_OK.test(k) };
 })();

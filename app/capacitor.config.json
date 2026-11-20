@@ -1,13 +1,18 @@
 {
   "appId": "io.github.alansouzadev7.futebol",
-  "appName": "433Fut",
+  "appName": "CazéStats.TV",
   "webDir": "www",
+  "server": {
+    "url": "https://cazestats.pages.dev/",
+    "androidScheme": "https",
+    "errorPath": "sem-conexao.html"
+  },
   "android": {
     "allowMixedContent": false,
     "captureInput": true,
     "webContentsDebuggingEnabled": false,
     "minWebViewVersion": 111,
-    "errorPath": "atualizar.html"
+    "appendUserAgent": "CazeStatsApp/3.0.0"
   },
   "plugins": {
     "SystemBars": {

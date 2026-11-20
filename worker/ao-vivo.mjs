@@ -34,7 +34,7 @@
        (UTC, quando a API-Football renova o limite) e o site volta para a ESPN sozinho.
    ========================================================================== */
 
-import { entrar, usuarioDa, lerDados, gravarDados, sair, apagarConta, limpaSessoes } from "./conta.mjs";
+import { entrar, entrarApp, trocaCodigo, usuarioDa, lerDados, gravarDados, sair, apagarConta, limpaSessoes } from "./conta.mjs";
 import { eu, gravaApelido, gravaPalpite, ranking, criaLiga, entraLiga, saiLiga, atualizaTotais, limpaTotais } from "./bolao.mjs";
 import { avisar, recentes, montaAvisos, enviaAvisos, limpaAvisos } from "./bolao-avisos.mjs";
 import { vota, resultado as resultadoTorcida, limpaVotos } from "./torcida.mjs";
@@ -281,8 +281,17 @@ const app = {
       return json({ ok: true });
     }
     // conta opcional (Entrar com Google) e sincronização do que o torcedor salva
-    if (path === "/conta/entrar" || path === "/conta/dados" || path === "/conta/sair" || path === "/conta") {
+    if (path === "/conta/entrar" || path === "/conta/dados" || path === "/conta/sair" || path === "/conta" || path === "/conta/entrar-app" || path === "/conta/troca") {
       if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      // app Android: entrar no navegador e voltar com um código de uso único (worker/conta.mjs)
+      if (path === "/conta/entrar-app" && req.method === "POST") {
+        const r = await entrarApp(env, await req.text());
+        return r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, codigo: r.codigo });
+      }
+      if (path === "/conta/troca" && req.method === "POST") {
+        const r = await trocaCodigo(env, await req.text());
+        return r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, sessao: r.sessao, nome: r.nome, foto: r.foto });
+      }
       if (path === "/conta/entrar" && req.method === "POST") {
         if (+(req.headers.get("content-length") || 0) > 8192) return json({ erro: "pedido grande demais" }, 413);
         const r = await entrar(env, await req.text());

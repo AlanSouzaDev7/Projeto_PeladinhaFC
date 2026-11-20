@@ -1,12 +1,13 @@
 {
-  "name": "433fut-app",
+  "name": "cazestats-tv-app",
   "private": true,
-  "version": "2.0.0",
-  "description": "433Fut 2.0 — app Android do CazéStats.TV (Capacitor). Autor: Alan Evangelista de Souza Martins.",
+  "version": "3.0.0",
+  "description": "CazéStats.TV — app Android (Capacitor) que abre o site publicado com a camada nativa. Autor: Alan Evangelista de Souza Martins.",
   "author": "Alan Evangelista de Souza Martins",
   "scripts": {
     "montar": "node montar-www.mjs",
-    "android": "node montar-www.mjs && npx cap sync android && cd android && gradlew assembleDebug"
+    "apk": "node montar-www.mjs && npx cap sync android && cd android && gradlew assembleDebug",
+    "apk-release": "node montar-www.mjs && npx cap sync android && cd android && gradlew assembleRelease"
   },
   "dependencies": {
     "@capacitor/android": "8.6.2",

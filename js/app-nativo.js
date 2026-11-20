@@ -1,18 +1,22 @@
 /* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
-   433Fut — o site dentro do app Android (Capacitor). Só entra no pacote do app (scripts/montar-www.mjs),
-   carregado depois de js/config.js e antes de js/dados.js.
-     · dados: o código vem no APK; os dados vêm da rede (JSON, limpos por SEG), com a última cópia boa guardada
-       no aparelho e o retrato embutido no APK para a primeira abertura sem internet (js/dados.js);
-     · placar: modo reserva da ESPN a cada 5 s (js/live.js), tudo parado com o app em segundo plano;
-     · botão voltar, links externos no navegador do sistema, compartilhar e salvar cartaz, barra de status e splash.
+   CazéStats.TV — camada nativa do app Android (Capacitor). Faz parte do site e só liga dentro do app:
+   o app abre o próprio site publicado (app/capacitor.config.json: server.url) e acrescenta "CazeStatsApp/<versão>" ao
+   user agent. Assim toda atualização do site chega ao app na hora, sem novo APK (o APK só muda quando a parte nativa muda).
+     · dados e placar: os mesmos do site, em tempo real (placar da ESPN a cada 5 s com o app aberto, parado em segundo
+       plano); sem internet, a última cópia guardada (service worker e js/dados.js);
+     · entrar com Google: o Google não deixa entrar dentro do app; abre o navegador, a pessoa entra no site e volta com um
+       código de uso único que só vale com o verificador guardado aqui (PKCE; worker/conta.mjs: entrarApp e trocaCodigo);
+     · botão voltar, links externos no navegador do sistema, compartilhar e salvar imagem, barra de status e splash.
+   Carregado logo depois de js/config.js e antes de js/dados.js (que lê window.PLACAR_APP).
    ========================================================================== */
 (() => {
   "use strict";
-  const SITE_URL = "https://alansouzadev7.github.io/Projeto_PeladinhaFC/";
+  // só dentro do app: no navegador comum este arquivo não faz nada
+  const ua = /CazeStatsApp\/([\d.]+)/.exec(navigator.userAgent || "");
+  if (!ua) return;
   window.PLACAR_APP = true;
-  window.SITE_URL = SITE_URL;
-  window.PLACAR_CONFIG = Object.assign(window.PLACAR_CONFIG || {}, { dados: `${SITE_URL}dados/` });
+  window.APP_VERSAO = ua[1];
   document.documentElement.classList.add("app-nativo");
   // o manual pede fundo escuro e denso: o app começa no tema escuro (a escolha de quem trocar continua valendo)
   try {
@@ -106,12 +110,42 @@
       return true;
     },
   };
+  /* ---------- entrar com Google pelo navegador do sistema e voltar com um código (PKCE) ---------- */
+  const API = ((window.PLACAR_CONFIG && window.PLACAR_CONFIG.api) || "").replace(/\/+$/, "");
+  const VERIF = "cazestats:app-verificador";
+  const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  APP_NATIVO.entrar = async () => {
+    const verificador = b64u(crypto.getRandomValues(new Uint8Array(32)));
+    const desafio = b64u(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verificador)));
+    try { localStorage.setItem(VERIF, JSON.stringify({ verificador, quando: Date.now() })); } catch { /* sem armazenamento */ }
+    const url = `${location.origin}/entrar-app.html?desafio=${desafio}`;
+    if (cap().Browser) await cap().Browser.open({ url, presentationStyle: "popover" });
+    else window.open(url, "_blank", "noopener");
+  };
+  async function voltouDoLogin(endereco) {
+    let u;
+    try { u = new URL(endereco); } catch { return; }
+    if (u.protocol !== "cazestats:" || u.host !== "entrar") return;
+    const codigo = u.searchParams.get("codigo") || "";
+    cap().Browser?.close?.().catch(() => {});
+    let guardado = null;
+    try { guardado = JSON.parse(localStorage.getItem(VERIF) || "null"); localStorage.removeItem(VERIF); } catch { /* nada */ }
+    if (!guardado || Date.now() - guardado.quando > 10 * 60e3 || !/^[\w-]{20,60}$/.test(codigo)) return window.CONTA?.avisa?.("O login expirou. Toque em Entrar de novo.");
+    try {
+      const r = await fetch(`${API}/conta/troca`, { method: "POST", body: JSON.stringify({ codigo, verificador: guardado.verificador }) });
+      const d = await SEG.json(r);
+      if (!r.ok) throw new Error(d.erro || `servidor respondeu ${r.status}`);
+      await window.CONTA?.recebeSessao?.(d);
+    } catch (e) {
+      window.CONTA?.avisa?.(String(e.message || e));
+    }
+  }
   window.APP_NATIVO = APP_NATIVO;
 
   /* ---------- abertura do app (só ao abrir do zero; não toca ao voltar do segundo plano) ----------
      Começa no mesmo quadro da splash do Android (o símbolo no centro, sobre Noite). Os 11 módulos entram em campo de
      baixo para cima, como o manual lê a formação (goleiro, defesa, meio-campo, ataque), o centroavante acende em
-     Refletor e o símbolo voa até o lugar dele no cabeçalho enquanto o fundo se abre e "433Fut" aparece.
+     Refletor e o símbolo voa até o lugar dele no cabeçalho enquanto o fundo se abre e "CazéStats.TV" aparece.
      Só transform e opacity (Web Animations API: roda fora da linha principal). Cerca de 1,3 s; um toque pula.
      Movimento reduzido: sem abertura. Se os dados ainda não chegaram, a revelação espera (no máximo 2,5 s). */
   // a formação numa caixa de 100 (a mesma de scripts/marca-433.mjs): [x, y, linha], linha 0 = goleiro
@@ -235,6 +269,7 @@
     if (App) {
       App.addListener("backButton", voltar);
       App.addListener("appStateChange", ({ isActive }) => estado(isActive));
+      App.addListener("appUrlOpen", ({ url }) => voltouDoLogin(url)); // cazestats://entrar?codigo=... (login no navegador)
     }
     if (StatusBar) {
       // ícones da barra de status legíveis no tema da página: escuros no claro, claros no escuro (e quando o tema muda)
@@ -257,7 +292,7 @@
     } catch {
       /* segue com o retrato embutido */
     }
-    // os arquivos que o index.html carrega de saída vieram no APK: troca pelos da rede (ou pela última cópia guardada)
+    // relê os arquivos que o index.html carrega de saída (pode ser a cópia guardada sem internet)
     const D = window.DADOS;
     if (D) {
       await Promise.all(["squads", "player-stats", "departamento-medico"].map((n) => D.carrega(n, { fresco: true })));

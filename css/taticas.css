@@ -598,3 +598,5 @@
 @media (max-width: 420px) { .pg-atalho input::placeholder { font-size: 13px; } .pg-atalho button { padding: 0 12px; } }
 /* depois da primeira pergunta as sugestões iniciais somem (as respostas sem resposta trazem as delas) */
 .pg-caixa:has(.pg-conversa li) > .pg-sug { display: none; }
+/* conta no app: o botão abre o navegador do sistema (js/conta.js) */
+.conta-app-entrar { display: block; width: 100%; min-height: 44px; margin-bottom: 6px; border-radius: 999px; border: 0; background: #fff; color: #1f1f1f; font: 700 15px var(--font); cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); }

@@ -17,7 +17,7 @@ import { geraPaginas, clubesDoSite } from "./paginas-busca.mjs";
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SAIDA = path.resolve(RAIZ, process.argv[2] || "_site");
 const SITE = process.env.SITE_URL || "https://cazestats.pages.dev/";
-const ENTRA = ["index.html", "sw.js", "manifest.webmanifest", "css", "js", "assets", "dados", "img", "media", "prints", "widget"];
+const ENTRA = ["index.html", "entrar-app.html", "sw.js", "manifest.webmanifest", "css", "js", "assets", "dados", "img", "media", "prints", "widget"];
 
 fs.rmSync(SAIDA, { recursive: true, force: true });
 fs.mkdirSync(SAIDA, { recursive: true });

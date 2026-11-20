@@ -76,5 +76,29 @@ await t("CORS: o navegador pode mandar o cabeçalho Authorization e usar PUT/DEL
   assert.match(r.headers.get("access-control-allow-headers"), /authorization/);
   assert.match(r.headers.get("access-control-allow-methods"), /PUT/);
 });
+await t("app Android: entrar no navegador e trocar o código de uso único pela sessão (com o verificador do app)", async () => {
+  const b64u = (buf) => Buffer.from(buf).toString("base64url");
+  const verificador = b64u(crypto.getRandomValues(new Uint8Array(32)));
+  const desafio = b64u(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verificador)));
+  const r1 = await (await pede("/conta/entrar-app", { metodo: "POST", corpo: { credential: await comprovante(), desafio } })).json();
+  assert.equal(r1.ok, true); assert.match(r1.codigo, /^[\w-]{30,}$/);
+  assert.equal(r1.sessao, undefined, "o navegador não recebe a sessão, só o código");
+  // outro app que pegue o código sem o verificador não entra, e o código morre
+  const outro = b64u(crypto.getRandomValues(new Uint8Array(32)));
+  assert.equal((await pede("/conta/troca", { metodo: "POST", corpo: { codigo: r1.codigo, verificador: outro } })).status, 401);
+  assert.equal((await pede("/conta/troca", { metodo: "POST", corpo: { codigo: r1.codigo, verificador } })).status, 401, "uso único");
+  // fluxo certo
+  const r2 = await (await pede("/conta/entrar-app", { metodo: "POST", corpo: { credential: await comprovante(), desafio } })).json();
+  const r3 = await (await pede("/conta/troca", { metodo: "POST", corpo: { codigo: r2.codigo, verificador } })).json();
+  assert.equal(r3.ok, true); assert.equal(r3.nome, "Alan");
+  assert.equal((await pede("/conta/dados", { token: r3.sessao })).status, 200, "a sessão do app funciona na API");
+  assert.equal((await pede("/conta/troca", { metodo: "POST", corpo: { codigo: r2.codigo, verificador } })).status, 401, "não troca duas vezes");
+  // código vencido e desafio malformado
+  const r4 = await (await pede("/conta/entrar-app", { metodo: "POST", corpo: { credential: await comprovante(), desafio } })).json();
+  DB._db.prepare("UPDATE conta_trocas SET expira = 1").run();
+  assert.equal((await pede("/conta/troca", { metodo: "POST", corpo: { codigo: r4.codigo, verificador } })).status, 401);
+  assert.equal((await pede("/conta/entrar-app", { metodo: "POST", corpo: { credential: await comprovante(), desafio: "curto" } })).status, 400);
+  assert.equal((await pede("/conta/entrar-app", { metodo: "POST", corpo: { credential: "falso", desafio } })).status, 401);
+});
 globalThis.fetch = fetchOriginal;
 console.log(`\n${ok} testes da conta passaram`);

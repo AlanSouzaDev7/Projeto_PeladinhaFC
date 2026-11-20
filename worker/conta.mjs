@@ -74,6 +74,36 @@ export async function entrar(env, txt, buscar = fetch) {
   return { status: 200, sessao: token, nome: g.nome, foto: /^https:\/\/lh\d\.googleusercontent\.com\//.test(g.foto) ? g.foto : "" };
 }
 
+/* ---------- entrar no app Android (o Google não permite entrar dentro de WebView) ----------
+   1) o app guarda um verificador aleatório e abre no navegador o site com o desafio = SHA-256(verificador);
+   2) a pessoa entra com Google no site; entrarApp cria a sessão e devolve um código de uso único (5 min);
+   3) o site manda o código de volta para o app (cazestats://entrar?codigo=...); o app troca código + verificador pela
+      sessão. Sem o verificador, o código não serve (PKCE, o esquema dos apps oficiais). */
+const DESAFIO_OK = /^[A-Za-z0-9_-]{43}$/, TROCA_MIN = 5;
+export async function entrarApp(env, txt, buscar = fetch) {
+  let d;
+  try { d = JSON.parse(txt || ""); } catch { return { status: 400, erro: "pedido inválido" }; }
+  if (!DESAFIO_OK.test(String(d?.desafio || ""))) return { status: 400, erro: "desafio inválido" };
+  const r = await entrar(env, JSON.stringify({ credential: d.credential }), buscar);
+  if (r.erro) return r;
+  const codigo = b64url(crypto.getRandomValues(new Uint8Array(24)));
+  await env.DB.prepare("INSERT INTO conta_trocas (codigo, desafio, sessao, nome, foto, expira) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
+    .bind(await sha256(codigo), d.desafio, r.sessao, r.nome || "", r.foto || "", Date.now() + TROCA_MIN * 60e3).run();
+  return { status: 200, codigo };
+}
+export async function trocaCodigo(env, txt) {
+  let d;
+  try { d = JSON.parse(txt || ""); } catch { return { status: 400, erro: "pedido inválido" }; }
+  const codigo = String(d?.codigo || ""), verificador = String(d?.verificador || "");
+  if (!/^[\w-]{20,60}$/.test(codigo) || !/^[\w-]{43,128}$/.test(verificador)) return { status: 400, erro: "pedido inválido" };
+  const chave = await sha256(codigo);
+  const t = await env.DB.prepare("SELECT desafio, sessao, nome, foto, expira FROM conta_trocas WHERE codigo = ?1").bind(chave).first();
+  await env.DB.prepare("DELETE FROM conta_trocas WHERE codigo = ?1").bind(chave).run(); // uso único, mesmo se falhar abaixo
+  if (!t || t.expira < Date.now()) return { status: 401, erro: "código vencido: entre de novo" };
+  if ((await sha256(verificador)) !== t.desafio) return { status: 401, erro: "código não confere" };
+  return { status: 200, sessao: t.sessao, nome: t.nome, foto: t.foto };
+}
+
 /* usuário da sessão (Authorization: Bearer ...) ou null */
 export async function usuarioDa(env, req) {
   const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
@@ -121,4 +151,5 @@ export async function apagarConta(env, usuario) {
 }
 export async function limpaSessoes(env) {
   await env.DB.prepare("DELETE FROM sessoes WHERE expira < ?1").bind(Date.now()).run();
+  await env.DB.prepare("DELETE FROM conta_trocas WHERE expira < ?1").bind(Date.now()).run().catch(() => {}); // códigos do app vencidos
 }
