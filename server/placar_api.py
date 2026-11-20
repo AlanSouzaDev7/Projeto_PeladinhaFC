@@ -2479,6 +2479,13 @@ def write_snapshot():
         log("checagem:", r["total"], "avisos", r["porTipo"])
     except Exception as ex:
         log("falha na checagem dos dados", ex)
+    # xG da temporada: ranking de clubes e jogadores (dados/xg.json, página #/xg)
+    try:
+        import xg as XGR
+        r = XGR.resumo()
+        log("xg:", len(r["clubes"]), "clubes,", len(r["jogadores"]), "jogadores")
+    except Exception as ex:
+        log("falha no resumo do xG", ex)
 
 
 def news_query(q):

@@ -199,7 +199,7 @@
   }
 
   // linha de estatística comparável: [rótulo, chave, por 90?]
-  const LINHAS = [["Jogos", "j"], ["Titular", "tit"], ["Minutos", "min"], ["Gols", "g", 1], ["Assistências", "a", 1], ["Finalizações", "ch", 1], ["No alvo", "alvo", 1],
+  const LINHAS = [["Jogos", "j"], ["Titular", "tit"], ["Minutos", "min"], ["Gols", "g", 1], ["Assistências", "a", 1], ["Finalizações", "ch", 1], ["No alvo", "alvo", 1], ["xG (chances)", "xg", 1],
     ["Ações com bola no campo", "toques", 1], ["Passes", "passes", 1], ["Cruzamentos", "cruz", 1], ["Dribles tentados", "dribles", 1], ["Desarmes", "desarmes", 1],
     ["Interceptações", "intercept", 1], ["Cortes", "cortes", 1], ["Chutes bloqueados", "bloq", 1], ["Duelos aéreos", "aereos", 1], ["Perdas de posse", "perdas", 1], ["Defesas (goleiro)", "defesas", 1],
     ["Amarelos", "ca"], ["Vermelhos", "cv"]];
@@ -211,7 +211,7 @@
       <tbody>${comps.map((k) => `<tr><td class="club">${esc(k)}</td><td>${C[k].j}</td><td>${C[k].min}</td><td>${C[k].g}</td><td>${C[k].a}</td><td class="hide-sm">${C[k].ch}</td><td class="hide-sm">${C[k].alvo}</td><td class="hide-sm">${C[k].ca}</td><td class="hide-sm">${C[k].cv}</td></tr>`).join("")}
       ${comps.length > 1 ? `<tr class="jg-tot"><td class="club">Total</td>${["j", "min", "g", "a"].map((k) => `<td>${soma(C, k)}</td>`).join("")}${["ch", "alvo", "ca", "cv"].map((k) => `<td class="hide-sm">${soma(C, k)}</td>`).join("")}</tr>` : ""}</tbody></table></div>` : `<div class="empty" style="padding:24px">Ainda sem jogos nesta temporada.</div>`;
     const min = soma(C, "min");
-    const por90 = [["Ações com bola", "toques"], ["Passes", "passes"], ["Finalizações", "ch"], ["Dribles tentados", "dribles"], ["Desarmes", "desarmes"], ["Interceptações", "intercept"]]
+    const por90 = [["xG (chances)", "xg"], ["Ações com bola", "toques"], ["Passes", "passes"], ["Finalizações", "ch"], ["Dribles tentados", "dribles"], ["Desarmes", "desarmes"], ["Interceptações", "intercept"]]
       .map(([l, k]) => `<li><b>${fmt(p90(soma(C, k), min))}</b><span>${l}</span></li>`).join("");
     return `<div class="grid-2 jg-grid">
       <div>

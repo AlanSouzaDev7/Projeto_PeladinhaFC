@@ -25,18 +25,20 @@ import unicodedata
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
+import xg as XG  # noqa: E402  (server/xg.py: xG estimado de cada chute)
+
 P = None  # módulo placar_api (helpers: get_json, log, CLUBS, COMP_NAME, match_extract...), ligado em placar_api.py
 
 GX, GY = 24, 16  # grade do mapa de calor: 24 faixas de profundidade x 16 de largura
 ESPN_CORE = "https://sports.core.api.espn.com/v2/sports/soccer/leagues"
-LANCES_VERSAO = 2
+LANCES_VERSAO = 3  # 3: xG de cada chute (server/xg.py); os jogos antigos são baixados de novo uma vez
 # tipo de lance da ESPN -> número no site
 ACOES = {"Pass": "passes", "Cross": "cruz", "Tackle": "desarmes", "Attempted tackle": "desarmesT", "Interception": "intercept",
          "Clear": "cortes", "Take On": "dribles", "Aerial": "aereos", "Dispossessed": "perdas", "Save": "defesas",
          "Ball touch": "toques1", "Blocked Pass": "passesBloq", "Shot Off Target": "fin", "Shot On Target": "fin", "Shot Blocked": "fin",
          "Goal": "fin", "Foul": "faltas", "Throw In": "laterais", "Corner Awarded": "escanteios", "Free Kick": "faltasCob", "Offside": "impedimentos"}
 CAMPOS_JOGO = ["eid", "date", "comp", "opp", "home", "gf", "ga", "tit", "min", "g", "a", "ch", "alvo", "ca", "cv",
-               "toques", "passes", "cruz", "desarmes", "intercept", "cortes", "dribles", "aereos", "defesas", "perdas", "nota", "vivo", "bloq"]
+               "toques", "passes", "cruz", "desarmes", "intercept", "cortes", "dribles", "aereos", "defesas", "perdas", "nota", "vivo", "bloq", "xg"]
 # "Save" da ESPN: no goleiro é defesa; no jogador de linha é chute bloqueado (bloq). Antes de 20/11 tudo virava "defesas"
 # e zagueiros apareciam com dezenas de defesas de goleiro (achado pela checagem automática, server/checagem.py).
 
@@ -98,7 +100,7 @@ def notas_time(clube_jogadores, campos):
         melhor = max(xs, key=lambda x: (x[1], x[2]))
         out[eid] = [round(max(3.0, min(10.0, media)), 1), melhor[0], melhor[1]]
     return out
-SOMA = ["j", "tit", "min", "g", "a", "ch", "alvo", "pen", "ca", "cv", "toques", "passes", "cruz", "desarmes", "intercept", "cortes", "dribles", "aereos", "defesas", "perdas", "bloq", "jl"]
+SOMA = ["j", "tit", "min", "g", "a", "ch", "alvo", "pen", "ca", "cv", "toques", "passes", "cruz", "desarmes", "intercept", "cortes", "dribles", "aereos", "defesas", "perdas", "bloq", "xg", "jl"]
 NIVEIS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"  # 62 níveis por célula
 
 
@@ -153,6 +155,9 @@ def lances(eid, lg):
         if k:
             q["c"][k] = q["c"].get(k, 0) + 1
         x, y = pl.get("fieldPositionX"), pl.get("fieldPositionY")
+        v = XG.do_lance(tipo, pl.get("text") or pl.get("shortText") or "", x * escala if isinstance(x, (int, float)) else x, y * escala if isinstance(y, (int, float)) else y)
+        if v is not None:
+            q["c"]["xg"] = round(q["c"].get("xg", 0) + v, 4)
         # (0, 0) é "sem posição" na ESPN
         if isinstance(x, (int, float)) and isinstance(y, (int, float)) and (x or y):
             x, y = x * escala, y * escala
@@ -576,9 +581,18 @@ def _soma(dst, src):
 def montar(squads, todas, lan, fotos):
     by_espn = {str(c["espn"]): cid for cid, c in P.CLUBS.items()}
     por_jogador = {}  # aid -> lista de (data, linha do jogo, grade)
+    xg_time = {}  # clube -> [(competição, xG a favor, xG contra, gols pró, gols contra)], só jogos com lances na versão do xG
     for eid, m in todas.items():
         placar, casa = m.get("placar") or {}, m.get("home")
         ids = list((m.get("teams") or {}).keys())
+        P_ = (lan.get(eid) or {})
+        if (P_.get("v") or 0) >= 3 and not m.get("vivo"):
+            soma_xg = {tid: sum(((P_.get("p") or {}).get(str(r[0])) or {}).get("c", {}).get("xg", 0) for r in rows) for tid, rows in (m.get("teams") or {}).items()}
+            for tid in soma_xg:
+                cid_t = by_espn.get(str(tid))
+                outro_t = next((t for t in ids if t != tid), None)
+                if cid_t and outro_t is not None and placar.get(str(tid)) is not None:
+                    xg_time.setdefault(cid_t, []).append((m.get("comp"), soma_xg[tid], soma_xg.get(outro_t, 0), placar.get(str(tid)), placar.get(str(outro_t))))
         for tid, rows in (m.get("teams") or {}).items():
             outro = next((t for t in ids if t != tid), None)
             cid = by_espn.get(str(tid))
@@ -595,7 +609,7 @@ def montar(squads, todas, lan, fotos):
                         "g": g, "a": a, "ch": ch, "alvo": alvo, "pen": pen, "ca": ca, "cv": cv, "toques": c.get("toques", 0),
                         "passes": c.get("passes", 0), "cruz": c.get("cruz", 0), "desarmes": c.get("desarmes", 0), "intercept": c.get("intercept", 0),
                         "cortes": c.get("cortes", 0), "dribles": c.get("dribles", 0), "aereos": c.get("aereos", 0), "defesas": c.get("defesas", 0),
-                        "perdas": c.get("perdas", 0), "vivo": 1 if m.get("vivo") else 0, "_g": L["g"], "_l": 1 if L["g"] else 0, "_cid": cid, "_nome": nome}
+                        "perdas": c.get("perdas", 0), "xg": round(c.get("xg", 0), 2), "vivo": 1 if m.get("vivo") else 0, "_g": L["g"], "_l": 1 if L["g"] else 0, "_cid": cid, "_nome": nome}
                 por_jogador.setdefault(str(aid), []).append(jogo)
     # a ESPN às vezes usa o mesmo número para dois jogadores de clubes diferentes (homônimos) ou tira do elenco
     # quem ainda joga: cada clube leva quem está no elenco e quem jogou por ele na temporada
@@ -629,6 +643,8 @@ def montar(squads, todas, lan, fotos):
                 for k in SOMA[1:-1]:
                     t[k] += j.get(k, 0) or 0
                 _soma(grade, j["_g"])
+            for t in comps.values():
+                t["xg"] = round(t.get("xg", 0), 2)
             for j in lista[-10:]:
                 _soma(grade10, j["_g"])
             r = {"n": nome, "num": num, "pos": pos, "idade": idade, "comps": comps,
@@ -648,7 +664,14 @@ def montar(squads, todas, lan, fotos):
                 f = fotos[cid][str(aid)]
                 r["foto"] = dict(f, url=str(f.get("url") or "").split("?")[0], fonte=f.get("fonte") or "Wikimedia Commons")  # sem os parâmetros de rastreamento do Commons
             jog[str(aid)] = r
-        clubes[cid] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "club": cid, "grade": [GX, GY], "campos": CAMPOS_JOGO, "notasTime": notas_time(jog, CAMPOS_JOGO),
+        xt = {}
+        for comp, a_favor, contra, gp, gc in xg_time.get(cid, []):
+            for k in (comp, "Todas"):
+                t = xt.setdefault(k, {"jogos": 0, "xg": 0.0, "xgc": 0.0, "gols": 0, "gc": 0})
+                t["jogos"] += 1; t["xg"] += a_favor; t["xgc"] += contra; t["gols"] += gp or 0; t["gc"] += gc or 0  # noqa: E702
+        for t in xt.values():
+            t["xg"], t["xgc"] = round(t["xg"], 2), round(t["xgc"], 2)
+        clubes[cid] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "club": cid, "grade": [GX, GY], "campos": CAMPOS_JOGO, "notasTime": notas_time(jog, CAMPOS_JOGO), "xgTime": xt,
                        "criteriosNota": "Placar.TV: parte de 6,0, de 3 a 10; gols, assistências, finalizações, dribles, desarmes, interceptações, cortes, duelos aéreos, defesas, jogo sem sofrer gol, gols sofridos, perdas de bola, cartões e resultado; sem nota com menos de 10 min",
                        "fontes": {"lances": "ESPN (lances com coordenadas)", "sumulas": "ESPN", "fotos": "Flickr (licença livre, temporada atual) e Wikimedia Commons"}, "jogadores": jog}
     return clubes

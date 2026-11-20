@@ -1349,6 +1349,9 @@
       ${tile(2, "defesa", def.ga, `${byId[def.id].abbr} · gols sofridos`, byId[def.id])}
       ${tile(3, "amarelos", yel.ca, byId[yel.id].abbr, byId[yel.id])}
       ${tile(4, "vermelhos", red.cv, byId[red.id].abbr, byId[red.id])}
+      <a class="kpi kpi-link" href="#/xg" style="--i:5"><i class="kpi-sheet" aria-hidden="true"></i><i class="kpi-sheet" aria-hidden="true"></i>
+        <small>xG</small><b>Chances</b><em>quem cria mais e quem finaliza melhor</em>
+        <span class="kpi-more">Ver xG <svg viewBox="0 0 24 24" width="14" height="14"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>
     </div>
     <div class="rank-preview" id="rank-preview" role="tooltip" aria-hidden="true"></div>`;
   }
@@ -1715,6 +1718,7 @@
       r.page === "bolao" && window.BOLAO ? BOLAO.page(r.id, r.tab) :
       r.page === "status" && window.STATUS ? STATUS.pageStatus() :
       r.page === "creditos" && window.STATUS ? STATUS.pageCreditos() :
+      r.page === "xg" && window.XG ? XG.page() :
       window.PAINEL && r.page === PAINEL.ROTA_ADMIN ? PAINEL.page() :
       r.page === "widgets" && window.WIDGETS ? WIDGETS.page() :
       r.page === "sobre" ? pageAbout() :
@@ -1746,7 +1750,7 @@
     stamp(view);
     const navKey = r.page === "" || r.page === "partida" || r.page === "copa" ? "home" : r.page === "clube" || r.page === "jogador" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? (findMatch(r.id) ? `${byId[findMatch(r.id).home].abbr} x ${byId[findMatch(r.id).away].abbr} — CazéStats.TV` : "Partida — CazéStats.TV") : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "bolao" ? "Bolão — CazéStats.TV" : window.PAINEL && r.page === PAINEL.ROTA_ADMIN ? "Administração — CazéStats.TV" : r.page === "widgets" ? "Widgets — CazéStats.TV" : r.page === "status" ? "Status — CazéStats.TV" : r.page === "creditos" ? "Fontes e créditos — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
+    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? (findMatch(r.id) ? `${byId[findMatch(r.id).home].abbr} x ${byId[findMatch(r.id).away].abbr} — CazéStats.TV` : "Partida — CazéStats.TV") : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "bolao" ? "Bolão — CazéStats.TV" : window.PAINEL && r.page === PAINEL.ROTA_ADMIN ? "Administração — CazéStats.TV" : r.page === "widgets" ? "Widgets — CazéStats.TV" : r.page === "xg" ? "xG no Brasileirão — CazéStats.TV" : r.page === "status" ? "Status — CazéStats.TV" : r.page === "creditos" ? "Fontes e créditos — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
     enhance();
   }
 
@@ -1923,6 +1927,7 @@
     window.TORCIDA?.mount(view); // voz da torcida: quem vence e Craque do jogo
     window.PRESSAO?.mount(view); // gráfico de pressão da partida
     window.CHUTES?.mount(view); // mapa de chutes da partida
+    window.XG?.mount(view); // xG na temporada (#/xg)
     window.STATUS?.mount(view); // página de status do sistema
     window.PAINEL?.mount(view); // administração
     window.WIDGETS?.mount(view); // gerador de widgets

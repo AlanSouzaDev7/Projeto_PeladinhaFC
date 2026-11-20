@@ -359,3 +359,20 @@
 .ch-tab td { font: 800 15px/1 var(--font); color: var(--text); width: 25%; }
 .ch-tab td:first-child { text-align: left; } .ch-tab td:last-child { text-align: right; }
 .ch-tab th { font: 600 12.5px/1.2 var(--font); color: var(--text-2); text-align: center; }
+
+/* ---------- xG na temporada (js/xg.js) ---------- */
+.xg-tab-rola { overflow-x: auto; }
+.xg-tab th button { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+.xg-tab th button.on { color: var(--accent); text-decoration: underline; font-weight: 800; }
+.xg-tab td.club { position: relative; }
+.xg-tab td.club a { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-weight: 700; text-decoration: none; position: relative; z-index: 1; }
+.xg-barra { position: absolute; left: 0; bottom: 4px; height: 3px; width: var(--p); background: var(--accent); border-radius: 2px; opacity: 0.6; }
+.xg-tab td.xg-mais { color: #22c55e; font-weight: 700; } .xg-tab td.xg-menos { color: #f87171; font-weight: 700; }
+.xg-jog { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; counter-reset: xg; }
+.xg-jog li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); counter-increment: xg; }
+.xg-jog li::before { content: counter(xg); width: 1.6em; color: var(--text-3); font-size: 12px; }
+.xg-jog a { flex: 1; display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; color: var(--text); text-decoration: none; min-width: 0; }
+.xg-jog a > :first-child { grid-row: span 2; }
+.xg-jog a span { font-weight: 700; }
+.xg-jog a small { color: var(--text-3); font-size: 12px; }
+.xg-jog b { font: 800 16px/1 var(--font); font-variant-numeric: tabular-nums; }
