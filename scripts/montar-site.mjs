@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { geraPaginas } from "./paginas-busca.mjs";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SAIDA = path.resolve(RAIZ, process.argv[2] || "_site");
@@ -30,6 +31,8 @@ const hash = (arq) => createHash("sha1").update(fs.readFileSync(path.join(SAIDA,
 let html = fs.readFileSync(path.join(SAIDA, "index.html"), "utf8");
 html = html.replace(/(href|src)="((?:css|js)\/[^"?]+\.(?:css|js))"/g, (_, attr, arq) => `${attr}="${arq}?v=${hash(arq)}"`);
 fs.writeFileSync(path.join(SAIDA, "index.html"), html);
+// páginas para buscadores e prévia de link: /jogo/..., /clube/..., /jogador/... (scripts/paginas-busca.mjs)
+const PAGINAS = geraPaginas({ raiz: RAIZ, saida: SAIDA, site: SITE, html });
 
 fs.writeFileSync(path.join(SAIDA, "_headers"), `/*
   X-Content-Type-Options: nosniff
@@ -40,6 +43,12 @@ fs.writeFileSync(path.join(SAIDA, "_headers"), `/*
   Cache-Control: no-cache
 /sw.js
   Cache-Control: no-cache
+/jogo/*
+  Cache-Control: public, max-age=300
+/clube/*
+  Cache-Control: public, max-age=3600
+/jogador/*
+  Cache-Control: public, max-age=3600
 /
   Cache-Control: no-cache
 /css/*
@@ -64,10 +73,12 @@ fs.appendFileSync(path.join(SAIDA, "_headers"), "/js/jogadores/*\n  Cache-Contro
 fs.writeFileSync(path.join(SAIDA, "robots.txt"), `User-agent: *\nAllow: /\nDisallow: /dados/\nSitemap: ${SITE}sitemap.xml\n`);
 const hoje = new Date().toISOString().slice(0, 10);
 fs.writeFileSync(path.join(SAIDA, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
-<!-- CazéStats.TV · autor: Alan Evangelista de Souza Martins. As páginas internas usam rotas com # (uma só página para os buscadores, ver E6). -->
+<!-- CazéStats.TV · autor: Alan Evangelista de Souza Martins. Página inicial + uma página por jogo, clube e jogador (scripts/paginas-busca.mjs). -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${SITE}</loc><lastmod>${hoje}</lastmod><changefreq>hourly</changefreq></url>
+${PAGINAS.map((u) => `  <url><loc>${u}</loc><lastmod>${hoje}</lastmod><changefreq>${u.includes("/jogo/") ? "hourly" : "daily"}</changefreq></url>`).join("\n")}
 </urlset>
 `);
+console.log(`páginas para buscadores: ${PAGINAS.length}`);
 const tam = (dir) => fs.readdirSync(dir, { withFileTypes: true }).reduce((s, e) => s + (e.isDirectory() ? tam(path.join(dir, e.name)) : fs.statSync(path.join(dir, e.name)).size), 0);
 console.log(`site montado em ${path.relative(RAIZ, SAIDA)} (${(tam(SAIDA) / 1e6).toFixed(1)} MB)`);

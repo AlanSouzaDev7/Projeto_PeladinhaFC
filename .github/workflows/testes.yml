@@ -94,6 +94,8 @@ jobs:
         run: node tests/bolao.mjs
       - name: Voz da torcida e status do sistema
         run: node tests/torcida.mjs
+      - name: Crescimento (resumo automático e páginas para buscadores)
+        run: node tests/crescimento.mjs
       - name: Conta com Google e sincronização (comprovantes e banco simulados)
         timeout-minutes: 2
         run: node tests/conta.mjs

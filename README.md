@@ -30,6 +30,9 @@ Feito com **HTML, CSS e JavaScript puro** (sem frameworks) e uma **API em Python
 | **Onde assistir** (19/11): matérias de transmissão de cada jogo e os canais citados nos títulos, na página da partida (robô, junto com a arbitragem) | `server/placar_api.py`, `js/app.js` |
 | **Status do sistema** (19/11): página `#/status` com robô, agendador, placar e banco (verde, atrasado, parado) | `js/status.js`, `worker/status.mjs` |
 | **Fontes e créditos** (19/11): página `#/creditos` com cada fonte e licença (Wikipédia CC BY-SA) e link na linha do tempo da carreira | `js/status.js` |
+| **Páginas para buscadores e prévia de link** (19/11): uma página estática por jogo, clube e jogador (`/jogo/...`, `/clube/...`, `/jogador/...`) com título, descrição, prévia, canônico, schema.org e texto inicial; sitemap com todas | `scripts/paginas-busca.mjs`, `scripts/montar-site.mjs` |
+| **Resumo automático da partida** (19/11): prévia, ao vivo ou crônica curta escrita por regras, na página do jogo e nas páginas para buscadores | `js/resumo.js` |
+| **Site instalável e modo offline** (19/11): service worker guarda o site; sem internet abre a última versão vista, com aviso; botão Instalar o app no rodapé | `sw.js`, `js/offline.js` |
 | **Confronto direto na página da partida** (18/11): todas as competições desde 2023, com resumo de vitórias, empates e gols | `js/confronto.js` |
 | **Dados no banco D1** (18/11): o robô envia só o que mudou, o site lê do banco e usa a cópia estática se ele falhar; o site deixa de ser republicado a cada rodada | `server/enviar_d1.py`, `js/dados.js`, `worker/` |
 | Riscos para lembrar ao apresentar a uma empresa (nunca bloqueiam funções) | `docs/RISCOS-APRESENTACAO.md` |

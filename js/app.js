@@ -1,8 +1,14 @@
 /* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. Uso, cópia ou redistribuição só com autorização do autor (veja LICENSE). */
 /* ==========================================================================
    PLACAR — aplicação (SPA com rotas por hash, sem dependências)
+   Páginas para buscadores (/jogo/<id>, /clube/<id>, /jogador/<chave>, geradas por scripts/paginas-busca.mjs): o
+   endereço vira a rota com # logo ao abrir, antes do roteador.
    ========================================================================== */
 (async () => {
+  { // /jogo/x, /clube/x, /jogador/x -> #/partida/x, #/clube/x, #/jogador/x (mesma página, sem recarregar)
+    const p = /^\/(jogo|clube|jogador)\/([\w-]{1,80})(?:\.html)?\/?$/.exec(location.pathname);
+    if (p && !location.hash) history.replaceState(null, "", `/#/${p[1] === "jogo" ? "partida" : p[1]}/${p[2]}`);
+  }
   await window.PD_BOOT; // dados ao vivo da API, quando ela estiver rodando
   const { CLUBS, byId, REAL, buildStandings, realMatches } = window.PD;
   let { ROUND, ROUNDS } = window.PD;
@@ -1147,6 +1153,7 @@
           ${m.espn && m.status !== "pending" ? `<div class="card notas-partida" data-notas-partida="${m.espn}" data-h="${m.home}" data-a="${m.away}"><div class="card-h">Notas da partida <small>${m.status === "progress" ? "ao vivo, atualizadas durante o jogo" : "critérios do CazéStats.TV"}</small></div><div class="empty" style="padding:18px">Calculando as notas…</div></div>` : ""}
           ${m.espn || (LIVE.proxy() && m.status !== "ft") ? `<div class="card mam" data-mam="${m.espn || ""}" data-h="${m.home}" data-a="${m.away}" data-kick="${m.kick || ""}"><div class="card-h">Minuto a minuto <small class="mam-src">lances: ${LIVE.proxy() ? "API-Football" : "ESPN"} · narração: CazéStats.TV</small></div>
             <div class="mam-top"></div><ul class="mam-list"><li class="mam-empty">Carregando a narração…</li></ul></div>` : ""}
+          ${resumoHTML(m)}
           <div class="card"><div class="card-h">Comparação no campeonato <small>${SEG.esc(REAL.source)} · ${SEG.esc(REAL.updated)}</small></div><div class="card-b">${compareHTML(m)}</div></div>
         </div>
         <div>
@@ -1193,6 +1200,23 @@
       <ul class="arb-list">${a.assistir.slice(0, 3).map((x) => `<li><a href="${esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer"><b>${esc(x.title)}</b><small>${esc(x.source)} · ${haTempo(x.ts)} ↗</small></a></li>`).join("")}</ul>
       <p class="arb-aviso">${a.canais?.length ? "Canais citados nos títulos das matérias. " : ""}A transmissão pode mudar; confira na matéria do veículo.</p>
     </div></div></div>`;
+  }
+
+  /* resumo automático (js/resumo.js): prévia, ao vivo ou crônica curta, escrito por regras com os dados do site */
+  function contextoResumo() {
+    const pos = new Map(state.standings.map((r, i) => [r.id, { pos: i + 1, p: r.p }]));
+    return {
+      nome: (c) => byId[c]?.abbr || c,
+      tabela: (c) => pos.get(c),
+      forma: (c) => (window.CLUB_FORM?.clubs?.[c]?.last || []).filter((e) => e.res).slice(0, 5).map((e) => e.res).join(""),
+    };
+  }
+  function resumoHTML(m) {
+    if (!window.RESUMO) return "";
+    const gols = (m.gols || []).map((g) => ({ nome: g[1], clube: g[2], pen: !!g[3], contra: !!g[4] }));
+    const r = RESUMO.partida({ ...m, venue: estadio(m.venue), gols }, contextoResumo());
+    return `<div data-live="resumo"><div class="card resumo-jogo"><div class="card-h">Resumo <small>texto automático do CazéStats.TV</small></div>
+      <div class="card-b"><p>${SEG.esc(r.texto)}</p></div></div></div>`;
   }
 
   /* palpite de quem está vendo (guardado só neste navegador) */
@@ -1718,7 +1742,7 @@
     stamp(view);
     const navKey = r.page === "" || r.page === "partida" || r.page === "copa" ? "home" : r.page === "clube" || r.page === "jogador" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? "Partida — CazéStats.TV" : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "bolao" ? "Bolão — CazéStats.TV" : r.page === "status" ? "Status — CazéStats.TV" : r.page === "creditos" ? "Fontes e créditos — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
+    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? (findMatch(r.id) ? `${byId[findMatch(r.id).home].abbr} x ${byId[findMatch(r.id).away].abbr} — CazéStats.TV` : "Partida — CazéStats.TV") : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "bolao" ? "Bolão — CazéStats.TV" : r.page === "status" ? "Status — CazéStats.TV" : r.page === "creditos" ? "Fontes e créditos — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
     enhance();
   }
 
