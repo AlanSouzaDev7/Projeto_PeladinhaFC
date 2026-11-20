@@ -45,7 +45,7 @@
 
   function card(m) {
     if (!API || !m.espn || m.status === "pending") return "";
-    return `<div class="card torcida" data-torcida="${esc(String(m.espn))}" data-h="${esc(m.home)}" data-a="${esc(m.away)}" data-st="${esc(m.status)}" data-kick="${esc(String(m.kick || ""))}">
+    return `<div class="card torcida" data-torcida="${esc(String(m.espn))}" data-h="${esc(m.home)}" data-a="${esc(m.away)}" data-st="${esc(m.status)}" data-kick="${esc(String(m.kick || ""))}" data-hs="${esc(String(m.hs ?? ""))}" data-as="${esc(String(m.as ?? ""))}">
       <div class="card-h">Voz da torcida <small>votos de quem usa o CazéStats.TV</small></div><div class="card-b"><p class="tc-txt">Carregando…</p></div></div>`;
   }
   const sigla = (id) => (typeof byId !== "undefined" && byId[id]?.abbr) || id;
@@ -59,7 +59,35 @@
     return `<div class="tc-bloco"><b class="tc-h">Quem vence, segundo a torcida</b>
       <div class="ch-barra" role="img" aria-label="${esc(sigla(h))} ${p1}%, empate ${px}%, ${esc(sigla(a))} ${p2}%"><i style="width:${p1}%;background:${cor(h)}"></i><i style="width:${px}%;background:var(--text-3)"></i><i style="width:${p2}%;background:${cor(a)}"></i></div>
       <div class="tc-leg"><span>${esc(sigla(h))} ${p1}%</span><span>Empate ${px}%</span><span>${esc(sigla(a))} ${p2}%</span></div>
-      <small class="tc-txt">${t} voto${t === 1 ? "" : "s"}</small></div>`;
+      <small class="tc-txt">${t} voto${t === 1 ? "" : "s"}</small></div>${modeloHTML(el, [p1, px, p2])}`;
+  }
+  /* torcida x modelo: a chance que o CazéStats.TV calcula antes do jogo (js/chance.js) ao lado do voto da torcida;
+     com o jogo encerrado, quem acertou o favorito. Devolve [porcentagens do modelo, frases] ou null sem os dados */
+  function comparaTorcida(tor, mod, nomes, final) {
+    const fav = (ps) => { const i = ps.indexOf(Math.max(...ps)); return ps.filter((x) => x === ps[i]).length > 1 ? -1 : i; };
+    const ft = fav(tor), fm = fav(mod), nome = (i) => (i === 1 ? "o empate" : nomes[i === 0 ? 0 : 1]);
+    const frases = [];
+    if (ft >= 0 && fm >= 0 && ft === fm) frases.push(`Torcida e modelo concordam: favorito ${ft === 1 ? "é o empate" : `é ${nomes[ft === 0 ? 0 : 1]}`}.`);
+    else if (ft >= 0 && fm >= 0) frases.push(`A torcida aposta ${ft === 1 ? "no empate" : `em ${nome(ft)}`} (${tor[ft]}%); o modelo vê ${nome(fm)} como mais provável (${mod[fm]}%).`);
+    const dif = [0, 1, 2].map((i) => tor[i] - mod[i]), k = dif.map(Math.abs).indexOf(Math.max(...dif.map(Math.abs)));
+    if (Math.abs(dif[k]) >= 15) frases.push(`A maior diferença: a torcida dá ${tor[k]}% para ${nome(k)}, o modelo ${mod[k]}%.`);
+    if (final) {
+      const real = final.casa > final.fora ? 0 : final.casa === final.fora ? 1 : 2;
+      const quem = [ft === real && "a torcida", fm === real && "o modelo"].filter(Boolean);
+      frases.push(quem.length === 2 ? "Deu o favorito: torcida e modelo acertaram." : quem.length ? `Acertou ${quem[0]}.` : "Zebra: torcida e modelo erraram o favorito.");
+    }
+    return frases;
+  }
+  function modeloHTML(el, tor) {
+    if (!window.CHANCE || !window.CLUB_FORM || typeof byId === "undefined" || !byId[el.dataset.h] || !byId[el.dataset.a]) return "";
+    const c = window.CHANCE.calcula({ home: el.dataset.h, away: el.dataset.a, status: "ns" });
+    const mod = window.CHANCE._cem([c.casa, c.empate, c.fora]), h = el.dataset.h, a = el.dataset.a;
+    const final = el.dataset.st === "ft" && /^\d+$/.test(el.dataset.hs || "") && /^\d+$/.test(el.dataset.as || "") ? { casa: Number(el.dataset.hs), fora: Number(el.dataset.as) } : null;
+    const frases = comparaTorcida(tor, mod, [sigla(h), sigla(a)], final);
+    return `<div class="tc-bloco tc-modelo"><b class="tc-h">E o modelo do CazéStats.TV <small>antes do jogo</small></b>
+      <div class="ch-barra" role="img" aria-label="Modelo: ${esc(sigla(h))} ${mod[0]}%, empate ${mod[1]}%, ${esc(sigla(a))} ${mod[2]}%"><i style="width:${mod[0]}%;background:${cor(h)}"></i><i style="width:${mod[1]}%;background:var(--text-3)"></i><i style="width:${mod[2]}%;background:${cor(a)}"></i></div>
+      <div class="tc-leg"><span>${esc(sigla(h))} ${mod[0]}%</span><span>Empate ${mod[1]}%</span><span>${esc(sigla(a))} ${mod[2]}%</span></div>
+      ${frases.length ? `<p class="tc-compara">${frases.map(esc).join(" ")}</p>` : ""}</div>`;
   }
   function craqueHTML(el, r, elenco) {
     const st = el.dataset.st, kick = Number(el.dataset.kick) || 0;
@@ -95,6 +123,9 @@
       // clube de cada jogador pelo lado do jogo (mandante ou visitante)
       elenco = (await elencoDe(el.dataset.torcida)).map((x) => ({ ...x, clube: x.lado === "home" ? el.dataset.h : el.dataset.a }));
     }
+    // a chance do modelo (torcida x modelo) usa a forma dos clubes; em jogo encerrado ela pode não estar carregada
+    if (!window.CLUB_FORM && window.DADOS && n(r.totalVencedor)) await window.DADOS.carrega("club-form").catch(() => null);
+    if (!el.isConnected) return;
     el.querySelector(".card-b").innerHTML = vencedorHTML(el, r) + craqueHTML(el, r, elenco);
   }
   async function preenche(el) {
@@ -121,5 +152,5 @@
     }
   });
 
-  window.TORCIDA = { card, mount, votaVencedor };
+  window.TORCIDA = { card, mount, votaVencedor, _compara: comparaTorcida };
 })();

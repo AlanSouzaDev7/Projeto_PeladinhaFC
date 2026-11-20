@@ -218,7 +218,7 @@
         <div class="card"><div class="card-h">Temporada por competição <small>${D.updated ? `atualizado em ${esc(D.updated)}` : ""}</small></div>${tabela}</div>
         <div class="card"><div class="card-h">Por 90 minutos <small>todas as competições</small></div><ul class="jg-p90">${min ? por90 : `<li class="empty">Sem minutos em campo.</li>`}</ul></div>
         <div class="card"><div class="card-h">Últimos jogos <small><a href="#/jogador/${esc(p.key)}/ultimos" style="color:var(--ink)">ver os 10 ›</a></small></div>
-          <ul class="jg-ult">${ult.map((x) => `<li><span class="jg-d">${dm(x.date)}</span><span class="jg-o">${oppHTML(x.opp)}</span><span class="jg-s ${res(x)}">${x.gf ?? "–"}–${x.ga ?? "–"}</span><span class="jg-m">${x.min}'</span>${notaHTML(x.nota, x.vivo)}<span class="jg-ga">${x.g ? `⚽${x.g > 1 ? `×${x.g}` : ""}` : ""}${x.a ? ` 🅰${x.a > 1 ? `×${x.a}` : ""}` : ""}</span></li>`).join("") || `<li class="empty">Sem jogos.</li>`}</ul></div>
+          <ul class="jg-ult">${ult.map((x) => `<li><span class="jg-d">${dm(x.date)}</span><span class="jg-o">${oppHTML(x.opp)}</span><span class="jg-s ${res(x)}">${x.gf ?? "–"}–${x.ga ?? "–"}</span><span class="jg-m">${x.min}'</span>${notaBotao(x, p.pos)}<span class="jg-ga">${x.g ? `⚽${x.g > 1 ? `×${x.g}` : ""}` : ""}${x.a ? ` 🅰${x.a > 1 ? `×${x.a}` : ""}` : ""}</span></li>`).join("") || `<li class="empty">Sem jogos.</li>`}</ul></div>
       </div>
       <div>
         <div class="card"><div class="card-h">Mapa de calor <small>${j.lances ? `${j.lances.toLocaleString("pt-BR")} ações na temporada` : "sem lances registrados"}</small></div>
@@ -227,14 +227,48 @@
       </div></div>`;
   }
 
-  function linhaJogo(x, cols) {
-    return `<tr><td>${dm(x.date)}</td><td class="hide-sm">${esc(x.comp)}</td><td class="club"><span class="jg-o">${x.home ? "" : "@ "}${oppHTML(x.opp, 20)}</span></td><td><span class="jg-s ${res(x)}">${x.gf ?? "–"}–${x.ga ?? "–"}</span></td>${cols.map(([k, hide]) => `<td${hide ? ' class="hide-sm"' : ""}>${k === "nota" ? notaHTML(x.nota, x.vivo) : k === "min" ? `${x.min}'${x.tit ? "" : "<small> (entrou)</small>"}` : (x[k] ?? 0)}</td>`).join("")}</tr>`;
+  function linhaJogo(x, cols, pos) {
+    return `<tr><td>${dm(x.date)}</td><td class="hide-sm">${esc(x.comp)}</td><td class="club"><span class="jg-o">${x.home ? "" : "@ "}${oppHTML(x.opp, 20)}</span></td><td><span class="jg-s ${res(x)}">${x.gf ?? "–"}–${x.ga ?? "–"}</span></td>${cols.map(([k, hide]) => `<td${hide ? ' class="hide-sm"' : ""}>${k === "nota" ? notaBotao(x, pos) : k === "min" ? `${x.min}'${x.tit ? "" : "<small> (entrou)</small>"}` : (x[k] ?? 0)}</td>`).join("")}</tr>`;
   }
   const COLS = [["nota"], ["min"], ["g"], ["a"], ["ch", 1], ["alvo", 1], ["toques", 1], ["passes", 1], ["desarmes", 1], ["intercept", 1], ["dribles", 1], ["ca", 1], ["cv", 1]];
   const CAB = ["Nota", "Min", "G", "A", "Fin.", "Alvo", "Ações", "Passes", "Desarm.", "Interc.", "Dribles", "CA", "CV"];
   /* nota de 3 a 10 com a cor dos apps de placar: vermelho (abaixo de 6), laranja, amarelo, verde, azul (8+) */
   const corNota = (n) => (n == null ? "" : n >= 8 ? "n-top" : n >= 7 ? "n-boa" : n >= 6.5 ? "n-ok" : n >= 6 ? "n-med" : "n-ruim");
   const notaHTML = (n, vivo) => (n == null ? `<span class="nota n-sem" title="Menos de 10 minutos em campo">–</span>` : `<span class="nota ${corNota(n)}${vivo ? " vivo" : ""}" title="${vivo ? "Ao vivo: muda durante o jogo" : "Nota do CazéStats.TV"}">${n.toFixed(1).replace(".", ",")}</span>`);
+  /* "Por que essa nota?" (js/nota.js): a nota vira botão; ao tocar, abre logo abaixo a conta parte por parte */
+  const CAMPOS_NOTA = ["min", "g", "a", "ch", "alvo", "dribles", "cruz", "toques", "desarmes", "intercept", "cortes", "aereos", "defesas", "bloq", "ga", "gf", "perdas", "ca", "cv"];
+  const notaBotao = (x, pos) => (x.nota == null || !window.NOTA ? notaHTML(x.nota, x.vivo)
+    : `<button type="button" class="nota-exp" data-nota-x="${esc(JSON.stringify(Object.fromEntries(CAMPOS_NOTA.map((k) => [k, x[k] ?? null]))))}" data-pos="${esc(pos || "M")}" aria-expanded="false" title="Por que essa nota?" aria-label="Nota ${String(x.nota).replace(".", ",")}: ver por que">${notaHTML(x.nota, x.vivo)}</button>`);
+  const v1 = (n) => `${n > 0 ? "+" : "−"}${Math.abs(n).toFixed(Math.abs(n) < 0.1 ? 2 : 1).replace(".", ",")}`;
+  function painelNota(x, pos) {
+    const r = window.NOTA.explica(x, pos);
+    if (r.nota == null) return `<p>${esc(r.motivo)}</p>`;
+    const max = Math.max(0.01, ...r.itens.map((i) => Math.abs(i.valor)));
+    const mostra = r.itens.slice(0, 9), resto = r.itens.slice(9);
+    const linha = (i) => `<li class="${i.valor > 0 ? "mais" : "menos"}"><span>${esc(i.rotulo)}</span><i style="--w:${Math.round((Math.abs(i.valor) / max) * 100)}%"></i><b>${v1(i.valor)}</b></li>`;
+    return `<p class="ne-topo">Parte de <b>6,0</b>${r.itens.length ? " e muda com o que o jogador fez:" : "; nada mudou a nota neste jogo."}</p>
+      <ul class="ne-lista">${mostra.map(linha).join("")}${resto.length ? `<li class="ne-resto"><span>Mais ${resto.length} detalhe${resto.length > 1 ? "s" : ""} pequeno${resto.length > 1 ? "s" : ""}</span><i></i><b>${v1(resto.reduce((t, i) => t + i.valor, 0))}</b></li>` : ""}</ul>
+      <p class="ne-fim">Nota ${String(r.nota).replace(".", ",")}${r.limite === "teto" ? " (a conta passou de 10; a nota vai até 10)" : r.limite === "piso" ? " (a conta ficou abaixo de 3; a nota vai de 3 a 10)" : ""} · critérios do CazéStats.TV, os mesmos para todos</p>`;
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest(".nota-exp");
+    if (!b) return;
+    e.preventDefault();
+    const dono = b.closest("tr, li");
+    if (!dono) return;
+    const aberto = b.getAttribute("aria-expanded") === "true";
+    const atual = dono.tagName === "TR" ? dono.nextElementSibling?.classList.contains("ne-linha") && dono.nextElementSibling : dono.querySelector(":scope > .ne-painel");
+    if (atual) atual.remove();
+    b.setAttribute("aria-expanded", String(!aberto));
+    if (aberto) return;
+    let x;
+    try { x = JSON.parse(b.dataset.notaX); } catch { return; }
+    const id = `ne-${Math.random().toString(36).slice(2, 8)}`;
+    b.setAttribute("aria-controls", id);
+    const html = `<div class="ne-painel" id="${id}" role="region" aria-label="Por que essa nota">${painelNota(x, b.dataset.pos)}</div>`;
+    if (dono.tagName === "TR") dono.insertAdjacentHTML("afterend", `<tr class="ne-linha"><td colspan="${dono.children.length}">${html}</td></tr>`);
+    else dono.insertAdjacentHTML("beforeend", html);
+  });
   const mediaNota = (jogos) => { const xs = jogos.filter((x) => x.nota != null); return xs.length ? xs.reduce((t, x) => t + x.nota, 0) / xs.length : null; };
   const cab = (extra = "") => `<thead><tr><th>Data</th><th class="hide-sm">Competição</th><th>Adversário</th><th>Placar</th>${CAB.map((h, i) => `<th${COLS[i][1] ? ' class="hide-sm"' : ""}>${h}</th>`).join("")}${extra}</tr></thead>`;
 
@@ -248,7 +282,7 @@
     return `<div class="kpis jg-kpis10">${mn != null ? `<div class="kpi"><small>Nota média</small><b>${notaHTML(Math.round(mn * 10) / 10)}</b><em>nos últimos ${jogos.length} jogos</em></div>` : ""}${[["Jogos", jogos.length], ["Minutos", min], ["Gols", tot("g")], ["Assistências", tot("a")]].map(([l, v]) => `<div class="kpi"><small>${l}</small><b>${v}</b><em>${l === "Minutos" ? `média de ${Math.round(min / jogos.length)} por jogo` : l === "Jogos" ? `${tot("tit")} como titular` : `${fmt(p90(v, min), 2)} por 90 min`}</em></div>`).join("")}</div>
       <div class="grid-2 jg-grid">
         <div class="card"><div class="card-h">Jogo a jogo <small>do mais recente ao mais antigo</small></div>
-          <div class="jg-tab-wrap"><table class="table jg-tab jg-jogos">${cab()}<tbody>${jogos.slice().reverse().map((x) => linhaJogo(x, COLS)).join("")}</tbody></table></div>
+          <div class="jg-tab-wrap"><table class="table jg-tab jg-jogos">${cab()}<tbody>${jogos.slice().reverse().map((x) => linhaJogo(x, COLS, p.pos)).join("")}</tbody></table></div>
           <div class="source">Ações = toda ação com bola registrada com posição no campo (passe, desarme, cruzamento, drible, finalização...). Fonte: ESPN.</div></div>
         <div>
           <div class="card"><div class="card-h">Ações com bola por jogo</div><ol class="jg-barras">${barras}</ol></div>
@@ -265,7 +299,7 @@
     for (const x of lista.slice().reverse()) {
       const m = `${MESES[+x.date.slice(5, 7) - 1]} ${x.date.slice(0, 4)}`;
       if (m !== mes) { mes = m; linhas += `<tr class="jg-mes"><td colspan="16">${m}</td></tr>`; }
-      linhas += linhaJogo(x, COLS);
+      linhas += linhaJogo(x, COLS, p.pos);
     }
     const antes = j.antes?.length ? `<p class="jg-antes">Também jogou por ${j.antes.map(([cid, n]) => `${crest(byId[cid], 18)} ${byId[cid].abbr} (${n} jogo${n > 1 ? "s" : ""})`).join(", ")} nesta temporada.</p>` : "";
     return `<div class="card"><div class="card-h">Jogos da temporada pelo ${byId[p.cid].abbr} <small>${lista.length} jogo${lista.length === 1 ? "" : "s"}</small></div>
@@ -440,7 +474,7 @@
       if (!linhas.length) return "";
       const t = D.notasTime?.[eid];
       return `<div class="np-time"><div class="np-cab">${crest(c, 26)}<b>${esc(c.name)}</b>${t ? `${notaHTML(t[0])}<small>nota do time</small>` : ""}</div>
-        <ul class="np-lista">${linhas.map(({ aid, r, x }) => `<li class="${t && t[1] === aid ? "melhor" : ""}"><a href="#/jogador/${aid}-${cid}">${esc(r.n)}</a><small>${x.min}'${x.tit ? "" : " (entrou)"}${x.g ? ` · ${x.g} ${x.g > 1 ? "gols" : "gol"}` : ""}${x.a ? ` · ${x.a} assist.` : ""}${t && t[1] === aid ? " · melhor em campo" : ""}</small>${notaHTML(x.nota, x.vivo)}</li>`).join("")}</ul></div>`;
+        <ul class="np-lista">${linhas.map(({ aid, r, x }) => `<li class="${t && t[1] === aid ? "melhor" : ""}"><a href="#/jogador/${aid}-${cid}">${esc(r.n)}</a><small>${x.min}'${x.tit ? "" : " (entrou)"}${x.g ? ` · ${x.g} ${x.g > 1 ? "gols" : "gol"}` : ""}${x.a ? ` · ${x.a} assist.` : ""}${t && t[1] === aid ? " · melhor em campo" : ""}</small>${notaBotao(x, r.pos)}</li>`).join("")}</ul></div>`;
     }).filter(Boolean);
     el.innerHTML = blocos.length ? `${el.querySelector(".card-h").outerHTML}<div class="np-grid">${blocos.join("")}</div><div class="source">${esc(Ds.find(Boolean)?.criteriosNota || "")}</div>`
       : `${el.querySelector(".card-h").outerHTML}<div class="empty" style="padding:18px">As notas aparecem quando a súmula do jogo for lida (durante o jogo, a cada atualização; no fim, com os números finais).</div>`;

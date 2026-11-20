@@ -72,8 +72,8 @@ Valor para investidor: ★★★ alto, ★★ médio, ★ baixo. Custo: P (dias)
 | # | Função | Valor | Custo | Pilares | Observação |
 |---|---|---|---|---|---|
 | L1 | **Início personalizado ("Meu CazéStats")**: jogos dos favoritos primeiro, "Em alta agora" e atalhos | ★★ | P | Escala | A nova tela inicial do SofaScore; já temos favoritos e "Em alta" na busca |
-| L2 | **Enquete "quem vence?" antes do jogo**, com o percentual da torcida ao lado da nossa chance calculada | ★★ | P | Autoria | Gera um dado próprio: "a torcida acha X, o modelo acha Y". Reaproveita a votação do craque |
-| L3 | **Por que essa nota?** Ao tocar na nota, os números que pesaram (gols, passes, desarmes, erros) | ★★ | P | Autoria, confiança | O FlashScore acaba de lançar a nota "mais transparente" |
+| L2 | **Torcida x modelo**: a enquete "quem vence?" já existia (Voz da torcida); faltava pôr a nossa chance calculada ao lado e dizer quem acertou | ★★ | P | Autoria | Feito em 20/11: "a torcida aposta no empate (60%); o modelo vê o Mirassol (39%)" e, no fim, quem acertou |
+| L3 | **Por que essa nota?** Ao tocar na nota, os números que pesaram (gols, passes, desarmes, erros) | ★★ | P | Autoria, confiança | Feito em 20/11 (js/nota.js): a conta bate com as 15.753 notas gravadas pelo robô |
 | L4 | **Placar na tela de bloqueio** (Live Activities no iPhone e notificação contínua no Android) | ★★ | M | Escala | Só no app (Capacitor); no Android dá para começar já |
 | L5 | **Narração em texto automática** dos lances em português, com o nosso estilo | ★★ | M | Autoria | O SofaScore oferece em 12 idiomas; podemos ser o melhor em português |
 | L6 | **Valor de mercado e fim de contrato** dos jogadores | ★ | M | Depende de fonte | Exige uma fonte de dados com licença |
