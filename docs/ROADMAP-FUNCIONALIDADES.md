@@ -50,7 +50,7 @@ interação de torcida (bolão, ligas, avisos) que os gigantes cobram ou não t�
 |---|---|---|---|
 | Placar e estatísticas vêm da ESPN por endereço público, **sem contrato** | Disponibilidade, Autoria | Alta | Contratar fonte licenciada antes de escalar (API-Football ~US$ 20–40/mês, Sportmonks, Opta para grande porte); manter ESPN como reserva. O código já tem o caminho da API-Football (`LIVE.proxy`) |
 | Alerta de gol: 30 envios por minuto (limite do plano grátis) | Escalabilidade | Alta quando crescer | Com 10 mil inscritos num clube, um gol levaria ~5 h para chegar a todos. Solução: Cloudflare Queues (plano pago, US$ 5/mês) espalhando os envios em paralelo |
-| Ranking do bolão soma todos os palpites a cada consulta | Escalabilidade | Média | Hoje tem cache de 60 s. Acima de ~50 mil palpites: tabela de totais atualizada quando o jogo termina |
+| Ranking do bolão soma todos os palpites a cada consulta | Escalabilidade | Resolvido (20/11) | Tabela de totais (`bolao_totais`) refeita quando o jogo termina; com 120 mil palpites o ranking geral cai de ~60 ms para ~3 ms (tests/bolao-rodada.mjs) |
 | Carreiras vêm da Wikipédia (licença CC BY-SA): exige **crédito** | Autoria | Média | Página "Fontes e créditos" e crédito na linha do tempo (item A6) |
 | Fotos do TheSportsDB/Flickr sem licença comercial | Autoria | Alta para vender | Já previsto: `MODO_VENDA=1` antes de apresentar ou vender |
 | Sem monitoramento: se o robô ou o Worker parar, ninguém fica sabendo | Disponibilidade | Média | Verificação a cada 5 min com aviso (item D1) |

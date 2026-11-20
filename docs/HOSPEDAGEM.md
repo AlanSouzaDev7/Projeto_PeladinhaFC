@@ -163,6 +163,14 @@ npx wrangler d1 execute cazestats --remote --file worker/migracoes/007-administr
 npx wrangler d1 execute cazestats --remote --file worker/migracoes/008-bloqueios.sql
 ```
 
+**Bolão pronto para crescer (20/11).** Os totais de cada torcedor ficam guardados e são refeitos quando um jogo com
+palpites acaba (ou tem o placar corrigido); o ranking geral e o das ligas leem esses totais. Uma vez só, **antes** de
+publicar o Worker (sem a tabela, o ranking continua somando os palpites como antes):
+
+```bash
+npx wrangler d1 execute cazestats --remote --file worker/migracoes/009-bolao-totais.sql
+```
+
 ### 8. Entrar com Google (conta opcional e sincronização)
 
 O botão de conta no cabeçalho (js/conta.js) usa o "Entrar com Google". O Worker confere o comprovante do Google e guarda

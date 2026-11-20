@@ -118,6 +118,60 @@ export async function gravaPalpite(env, usuario, txt, agora = Date.now()) {
 }
 
 /* ranking: geral (só quem já escolheu apelido e tem jogo encerrado) ou da liga (todos os membros, mesmo com 0) */
+/* ---------- totais guardados (escala): o ranking geral e o das ligas leem bolao_totais ----------
+   Quando um jogo com palpites acaba (ou tem o placar corrigido), os totais de quem palpitou nele são refeitos a partir
+   dos palpites: refazer em vez de somar mantém o número certo mesmo se o placar mudar ou a conta rodar duas vezes.
+   Roda no agendador (a cada 5 minutos) e antes de montar um ranking que não está no cache. */
+const DIAS_RECONTA = 4; // placar corrigido depois disso não é recontado sozinho (raríssimo)
+const REFAZ = (filtro) => `INSERT OR REPLACE INTO bolao_totais (usuario, pontos, exatos, jogos, atualizado)
+  SELECT p.usuario, SUM(${PONTOS_SQL}), SUM((${PONTOS_SQL}) = ${PONTOS.exato}), COUNT(*), ?1 FROM palpites p JOIN jogos j ON j.id = p.jogo
+  WHERE j.estado = 'post' AND j.gols_casa IS NOT NULL AND j.gols_fora IS NOT NULL ${filtro} GROUP BY p.usuario`;
+export async function atualizaTotais(env, agora = Date.now()) {
+  const primeiraVez = !(await env.DB.prepare("SELECT 1 AS x FROM bolao_contados LIMIT 1").first());
+  if (primeiraVez) {
+    // primeira vez (ou banco recém-migrado): soma tudo de uma vez e marca todos os jogos encerrados com palpite
+    await env.DB.batch([
+      env.DB.prepare(REFAZ("")).bind(agora),
+      env.DB.prepare(`INSERT OR REPLACE INTO bolao_contados (jogo, gols_casa, gols_fora, contado) SELECT j.id, j.gols_casa, j.gols_fora, ?1 FROM jogos j
+        WHERE j.estado = 'post' AND j.gols_casa IS NOT NULL AND j.gols_fora IS NOT NULL AND j.id IN (SELECT DISTINCT jogo FROM palpites)`).bind(agora),
+    ]);
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM bolao_contados").first();
+    if (n?.n) await limpaRanking();
+    return n?.n || 0;
+  }
+  const desde = new Date(agora - DIAS_RECONTA * 864e5).toISOString().slice(0, 10);
+  const { results: novos } = await env.DB.prepare(`SELECT j.id, j.gols_casa, j.gols_fora FROM jogos j
+    WHERE j.data >= ?1 AND j.estado = 'post' AND j.gols_casa IS NOT NULL AND j.gols_fora IS NOT NULL
+      AND EXISTS (SELECT 1 FROM palpites p WHERE p.jogo = j.id)
+      AND NOT EXISTS (SELECT 1 FROM bolao_contados c WHERE c.jogo = j.id AND c.gols_casa = j.gols_casa AND c.gols_fora = j.gols_fora)
+    LIMIT 40`).bind(desde).all();
+  if (!novos?.length) return 0;
+  const ids = novos.map((j) => j.id), marcas = ids.map((_, i) => `?${i + 2}`).join(",");
+  await env.DB.batch([
+    env.DB.prepare(REFAZ(`AND p.usuario IN (SELECT usuario FROM palpites WHERE jogo IN (${marcas}))`)).bind(agora, ...ids),
+    ...novos.map((j) => env.DB.prepare("INSERT OR REPLACE INTO bolao_contados (jogo, gols_casa, gols_fora, contado) VALUES (?1, ?2, ?3, ?4)").bind(j.id, j.gols_casa, j.gols_fora, agora)),
+  ]);
+  await limpaRanking();
+  return novos.length;
+}
+// limpeza diária: totais de quem apagou a conta (sem palpites) saem da tabela
+export async function limpaTotais(env) {
+  await env.DB.prepare("DELETE FROM bolao_totais WHERE usuario NOT IN (SELECT usuario FROM palpites)").run().catch(() => {});
+}
+const semTabela = (e) => /no such table/i.test(String(e?.message || e));
+// ranking geral pelos totais guardados: os 100 primeiros, o total de torcedores e a posição de quem pediu
+async function geralPorTotais(env, usuario) {
+  const [{ results: linhas }, tot, eu] = await Promise.all([
+    env.DB.prepare(`SELECT a.usuario, a.apelido, t.pontos, t.exatos, t.jogos FROM bolao_totais t JOIN apelidos a ON a.usuario = t.usuario
+      ORDER BY t.pontos DESC, t.exatos DESC, t.jogos ASC, a.apelido LIMIT 100`).all(),
+    env.DB.prepare("SELECT COUNT(*) AS n FROM bolao_totais t JOIN apelidos a ON a.usuario = t.usuario").first(),
+    usuario ? env.DB.prepare(`SELECT a.apelido, t.pontos, t.exatos, t.jogos,
+        (SELECT COUNT(*) FROM bolao_totais o JOIN apelidos b ON b.usuario = o.usuario WHERE o.pontos > t.pontos OR (o.pontos = t.pontos AND o.exatos > t.exatos)) + 1 AS pos
+      FROM bolao_totais t JOIN apelidos a ON a.usuario = t.usuario WHERE t.usuario = ?1`).bind(usuario).first() : null,
+  ]);
+  return { linhas: linhas || [], total: tot?.n || 0, eu };
+}
+
 export async function ranking(env, usuario, liga, jogosTxt = "") {
   if (liga && !CODIGO_OK.test(liga)) return erro(400, "Código de liga inválido.");
   // ranking de uma rodada: o site manda os ids dos jogos dela (até 20)
@@ -125,11 +179,24 @@ export async function ranking(env, usuario, liga, jogosTxt = "") {
   if (jogos.length > 20 || jogos.some((x) => !/^\d{1,12}$/.test(x))) return erro(400, "Lista de jogos inválida.");
   const cache = typeof caches !== "undefined" ? caches.default : null;
   const chave = `https://cache.cazestats.interno/bolao/ranking/${liga || "geral"}/${jogos.join("-") || "todos"}`;
-  let linhas = null, nome = null;
+  let linhas = null, nome = null, total = null;
   const hit = cache && (await cache.match(chave));
-  if (hit) ({ linhas, nome } = await hit.json());
+  if (hit) ({ linhas, nome, total = null } = await hit.json());
   else {
-    if (liga) {
+    // totais guardados (geral e ligas); sem a tabela ainda (migração 009 não rodada), soma os palpites como antes
+    let guardados = !jogos.length;
+    if (guardados) await atualizaTotais(env).catch((e) => { if (semTabela(e)) guardados = false; else console.error("bolão totais:", e?.message); });
+    if (guardados && !liga) {
+      const g = await geralPorTotais(env, null);
+      linhas = g.linhas; total = g.total;
+    } else if (guardados && liga) {
+      const l = await env.DB.prepare("SELECT nome FROM ligas WHERE codigo = ?1").bind(liga).first();
+      if (!l) return erro(404, "Liga não encontrada. Confira o código.");
+      nome = l.nome;
+      ({ results: linhas } = await env.DB.prepare(`SELECT a.usuario, a.apelido, COALESCE(t.pontos, 0) AS pontos, COALESCE(t.exatos, 0) AS exatos, COALESCE(t.jogos, 0) AS jogos
+        FROM ligas_membros m JOIN apelidos a ON a.usuario = m.usuario LEFT JOIN bolao_totais t ON t.usuario = m.usuario WHERE m.codigo = ?1
+        ORDER BY pontos DESC, exatos DESC, jogos ASC, a.apelido`).bind(liga).all());
+    } else if (liga) {
       const l = await env.DB.prepare("SELECT nome FROM ligas WHERE codigo = ?1").bind(liga).first();
       if (!l) return erro(404, "Liga não encontrada. Confira o código.");
       nome = l.nome;
@@ -141,7 +208,7 @@ export async function ranking(env, usuario, liga, jogosTxt = "") {
         ORDER BY t.pontos DESC, t.exatos DESC, t.jogos ASC, a.apelido LIMIT 5000`).bind(...jogos).all());
     }
     linhas = linhas || [];
-    if (cache) await cache.put(chave, new Response(JSON.stringify({ linhas, nome }), { headers: { "cache-control": "public, max-age=60" } }));
+    if (cache) await cache.put(chave, new Response(JSON.stringify({ linhas, nome, total }), { headers: { "cache-control": "public, max-age=60" } }));
   }
   // posição com empate: quem tem os mesmos pontos e placares exatos divide a posição
   let pos = 0;
@@ -149,12 +216,17 @@ export async function ranking(env, usuario, liga, jogosTxt = "") {
     if (i === 0 || r.pontos !== linhas[i - 1].pontos || r.exatos !== linhas[i - 1].exatos) pos = i + 1;
     return { pos, apelido: r.apelido, pontos: r.pontos, exatos: r.exatos, jogos: r.jogos, voce: !!usuario && r.usuario === usuario };
   });
-  const voce = comPos.find((r) => r.voce) || null;
-  return { status: 200, liga: liga || null, nome, rodada: jogos.length > 0, total: comPos.length, linhas: comPos.slice(0, 100), voce };
+  let voce = comPos.find((r) => r.voce) || null;
+  // geral pelos totais: só os 100 primeiros vêm da lista; quem está abaixo recebe a posição contada no banco
+  if (total != null && usuario && !voce) {
+    const eu = (await geralPorTotais(env, usuario).catch(() => null))?.eu;
+    if (eu) voce = { pos: eu.pos, apelido: eu.apelido, pontos: eu.pontos, exatos: eu.exatos, jogos: eu.jogos, voce: true };
+  }
+  return { status: 200, liga: liga || null, nome, rodada: jogos.length > 0, total: total ?? comPos.length, linhas: comPos.slice(0, 100), voce };
 }
 export async function limpaRanking(liga) {
   const cache = typeof caches !== "undefined" ? caches.default : null;
-  if (cache) await Promise.all(["geral", liga].filter(Boolean).map((x) => cache.delete(`https://cache.cazestats.interno/bolao/ranking/${x}`)));
+  if (cache) await Promise.all(["geral", liga].filter(Boolean).map((x) => cache.delete(`https://cache.cazestats.interno/bolao/ranking/${x}/todos`)));
 }
 
 export async function criaLiga(env, usuario, txt) {

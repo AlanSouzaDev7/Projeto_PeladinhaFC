@@ -35,7 +35,7 @@
    ========================================================================== */
 
 import { entrar, usuarioDa, lerDados, gravarDados, sair, apagarConta, limpaSessoes } from "./conta.mjs";
-import { eu, gravaApelido, gravaPalpite, ranking, criaLiga, entraLiga, saiLiga } from "./bolao.mjs";
+import { eu, gravaApelido, gravaPalpite, ranking, criaLiga, entraLiga, saiLiga, atualizaTotais, limpaTotais } from "./bolao.mjs";
 import { avisar, recentes, montaAvisos, enviaAvisos, limpaAvisos } from "./bolao-avisos.mjs";
 import { vota, resultado as resultadoTorcida, limpaVotos } from "./torcida.mjs";
 import { status, batimento } from "./status.mjs";
@@ -437,10 +437,11 @@ const app = {
       const min = new Date(evento.scheduledTime || Date.now()).getUTCMinutes();
       if (env.DB) ctx.waitUntil((min % 5 === 0 ? montaAvisos(env) : Promise.resolve(0)).then(() => enviaAvisos(env)).catch((e) => console.error("bolão:", e && e.message)));
       if (env.DB && min % 5 === 0) ctx.waitUntil(batimento(env).catch(() => {})); // a página de status vê que o agendador está vivo
+      if (env.DB && min % 5 === 2) ctx.waitUntil(atualizaTotais(env).catch((e) => console.error("bolão totais:", e && e.message))); // totais do bolão dos jogos que acabaram
       return;
     }
     ctx.waitUntil(disparaRobo(env).then((r) => console.log("robô:", r)));
-    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env), limpaSessoes(env), limpaAvisos(env), limpaVotos(env), limpaPainel(env), limpaBloqueios(env)]));
+    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env), limpaSessoes(env), limpaAvisos(env), limpaVotos(env), limpaPainel(env), limpaBloqueios(env), limpaTotais(env)]));
   },
 };
 
