@@ -1155,6 +1155,7 @@
             <div class="mam-top"></div><ul class="mam-list"><li class="mam-empty">Carregando a narração…</li></ul></div>` : ""}
           ${resumoHTML(m)}
           ${window.PRESSAO ? PRESSAO.card(m) : ""}
+          ${window.CHUTES ? CHUTES.card(m) : ""}
           <div class="card"><div class="card-h">Comparação no campeonato <small>${SEG.esc(REAL.source)} · ${SEG.esc(REAL.updated)}</small></div><div class="card-b">${compareHTML(m)}</div></div>
         </div>
         <div>
@@ -1921,6 +1922,7 @@
     window.BOLAO?.mount(view); // bolão: palpite na partida e página #/bolao
     window.TORCIDA?.mount(view); // voz da torcida: quem vence e Craque do jogo
     window.PRESSAO?.mount(view); // gráfico de pressão da partida
+    window.CHUTES?.mount(view); // mapa de chutes da partida
     window.STATUS?.mount(view); // página de status do sistema
     window.PAINEL?.mount(view); // administração
     window.WIDGETS?.mount(view); // gerador de widgets

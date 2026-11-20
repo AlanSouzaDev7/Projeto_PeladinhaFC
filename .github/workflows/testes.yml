@@ -104,6 +104,8 @@ jobs:
         run: node tests/pressao.mjs
       - name: Proteção contra abuso
         run: node tests/protecao.mjs
+      - name: Mapa de chutes e xG
+        run: node tests/chutes.mjs
       - name: Conta com Google e sincronização (comprovantes e banco simulados)
         timeout-minutes: 2
         run: node tests/conta.mjs
