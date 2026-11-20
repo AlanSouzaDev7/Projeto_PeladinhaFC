@@ -157,6 +157,12 @@ npx wrangler d1 execute cazestats --remote --file worker/migracoes/006-visitas.s
 npx wrangler d1 execute cazestats --remote --file worker/migracoes/007-administracao.sql
 ```
 
+**Proteção contra abuso (20/11).** Limite de pedidos por origem (limitador da Cloudflare: `[[ratelimits]]` no `wrangler.toml`) e bloqueio automático de origens insistentes. Uma vez só:
+
+```bash
+npx wrangler d1 execute cazestats --remote --file worker/migracoes/008-bloqueios.sql
+```
+
 ### 8. Entrar com Google (conta opcional e sincronização)
 
 O botão de conta no cabeçalho (js/conta.js) usa o "Entrar com Google". O Worker confere o comprovante do Google e guarda

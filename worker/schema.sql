@@ -211,3 +211,12 @@ CREATE TABLE IF NOT EXISTS seguranca (
   pais    TEXT
 );
 CREATE INDEX IF NOT EXISTS seguranca_quando ON seguranca (quando);
+
+-- proteção contra abuso (worker/protecao.mjs)
+CREATE TABLE IF NOT EXISTS bloqueios (
+  origem TEXT    PRIMARY KEY,     -- código anônimo da origem (resumo do IP que muda todo dia)
+  ate    INTEGER NOT NULL,        -- bloqueado até (ms)
+  motivo TEXT    NOT NULL,
+  pais   TEXT,
+  criado INTEGER NOT NULL
+);

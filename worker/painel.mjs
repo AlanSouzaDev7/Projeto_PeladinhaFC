@@ -8,6 +8,8 @@
    voltar ao IP) e o país informado pela Cloudflare.
    Gravação em lote: cada instância soma na memória e grava no máximo uma vez por minuto.
    ========================================================================== */
+import { bloqueiaInsistentes, listaBloqueios } from "./protecao.mjs";
+
 const PAGINAS = new Set(["inicio", "clubes", "tabela", "simulador", "bora", "bolao", "jogo", "jogador", "copa", "sobre", "status", "creditos", "widgets", "privacidade", "admin"]);
 const USOS = new Set(["compartilhar", "agenda", "palpite-1x2", "craque", "alerta", "instalar", "widget-copiado", "bolao-palpite", "bolao-liga", "busca", "favorito", "simulador", "comparar"]);
 const ABAS = new Set(["geral", "partidas", "escalacoes", "historico", "elenco", "mercado", "estatisticas", "comparar", "tabela", "ultimos", "temporada", "calor"]);
@@ -72,12 +74,16 @@ export async function observa(env, req, resp) {
   else if (st === 413 || st === 414) tipo = "pedido-grande";
   else if (st === 429) tipo = "excesso-de-pedidos";
   else if (st === 400 && met !== "GET") tipo = "pedido-invalido";
+  if (st === 403 && resp.headers.get("x-bloqueio")) tipo = "bloqueado";
   if (tipo && eventos.length < 300) {
-    const ip = req.headers.get("cf-connecting-ip") || "";
-    const h = ip ? await resumo(`${ip}|${dia()}|${env.SAL_PAINEL || "cazestats"}`) : "sem-ip";
+    const h = await origemDoIp(env, req.headers.get("cf-connecting-ip") || "");
     eventos.push({ quando: Date.now(), tipo, rota: path.slice(0, 120), metodo: met.slice(0, 8), status: st, origem: h, pais: /^[A-Z]{2}$/.test(String(req.cf?.country || "")) ? req.cf.country : "" });
   }
   await gravaPendentes(env).catch(() => {});
+}
+/* código anônimo da origem: resumo do IP com o dia (muda todo dia; não dá para voltar ao IP) */
+export async function origemDoIp(env, ip) {
+  return ip ? resumo(`${ip}|${dia()}|${env.SAL_PAINEL || "cazestats"}`) : "sem-ip";
 }
 async function resumo(t) {
   const b = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)));
@@ -102,6 +108,7 @@ export async function gravaPendentes(env, forcar = false) {
     ops.push(env.DB.prepare("INSERT INTO seguranca (quando, tipo, rota, metodo, status, origem, pais) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)").bind(x.quando, x.tipo, x.rota, x.metodo, x.status, x.origem, x.pais));
   }
   if (ops.length) await env.DB.batch(ops);
+  if (e.length) await bloqueiaInsistentes(env).catch(() => {}); // proteção: origem insistente fica bloqueada por 24 h
   return ops.length;
 }
 export const gravaVisitas = gravaPendentes;
@@ -163,7 +170,7 @@ export async function painel(env, agora = Date.now()) {
     alertas: { aparelhos: aparelhos.n || 0, porClube, avisosBolao: avisosBolao.n || 0 },
     bolao: { palpites: palpites.n || 0, pessoas: palpites.pessoas || 0, ligas: ligas.n || 0, apelidos: apelidos.n || 0 },
     torcida: { votos: votos.n || 0, jogos: votos.jogos || 0, votos7: votos7.n || 0 },
-    seguranca: { tipos24h: segTipo24, tipos7d: segTipo7, origens: segOrigens, recentes: segRecentes },
+    seguranca: { tipos24h: segTipo24, tipos7d: segTipo7, origens: segOrigens, recentes: segRecentes, bloqueios: await listaBloqueios(env, agora).catch(() => []) },
     erros24h: erros24.n || 0,
   };
 }

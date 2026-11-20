@@ -39,6 +39,7 @@ import { eu, gravaApelido, gravaPalpite, ranking, criaLiga, entraLiga, saiLiga }
 import { avisar, recentes, montaAvisos, enviaAvisos, limpaAvisos } from "./bolao-avisos.mjs";
 import { vota, resultado as resultadoTorcida, limpaVotos } from "./torcida.mjs";
 import { status, batimento } from "./status.mjs";
+import { protege, desbloqueia, limpaBloqueios } from "./protecao.mjs";
 import { contaVisita, gravaVisitas, ehDono, painel, observa, limpaPainel } from "./painel.mjs";
 import { inscrever, verificaGols, enviaPushes, golsRecentes, limpaGols } from "./alertas.mjs";
 import { agenda } from "./agenda.mjs";
@@ -306,12 +307,13 @@ const app = {
       await gravaVisitas(env).catch(() => {});
       return new Response(null, { status: 204, headers: cors });
     }
-    if (path === "/painel" || path === "/painel/eu") {
+    if (path === "/painel" || path === "/painel/eu" || path === "/painel/desbloquear") {
       if (!env.DB) return json({ erro: "banco não configurado" }, 503);
       const sessao = await usuarioDa(env, req);
       if (!sessao) return json({ erro: "Entre com a conta Google do dono." }, 401);
       if (path === "/painel/eu") return json({ codigo: sessao.id, dono: ehDono(env, sessao.id) });
       if (!ehDono(env, sessao.id)) return json({ erro: "Esta conta não é a do dono do CazéStats.TV." }, 403);
+      if (path === "/painel/desbloquear" && req.method === "POST") { const r = await desbloqueia(env, await req.text()); return r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, origem: r.origem }); }
       await gravaVisitas(env, true).catch(() => {});
       return json(await painel(env));
     }
@@ -438,14 +440,17 @@ const app = {
       return;
     }
     ctx.waitUntil(disparaRobo(env).then((r) => console.log("robô:", r)));
-    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env), limpaSessoes(env), limpaAvisos(env), limpaVotos(env), limpaPainel(env)]));
+    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env), limpaSessoes(env), limpaAvisos(env), limpaVotos(env), limpaPainel(env), limpaBloqueios(env)]));
   },
 };
 
 /* cada resposta passa pelo observador (worker/painel.mjs): tráfego da API por minuto e eventos de segurança */
 export default {
   async fetch(req, env, ctx) {
-    const resp = await app.fetch(req, env);
+    // proteção contra abuso (worker/protecao.mjs): origem bloqueada ou acima do limite nem chega ao roteador
+    const base = { "access-control-allow-origin": env.ORIGEM || "*", "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" };
+    const recusa = await protege(env, req, base, roboAutorizado).catch(() => null);
+    const resp = recusa || await app.fetch(req, env);
     const obs = observa(env, req, resp).catch(() => {});
     if (ctx?.waitUntil) ctx.waitUntil(obs); else await obs;
     return resp;

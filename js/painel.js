@@ -93,7 +93,7 @@
     comparar: "Comparar", tabela: "Tabela", ultimos: "Jogador: últimos 10", temporada: "Jogador: temporada", calor: "Jogador: mapa de calor" };
   const NOME_SEG = { varredura: "Varredura de endereços (robô procurando falhas)", "login-invalido": "Login com comprovante inválido", "admin-sem-login": "Administração sem login",
     "admin-negado": "Administração com conta sem acesso", "chave-robo-invalida": "Chave do robô errada", "excesso-de-pedidos": "Excesso de pedidos (limite atingido)",
-    "pedido-grande": "Pedido grande demais", "pedido-invalido": "Pedido malformado", "rota-desconhecida": "Endereço inexistente" };
+    "pedido-grande": "Pedido grande demais", "pedido-invalido": "Pedido malformado", "rota-desconhecida": "Endereço inexistente", bloqueado: "Recusado: origem bloqueada" };
   const GRAVE = new Set(["varredura", "chave-robo-invalida", "admin-negado", "login-invalido", "excesso-de-pedidos"]);
   const nomeClube = (id) => (typeof byId !== "undefined" && byId[id]?.name) || id;
   const nomeRota = (r) => (r.startsWith("clube:") ? `Clube: ${nomeClube(r.slice(6))}` : NOME_ROTA[r] || r);
@@ -141,6 +141,12 @@
         ${seg.recentes?.length ? `<h3 class="pn-h">Últimos eventos</h3><div class="adm-tab-rola"><table class="adm-tab"><thead><tr><th>Quando</th><th>Tipo</th><th>Endereço</th><th>Origem</th><th>País</th></tr></thead><tbody>
           ${seg.recentes.map((e) => `<tr class="${GRAVE.has(e.tipo) ? "grave" : ""}"><td>${esc(ha(e.quando))}</td><td>${esc(NOME_SEG[e.tipo]?.split(" (")[0] || e.tipo)}</td><td><code>${esc(`${e.metodo} ${e.rota}`)}</code></td><td><code>${esc(e.origem)}</code></td><td>${esc(e.pais || "?")}</td></tr>`).join("")}
           </tbody></table></div>` : ""}
+        <h3 class="pn-h">Proteção: origens bloqueadas agora</h3>
+        ${seg.bloqueios?.length ? `<div class="adm-tab-rola"><table class="adm-tab"><thead><tr><th>Origem</th><th>País</th><th>Motivo</th><th>Até</th><th></th></tr></thead><tbody>
+          ${seg.bloqueios.map((b) => `<tr class="grave"><td><code>${esc(b.origem)}</code></td><td>${esc(b.pais || "?")}</td><td>${esc(b.motivo)}</td><td>${esc(new Date(n(b.ate)).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))}</td>
+            <td><button type="button" class="bl-btn sec adm-desb" data-desbloquear="${esc(b.origem)}">Desbloquear</button></td></tr>`).join("")}</tbody></table></div>`
+        : `<p class="st-txt">Nenhuma origem bloqueada. O bloqueio é automático: 20 tentativas graves em 1 hora bloqueiam por 24 horas.</p>`}
+        <p class="st-txt">Limite por origem, por minuto: 600 leituras, 60 escritas e 240 visitas. Quem passa recebe "muitos pedidos" e tenta de novo em 1 minuto.</p>
         <p class="st-txt">O site em si (páginas e arquivos) fica na rede da Cloudflare, que barra ataques de volume antes de chegarem aqui; esta seção mostra o que chegou ao servidor e foi recusado.</p>
       </div></section>
       ${checagemHTML(chk)}
@@ -205,7 +211,16 @@
     preenche(el);
     timer = setInterval(() => { if (!el.isConnected) return clearInterval(timer); if (!document.hidden) preenche(el); }, 15e3);
   }
-  document.addEventListener("click", (e) => { if (e.target.closest("[data-pn='entrar']")) { e.stopPropagation(); window.CONTA?.abre?.(); } });
+  document.addEventListener("click", async (e) => {
+    if (e.target.closest("[data-pn='entrar']")) { e.stopPropagation(); window.CONTA?.abre?.(); return; }
+    const b = e.target.closest("[data-desbloquear]");
+    if (!b || !confirm(`Desbloquear a origem ${b.dataset.desbloquear}?`)) return;
+    b.disabled = true;
+    const s = window.CONTA?.sessao();
+    const r = await fetch(`${API}/painel/desbloquear`, { method: "POST", body: JSON.stringify({ origem: b.dataset.desbloquear }), headers: s ? { authorization: `Bearer ${s.sessao}` } : {} }).catch(() => null);
+    b.textContent = r?.ok ? "Desbloqueada" : "Não deu";
+    if (r?.ok) document.querySelectorAll("[data-admin]").forEach((el) => preenche(el));
+  });
   window.addEventListener("conta:mudou", () => document.querySelectorAll("[data-admin]").forEach((el) => preenche(el)));
 
   window.PAINEL = { page, mount, visita, ROTA_ADMIN };
