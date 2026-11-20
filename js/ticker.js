@@ -15,7 +15,8 @@
   const congela = new URLSearchParams(location.search).has("estatico");   // prints dos testes: faixa parada
   const WAAPI = typeof Element !== "undefined" && typeof Element.prototype.animate === "function";
   const VEL = reduced ? 40 : 70;   // px por segundo
-  const guarda = { get: () => { try { return localStorage.getItem("tk-pausa") === "1"; } catch { return false; } },
+  // com "menos movimento" no aparelho a faixa começa parada; quem apertar o play continua com ela andando (fica guardado)
+  const guarda = { get: () => { try { const v = localStorage.getItem("tk-pausa"); return v === null ? reduced : v === "1"; } catch { return reduced; } },
     set: (v) => { try { localStorage.setItem("tk-pausa", v ? "1" : "0"); } catch {} } };
   let anim = null, mouse = false, foco = false, pausaUser = guarda.get();
   const esc = (x) => SEG.esc(x || "");

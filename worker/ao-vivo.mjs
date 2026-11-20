@@ -445,13 +445,36 @@ const app = {
   },
 };
 
+/* limite real do corpo das escritas: conta os bytes que chegam (o cabeçalho content-length pode faltar, num envio em
+   partes) e para no limite. O maior corpo legítimo do site é a sincronização da conta (600 KB); o robô, autenticado,
+   envia os arquivos de dados e fica de fora. Devolve o pedido com o corpo já lido, ou null se passou do limite. */
+export const CORPO_MAX = 700_000;
+export async function limitaCorpo(req, max = CORPO_MAX) {
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS" || !req.body) return req;
+  if (+(req.headers.get("content-length") || 0) > max) return null;
+  const leitor = req.body.getReader(), partes = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await leitor.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) { await leitor.cancel().catch(() => {}); return null; }
+    partes.push(value);
+  }
+  const corpo = new Uint8Array(total);
+  let i = 0;
+  for (const x of partes) { corpo.set(x, i); i += x.byteLength; }
+  return new Request(req, { body: corpo });
+}
+
 /* cada resposta passa pelo observador (worker/painel.mjs): tráfego da API por minuto e eventos de segurança */
 export default {
   async fetch(req, env, ctx) {
     // proteção contra abuso (worker/protecao.mjs): origem bloqueada ou acima do limite nem chega ao roteador
     const base = { "access-control-allow-origin": env.ORIGEM || "*", "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" };
     const recusa = await protege(env, req, base, roboAutorizado).catch(() => null);
-    const resp = recusa || await app.fetch(req, env);
+    const lido = recusa || roboAutorizado(req, env) ? req : await limitaCorpo(req).catch(() => null);
+    const resp = recusa || (lido ? await app.fetch(lido, env) : new Response(JSON.stringify({ erro: "pedido grande demais" }), { status: 413, headers: base }));
     const obs = observa(env, req, resp).catch(() => {});
     if (ctx?.waitUntil) ctx.waitUntil(obs); else await obs;
     return resp;

@@ -28,7 +28,7 @@ const noticias = { flamengo: [{ title: P.img, link: P.js, source: P.svg, ts: ago
 
 async function cenario(L, nome, opts) {
   const b = await L.launch(L === chromium ? { channel: "chrome" } : {});
-  const ctx = await b.newContext({ ...opts, locale: "pt-BR" });
+  const ctx = await b.newContext({ ...opts, locale: "pt-BR", serviceWorkers: "block" }); // o service worker responderia os dados sem passar pela interceptação do teste
   const p = await ctx.newPage();
   const bloqueios = [];
   p.on("console", (m) => { if (/bloqueado pela política/.test(m.text())) bloqueios.push(m.text()); });
@@ -58,6 +58,13 @@ async function cenario(L, nome, opts) {
     d.__proto__poluido = 1;
     const txt = JSON.stringify(d).replace('"__proto__poluido":1', '"__proto__":{"poluido":1}');
     r.fulfill({ body: `${s.slice(0, i)}${txt};\n`, contentType: "application/javascript" });
+  });
+  // o site lê dados/live-data.json (js/dados.js); o js/live-data.js antigo só entra se o JSON faltar
+  await p.route(/dados\/live-data\.json/, async (r) => {
+    const res = await r.fetch(); const d = JSON.parse(await res.text());
+    d.manchetes = manchetes; d.news = { ...(d.news || {}), ...noticias };
+    const txt = JSON.stringify(d).replace(/^\{/, '{"__proto__":{"poluido":1},');
+    r.fulfill({ body: txt, contentType: "application/json" });
   });
   await p.route(/site(\.web)?\.api\.espn\.com\/.*scoreboard/, async (r) => {
     let d; try { d = await (await r.fetch()).json(); } catch { d = { events: [] }; }
@@ -91,9 +98,10 @@ async function cenario(L, nome, opts) {
   // 4) endereços forjados
   for (const h of [`#/clube/${P.img}`, `#/partida/${P.svg}`, `#/bora-pro-jogo/${P.svg}/x`, `#/tabela/${P.img}`, "#/clube/__proto__", "#/clube/constructor", "#/../../etc/passwd"]) {
     await p.goto(`${BASE}/?s=${Date.now()}${h}`, { waitUntil: "load" });
-    await p.waitForTimeout(500);
+    await p.waitForFunction(() => document.querySelector("#view")?.children.length, null, { timeout: 4000 }).catch(() => {}); // WebKit pode levar mais que 0,5 s para desenhar
+    await p.waitForTimeout(300);
     const r = await p.evaluate(() => ({ xss: window.__xss || null, el: document.querySelectorAll('img[src="x"], svg[onload], [onerror], [onload]').length, view: !!document.querySelector("#view")?.children.length }));
-    ok(!r.xss && !r.el && r.view, `${nome}: endereço forjado ${h.slice(0, 34)}… não executa e a página continua de pé`);
+    ok(!r.xss && !r.el && r.view, `${nome}: endereço forjado ${h.slice(0, 34)}… não executa e a página continua de pé${r.xss || r.el || !r.view ? ` (${JSON.stringify(r)})` : ""}`);
   }
 
   // 5) armazenamento local adulterado

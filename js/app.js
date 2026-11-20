@@ -921,7 +921,7 @@
       </aside>
 
       <section>
-        <h1 class="sr-only">Placar ao vivo do Brasileirão Série A 2026 — ${round}ª rodada</h1>
+        <h2 class="sr-only">Placar ao vivo do Brasileirão Série A 2026 — ${round}ª rodada</h2>
         <div class="card">
           <div class="round-nav">
             <button data-round="${ROUNDS[ri - 1] ?? ""}" ${ri > 0 ? "" : "disabled"} aria-label="Rodada anterior">‹</button>

@@ -2,7 +2,7 @@
 /* Proteção contra abuso sem rede: limite de pedidos (contador na memória, sem o limitador da Cloudflare),
    bloqueio automático de origem insistente e desbloqueio pela administração. Uso: node tests/protecao.mjs */
 import assert from "node:assert/strict";
-import worker from "../worker/ao-vivo.mjs";
+import worker, { limitaCorpo, CORPO_MAX } from "../worker/ao-vivo.mjs";
 import { LIMITES, BLOQUEIO_TENTATIVAS, _protecao } from "../worker/protecao.mjs";
 import { _visitas, gravaPendentes } from "../worker/painel.mjs";
 import { d1Simulado } from "./sim/d1.mjs";
@@ -63,6 +63,15 @@ await t("a administração continua acessível e o dono desbloqueia", async () =
 await t("conta comum não desbloqueia nada", async () => {
   const outra = (await (await pede("/conta/entrar", { ip: "192.0.2.11", metodo: "POST", corpo: { credential: await comprovante("g-outro") } })).json()).sessao;
   assert.equal((await pede("/painel/desbloquear", { ip: "192.0.2.11", metodo: "POST", corpo: { origem: "0123456789" }, token: outra })).status, 403);
+});
+await t("corpo grande demais é recusado mesmo sem content-length (envio em partes); o robô fica de fora", async () => {
+  const emPartes = (n, extra = {}) => new Request("https://w.test/bolao/palpite", { method: "PUT", duplex: "half", headers: { "cf-connecting-ip": "203.0.113.90", ...extra },
+    body: new ReadableStream({ start(c) { for (let i = 0; i < n; i++) c.enqueue(new Uint8Array(100_000)); c.close(); } }) });
+  assert.equal((await worker.fetch(emPartes(8), env)).status, 413, "800 KB em partes");
+  assert.equal(await limitaCorpo(new Request("https://w.test/x", { method: "POST", headers: { "content-length": String(CORPO_MAX + 1) }, body: "x" })), null);
+  const pequeno = await limitaCorpo(new Request("https://w.test/x", { method: "POST", body: '{"a":1}' }));
+  assert.equal(await pequeno.text(), '{"a":1}', "corpo pequeno chega inteiro ao roteador");
+  assert.notEqual((await worker.fetch(emPartes(8, { authorization: `Bearer ${ROBO}` }), env)).status, 413, "o robô autenticado envia arquivos grandes");
 });
 globalThis.fetch = fetchOriginal;
 console.log(`\n${ok} testes da proteção passaram`);

@@ -1,15 +1,85 @@
 {
+  "id": "./",
   "name": "CazéStats.TV — futebol brasileiro ao vivo",
   "short_name": "CazéStats.TV",
   "description": "Placar ao vivo, tabela e estatísticas do futebol brasileiro. Autor: Alan Evangelista de Souza Martins.",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0B0B0D",
   "theme_color": "#0B0B0D",
   "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": [
+    "sports",
+    "news"
+  ],
   "icons": [
-    { "src": "assets/marca/icone-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "assets/marca/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
-    { "src": "assets/marca/simbolo.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "assets/marca/icone-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/marca/icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/marca/simbolo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Jogos ao vivo",
+      "short_name": "Ao vivo",
+      "url": "./#/",
+      "icons": [
+        {
+          "src": "assets/marca/icone-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Tabela do Brasileirão",
+      "short_name": "Tabela",
+      "url": "./#/tabela",
+      "icons": [
+        {
+          "src": "assets/marca/icone-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Bolão",
+      "short_name": "Bolão",
+      "url": "./#/bolao",
+      "icons": [
+        {
+          "src": "assets/marca/icone-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Resumo da rodada",
+      "short_name": "Rodada",
+      "url": "./#/rodada",
+      "icons": [
+        {
+          "src": "assets/marca/icone-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }

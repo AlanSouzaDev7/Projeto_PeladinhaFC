@@ -1,6 +1,6 @@
 /* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. */
 /* Menu principal em toda largura de tela: no PC, o do topo; no celular e no tablet, a barra inferior.
-   Confere que os 6 itens (Ao vivo, Clubes, Tabela, Simulador, Bora pro jogo, Sobre) estão visíveis, não ficam cobertos
+   Confere que os 7 itens (Ao vivo, Clubes, Tabela, Simulador, Bolão, Bora pro jogo, Sobre) estão visíveis, não ficam cobertos
    e levam à página certa com o item marcado. (Antes, abaixo de 900 px o site ficava sem menu nenhum.)
    E a coluna "Próx." da tabela: nunca mostra um adversário de jogo que já terminou.
    Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  node tests/mobile/menu.mjs */
@@ -32,7 +32,7 @@ for (const [nome, eng, opts, launch] of telas) {
   });
   ok(!!menu, `${nome} · menu visível${menu ? ` (${menu.qual})` : ""}`);
   if (menu) {
-    ok(menu.itens.length === 6 && menu.itens.every((i) => i.visivel && i.livre), `${nome} · os 6 itens aparecem e nada os cobre (${menu.itens.filter((i) => i.visivel && i.livre).length}/6)`);
+    ok(menu.itens.length === 7 && menu.itens.every((i) => i.visivel && i.livre), `${nome} · os 7 itens aparecem e nada os cobre (${menu.itens.filter((i) => i.visivel && i.livre).length}/7)`);
     if (menu.qual.includes("bottom")) ok(menu.itens.every((i) => i.alto >= 40), `${nome} · área de toque de pelo menos 40 px`);
     for (const [k, h] of Object.entries(ROTAS)) {
       const a = p.locator(`nav.${menu.qual.split(" ")[0]} a[data-nav="${k}"]`);
