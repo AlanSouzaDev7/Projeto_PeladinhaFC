@@ -196,13 +196,15 @@
     if (!gols.length) { box.innerHTML = `<p class="tc-txt">Os lances dos gols ainda não chegaram da fonte.</p>`; return; }
     box.innerHTML = `<div class="rp-tela"></div>
       <ol class="rp-lista">${gols.map((g, i) => `<li><button type="button" data-rp="${i}" aria-pressed="${i === 0}"><span class="rp-play" aria-hidden="true"></span>${legenda(g, h, a)}</button></li>`).join("")}</ol>
+      ${window.COMPARTILHAR ? `<div class="cp-wrap">${COMPARTILHAR.botao("replay", el.dataset.replay)}</div>` : ""}
       <p class="rp-nota">Real: o local do chute, o lado do gol, o autor e o tipo de passe. Aproximado: o caminho do passe, que a fonte não informa.</p>`;
-    const toca = (i) => { box.querySelectorAll("[data-rp]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.rp) === i))); const g = gols[i]; anima(el, g, g.time, g.time === "casa" ? h : a); };
+    const toca = (i) => { box.querySelectorAll("[data-rp]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.rp) === i))); const g = gols[i]; atuais[el.dataset.replay] = { g, h, a }; anima(el, g, g.time, g.time === "casa" ? h : a); };
     box.addEventListener("click", (e) => { const b = e.target.closest("[data-rp]"); if (b) toca(Number(b.dataset.rp)); });
     toca(0);
   }
+  const atuais = {}; // o gol escolhido em cada jogo (o card de compartilhar desenha esse)
   function mount(view) {
     (view || document).querySelectorAll("[data-replay]:not([data-rp-ok])").forEach((el) => { el.dataset.rpOk = "1"; preenche(el); });
   }
-  raiz.REPLAY = { ...api, card, mount };
+  raiz.REPLAY = { ...api, card, mount, atual: (espn) => atuais[String(espn)] || null, NOME_PASSE };
 })(typeof window !== "undefined" ? window : globalThis);

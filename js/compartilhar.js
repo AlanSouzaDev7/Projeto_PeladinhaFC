@@ -179,6 +179,49 @@
     texto(ctx, `Craque da rodada: ${S.craque.nome} (${byId[S.craque.clube]?.abbr || S.craque.clube}), nota ${S.craque.nota.toFixed(1).replace(".", ",")}`, L / 2, A - 190, { peso: 700, px: 34, max: L - 140 });
     return { canvas: cv, nome: `selecao-rodada-${rd}` };
   }
+  /* replay do gol: meio campo de ataque em pé (o gol no alto), com o caminho da bola, quem passou e quem fez */
+  async function cardReplay(espn) {
+    const R = window.REPLAY, at = R?.atual?.(espn);
+    if (!at) throw new Error("abra o replay do gol primeiro");
+    const { g, h: hid, a: aid } = at, h = byId[hid], a = byId[aid], dono = g.time === "casa" ? h : a;
+    const corDono = dono.colors[0] === "#ffffff" || dono.colors[0] === "#111111" ? dono.colors[1] || dono.colors[0] : dono.colors[0];
+    const cv = novoCanvas(), ctx = cv.getContext("2d");
+    fundo(ctx, dono.colors[0], "#0f3d2e");
+    moldura(ctx, "Replay do gol");
+    texto(ctx, `${g.min} ${g.autor}`, L / 2, 215, { px: 64, tipo: "titulo" });
+    const como = [R.NOME_PASSE[g.passe], g.contraAtaque && "contra-ataque"].filter(Boolean).join(" em ");
+    texto(ctx, [dono.abbr, g.assist && g.passe !== "contra" ? `passe de ${g.assist}` : "", como].filter(Boolean).join(" · "), L / 2, 270, { peso: 700, px: 32, cor: "rgba(255,255,255,0.8)" });
+    // campo: largura 68 m em 900 px; profundidade de 52,5 m (meio campo de ataque)
+    const ox = 90, oy = 330, k = 900 / 68, X = (y) => ox + y * 0.68 * k, Y = (x) => oy + (100 - Math.max(47.6, x)) * 1.05 * k;
+    ctx.fillStyle = "#1f6b3a"; ctx.fillRect(ox, oy, 900, 52.5 * k);
+    for (let i = 0; i < 6; i++) { ctx.fillStyle = i % 2 ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.04)"; ctx.fillRect(ox, oy + i * 52.5 * k / 6, 900, 52.5 * k / 6); }
+    ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 4;
+    ctx.strokeRect(ox, oy, 900, 52.5 * k);
+    ctx.strokeRect(X(50 - 40.32 / 0.68 / 2), oy, 40.32 * k, 16.5 * k);   // grande área
+    ctx.strokeRect(X(50 - 18.32 / 0.68 / 2), oy, 18.32 * k, 5.5 * k);    // pequena área
+    ctx.beginPath(); ctx.arc(X(50), oy + 11 * k, 4, 0, Math.PI * 2); ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.fill();
+    ctx.beginPath(); ctx.arc(X(50), oy + 52.5 * k, 9.15 * k, Math.PI, 0); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(X(50 - 7.32 / 0.68 / 2), oy - 14, 7.32 * k, 14); // gol
+    // caminho da bola: o plano inteiro, amostrado
+    const P = R.plano(g);
+    ctx.setLineDash([16, 12]); ctx.lineWidth = 6; ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineCap = "round";
+    ctx.beginPath();
+    for (let i = 0; i <= 120; i++) { const b = R.quadro(P, (P.total - 900) * i / 120).bola; const px = X(b.y), py = Y(b.x); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+    ctx.stroke(); ctx.setLineDash([]);
+    const jogador = (p, nome) => {
+      const px = X(p.y), py = Y(p.x);
+      ctx.beginPath(); ctx.arc(px, py, 26, 0, Math.PI * 2); ctx.fillStyle = corDono; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = "#fff"; ctx.stroke();
+      ctx.lineWidth = 8; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.font = fonte(800, 34); ctx.textAlign = "center"; ctx.strokeText(nome, px, py - 40); texto(ctx, nome, px, py - 40, { px: 34, max: 300 });
+    };
+    const curto = (n) => { const s = String(n || ""), q = s.split(" "); return s.length <= 12 || q.length < 2 ? s : q[q.length - 1]; };
+    if (P.origem && !P.origem.conducao && g.assist) jogador(P.fases.find((f) => f.tipo === "passe").de, curto(g.assist));
+    jogador(g.de, curto(g.autor));
+    const fim = R.quadro(P, P.total).bola;
+    ctx.beginPath(); ctx.arc(X(fim.y), Y(fim.x) - 4, 15, 0, Math.PI * 2); ctx.fillStyle = "#fff"; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = "#f5b800"; ctx.stroke();
+    if (g.placar) texto(ctx, `${h.abbr} ${g.placar[0]} x ${g.placar[1]} ${a.abbr}`, L / 2, 1100, { px: 60, tipo: "titulo" });
+    texto(ctx, P.aproximado ? "Local do chute e lado do gol reais; caminho do passe aproximado" : "Local do chute e lado do gol reais", L / 2, 1150, { peso: 600, px: 24, cor: "rgba(255,255,255,0.6)" });
+    return { canvas: cv, nome: `gol-${g.autor}-${g.min.replace(/\D/g, "")}` };
+  }
   async function cardBolao() {
     const d = window.BOLAO?.ultimo?.();
     if (!d?.voce) throw new Error("entre no ranking para compartilhar a sua posição");
@@ -224,7 +267,7 @@
       await document.fonts?.ready;
       const tipo = b.dataset.cp, id = b.dataset.cpId;
       const card = tipo === "partida" ? await cardPartida(origens.partida?.(id) || (() => { throw new Error("jogo não encontrado"); })())
-        : tipo === "jogador" ? await cardJogador(id) : tipo === "comparacao" ? await cardComparacao(id) : tipo === "rodada" ? await cardRodada(id) : tipo === "selecao" ? await cardSelecao(id) : await cardBolao();
+        : tipo === "jogador" ? await cardJogador(id) : tipo === "comparacao" ? await cardComparacao(id) : tipo === "rodada" ? await cardRodada(id) : tipo === "selecao" ? await cardSelecao(id) : tipo === "replay" ? await cardReplay(id) : await cardBolao();
       const r = await entrega(card);
       if (msg) msg.textContent = r;
     } catch (err) {
@@ -235,6 +278,6 @@
   });
 
   // _monta: só desenha (sem compartilhar nem baixar); usado para conferir a imagem
-  const _monta = async (tipo, id) => { pegaFontes(); await document.fonts?.ready; return tipo === "partida" ? cardPartida(origens.partida(id)) : tipo === "jogador" ? cardJogador(id) : tipo === "comparacao" ? cardComparacao(id) : tipo === "rodada" ? cardRodada(id) : tipo === "selecao" ? cardSelecao(id) : cardBolao(); };
+  const _monta = async (tipo, id) => { pegaFontes(); await document.fonts?.ready; return tipo === "partida" ? cardPartida(origens.partida(id)) : tipo === "jogador" ? cardJogador(id) : tipo === "comparacao" ? cardComparacao(id) : tipo === "rodada" ? cardRodada(id) : tipo === "selecao" ? cardSelecao(id) : tipo === "replay" ? cardReplay(id) : cardBolao(); };
   window.COMPARTILHAR = { botao, origem: (tipo, fn) => { origens[tipo] = fn; }, _arquivo: arquivo, _monta };
 })();
