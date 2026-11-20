@@ -111,10 +111,16 @@
       return new Set();
     }
   };
+  // a pasta dados/ é criada uma vez, antes da primeira gravação: com vários arquivos gravando ao mesmo tempo, o
+  // recursive do plugin falhava ("Missing parent directory") e o Capacitor registrava erro no console
+  const PASTA = "433:pasta-dados";
+  let pastaP = null;
+  const pasta = (F) => (pastaP = pastaP || (localStorage.getItem(PASTA) ? Promise.resolve()
+    : F.mkdir({ path: "dados", directory: "DATA", recursive: true }).catch(() => {}).then(() => { try { localStorage.setItem(PASTA, "1"); } catch { /* sem marca */ } })));
   function guarda(nome, txt) {
     const F = fs();
     if (!F) return;
-    F.writeFile({ path: `dados/${nome}.json`, data: txt, directory: "DATA", encoding: "utf8", recursive: true })
+    pasta(F).then(() => F.writeFile({ path: `dados/${nome}.json`, data: txt, directory: "DATA", encoding: "utf8", recursive: true }))
       .then(() => {
         const l = lista();
         if (l.has(nome)) return;
