@@ -1185,13 +1185,14 @@
   function ondeAssistirHTML(m) {
     if (m.status === "ft" || m.status === "pending") return "";
     const a = window.ARBITRAGEM?.jogos?.[m.espn] || window.ARBITRAGEM?.jogos?.[`${m.home}|${m.away}`];
-    if (!a?.assistir?.length) return "";
+    // região ao vivo sempre presente: os dados chegam depois do desenho da página e preenchem o cartão sozinhos
+    if (!a?.assistir?.length) return `<div data-live="onde-assistir"></div>`;
     const esc = (x) => SEG.esc(x || "");
-    return `<div class="card onde-assistir"><div class="card-h">Onde assistir <small>segundo a imprensa</small></div><div class="card-b">
+    return `<div data-live="onde-assistir"><div class="card onde-assistir"><div class="card-h">Onde assistir <small>segundo a imprensa</small></div><div class="card-b">
       ${a.canais?.length ? `<div class="oa-canais">${a.canais.map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
       <ul class="arb-list">${a.assistir.slice(0, 3).map((x) => `<li><a href="${esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer"><b>${esc(x.title)}</b><small>${esc(x.source)} · ${haTempo(x.ts)} ↗</small></a></li>`).join("")}</ul>
       <p class="arb-aviso">${a.canais?.length ? "Canais citados nos títulos das matérias. " : ""}A transmissão pode mudar; confira na matéria do veículo.</p>
-    </div></div>`;
+    </div></div></div>`;
   }
 
   /* palpite de quem está vendo (guardado só neste navegador) */
