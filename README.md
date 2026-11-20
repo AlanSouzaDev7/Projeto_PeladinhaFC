@@ -34,6 +34,7 @@ Feito com **HTML, CSS e JavaScript puro** (sem frameworks) e uma **API em Python
 | **Resumo automático da partida** (19/11): prévia, ao vivo ou crônica curta escrita por regras, na página do jogo e nas páginas para buscadores | `js/resumo.js` |
 | **Site instalável e modo offline** (19/11): service worker guarda o site; sem internet abre a última versão vista, com aviso; botão Instalar o app no rodapé | `sw.js`, `js/offline.js` |
 | **Widgets para outros sites** (19/11): tabela, jogos de um clube e placar de um jogo em `<iframe>` (`/widget/`), com a marca e link de volta; gerador em `#/widgets` | `widget/`, `js/widgets.js` |
+| **Gráfico de pressão** (19/11): quem está melhor no jogo, minuto a minuto, calculado pelos lances (chutes, escanteios, impedimentos, faltas no ataque) com gols e intervalo marcados; atualiza a cada minuto com o jogo rolando | `js/pressao.js`, `js/pressao-card.js` |
 | **Confronto direto na página da partida** (18/11): todas as competições desde 2023, com resumo de vitórias, empates e gols | `js/confronto.js` |
 | **Dados no banco D1** (18/11): o robô envia só o que mudou, o site lê do banco e usa a cópia estática se ele falhar; o site deixa de ser republicado a cada rodada | `server/enviar_d1.py`, `js/dados.js`, `worker/` |
 | Riscos para lembrar ao apresentar a uma empresa (nunca bloqueiam funções) | `docs/RISCOS-APRESENTACAO.md` |

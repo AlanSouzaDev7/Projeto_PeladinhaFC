@@ -332,3 +332,11 @@
 .adm-tab code { font-size: 12px; }
 .adm-tab tr.grave td { color: #f87171; }
 @media (max-width: 860px) { .adm-duas, .adm-tres { grid-template-columns: 1fr; } }
+
+/* ---------- gráfico de pressão (js/pressao.js, js/pressao-card.js) ---------- */
+.pressao .card-b { display: grid; gap: 8px; }
+.pr-leg { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 700 12.5px/1.2 var(--font); color: var(--text-2); }
+.pr-leg b { color: var(--text); text-align: center; }
+.pr-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin: 0 6px; vertical-align: -1px; }
+.pr-graf svg { display: block; width: 100%; height: 150px; color: var(--text); }
+.pr-eixo { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }

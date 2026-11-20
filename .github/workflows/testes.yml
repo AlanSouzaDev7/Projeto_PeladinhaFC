@@ -98,6 +98,8 @@ jobs:
         run: node tests/crescimento.mjs
       - name: Painel do dono e visitas anônimas
         run: node tests/painel.mjs
+      - name: Gráfico de pressão
+        run: node tests/pressao.mjs
       - name: Conta com Google e sincronização (comprovantes e banco simulados)
         timeout-minutes: 2
         run: node tests/conta.mjs
