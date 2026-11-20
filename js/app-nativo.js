@@ -293,8 +293,10 @@
     try {
       await window.PD_BOOT;
     } catch {
-      /* segue com o retrato embutido */
+      /* segue com a cópia guardada */
     }
+    // tempo até a primeira tela com dados (aparece no logcat do Android: medido no QA, tests/qa/apk.mjs)
+    console.info(`CazeStatsApp: primeira tela em ${Math.round(performance.now())} ms`);
     // relê os arquivos que o index.html carrega de saída (pode ser a cópia guardada sem internet)
     const D = window.DADOS;
     if (D) {
