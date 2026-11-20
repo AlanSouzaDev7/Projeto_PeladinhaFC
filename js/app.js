@@ -1150,9 +1150,11 @@
           <div class="card"><div class="card-h">Comparação no campeonato <small>${SEG.esc(REAL.source)} · ${SEG.esc(REAL.updated)}</small></div><div class="card-b">${compareHTML(m)}</div></div>
         </div>
         <div>
+          ${ondeAssistirHTML(m)}
           ${window.CHANCE ? CHANCE.card(m, { casa: display(byId[m.home]), fora: display(byId[m.away]) }) : ""}
           ${voteCard(m)}
           ${window.BOLAO ? BOLAO.card(m) : ""}
+          ${window.TORCIDA ? TORCIDA.card(m) : ""}
           <div class="card"><div class="card-h">Na tabela</div>${standingsTable(both, null, true)}${sourceNote}</div>
           ${scorersDuel(m)}
           ${window.CONFRONTO ? CONFRONTO.card(m) : ""}
@@ -1176,6 +1178,20 @@
       ${a.manchetes?.length ? `<ul class="arb-list">${a.manchetes.slice(0, 3).map((x) => `<li><a href="${esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer"><b>${esc(x.title)}</b><small>${esc(x.source)} · ${haTempo(x.ts)} ↗</small></a></li>`).join("")}</ul>` : `<p class="arb-none">Os veículos ainda não publicaram a escala deste jogo.</p>`}
       <p class="arb-aviso">A escala completa (assistentes, quarto árbitro e VAR) é divulgada pela CBF; aqui aparece o que a imprensa já noticiou, com link para cada matéria. <a href="https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/${new Date().getFullYear()}" target="_blank" rel="noopener noreferrer">Escala oficial na CBF ↗</a></p>
     </div>`;
+  }
+
+  /* onde assistir: matérias de transmissão do jogo (robô, com a arbitragem) e os canais citados nos títulos.
+     Não afirmamos o canal por conta própria: mostramos o que a imprensa publicou, com link para cada matéria. */
+  function ondeAssistirHTML(m) {
+    if (m.status === "ft" || m.status === "pending") return "";
+    const a = window.ARBITRAGEM?.jogos?.[m.espn] || window.ARBITRAGEM?.jogos?.[`${m.home}|${m.away}`];
+    if (!a?.assistir?.length) return "";
+    const esc = (x) => SEG.esc(x || "");
+    return `<div class="card onde-assistir"><div class="card-h">Onde assistir <small>segundo a imprensa</small></div><div class="card-b">
+      ${a.canais?.length ? `<div class="oa-canais">${a.canais.map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
+      <ul class="arb-list">${a.assistir.slice(0, 3).map((x) => `<li><a href="${esc(SEG.url(x.link))}" target="_blank" rel="noopener noreferrer"><b>${esc(x.title)}</b><small>${esc(x.source)} · ${haTempo(x.ts)} ↗</small></a></li>`).join("")}</ul>
+      <p class="arb-aviso">${a.canais?.length ? "Canais citados nos títulos das matérias. " : ""}A transmissão pode mudar; confira na matéria do veículo.</p>
+    </div></div>`;
   }
 
   /* palpite de quem está vendo (guardado só neste navegador) */
@@ -1670,6 +1686,8 @@
       r.page === "jogador" ? JOGADOR.page(r.id, r.tab, r.extra) :
       r.page === "copa" ? COPA.page(r.id, r.tab, r.extra) :
       r.page === "bolao" && window.BOLAO ? BOLAO.page(r.id, r.tab) :
+      r.page === "status" && window.STATUS ? STATUS.pageStatus() :
+      r.page === "creditos" && window.STATUS ? STATUS.pageCreditos() :
       r.page === "sobre" ? pageAbout() :
       r.page === "privacidade" ? PRIVACIDADE.page() : pageNotFound();
   /* competição em tela: Brasileirão (o site de sempre) ou Libertadores, Sul-Americana, Copa do Brasil e estaduais
@@ -1699,7 +1717,7 @@
     stamp(view);
     const navKey = r.page === "" || r.page === "partida" || r.page === "copa" ? "home" : r.page === "clube" || r.page === "jogador" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? "Partida — CazéStats.TV" : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "bolao" ? "Bolão — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
+    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? "Partida — CazéStats.TV" : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "bolao" ? "Bolão — CazéStats.TV" : r.page === "status" ? "Status — CazéStats.TV" : r.page === "creditos" ? "Fontes e créditos — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
     enhance();
   }
 
@@ -1873,6 +1891,8 @@
     window.TATICA?.mount(view); // campinho tático da partida e aba Escalações do clube
     window.CONFRONTO?.mount(view); // confronto direto da partida (histórico do banco)
     window.BOLAO?.mount(view); // bolão: palpite na partida e página #/bolao
+    window.TORCIDA?.mount(view); // voz da torcida: quem vence e Craque do jogo
+    window.STATUS?.mount(view); // página de status do sistema
     window.COMPARTILHAR?.origem("partida", findMatch); // card para compartilhar: o jogo com o placar da hora
     // chance de vitória: precisa dos jogos da temporada dos clubes (js/club-form.js, baixado sob demanda)
     if (state.route.page === "partida" && window.CHANCE && $("[data-chance-vazio]", view)) loadClubForm().then(() => {
@@ -2117,6 +2137,7 @@
       votes[v.dataset.vote] = v.dataset.pick;
       store.set("votes", votes);
       const m = findMatch(v.dataset.vote);
+      window.TORCIDA?.votaVencedor(m.espn, v.dataset.pick); // o palpite também conta na voz da torcida
       $$(`[data-vote-card="${m.id}"]`).forEach((card) => {
         card.outerHTML = voteCard(m);
       });

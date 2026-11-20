@@ -115,7 +115,7 @@
       return anos ? `${nomeDe(x)} (${anos})` : nomeDe(x);
     }).join(", ");
     return `<div class="jg-linha" role="img" aria-label="${esc(`Carreira de ${p.nome}: ${resumo}`)}">
-      <div class="jgl-tag"><b>Carreira</b><span>${clubes} ${clubes === 1 ? "clube" : "clubes"}</span></div>
+      <div class="jgl-tag"><b>Carreira</b><span>${clubes} ${clubes === 1 ? "clube" : "clubes"}</span><a class="jgl-fonte" href="#/creditos" title="Fontes: Wikipédia (CC BY-SA), Wikidata, ogol e ESPN">fontes</a></div>
       <div class="jgl-fita"><ol class="jgl-trilho">${itensHTML(lista)}</ol></div></div>`;
   }
   // fita em looping + foco: repete os clubes até cobrir a fita duas vezes e anda uma "volta" (a largura de uma cópia)

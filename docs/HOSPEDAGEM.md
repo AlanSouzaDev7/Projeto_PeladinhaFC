@@ -141,6 +141,12 @@ npx wrangler d1 execute cazestats --remote --file worker/migracoes/003-bolao.sql
 npx wrangler d1 execute cazestats --remote --file worker/migracoes/004-avisos-do-bolao.sql
 ```
 
+**Voz da torcida e status (19/11).** Votos de quem vence e do Craque do jogo, e o batimento do agendador para a página de status. Uma vez só:
+
+```bash
+npx wrangler d1 execute cazestats --remote --file worker/migracoes/005-torcida.sql
+```
+
 ### 8. Entrar com Google (conta opcional e sincronização)
 
 O botão de conta no cabeçalho (js/conta.js) usa o "Entrar com Google". O Worker confere o comprovante do Google e guarda

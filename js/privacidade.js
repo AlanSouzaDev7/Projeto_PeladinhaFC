@@ -48,6 +48,8 @@
           e o que você salvou no site (favoritos, escalações, janela, palpites de 1 x 2) para aparecer nos seus outros aparelhos.</p>
           <p><b>Bolão (opcional, com conta).</b> Ficam guardados seus palpites de placar, o apelido que você escolher e as ligas em que você está.
           O apelido, os pontos e a posição aparecem no ranking para qualquer pessoa; os palpites de cada jogo não são mostrados aos outros.</p>
+          <p><b>Voz da torcida (opcional).</b> Ao votar em quem vence ou no Craque do jogo, o servidor guarda o voto com um código aleatório
+          do aparelho (resumido, não dá para voltar ao original) e um resumo da conexão com o jogo, só para limitar fraude. O endereço IP não é guardado.</p>
           <p><b>Alertas (opcionais).</b> Ao ativar avisos de um clube, o servidor guarda o endereço de notificação do navegador, os clubes e os tipos de aviso escolhidos.
           Desligar os avisos apaga a inscrição.</p>
           <p><b>Apagar tudo.</b> No menu da conta, "Apagar minha conta" remove do servidor a conta, o que ela salvou, os palpites, o apelido e a participação nas ligas.</p></div></section>

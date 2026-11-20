@@ -92,6 +92,8 @@ jobs:
         run: node tests/agenda.mjs
       - name: Bolão (palpites, pontos, ranking e ligas)
         run: node tests/bolao.mjs
+      - name: Voz da torcida e status do sistema
+        run: node tests/torcida.mjs
       - name: Conta com Google e sincronização (comprovantes e banco simulados)
         timeout-minutes: 2
         run: node tests/conta.mjs

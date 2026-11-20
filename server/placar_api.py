@@ -2688,6 +2688,17 @@ def known_refs():
     return refs
 
 
+# onde assistir: manchetes de transmissão de cada jogo e, quando o título cita, o canal (só nome, título, veículo e link)
+CANAIS = [("Globo", r"\b(TV\s+)?Globo\b(?!\s*Esporte)"), ("SporTV", r"\bSporTV\b"), ("Premiere", r"\bPremiere\b"), ("Prime Video", r"\b(Amazon\s+)?Prime\s+Video\b"),
+          ("CazéTV", r"\bCaz[ée]\s?TV\b"), ("Record", r"\bRecord(\s+TV)?\b"), ("ESPN", r"\bESPN\b"), ("Disney+", r"\bDisney\s?\+"),
+          ("Max", r"\bHBO\s+Max\b|\bMax\b(?=\s*\(|\s+e\s|,)"), ("Paramount+", r"\bParamount\s?\+"), ("Band", r"\bBand\b"), ("YouTube", r"\bYouTube\b"), ("GE TV", r"\bGE\s?TV\b")]
+ASSISTIR = r"onde\s+(assistir|vai\s+passar|ver)|transmiss|ao\s+vivo\s+(na|no|pel[oa])|como\s+assistir"
+
+
+def canais_do_titulo(t):
+    return [n for n, rx in CANAIS if re.search(rx, t)]
+
+
 def update_referees():
     """Para cada jogo dos próximos 8 dias, as manchetes sobre a arbitragem dele e, se o título trouxer, o árbitro."""
     with lock:
@@ -2734,6 +2745,25 @@ def update_referees():
             uniq.setdefault(headline_key(f["title"]), f)
         ref = max(names.items(), key=lambda x: x[1])[0] if names else None
         out[g[7] or f"{h}|{a}"] = {"arbitro": ref, "confirmacoes": names.get(ref, 0) if ref else 0, "manchetes": list(uniq.values())[:4]}
+        time.sleep(1)
+        # onde assistir (mesma rodada): até 3 matérias de transmissão do jogo e os canais citados nos títulos
+        try:
+            tv = news_query(f'"{nh}" "{na}" ("onde assistir" OR "onde vai passar" OR transmissão OR "como assistir") when:6d')
+        except Exception as ex:
+            log("onde assistir", h, a, ex)
+            tv = []
+        vistos, assistir, canais = set(), [], {}
+        for x in sorted(tv, key=lambda x: -x["ts"]):
+            t = x["title"]
+            if x["ts"] < since or not re.search(ASSISTIR, t, re.I) or not (about_club(h, t) and about_club(a, t)):
+                continue
+            for c in canais_do_titulo(t):
+                canais[c] = canais.get(c, 0) + 1
+            k = headline_key(t)
+            if k not in vistos:
+                vistos.add(k)
+                assistir.append({"title": t, "link": x["link"], "source": x["source"], "ts": x["ts"]})
+        out[g[7] or f"{h}|{a}"].update(assistir=assistir[:3], canais=sorted(canais, key=lambda c: -canais[c])[:4])
         time.sleep(1)
     with lock:
         state["arbitragem"] = {"updated": time.strftime("%d/%m/%Y às %H:%M"), "jogos": out, "arbitros": state.get("arbitros", [])}

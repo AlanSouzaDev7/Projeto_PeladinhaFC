@@ -16,6 +16,8 @@
      PUT /dados/<nome>.json, GET /dados/_lista   só o robô de dados (segredo ROBO_CHAVE)
      GET /jogos?clube=&contra=&temporada=&liga=  histórico dos jogos (todas as temporadas) com resumo V/E/D
      POST /jogos                                 só o robô: lote de jogos para o histórico
+     GET /status                              saúde do sistema (worker/status.mjs)
+     POST /torcida/voto, GET /torcida/<jogo>  voz da torcida: quem vence e Craque do jogo (worker/torcida.mjs)
      /bolao/eu, /bolao/palpite, /bolao/ranking, /bolao/liga   bolão com ranking e ligas entre amigos (worker/bolao.mjs)
      GET /agenda/<clube>.ics                  agenda do favorito: calendário de jogos para assinar (worker/agenda.mjs)
      POST /alerta, GET /gols/recentes            alertas do favorito: gol, início, intervalo, escalação, fim (Web Push)
@@ -34,6 +36,8 @@
 import { entrar, usuarioDa, lerDados, gravarDados, sair, apagarConta, limpaSessoes } from "./conta.mjs";
 import { eu, gravaApelido, gravaPalpite, ranking, criaLiga, entraLiga, saiLiga } from "./bolao.mjs";
 import { avisar, recentes, montaAvisos, enviaAvisos, limpaAvisos } from "./bolao-avisos.mjs";
+import { vota, resultado as resultadoTorcida, limpaVotos } from "./torcida.mjs";
+import { status, batimento } from "./status.mjs";
 import { inscrever, verificaGols, enviaPushes, golsRecentes, limpaGols } from "./alertas.mjs";
 import { agenda } from "./agenda.mjs";
 import { guardaCompartilhado, rotaEspn, repassaEspn, contaBuscaD1, emAltaD1, registraErro, salvaEscalacao, lerEscalacao, limpaAntigos, disparaRobo, roboAutorizado, gravaArquivo, listaArquivos, serveArquivo, gravaJogos, consultaJogos } from "./plataforma.mjs";
@@ -292,6 +296,24 @@ export default {
       if (path === "/conta" && req.method === "DELETE") { await apagarConta(env, sessao.id); return json({ ok: true }); }
       return json({ erro: "método não permitido" }, 405);
     }
+    // saúde do sistema: quando cada parte trabalhou pela última vez (página #/status do site)
+    if (path === "/status" && (req.method === "GET" || req.method === "HEAD")) {
+      if (!env.DB) return json({ geral: "fora", itens: [], erro: "banco não configurado" }, 503);
+      return new Response(JSON.stringify(await status(env)), { headers: { ...cors, "cache-control": "public, max-age=30" } });
+    }
+    // voz da torcida: "quem vence?" e Craque do jogo (worker/torcida.mjs)
+    if (path === "/torcida/voto" && req.method === "POST") {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      if (+(req.headers.get("content-length") || 0) > 1024) return json({ erro: "pedido grande demais" }, 413);
+      const r = await vota(env, await req.text(), req.headers.get("cf-connecting-ip") || "");
+      return r.erro ? json({ erro: r.erro }, r.status) : json({ ok: true, ...r, status: undefined });
+    }
+    const tc = /^\/torcida\/(\d{1,12})$/.exec(path);
+    if (tc && req.method === "GET") {
+      if (!env.DB) return json({ erro: "banco não configurado" }, 503);
+      const r = await resultadoTorcida(env, tc[1]);
+      return r.erro ? json({ erro: r.erro }, r.status) : new Response(JSON.stringify({ ok: true, ...r, status: undefined }), { headers: { ...cors, "cache-control": "public, max-age=20" } });
+    }
     // bolão: palpites de placar, ranking geral e ligas entre amigos (worker/bolao.mjs). O ranking é público; o resto pede a conta.
     if (path.startsWith("/bolao/")) {
       if (!env.DB) return json({ erro: "banco não configurado" }, 503);
@@ -393,9 +415,10 @@ export default {
       // avisos do bolão: monta a cada 5 minutos (só banco) e envia um pouco por minuto
       const min = new Date(evento.scheduledTime || Date.now()).getUTCMinutes();
       if (env.DB) ctx.waitUntil((min % 5 === 0 ? montaAvisos(env) : Promise.resolve(0)).then(() => enviaAvisos(env)).catch((e) => console.error("bolão:", e && e.message)));
+      if (env.DB && min % 5 === 0) ctx.waitUntil(batimento(env).catch(() => {})); // a página de status vê que o agendador está vivo
       return;
     }
     ctx.waitUntil(disparaRobo(env).then((r) => console.log("robô:", r)));
-    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env), limpaSessoes(env), limpaAvisos(env)]));
+    if (env.DB) ctx.waitUntil(Promise.all([limpaAntigos(env), limpaGols(env), limpaSessoes(env), limpaAvisos(env), limpaVotos(env)]));
   },
 };
