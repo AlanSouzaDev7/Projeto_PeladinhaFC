@@ -1156,6 +1156,7 @@
             <div class="mam-top"></div><ul class="mam-list"><li class="mam-empty">Carregando a narração…</li></ul></div>` : ""}
           ${resumoHTML(m)}
           ${window.PRESSAO ? PRESSAO.card(m) : ""}
+          ${window.REPLAY ? REPLAY.card(m) : ""}
           ${window.CHUTES ? CHUTES.card(m) : ""}
           <div class="card"><div class="card-h">Comparação no campeonato <small>${SEG.esc(REAL.source)} · ${SEG.esc(REAL.updated)}</small></div><div class="card-b">${compareHTML(m)}</div></div>
         </div>
@@ -1934,6 +1935,7 @@
     window.TORCIDA?.mount(view); // voz da torcida: quem vence e Craque do jogo
     window.PRESSAO?.mount(view); // gráfico de pressão da partida
     window.CHUTES?.mount(view); // mapa de chutes da partida
+    window.REPLAY?.mount(view); // replay animado dos gols
     window.XG?.mount(view); // xG na temporada (#/xg)
     window.PREVISAO?.mount(view); // previsão da tabela final (#/previsao)
     window.RODADA?.mount(view); // resumo da rodada (#/rodada/<n>)

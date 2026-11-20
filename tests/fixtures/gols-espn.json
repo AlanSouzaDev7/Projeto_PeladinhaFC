@@ -1,0 +1,481 @@
+[
+ {
+  "casa": "Vasco da Gama",
+  "fora": "Internacional",
+  "c": {
+   "sequence": 29,
+   "time": {
+    "value": 1546.0,
+    "displayValue": "26'"
+   },
+   "text": "Goal! Vasco da Gama 1, Internacional 0. Thiago Mendes (Vasco da Gama) right footed shot from outside the box to the bottom left corner. Assisted by Facundo Colidio with a headed pass.",
+   "play": {
+    "type": {
+     "id": "70",
+     "text": "Goal",
+     "type": "goal"
+    },
+    "team": {
+     "displayName": "Vasco da Gama"
+    },
+    "fieldPositionX": 80.6,
+    "fieldPositionY": 58.5,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 53.7,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Thiago Mendes"
+      }
+     },
+     {
+      "athlete": {
+       "displayName": "Facundo Colidio"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Vasco da Gama",
+  "fora": "Internacional",
+  "c": {
+   "sequence": 73,
+   "time": {
+    "value": 3054.0,
+    "displayValue": "51'"
+   },
+   "text": "Goal! Vasco da Gama 1, Internacional 1. Juninho (Internacional) header from the centre of the box to the bottom left corner. Assisted by Bruno Gomes following a corner.",
+   "play": {
+    "type": {
+     "id": "137",
+     "text": "Goal - Header",
+     "type": "goal---header"
+    },
+    "team": {
+     "displayName": "Internacional"
+    },
+    "fieldPositionX": 93.9,
+    "fieldPositionY": 50.1,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 52.5,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Juninho"
+      }
+     },
+     {
+      "athlete": {
+       "displayName": "Bruno Gomes"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Vasco da Gama",
+  "fora": "Internacional",
+  "c": {
+   "sequence": 81,
+   "time": {
+    "value": 3746.0,
+    "displayValue": "63'"
+   },
+   "text": "Goal! Vasco da Gama 2, Internacional 1. Facundo Colidio (Vasco da Gama) right footed shot from the centre of the box to the bottom left corner. Assisted by Andrés Gómez.",
+   "play": {
+    "type": {
+     "id": "70",
+     "text": "Goal",
+     "type": "goal"
+    },
+    "team": {
+     "displayName": "Vasco da Gama"
+    },
+    "fieldPositionX": 84.6,
+    "fieldPositionY": 48.1,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 53.3,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Facundo Colidio"
+      }
+     },
+     {
+      "athlete": {
+       "displayName": "Andrés Gómez"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Flamengo",
+  "fora": "Athletico Paranaense",
+  "c": {
+   "sequence": 5,
+   "time": {
+    "value": 655.0,
+    "displayValue": "11'"
+   },
+   "text": "Goal! Flamengo 0, Athletico Paranaense 1. Kerwin Vargas (Athletico Paranaense) right footed shot from more than 35 yards to the centre of the goal. Assisted by Bruno Zapelli following a fast break.",
+   "play": {
+    "type": {
+     "id": "70",
+     "text": "Goal",
+     "type": "goal"
+    },
+    "team": {
+     "displayName": "Athletico Paranaense"
+    },
+    "fieldPositionX": 39.0,
+    "fieldPositionY": 42.3,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 48.3,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Kerwin Vargas"
+      }
+     },
+     {
+      "athlete": {
+       "displayName": "Bruno Zapelli"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Flamengo",
+  "fora": "Athletico Paranaense",
+  "c": {
+   "sequence": 9,
+   "time": {
+    "value": 974.0,
+    "displayValue": "17'"
+   },
+   "text": "Goal! Flamengo 1, Athletico Paranaense 1. Jorge Carrascal (Flamengo) right footed shot from the centre of the box to the bottom left corner. Assisted by Guillermo Varela with a headed pass.",
+   "play": {
+    "type": {
+     "id": "70",
+     "text": "Goal",
+     "type": "goal"
+    },
+    "team": {
+     "displayName": "Flamengo"
+    },
+    "fieldPositionX": 90.6,
+    "fieldPositionY": 39.5,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 53.2,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Jorge Carrascal"
+      }
+     },
+     {
+      "athlete": {
+       "displayName": "Guillermo Varela"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Flamengo",
+  "fora": "Athletico Paranaense",
+  "c": {
+   "sequence": 18,
+   "time": {
+    "value": 1594.0,
+    "displayValue": "27'"
+   },
+   "text": "Goal! Flamengo 2, Athletico Paranaense 1. Jorginho (Flamengo) converts the penalty with a right footed shot to the bottom left corner.",
+   "play": {
+    "type": {
+     "id": "98",
+     "text": "Penalty - Scored",
+     "type": "penalty---scored"
+    },
+    "team": {
+     "displayName": "Flamengo"
+    },
+    "fieldPositionX": 88.5,
+    "fieldPositionY": 50.0,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 52.9,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Jorginho"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Cruzeiro",
+  "fora": "Palmeiras",
+  "c": {
+   "sequence": 60,
+   "time": {
+    "value": 2718.0,
+    "displayValue": "46'"
+   },
+   "text": "Goal! Cruzeiro 0, Palmeiras 1. Ramón Sosa (Palmeiras) right footed shot from the right side of the box to the bottom left corner. Assisted by Lucas Evangelista with a through ball following a fast break.",
+   "play": {
+    "type": {
+     "id": "70",
+     "text": "Goal",
+     "type": "goal"
+    },
+    "team": {
+     "displayName": "Palmeiras"
+    },
+    "fieldPositionX": 85.7,
+    "fieldPositionY": 35.1,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 53.5,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Ramón Sosa"
+      }
+     },
+     {
+      "athlete": {
+       "displayName": "Lucas Evangelista"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Cruzeiro",
+  "fora": "Palmeiras",
+  "c": {
+   "sequence": 96,
+   "time": {
+    "value": 4414.0,
+    "displayValue": "74'"
+   },
+   "text": "Goal! Cruzeiro 1, Palmeiras 1. Matheus Pereira (Cruzeiro) from a free kick with a left footed shot to the top right corner.",
+   "play": {
+    "type": {
+     "id": "138",
+     "text": "Goal - Free-kick",
+     "type": "goal---free-kick"
+    },
+    "team": {
+     "displayName": "Cruzeiro"
+    },
+    "fieldPositionX": 71.9,
+    "fieldPositionY": 36.4,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 45.9,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Matheus Pereira"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Cruzeiro",
+  "fora": "Palmeiras",
+  "c": {
+   "sequence": 99,
+   "time": {
+    "value": 4584.0,
+    "displayValue": "77'"
+   },
+   "text": "Own Goal by Khellven, Palmeiras. Cruzeiro 2, Palmeiras 1.",
+   "play": {
+    "type": {
+     "id": "97",
+     "text": "Own Goal",
+     "type": "own-goal"
+    },
+    "team": {
+     "displayName": "Cruzeiro"
+    },
+    "fieldPositionX": 98.4,
+    "fieldPositionY": 57.3,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 49.1,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Khellven"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Corinthians",
+  "fora": "Botafogo",
+  "c": {
+   "sequence": 23,
+   "time": {
+    "value": 1640.0,
+    "displayValue": "28'"
+   },
+   "text": "Goal! Corinthians 1, Botafogo 0. Kaio César (Corinthians) left footed shot from the centre of the box to the centre of the goal. Assisted by Vitinho with a cross.",
+   "play": {
+    "type": {
+     "id": "70",
+     "text": "Goal",
+     "type": "goal"
+    },
+    "team": {
+     "displayName": "Corinthians"
+    },
+    "fieldPositionX": 88.0,
+    "fieldPositionY": 44.8,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 51.2,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Kaio"
+      }
+     },
+     {
+      "athlete": {
+       "displayName": "Vitinho"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Corinthians",
+  "fora": "Botafogo",
+  "c": {
+   "sequence": 25,
+   "time": {
+    "value": 2009.0,
+    "displayValue": "34'"
+   },
+   "text": "Goal! Corinthians 2, Botafogo 0. Memphis Depay (Corinthians) right footed shot from the centre of the box to the bottom left corner. Assisted by Kaio César.",
+   "play": {
+    "type": {
+     "id": "70",
+     "text": "Goal",
+     "type": "goal"
+    },
+    "team": {
+     "displayName": "Corinthians"
+    },
+    "fieldPositionX": 88.7,
+    "fieldPositionY": 41.9,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 52.5,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Memphis Depay"
+      }
+     },
+     {
+      "athlete": {
+       "displayName": "Kaio"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Corinthians",
+  "fora": "Botafogo",
+  "c": {
+   "sequence": 67,
+   "time": {
+    "value": 3593.0,
+    "displayValue": "60'"
+   },
+   "text": "Goal! Corinthians 3, Botafogo 0. Kaio César (Corinthians) left footed shot from the centre of the box to the centre of the goal. Assisted by Memphis Depay.",
+   "play": {
+    "type": {
+     "id": "70",
+     "text": "Goal",
+     "type": "goal"
+    },
+    "team": {
+     "displayName": "Corinthians"
+    },
+    "fieldPositionX": 91.8,
+    "fieldPositionY": 48.1,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 51.5,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Kaio"
+      }
+     },
+     {
+      "athlete": {
+       "displayName": "Memphis Depay"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "casa": "Corinthians",
+  "fora": "Botafogo",
+  "c": {
+   "sequence": 72,
+   "time": {
+    "value": 3980.0,
+    "displayValue": "67'"
+   },
+   "text": "Goal! Corinthians 4, Botafogo 0. Kaio César (Corinthians) right footed shot from the right side of the box to the bottom left corner. Assisted by Vitinho.",
+   "play": {
+    "type": {
+     "id": "70",
+     "text": "Goal",
+     "type": "goal"
+    },
+    "team": {
+     "displayName": "Corinthians"
+    },
+    "fieldPositionX": 91.7,
+    "fieldPositionY": 31.3,
+    "fieldPosition2X": 100.0,
+    "fieldPosition2Y": 52.7,
+    "participants": [
+     {
+      "athlete": {
+       "displayName": "Kaio"
+      }
+     },
+     {
+      "athlete": {
+       "displayName": "Vitinho"
+      }
+     }
+    ]
+   }
+  }
+ }
+]
