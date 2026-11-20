@@ -413,3 +413,22 @@
 .pv-imp-l { display: inline-flex; gap: 4px; font-size: 10.5px; color: var(--text-3); }
 .pv-imp-l span { min-width: 3.4em; text-align: center; padding: 0 6px; }
 @media (max-width: 520px) { .pv-kpis { grid-template-columns: repeat(3, 1fr); } .pv-lados { grid-template-columns: 1fr; } }
+
+/* ---------- resumo da rodada (js/rodada.js) ---------- */
+.rd-chips { margin-bottom: 14px; }
+.rd-jogos { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.rd-jogos li { padding: 8px 0; border-bottom: 1px solid var(--line-soft); display: grid; gap: 3px; }
+.rd-jogos a { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; color: var(--text); text-decoration: none; }
+.rd-jogos a b { font: 800 18px/1 var(--font-display); font-variant-numeric: tabular-nums; min-width: 3.4em; text-align: center; }
+.rd-t { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.rd-t.dir { justify-content: flex-end; }
+.rd-jogos small { text-align: center; color: var(--text-3); font-size: 12px; }
+.rd-dest { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.rd-dest li { display: grid; grid-template-columns: 9em 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); font-size: 13.5px; }
+.rd-dest li > span { color: var(--text-3); font-weight: 700; font-size: 12.5px; }
+.rd-dest li > b a, .rd-dest li > span a { color: var(--text); text-decoration: none; }
+.rd-mov { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.rd-mov ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.rd-mov li { display: flex; align-items: center; gap: 6px; font-size: 13.5px; }
+.rd-mov li b { margin-left: auto; font-variant-numeric: tabular-nums; }
+.round-nav small a { color: var(--accent); font-weight: 700; }

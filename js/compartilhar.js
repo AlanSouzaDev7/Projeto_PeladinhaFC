@@ -134,6 +134,26 @@
     texto(ctx, card.querySelector("[data-cmp-veredito]")?.textContent || "", L / 2, A - 190, { px: 34, max: L - 160 });
     return { canvas: cv, nome: `${pa.nome}-x-${pb.nome}` };
   }
+  async function cardRodada(rd) {
+    const PD = window.PD, jogos = (PD?.realMatches?.(Number(rd)) || []).filter((m) => m.status === "ft");
+    if (!jogos.length) throw new Error("rodada sem jogos encerrados");
+    const cv = novoCanvas(), ctx = cv.getContext("2d");
+    fundo(ctx, "#0f3d2e", "#1d4ed8");
+    moldura(ctx, `Brasileirão · ${rd}ª rodada`);
+    texto(ctx, `Resumo da ${rd}ª rodada`, L / 2, 250, { px: 64, tipo: "titulo" });
+    const lista = jogos.slice(0, 10);
+    lista.forEach((m, i) => {
+      const y = 340 + i * 72;
+      ctx.fillStyle = "rgba(255,255,255,0.06)"; ctx.fillRect(90, y - 46, L - 180, 60);
+      texto(ctx, byId[m.home]?.abbr || m.home, L / 2 - 90, y, { px: 36, alinha: "right", max: 380 });
+      texto(ctx, `${m.hs} x ${m.as}`, L / 2, y, { px: 40, tipo: "titulo" });
+      texto(ctx, byId[m.away]?.abbr || m.away, L / 2 + 90, y, { px: 36, alinha: "left", max: 380 });
+    });
+    const d = document.querySelector(`[data-rodada="${CSS.escape(String(rd))}"] .rd-dest`);
+    const frase = d ? [...d.querySelectorAll("li")].slice(0, 2).map((li) => li.textContent.replace(/\s+/g, " ").trim()).join(" · ") : "";
+    if (frase) texto(ctx, frase, L / 2, A - 190, { peso: 600, px: 30, cor: "rgba(255,255,255,0.85)", max: L - 140 });
+    return { canvas: cv, nome: `rodada-${rd}` };
+  }
   async function cardBolao() {
     const d = window.BOLAO?.ultimo?.();
     if (!d?.voce) throw new Error("entre no ranking para compartilhar a sua posição");
@@ -179,7 +199,7 @@
       await document.fonts?.ready;
       const tipo = b.dataset.cp, id = b.dataset.cpId;
       const card = tipo === "partida" ? await cardPartida(origens.partida?.(id) || (() => { throw new Error("jogo não encontrado"); })())
-        : tipo === "jogador" ? await cardJogador(id) : tipo === "comparacao" ? await cardComparacao(id) : await cardBolao();
+        : tipo === "jogador" ? await cardJogador(id) : tipo === "comparacao" ? await cardComparacao(id) : tipo === "rodada" ? await cardRodada(id) : await cardBolao();
       const r = await entrega(card);
       if (msg) msg.textContent = r;
     } catch (err) {
@@ -190,6 +210,6 @@
   });
 
   // _monta: só desenha (sem compartilhar nem baixar); usado para conferir a imagem
-  const _monta = async (tipo, id) => { pegaFontes(); await document.fonts?.ready; return tipo === "partida" ? cardPartida(origens.partida(id)) : tipo === "jogador" ? cardJogador(id) : tipo === "comparacao" ? cardComparacao(id) : cardBolao(); };
+  const _monta = async (tipo, id) => { pegaFontes(); await document.fonts?.ready; return tipo === "partida" ? cardPartida(origens.partida(id)) : tipo === "jogador" ? cardJogador(id) : tipo === "comparacao" ? cardComparacao(id) : tipo === "rodada" ? cardRodada(id) : cardBolao(); };
   window.COMPARTILHAR = { botao, origem: (tipo, fn) => { origens[tipo] = fn; }, _arquivo: arquivo, _monta };
 })();

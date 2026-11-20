@@ -108,6 +108,8 @@ jobs:
         run: node tests/chutes.mjs
       - name: Previsão da tabela final
         run: node tests/previsao.mjs
+      - name: Resumo da rodada
+        run: node tests/rodada.mjs
       - name: Conta com Google e sincronização (comprovantes e banco simulados)
         timeout-minutes: 2
         run: node tests/conta.mjs

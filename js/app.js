@@ -925,7 +925,7 @@
         <div class="card">
           <div class="round-nav">
             <button data-round="${ROUNDS[ri - 1] ?? ""}" ${ri > 0 ? "" : "disabled"} aria-label="Rodada anterior">‹</button>
-            <div><b>${round}ª rodada</b><small>Brasileirão Série A 2026</small></div>
+            <div><b>${round}ª rodada</b><small>Brasileirão Série A 2026${list.some((m) => m.status === "ft") ? ` · <a href="#/rodada/${round}">Resumo da rodada</a>` : ""}</small></div>
             <button data-round="${ROUNDS[ri + 1] ?? ""}" ${ri < ROUNDS.length - 1 ? "" : "disabled"} aria-label="Próxima rodada">›</button>
           </div>
           <div class="tabs" data-tabs>
@@ -1725,6 +1725,7 @@
       r.page === "creditos" && window.STATUS ? STATUS.pageCreditos() :
       r.page === "xg" && window.XG ? XG.page() :
       r.page === "previsao" && window.PREVISAO ? PREVISAO.page() :
+      r.page === "rodada" && window.RODADA ? RODADA.page(r.id) :
       window.PAINEL && r.page === PAINEL.ROTA_ADMIN ? PAINEL.page() :
       r.page === "widgets" && window.WIDGETS ? WIDGETS.page() :
       r.page === "sobre" ? pageAbout() :
@@ -1756,7 +1757,7 @@
     stamp(view);
     const navKey = r.page === "" || r.page === "partida" || r.page === "copa" ? "home" : r.page === "clube" || r.page === "jogador" ? "clubes" : r.page;
     $$("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === navKey));
-    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? (findMatch(r.id) ? `${byId[findMatch(r.id).home].abbr} x ${byId[findMatch(r.id).away].abbr} — CazéStats.TV` : "Partida — CazéStats.TV") : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "bolao" ? "Bolão — CazéStats.TV" : window.PAINEL && r.page === PAINEL.ROTA_ADMIN ? "Administração — CazéStats.TV" : r.page === "widgets" ? "Widgets — CazéStats.TV" : r.page === "xg" ? "xG no Brasileirão — CazéStats.TV" : r.page === "previsao" ? "Previsão da tabela final — CazéStats.TV" : r.page === "status" ? "Status — CazéStats.TV" : r.page === "creditos" ? "Fontes e créditos — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
+    document.title = club ? `${club.name} — CazéStats.TV` : r.page === "tabela" && RANKINGS[r.id] ? `${RANKINGS[r.id].title} — CazéStats.TV` : r.page === "partida" ? (findMatch(r.id) ? `${byId[findMatch(r.id).home].abbr} x ${byId[findMatch(r.id).away].abbr} — CazéStats.TV` : "Partida — CazéStats.TV") : r.page === "bora-pro-jogo" ? "Bora pro jogo — CazéStats.TV" : r.page === "bolao" ? "Bolão — CazéStats.TV" : window.PAINEL && r.page === PAINEL.ROTA_ADMIN ? "Administração — CazéStats.TV" : r.page === "widgets" ? "Widgets — CazéStats.TV" : r.page === "xg" ? "xG no Brasileirão — CazéStats.TV" : r.page === "previsao" ? "Previsão da tabela final — CazéStats.TV" : r.page === "rodada" ? "Resumo da rodada — CazéStats.TV" : r.page === "status" ? "Status — CazéStats.TV" : r.page === "creditos" ? "Fontes e créditos — CazéStats.TV" : r.page === "simulador" ? "Simulador da tabela — CazéStats.TV" : r.page === "jogador" ? `${JOGADOR.get(r.id)?.nome || "Jogador"} — CazéStats.TV` : r.page === "copa" ? COPA.titulo(r.id || "libertadores", r.tab, r.extra) : "CazéStats.TV — Futebol Brasileiro";
     enhance();
   }
 
@@ -1935,6 +1936,7 @@
     window.CHUTES?.mount(view); // mapa de chutes da partida
     window.XG?.mount(view); // xG na temporada (#/xg)
     window.PREVISAO?.mount(view); // previsão da tabela final (#/previsao)
+    window.RODADA?.mount(view); // resumo da rodada (#/rodada/<n>)
     window.STATUS?.mount(view); // página de status do sistema
     window.PAINEL?.mount(view); // administração
     window.WIDGETS?.mount(view); // gerador de widgets
