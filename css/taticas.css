@@ -478,12 +478,12 @@
 /* a lupa fica por cima do campo: o toque nela tem de chegar ao campo (senão tocar na lupa não fazia nada) */
 .header .search > svg { pointer-events: none; }
 /* busca recolhida numa lupa de 40 px, que abre por cima do cabeçalho ao tocar:
-   · celular estreito (até 400 px: Android 360, Galaxy Fold fechado, iPhone SE): não cabem logotipo, busca e dois botões
+   · celular (até 440 px: Android 360 e 412, iPhone, Galaxy Fold fechado): não cabem logotipo, busca e dois botões
      (antes o campo ficava embaixo do botão da conta e o toque abria a conta);
    · tablet em paisagem / iPad Pro (901 a 1100 px): com o menu inteiro, o botão do tema saía 6 px para fora da tela.
    Fica aberta enquanto houver resultados na tela (no Safari, tocar num resultado tira o foco do campo antes do toque).
    O logotipo com a palavra fica sempre (regra da identidade em css/identidade.css). */
-@media (max-width: 400px), (min-width: 901px) and (max-width: 1100px) {
+@media (max-width: 440px), (min-width: 901px) and (max-width: 1100px) {
   html.ident .header .search { flex: 0 0 40px; width: 40px; min-width: 40px; border-color: transparent; background: transparent; }
   html.ident .header .search input { padding: 0 0 0 40px; cursor: pointer; }
   html.ident .header .search input::placeholder { color: transparent; }
@@ -496,7 +496,7 @@
 @media (min-width: 901px) and (max-width: 1100px) {
   html.ident .header .search:is(:focus-within, :has(.search-results.open)) { left: auto; width: min(420px, 60vw); right: 18px; }
 }
-@media (max-width: 400px) {
+@media (max-width: 440px) {
   html.ident .header { gap: 8px; padding: 0 12px; }
   html.ident .header .icon-btn { width: 40px; height: 40px; }
 }

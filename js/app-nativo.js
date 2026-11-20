@@ -118,7 +118,7 @@
     const verificador = b64u(crypto.getRandomValues(new Uint8Array(32)));
     const desafio = b64u(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verificador)));
     try { localStorage.setItem(VERIF, JSON.stringify({ verificador, quando: Date.now() })); } catch { /* sem armazenamento */ }
-    const url = `${location.origin}/entrar-app.html?desafio=${desafio}`;
+    const url = `${location.origin}/entrar-app?desafio=${desafio}`; // o Cloudflare Pages serve entrar-app.html sem a extensão
     if (cap().Browser) await cap().Browser.open({ url, presentationStyle: "popover" });
     else window.open(url, "_blank", "noopener");
   };
@@ -275,7 +275,10 @@
       // ícones da barra de status legíveis no tema da página: escuros no claro, claros no escuro (e quando o tema muda)
       const raiz = document.documentElement;
       const pinta = () => {
-        const claro = raiz.dataset.theme === "light";
+        // a página só desenha atrás da barra quando o Capacitor manda a margem de cima; senão a faixa é o fundo Noite
+        // do Android (styles.xml) e os ícones ficam sempre claros
+        const sob = parseFloat(getComputedStyle(raiz).getPropertyValue("--safe-area-inset-top")) > 0;
+        const claro = sob && raiz.dataset.theme === "light";
         StatusBar.setStyle({ style: claro ? "LIGHT" : "DARK" }).catch(() => {});
         // atrás da barra: Cal no tema claro, Noite no escuro (vale nos WebViews em que o Android pinta essa faixa)
         StatusBar.setBackgroundColor?.({ color: claro ? "#F1EDE1" : "#0B0B0D" })?.catch?.(() => {});

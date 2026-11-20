@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CazéStats.TV — cores da marca usadas pelo Android (Noite: fundo do app atrás das barras do sistema) -->
+<resources>
+    <color name="noite">#0B0B0D</color>
+</resources>
