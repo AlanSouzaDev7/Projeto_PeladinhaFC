@@ -19,7 +19,9 @@ const adb = (...a) => execFileSync(ADB, a, { encoding: "utf8", maxBuffer: 64e6 }
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 const res = [];
 const ok = (cond, nome, extra = "") => { res.push({ nome, ok: !!cond, extra }); console.log(`${cond ? "ok  " : "FALHOU"} · ${PERFIL} · ${nome}${extra ? ` (${extra})` : ""}`); };
-const print = (nome) => { writeFileSync(`${OUT}${PERFIL}-${nome}.png`, execFileSync(ADB, ["exec-out", "screencap", "-p"], { maxBuffer: 64e6 })); };
+// dobrável tem duas telas: o print escolhe a principal (o screencap sem -d falha com "Multiple displays")
+const telaPrincipal = (() => { try { return (execFileSync(ADB, ["shell", "dumpsys", "SurfaceFlinger", "--display-id"], { encoding: "utf8" }).match(/Display (\d+)/) || [])[1]; } catch { return null; } })();
+const print = (nome) => { const a = ["exec-out", "screencap", "-p", ...(telaPrincipal ? ["-d", telaPrincipal] : [])]; try { writeFileSync(`${OUT}${PERFIL}-${nome}.png`, execFileSync(ADB, a, { maxBuffer: 64e6 })); } catch { writeFileSync(`${OUT}${PERFIL}-${nome}.png`, execFileSync(ADB, ["exec-out", "screencap", "-p"], { maxBuffer: 64e6 })); } };
 
 /* a árvore de acessibilidade da tela (o WebView expõe os textos e links da página) */
 function tela() {
@@ -30,9 +32,11 @@ function tela() {
     .map((m) => ({ txt: `${m[1]} ${m[2]}`.trim(), x: (+m[3] + +m[5]) / 2, y: (+m[4] + +m[6]) / 2, w: +m[5] - +m[3], h: +m[6] - +m[4] }));
 }
 const acha = (re, nos = tela()) => nos.find((n) => re.test(n.txt) && n.w > 0 && n.h > 0);
+// avisos de "app não responde" de apps do sistema (comuns logo depois do boot do emulador): fecha antes de ler a tela
+const fechaAvisos = () => { try { adb("shell", "am", "broadcast", "-a", "android.intent.action.CLOSE_SYSTEM_DIALOGS"); } catch { /* segue */ } };
 async function aparece(re, ms = 20000) {
   const t0 = Date.now();
-  while (Date.now() - t0 < ms) { const n = acha(re); if (n) return { n, ms: Date.now() - t0 }; await espera(800); }
+  while (Date.now() - t0 < ms) { fechaAvisos(); const n = acha(re); if (n) return { n, ms: Date.now() - t0 }; await espera(800); }
   return null;
 }
 async function toca(re) { const n = acha(re); if (!n) return false; adb("shell", "input", "tap", String(Math.round(n.x)), String(Math.round(n.y))); await espera(1500); return true; }
@@ -47,7 +51,8 @@ adb("shell", "pm", "clear", PKG); // como app recém-instalado (sem cache)
 adb("logcat", "-c");
 const t0 = Date.now();
 adb("shell", "am", "start", "-W", "-n", `${PKG}/.MainActivity`);
-const primeira = await aparece(/Brasileirão|rodada/i, 60000);
+// conteúdo da página (os filtros da rodada), não só o letreiro de notícias, que também diz "Brasileirão"
+const primeira = await aparece(/A jogar \(\d+\)|Fim \(\d+\)|Encerrados \(\d+\)/, 60000);
 const marca = (adb("logcat", "-d", "-s", "Capacitor/Console:I").match(/primeira tela em (\d+) ms/) || [])[1];
 ok(primeira, "abre do zero e mostra a página inicial com dados", `${marca ? `primeira tela com dados em ${(marca / 1000).toFixed(1)} s (medido pelo app)` : `${((Date.now() - t0) / 1000).toFixed(1)} s até o leitor de tela ver`}`);
 await espera(3000);
@@ -85,11 +90,11 @@ if (!TV) {
     ok(/futebol/.test(atividade()), "ao voltar, o app continua de onde estava", atividade());
   } else ok(false, "painel da conta com o botão Entrar com Google");
   // 5) girar a tela
-  adb("shell", "settings", "put", "system", "accelerometer_rotation", "0");
-  adb("shell", "settings", "put", "system", "user_rotation", "1"); await espera(3500);
+  const gira = (r) => { try { adb("shell", "settings", "put", "system", "accelerometer_rotation", "0"); adb("shell", "settings", "put", "system", "user_rotation", String(r)); } catch { /* o emulador às vezes recusa na primeira: tenta de novo */ try { adb("shell", "settings", "put", "system", "user_rotation", String(r)); } catch { /* segue */ } } };
+  gira(1); await espera(3500);
   print("4-paisagem");
   ok(acha(/CazéStats|Classificação|Brasileirão/i), "girar para paisagem mantém o app de pé");
-  adb("shell", "settings", "put", "system", "user_rotation", "0"); await espera(2500);
+  gira(0); await espera(2500);
 } else {
   // TV: só controle remoto (setas e OK)
   for (let i = 0; i < 6; i++) { adb("shell", "input", "keyevent", "KEYCODE_DPAD_RIGHT"); await espera(400); }

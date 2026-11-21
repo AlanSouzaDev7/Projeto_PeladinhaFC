@@ -40,6 +40,19 @@
       <p>Confira se o celular está com internet. Depois de abrir uma vez, o app guarda os últimos dados e funciona mesmo sem conexão.</p>
       <a class="botao" href="https://cazestats.pages.dev/">Tentar de novo</a>
       <small>Se o problema continuar, atualize o "Android System WebView" e o "Google Chrome" na Play Store.</small>
+      <small id="auto">O app tenta de novo sozinho quando a internet voltar.</small>
     </div>
+    <script>
+      // tenta de novo sozinho: quando o Android avisa que a internet voltou e, por garantia, a cada 10 s (só se o site responder)
+      (function () {
+        var SITE = "https://cazestats.pages.dev/";
+        var tenta = function () {
+          if (!navigator.onLine) return;
+          fetch(SITE + "versao.json?t=" + Date.now(), { cache: "no-store", mode: "no-cors" }).then(function () { location.replace(SITE); }).catch(function () {});
+        };
+        window.addEventListener("online", tenta);
+        setInterval(tenta, 10000);
+      })();
+    </script>
   </body>
 </html>

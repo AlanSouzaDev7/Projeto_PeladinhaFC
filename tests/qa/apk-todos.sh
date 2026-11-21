@@ -9,10 +9,14 @@ PERFIS=("${@:-cz_celular cz_pequeno cz_tablet cz_dobravel cz_tv}")
 for avd in "${PERFIS[@]}"; do
   "$ADB" emu kill >/dev/null 2>&1; sleep 6
   echo "### ligando $avd"
-  "$EMU" -avd "$avd" -no-snapshot -no-boot-anim -gpu swiftshader_indirect -no-audio >/dev/null 2>&1 &
+  "$EMU" -avd "$avd" -no-snapshot -no-boot-anim -gpu host -no-audio >/dev/null 2>&1 &
   "$ADB" wait-for-device
   for i in $(seq 1 90); do [ "$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break; sleep 4; done
-  sleep 15
+  # o Android leva um tempo para assentar depois do boot (antes disso aparecem avisos de "app não responde" de apps
+  # do sistema, que bloqueiam toques e o leitor de tela)
+  sleep 60
+  "$ADB" shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1
+  for i in $(seq 1 30); do "$ADB" shell ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1 && break; sleep 2; done
   "$ADB" install -r "$APK" | tail -1
   nome="${avd#cz_}"
   if [ "$avd" = "cz_tv" ]; then node "$(dirname "$0")/apk.mjs" "$nome" tv; else node "$(dirname "$0")/apk.mjs" "$nome"; fi
