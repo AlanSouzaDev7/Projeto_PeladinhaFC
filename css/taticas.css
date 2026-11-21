@@ -626,3 +626,7 @@ html.motion-leve .backdrop-spot { display: none; }
 .jg-topo-kpis { min-height: 188px; }
 @media (min-width: 561px) and (max-width: 900px) { .jg-topo-kpis { min-height: 99px; } }
 @media (min-width: 901px) { .jg-topo-kpis { min-height: 206px; } }
+
+/* menu do topo entre 901 e 1000 px (TV Android em 1080p com densidade 2 = 960 px, tablets): os dois rótulos longos
+   ficam curtos como no menu de baixo ("Bora", "Sobre"), senão o botão do tema saía até 81 px da tela */
+@media (min-width: 901px) and (max-width: 1000px) { .header .nav .nav-extra { display: none; } }
