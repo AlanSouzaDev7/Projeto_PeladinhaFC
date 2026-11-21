@@ -1878,13 +1878,14 @@
 
     if (enteringClub && !reduced) {
       await curtain(byId[next.id]);
-    } else if (document.startViewTransition && !reduced) {
-      const vt = document.startViewTransition(() => render());
+    } else if (document.startViewTransition && !reduced && !document.documentElement.classList.contains("motion-leve")) {
+      // a página nova já entra no topo: a rolagem acontece dentro da transição (antes era depois, com um salto no fim)
+      const vt = document.startViewTransition(() => { render(); if (!samePage) window.scrollTo({ top: 0, behavior: "instant" }); });
       vt.ready.catch(() => {}); vt.finished.catch(() => {});
     } else {
       render();
+      if (!samePage) window.scrollTo({ top: 0, behavior: "instant" });
     }
-    if (!samePage) window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   /* cortina com as listras e o escudo do clube */

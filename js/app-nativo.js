@@ -163,61 +163,102 @@
     [70, 24, 3],
   ];
   const TAM_SPLASH = 127; // dp: o símbolo ocupa 44% do ícone de 288 dp da splash do Android 12+
+  /* som da abertura (Web Audio, sintetizado aqui: nenhum arquivo de áudio, nada de terceiros). Um "vush" suave quando a
+     formação sobe, uma nota de marimba por linha (goleiro, defesa, meio, ataque: Sol, Dó, Mi, Sol), um "plim" no
+     centroavante e, com o nome, um acorde claro com a torcida crescendo baixinho. Volume moderado; o botão do canto
+     desliga (fica guardado). Sem áudio liberado pelo aparelho, a abertura segue em silêncio. */
+  const SOM = "cazestats:intro-som";
+  const somLigado = () => { try { return localStorage.getItem(SOM) !== "0"; } catch { return true; } };
+  function somAbertura(tempos) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC || !somLigado()) return null;
+    let c;
+    try { c = new AC(); } catch { return null; }
+    if (c.state !== "running") c.resume().catch(() => {});
+    const mestre = c.createGain(), comp = c.createDynamicsCompressor();
+    mestre.gain.value = 0.42; comp.threshold.value = -16; comp.ratio.value = 3;
+    mestre.connect(comp).connect(c.destination);
+    const t0 = c.currentTime + 0.05, em = (ms) => t0 + ms / 1000;
+    const ruido = (seg) => {
+      const b = c.createBuffer(1, Math.ceil(c.sampleRate * seg), c.sampleRate), d = b.getChannelData(0);
+      let ult = 0;
+      for (let k = 0; k < d.length; k++) { ult = 0.97 * ult + 0.03 * (Math.random() * 2 - 1); d[k] = ult * 6; }
+      const s = c.createBufferSource(); s.buffer = b; return s;
+    };
+    const env = (g, t, pico, ataque, queda) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(pico, t + ataque); g.gain.exponentialRampToValueAtTime(0.0001, t + ataque + queda); };
+    // "vush": ruído passando por um filtro que abre
+    {
+      const n = ruido(0.7), f = c.createBiquadFilter(), g = c.createGain();
+      f.type = "bandpass"; f.Q.value = 0.9;
+      f.frequency.setValueAtTime(260, em(tempos.sobe)); f.frequency.exponentialRampToValueAtTime(2600, em(tempos.sobe + 520));
+      env(g, em(tempos.sobe), 0.22, 0.18, 0.45);
+      n.connect(f).connect(g).connect(mestre); n.start(em(tempos.sobe)); n.stop(em(tempos.sobe + 700));
+    }
+    // marimba: seno com um parcial 4x mais agudo que some rápido
+    const marimba = (freq, ms, vol = 0.35) => {
+      const t = em(ms);
+      for (const [mult, v, queda] of [[1, vol, 0.42], [4, vol * 0.18, 0.09]]) {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = "sine"; o.frequency.value = freq * mult; env(g, t, v, 0.006, queda);
+        o.connect(g).connect(mestre); o.start(t); o.stop(t + 0.6);
+      }
+    };
+    [196, 261.6, 329.6, 392].forEach((f, linha) => marimba(f, tempos.linhas[linha]));
+    marimba(784, tempos.lima, 0.22);
+    // acorde do nome (Dó maior aberto) e a torcida crescendo baixinho
+    {
+      const t = em(tempos.nome);
+      for (const [f, v] of [[130.8, 0.16], [523.3, 0.12], [659.3, 0.1], [784, 0.09], [1046.5, 0.05]]) {
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = "triangle"; o.frequency.value = f; env(g, t, v, 0.02, 1.25);
+        o.connect(g).connect(mestre); o.start(t); o.stop(t + 1.5);
+      }
+      const n = ruido(1.6), f = c.createBiquadFilter(), g = c.createGain();
+      f.type = "lowpass"; f.frequency.value = 950;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
+      n.connect(f).connect(g).connect(mestre); n.start(t); n.stop(t + 1.6);
+    }
+    console.info(`CazeStatsApp: som da abertura ${c.state === "running" ? "tocando" : `(${c.state})`}`);
+    return { estado: () => c.state, para: () => { try { mestre.gain.cancelScheduledValues(c.currentTime); mestre.gain.setTargetAtTime(0, c.currentTime, 0.04); setTimeout(() => c.close().catch(() => {}), 400); } catch { /* já fechado */ } } };
+  }
+
   function intro() {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches || !document.body.animate) return null;
     const capa = document.createElement("div");
     capa.className = "intro433";
-    capa.setAttribute("aria-hidden", "true");
     capa.style.setProperty("--i433", `${TAM_SPLASH}px`);
     // só marcação fixa deste arquivo (nenhum dado de fora entra aqui)
-    capa.innerHTML = `<div class="i433-fundo"></div><div class="i433-simbolo"><div class="i433-quadro"></div>${FORMACAO.map(
+    const NOME = ["C", "a", "z", "é", "S", "t", "a", "t", "s", ".", "T", "V"];
+    const ligado = somLigado();
+    // cada peça fica dentro de um "voo" (tela inteira, sem transformação própria até o fim): o voo final até o cabeçalho é
+    // calculado nele, centrado na posição visível da peça, sem somar com as animações de antes (que desviavam o pouso)
+    capa.innerHTML = `<div class="i433-fundo"></div><div class="i433-voo"><div class="i433-simbolo" aria-hidden="true"><div class="i433-quadro"></div>${FORMACAO.map(
       ([x, y, , l]) => `<i class="i433-mod${l ? " lima" : ""}" style="left:${x - 4.5}%;top:${y - 4.5}%"></i>`,
-    ).join("")}</div>`;
+    ).join("")}</div></div><div class="i433-voo"><div class="i433-nome" aria-hidden="true">${NOME.map((l, i) => `<span class="${i >= 9 ? "tv" : ""}">${l}</span>`).join("")}</div></div>
+      <button type="button" class="i433-som" aria-label="${ligado ? "Desligar o som da abertura" : "Ligar o som da abertura"}" aria-pressed="${!ligado}">${ligado ? "Som ligado" : "Som desligado"}</button>`;
     document.body.appendChild(capa);
-    const simbolo = capa.querySelector(".i433-simbolo"),
-      fundo = capa.querySelector(".i433-fundo");
-    const marca = document.querySelector(".l433-mark"),
-      palavra = document.querySelector(".l433-word");
+    const simbolo = capa.querySelector(".i433-simbolo"), fundo = capa.querySelector(".i433-fundo"), nome = capa.querySelector(".i433-nome");
+    const letras = [...nome.children], botaoSom = capa.querySelector(".i433-som");
+    const marca = document.querySelector(".l433-mark"), palavra = document.querySelector(".l433-word");
     const animacoes = [];
-    const anima = (el, quadros, op) => {
-      const a = el.animate(quadros, { fill: "both", ...op });
-      animacoes.push(a);
-      return a;
-    };
-    const SAI = "cubic-bezier(0.22, 1, 0.36, 1)",
-      MOLA = "cubic-bezier(0.34, 1.4, 0.64, 1)";
-    // 1) entrada em campo: cada linha "sobe" e assenta, de baixo para cima; o centroavante acende por último
+    const anima = (el, quadros, op) => { const a = el.animate(quadros, { fill: "both", ...op }); animacoes.push(a); return a; };
+    const SAI = "cubic-bezier(0.22, 1, 0.36, 1)", MOLA = "cubic-bezier(0.34, 1.32, 0.64, 1)";
+    // tempos (ms): a formação sobe linha por linha, o centroavante acende, o símbolo sobe e o nome aparece
+    const T = { sobe: 60, linhas: [100, 210, 320, 430], lima: 640, nome: 900 };
+    const som = somAbertura(T);
+    // 1) entrada em campo: cada linha "sobe" e assenta, de baixo para cima
     capa.querySelectorAll(".i433-mod").forEach((m, i) => {
       const linha = FORMACAO[i][2];
-      anima(
-        m,
-        [
-          { transform: "translateY(0) scale(1)" },
-          { transform: "translateY(-14%) scale(1.22)", offset: 0.45 },
-          { transform: "translateY(0) scale(1)" },
-        ],
-        {
-          duration: 420,
-          delay: 80 + linha * 85,
-          easing: MOLA,
-        },
-      );
+      anima(m, [{ transform: "translateY(0) scale(1)" }, { transform: "translateY(-16%) scale(1.24)", offset: 0.45 }, { transform: "translateY(0) scale(1)" }],
+        { duration: 460, delay: T.linhas[linha], easing: MOLA });
     });
-    const lima = capa.querySelector(".i433-mod.lima");
-    anima(
-      lima,
-      [
-        { transform: "scale(1)", opacity: 1 },
-        { transform: "scale(1.5)", opacity: 0.85, offset: 0.4 },
-        { transform: "scale(1)", opacity: 1 },
-      ],
-      {
-        duration: 380,
-        delay: 80 + 3 * 85 + 180,
-        easing: SAI,
-        composite: "add",
-      },
-    );
+    anima(capa.querySelector(".i433-mod.lima"), [{ transform: "scale(1)" }, { transform: "scale(1.6)", offset: 0.4 }, { transform: "scale(1)" }],
+      { duration: 420, delay: T.lima, easing: SAI, composite: "add" });
+    // 2) o símbolo sobe um pouco e o nome entra letra por letra, cada uma assentando com uma mola leve
+    anima(simbolo, [{ transform: "translateY(0) scale(1)" }, { transform: "translateY(-46px) scale(0.86)" }], { duration: 620, delay: T.nome - 120, easing: SAI });
+    letras.forEach((l, i) => anima(l, [{ opacity: 0, transform: "translateY(70%)" }, { opacity: 1, transform: "translateY(0)" }],
+      { duration: 520, delay: T.nome + i * 42, easing: MOLA }));
+    anima(botaoSom, [{ opacity: 0 }, { opacity: 0.75 }], { duration: 400, delay: 300, easing: SAI });
     let pulou = false;
     const fecha = () => {
       animacoes.forEach((a) => a.finish());
@@ -225,39 +266,38 @@
       if (marca) marca.style.opacity = "";
       if (palavra) palavra.style.opacity = "";
     };
-    capa.addEventListener("pointerdown", () => ((pulou = true), fecha()), { once: true });
+    botaoSom.addEventListener("pointerdown", (e) => e.stopPropagation());
+    botaoSom.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const liga = !somLigado();
+      try { localStorage.setItem(SOM, liga ? "1" : "0"); } catch { /* sem armazenamento */ }
+      botaoSom.textContent = liga ? "Som ligado" : "Som desligado";
+      botaoSom.setAttribute("aria-pressed", String(!liga));
+      botaoSom.setAttribute("aria-label", liga ? "Desligar o som da abertura" : "Ligar o som da abertura");
+      if (!liga) som?.para();
+    });
+    capa.addEventListener("pointerdown", () => { pulou = true; som?.para(); fecha(); }, { once: true });
     if (marca) marca.style.opacity = "0";
     if (palavra) palavra.style.opacity = "0";
-    // 2) revelação: depois da entrada e com a primeira tela pronta, o símbolo voa até o cabeçalho
-    const prontos = Promise.race([Promise.resolve(window.PD_BOOT).catch(() => {}), new Promise((r) => setTimeout(r, 2500))]);
-    const entrada = new Promise((r) => setTimeout(r, 820));
+    // 3) revelação: com o nome completo e a primeira tela pronta, símbolo e nome voam até o cabeçalho
+    const prontos = Promise.race([Promise.resolve(window.PD_BOOT).catch(() => {}), new Promise((r) => setTimeout(r, 2600))]);
+    const entrada = new Promise((r) => setTimeout(r, T.nome + letras.length * 42 + 620));
     return Promise.all([prontos, entrada]).then(async () => {
       if (pulou || !capa.isConnected) return;
-      const de = simbolo.getBoundingClientRect();
-      const para = marca?.getBoundingClientRect();
-      const DUR = 520;
-      if (para && para.width) {
-        const s = para.width / de.width;
-        const dx = para.left + para.width / 2 - (de.left + de.width / 2),
-          dy = para.top + para.height / 2 - (de.top + de.height / 2);
-        anima(simbolo, [{ transform: "translate(0, 0) scale(1)" }, { transform: `translate(${dx}px, ${dy}px) scale(${s})` }], {
-          duration: DUR,
-          easing: SAI,
-        });
-      } else anima(simbolo, [{ opacity: 1 }, { opacity: 0 }], { duration: DUR, easing: SAI });
-      anima(fundo, [{ opacity: 1 }, { opacity: 0 }], { duration: DUR * 0.8, delay: DUR * 0.2, easing: "ease-out" });
-      if (palavra) {
-        palavra.style.opacity = "";
-        anima(
-          palavra,
-          [
-            { opacity: 0, transform: "translateX(-8px)" },
-            { opacity: 1, transform: "translateX(0)" },
-          ],
-          { duration: 360, delay: DUR * 0.55, easing: SAI },
-        );
-      }
-      await new Promise((r) => setTimeout(r, DUR + 40));
+      const DUR = 640;
+      const voa = (el, alvo) => {
+        const voo = el.parentElement, de = el.getBoundingClientRect(), para = alvo?.getBoundingClientRect();
+        if (!para || !para.width) return anima(voo, [{ opacity: 1 }, { opacity: 0 }], { duration: DUR * 0.6, easing: SAI });
+        const cx = de.left + de.width / 2, cy = de.top + de.height / 2, k = para.height / de.height;
+        voo.style.transformOrigin = `${cx}px ${cy}px`;
+        const dx = para.left + para.width / 2 - cx, dy = para.top + para.height / 2 - cy;
+        return anima(voo, [{ transform: "translate(0, 0) scale(1)" }, { transform: `translate(${dx}px, ${dy}px) scale(${k})` }], { duration: DUR, easing: SAI });
+      };
+      voa(simbolo, marca);
+      voa(nome, palavra);
+      anima(fundo, [{ opacity: 1 }, { opacity: 0 }], { duration: DUR * 0.85, delay: DUR * 0.15, easing: "ease-out" });
+      anima(botaoSom, [{ opacity: 0.75 }, { opacity: 0 }], { duration: 200, easing: "ease-out" });
+      await new Promise((r) => setTimeout(r, DUR + 60));
       if (!pulou) fecha();
     });
   }

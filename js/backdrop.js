@@ -28,12 +28,14 @@
 
   let last = "", paints = 0;
   function paint() {
-    const w = innerWidth, h = innerHeight, light = root.dataset.theme === "light";
+    // altura em faixas de 120 px: a barra de endereço do celular sobe e desce ao rolar e não deve redesenhar o fundo
+    const w = innerWidth, h = Math.ceil(innerHeight / 120) * 120, light = root.dataset.theme === "light";
     const c1 = lift(rgb(css("--c1") || "#4f6bff"), light ? 0 : 70), c3 = lift(rgb(css("--c3") || "#8a9bff"), light ? 0 : 70), tx = rgb(css("--text") || "#e8edf6");
     const key = [w, h, light, c1, c3, tx].join("|");
     if (key === last) return;
     last = key;
-    const dpr = Math.min(devicePixelRatio || 1, 2);
+    // brilhos e pontinhos desfocados não pedem tela retina: 1x deixa a imagem 4x menor de gerar (e de guardar na GPU)
+    const dpr = Math.min(devicePixelRatio || 1, innerWidth < 900 ? 1 : 1.5);
     const cv = document.createElement("canvas");
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
     const g = cv.getContext("2d");
@@ -59,7 +61,7 @@
         if (lit > 0.04) {
           const c = lit > 0.5 ? c1.map((v, i) => Math.round(v * 0.75 + tx[i] * 0.25)) : (a >= b ? c1 : c3);
           g.fillStyle = rgba(c, Math.min(0.95, base + lit * (light ? 0.7 : 0.85)));
-          g.beginPath(); g.arc(x, y, 1.05 + lit * 0.55, 0, 6.2832); g.fill();
+          const rr = 1.05 + lit * 0.55; g.fillRect(x - rr, y - rr, rr * 2, rr * 2); // quadradinho do tamanho do ponto: a 1x é igual e custa bem menos que arc
         } else {
           g.fillStyle = rgba(tx, base);
           g.fillRect(x - 0.75, y - 0.75, 1.5, 1.5);
@@ -80,7 +82,8 @@
   }
 
   let t = 0;
-  const later = (ms = 120) => { clearTimeout(t); t = setTimeout(paint, ms); };
+  // o desenho espera o navegador ficar livre (no meio da troca de página ele disputava a CPU com a transição)
+  const later = (ms = 120) => { clearTimeout(t); t = setTimeout(() => (window.requestIdleCallback ? requestIdleCallback(paint, { timeout: 1500 }) : paint()), ms); };
   paint();
   addEventListener("resize", () => later(200), { passive: true });
   // tema claro/escuro e cores do clube (aplicadas no :root pelo app)

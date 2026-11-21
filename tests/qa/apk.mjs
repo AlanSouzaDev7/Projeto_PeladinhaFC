@@ -76,7 +76,9 @@ if (!TV) {
     const depois = atividade();
     print("3-login-navegador");
     // o navegador recebeu a página de login com o desafio (Chrome num emulador novo mostra antes a tela de boas-vindas)
-    const pedido = adb("shell", "dumpsys", "activity", "activities").match(/dat=(https:\/\/cazestats\.pages\.dev\/entrar-app\?desafio=[\w-]{43})/);
+    // prova no log do Android: o app pediu ao plugin Browser a página de login com o desafio, e o sistema abriu o Chrome
+    const lg = adb("logcat", "-d");
+    const pedido = /pluginId: Browser, methodName: open, methodData: \{"url":"https:\\\/\\\/cazestats\.pages\.dev\\\/entrar-app\?desafio=[\w-]{43}/.test(lg) && /START u0 \{act=android\.intent\.action\.VIEW dat=https:\/\/cazestats\.pages\.dev\/\.\.\. [^}]*pkg=com\.android\.chrome/.test(lg);
     ok(/chrome|browser/i.test(depois) && pedido, "Entrar com Google abre o navegador do sistema na página de login com o desafio", `${depois} ${pedido ? "→ entrar-app?desafio=…" : "sem a página certa"}`);
     void antes;
     adb("shell", "am", "start", "-n", `${PKG}/.MainActivity`); await espera(2500);

@@ -15,12 +15,15 @@
   const congela = new URLSearchParams(location.search).has("estatico");   // prints dos testes: faixa parada
   const WAAPI = typeof Element !== "undefined" && typeof Element.prototype.animate === "function";
   const VEL = reduced ? 40 : 70;   // px por segundo
+  const TROCA_MS = 8000;           // tempo de cada manchete no alto (a barrinha de progresso acompanha)
   // com "menos movimento" no aparelho a faixa começa parada; quem apertar o play continua com ela andando (fica guardado)
   const guarda = { get: () => { try { const v = localStorage.getItem("tk-pausa"); return v === null ? reduced : v === "1"; } catch { return reduced; } },
     set: (v) => { try { localStorage.setItem("tk-pausa", v ? "1" : "0"); } catch {} } };
   let anim = null, mouse = false, foco = false, pausaUser = guarda.get();
   const esc = (x) => SEG.esc(x || "");
-  const hora = (ts) => new Date(ts * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+  // formatador criado uma vez (criar um Intl a cada manchete custava tempo de CPU no celular)
+  const FMT_HORA = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+  const hora = (ts) => FMT_HORA.format(new Date(ts * 1000));
   const ha = (ts) => { const m = Math.max(1, Math.round((Date.now() / 1000 - ts) / 60)); return m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} d`; };
   const escudos = (x) => (x.clubes || []).slice(0, 2).map((c) => (window.PD?.byId && Object.prototype.hasOwnProperty.call(window.PD.byId, c) && window.GFX ? window.GFX.crest(window.PD.byId[c], 20) : "")).join("");
   let items = [], cur = 0, timer = null;
@@ -55,12 +58,16 @@
     const b = el.querySelector(".tk-pause");
     if (b) { b.setAttribute("aria-pressed", String(pausaUser)); b.setAttribute("aria-label", pausaUser ? "Continuar a faixa de notícias" : "Pausar a faixa de notícias"); b.title = b.getAttribute("aria-label"); }
     if (anim) segura() ? anim.pause() : anim.play();
+    el.querySelector(".tk-prog")?.getAnimations?.().forEach((a) => (segura() ? a.pause() : a.play()));
   }
   // barrinha embaixo da manchete: o tempo até a próxima
   function prog() {
     const p = el.querySelector(".tk-prog");
     if (!p) return;
-    p.classList.remove("run"); void p.offsetWidth; p.classList.add("run");
+    // recomeça a barrinha pela Web Animations API: o truque antigo (ler offsetWidth) forçava o navegador a refazer o
+    // layout da página inteira a cada 8 s, o que dava um tranco no celular
+    if (p.animate) { p.getAnimations().forEach((a) => a.cancel()); p.classList.remove("run"); p.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: TROCA_MS, easing: "linear", fill: "both" }); return; }
+    p.classList.remove("run"); requestAnimationFrame(() => p.classList.add("run"));
   }
   // a fita anda sempre na mesma velocidade, qualquer que seja o tamanho do texto
   function speed() {
@@ -121,11 +128,13 @@
   timer = setInterval(() => {
     if (segura() || document.hidden) { t0 = Date.now(); return; }
     falta -= Date.now() - t0; t0 = Date.now();
-    if (falta <= 50) { next(); falta = 8000; }
+    if (falta <= 50) { next(); falta = TROCA_MS; }
   }, 250);
   setInterval(clock, 30000);
   setInterval(load, 30 * 60e3);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { clock(); if (Date.now() - (window.__tkLoad || 0) > 30 * 60e3) { window.__tkLoad = Date.now(); load(); } } });
-  addEventListener("resize", () => speed());
+  // só a largura muda a velocidade: no celular a barra de endereço sobe e desce ao rolar (muda só a altura)
+  let largura = innerWidth;
+  addEventListener("resize", () => { if (innerWidth === largura) return; largura = innerWidth; requestAnimationFrame(speed); }, { passive: true });
   window.TICKER = { reload: load };
 })();

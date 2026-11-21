@@ -605,3 +605,45 @@
     color: transparent;
   }
 }
+
+/* nome na abertura (js/app-nativo.js, intro): "CazéStats.TV" letra por letra sob o símbolo; só transform e opacity */
+.i433-nome {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + var(--i433) / 2 - 18px);
+  display: flex;
+  justify-content: center;
+  font: 700 34px/1 "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--f-cal);
+  transform-origin: 50% 50%;
+  overflow: hidden;
+  padding: 6px 0;
+}
+.i433-nome span {
+  display: inline-block;
+  opacity: 0;
+}
+.i433-nome span.tv {
+  color: #7c8cff;
+}
+.i433-som {
+  position: absolute;
+  right: calc(16px + var(--sa-right, 0px));
+  bottom: calc(24px + var(--sa-bottom, 0px));
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(241, 237, 225, 0.25);
+  background: rgba(241, 237, 225, 0.06);
+  color: var(--f-cal);
+  font: 600 13px Inter, system-ui, sans-serif;
+  opacity: 0;
+}
+
+/* camada do voo final da abertura (js/app-nativo.js): tela inteira, sem transformação até o voo */
+.i433-voo {
+  position: absolute;
+  inset: 0;
+}

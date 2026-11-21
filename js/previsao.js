@@ -54,7 +54,20 @@
     const rodar = (fixo) => obj.valor(simula(tabela, jogos.map((j) => (j.id === idJogo ? { ...j, fixo } : j)), n, semente).find((x) => x.id === clube));
     return { vitoria: rodar(casa ? [1, 0] : [0, 1]), empate: rodar([1, 1]), derrota: rodar(casa ? [0, 1] : [1, 0]) };
   }
-  const api = { simula, rng, poisson, objetivo, impacto };
+  /* a mesma simulação em fatias (lotes de 500, cada um com a sua semente), devolvendo a vez ao navegador entre um lote e
+     outro: 10.000 rodadas de uma vez travavam a página do clube por quase um segundo num celular intermediário */
+  async function simulaFatiado(tabela, jogos, n = 10000, semente = 1, lote = 500) {
+    const pausa = () => new Promise((r) => (globalThis.scheduler?.yield ? globalThis.scheduler.yield().then(r) : setTimeout(r, 0)));
+    const partes = [];
+    for (let k = 0; k * lote < n; k++) { partes.push(simula(tabela, jogos, Math.min(lote, n - k * lote), semente * 1000 + k + 1)); await pausa(); }
+    return partes[0].map((c0, i) => {
+      const pesos = partes.map((p, k) => Math.min(lote, n - k * lote));
+      const media = (f) => partes.reduce((s, p, k) => s + f(p[i]) * pesos[k], 0) / n;
+      const posicoes = c0.posicoes.map((_, j) => media((x) => x.posicoes[j]));
+      return { id: c0.id, posicoes, titulo: media((x) => x.titulo), g6: media((x) => x.g6), sula: media((x) => x.sula), z4: media((x) => x.z4), pontos: media((x) => x.pontos), provavel: posicoes.indexOf(Math.max(...posicoes)) + 1 };
+    });
+  }
+  const api = { simula, simulaFatiado, rng, poisson, objetivo, impacto };
   raiz.PREVISAO_CALC = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 
@@ -79,7 +92,7 @@
     return dadosP;
   }
   let baseP = null;
-  const base = () => (baseP = baseP || dados().then((d) => ({ ...d, res: simula(d.tabela, d.jogos, 10000, d.semente) })));
+  const base = () => (baseP = baseP || dados().then(async (d) => ({ ...d, res: await simulaFatiado(d.tabela, d.jogos, 10000, d.semente) })));
   const OBJ_TXT = { titulo: "Chance de título", g6: "Chance de G6", fica: "Chance de escapar do Z4", sula: "Chance de Sul-Americana" };
   const barra3 = (i) => `<span class="pv-imp"><b class="v">${pct(i.vitoria)}</b><b class="e">${pct(i.empate)}</b><b class="d">${pct(i.derrota)}</b></span>`;
   function cardClube(id) {

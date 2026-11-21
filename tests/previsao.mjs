@@ -43,4 +43,13 @@ t("impacto de um jogo: vencer vale mais que empatar, que vale mais que perder", 
   assert.equal(obj.chave, "titulo");
   assert.ok(i.vitoria > i.empate && i.empate > i.derrota);
 });
+// em fatias (lotes com sementes diferentes, devolvendo a vez ao navegador): mesmo resultado dentro do ruído estatístico
+const tb = [{ id: "a", p: 50, w: 15, gf: 40, ga: 20 }, { id: "b", p: 48, w: 14, gf: 35, ga: 22 }, { id: "c", p: 30, w: 8, gf: 20, ga: 30 }];
+const jg = [{ home: "a", away: "b", xh: 1.4, xa: 1.1 }, { home: "b", away: "c", xh: 1.6, xa: 0.9 }, { home: "c", away: "a", xh: 1, xa: 1.5 }];
+const fat = await P.simulaFatiado(tb, jg, 6000, 3), dir = P.simula(tb, jg, 6000, 3);
+t("simulação em fatias: probabilidades somam 1 e batem com a simulação direta (±3 pontos)", () => {
+  for (const c of fat) assert.ok(Math.abs(c.posicoes.reduce((x, y) => x + y, 0) - 1) < 1e-9);
+  for (const c of fat) { const d = dir.find((x) => x.id === c.id); assert.ok(Math.abs(c.titulo - d.titulo) < 0.03, `${c.id}: ${c.titulo} x ${d.titulo}`); }
+  assert.deepEqual(fat.map((x) => x.provavel), dir.map((x) => x.provavel));
+});
 console.log(`\n${ok} testes da previsão passaram`);

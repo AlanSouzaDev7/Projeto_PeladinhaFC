@@ -48,9 +48,15 @@
       // "?cena=8" abre a animação já no segundo 8 (útil para conferir e fotografar)
       const skip = +new URLSearchParams(location.search).get("cena") || 0;
       this.t0 = performance.now() - skip * 1000; this.visible = true; this.alive = true;
-      this.resize();
+      // o tamanho chega pelo ResizeObserver (logo depois do layout natural): medir aqui com getBoundingClientRect
+      // obrigava o navegador a montar a página inteira de uma vez (era o maior tranco da página do clube)
+      this.w = 1; this.h = 1; this.dpr = 1; // 1x1 até o observador mandar o tamanho (antes do primeiro quadro visível)
       this.scene = factory(this);
-      this.ro = new ResizeObserver(() => { this.remeasure = true; this.resize(); this.scene.resize && this.scene.resize(); });
+      this.ro = new ResizeObserver(([e]) => {
+        const r = e.contentRect;
+        if (Math.round(r.width) === Math.round(this.w) && Math.round(r.height) === Math.round(this.h) && this.c.width > 1) return; // nada mudou
+        this.remeasure = true; this.resize(r); this.scene.resize && this.scene.resize();
+      });
       setTimeout(() => (this.remeasure = true), 600); // depois das fontes carregarem
       this.ro.observe(canvas);
       this.io = new IntersectionObserver(([e]) => { this.visible = e.isIntersecting; if (this.visible) this.loop(); });
@@ -61,10 +67,10 @@
       host.addEventListener("click", (e) => { if (!e.target.closest("a,button")) this.replay(); });
       if (reduced) { this.draw(99); } else this.loop();
     }
-    resize() {
+    resize(caixa) {
       // celular: resolução menor (a tela já é densa); se o aparelho estiver lento, cai ainda mais
-      const small = innerWidth < 700, cap = this.lowPower ? 1 : small ? 1.5 : 2;
-      const r = this.c.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, cap);
+      const small = innerWidth < 700, cap = this.lowPower || document.documentElement.classList.contains("motion-leve") ? 1 : small ? 1.5 : 2;
+      const r = caixa || { width: this.w, height: this.h }, dpr = Math.min(devicePixelRatio || 1, cap);
       this.w = Math.max(1, r.width); this.h = Math.max(1, r.height); this.dpr = dpr;
       this.c.width = Math.round(this.w * dpr); this.c.height = Math.round(this.h * dpr);
       // mudar o tamanho apaga o canvas: redesenha na hora para não piscar

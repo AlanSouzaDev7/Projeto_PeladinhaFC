@@ -28,11 +28,20 @@
     return ctx;
   }
   // primeiro toque/clique/tecla: cria e destrava o áudio (Safari só destrava dentro do próprio gesto)
-  const destrava = () => {
+  // criar o AudioContext custa ~100 ms no celular: se ele ainda não existe, o toque só marca a vontade e a criação vai
+  // para logo depois (o navegador já conta a página como "ativada" pelo toque, então o resume funciona)
+  const liga = () => {
     const c = contexto();
     if (!c) return;
     if (c.state !== "running") c.resume().catch(() => {});
     try { const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0); } catch { /* ok */ }
+  };
+  // Chrome, Edge, Firefox e o WebView do Android: depois do primeiro toque a página fica "ativada" até sair dela, então o
+  // áudio é criado só quando um gol for tocar (criar custa de 100 ms a mais de 1 s num celular fraco). Safari antigo
+  // (sem navigator.userActivation) só destrava dentro do próprio gesto: lá ele é criado no toque, como antes.
+  const destrava = () => {
+    if (ctx) { if (ctx.state !== "running") liga(); return; }
+    if (!navigator.userActivation) liga();
   };
   ["pointerdown", "keydown", "touchend"].forEach((ev) => addEventListener(ev, destrava, { capture: true, passive: true }));
 
@@ -242,9 +251,10 @@
   function tocarGol(clube) {
     const reg = { tipo: "gol", clube: clube || null, em: Date.now(), tocou: false, motivo: "" };
     historico.push(reg); if (historico.length > 50) historico.shift();
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) { reg.motivo = "aguardando o primeiro toque na página"; return reg; }
     const c = contexto();
     if (!c) { reg.motivo = "sem Web Audio"; return reg; }
-    if (c.state !== "running") { c.resume().catch(() => {}); if (c.state !== "running") { reg.motivo = "aguardando o primeiro toque na página"; return reg; } }
+    if (c.state !== "running") { c.resume().catch(() => {}); if (c.state !== "running" && !navigator.userActivation) { reg.motivo = "aguardando o primeiro toque na página"; return reg; } }
     const t0 = Math.max(c.currentTime + 0.03, livreEm);
     if (HINOS.has(clube)) hino(c, saida, t0, clube).catch(() => gol(c, saida, t0, clube)); else gol(c, saida, t0, clube);
     livreEm = t0 + DUR_GOL + 0.15;

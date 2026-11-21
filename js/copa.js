@@ -513,7 +513,8 @@
   const estado = { fase: {} };
   // barra rolável: o item ativo (competição, fase atual) aparece no meio, sem mexer na rolagem da página
   const centraliza = (barra, item) => { if (barra && item) barra.scrollLeft = Math.max(0, item.offsetLeft - barra.clientWidth / 2 + item.clientWidth / 2); };
-  function ajustaBarras(root) { root.querySelectorAll(".cp-bar").forEach((b) => centraliza(b, b.querySelector(".cp-bar-i.on"))); }
+  // no quadro seguinte: ler offsetLeft logo depois de montar a página obrigava o navegador a fazer o layout inteiro na hora
+  function ajustaBarras(root) { requestAnimationFrame(() => root.querySelectorAll(".cp-bar").forEach((b) => centraliza(b, b.querySelector(".cp-bar-i.on")))); }
   async function clubesSerie(el) {
     const id = el.dataset.clubesSerie, D = await carrega(id);
     if (!el.isConnected) return;

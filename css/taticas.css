@@ -600,3 +600,29 @@
 .pg-caixa:has(.pg-conversa li) > .pg-sug { display: none; }
 /* conta no app: o botão abre o navegador do sistema (js/conta.js) */
 .conta-app-entrar { display: block; width: 100%; min-height: 44px; margin-bottom: 6px; border-radius: 999px; border: 0; background: #fff; color: #1f1f1f; font: 700 15px var(--font); cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); }
+
+/* ---------- auditoria de animações (20/11/2026, tests/qa/animacoes.mjs) ---------- */
+/* cartões pesados que ficam longe do topo: o navegador pula layout e pintura enquanto estão fora da tela
+   (sem pop-ups dentro deles, que a contenção cortaria); "auto" lembra o tamanho real para a rolagem não pular */
+.card.tat-card, .card.pressao, .card.chutes, .card.mam, .card.confronto, .card.replay, .card.pv-card,
+.jg-grid .card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 560px;
+}
+/* linha do tempo da carreira: só transform anima (cor da borda e sombra mudavam a cada quadro e repintavam);
+   sem will-change em dezenas de escudos (cada um virava uma camada de GPU) */
+.jgl-esc { transition: transform 0.5s var(--ease-mola); will-change: auto; }
+/* resumo da rodada: espaço da seleção reservado enquanto ela carrega (a página empurrava tudo para baixo) */
+.rd-sel .card-b:has(> .st-txt:only-child) { min-height: 380px; display: grid; align-content: center; }
+@media (min-width: 761px) { .rd-sel .card-b:has(> .st-txt:only-child) { min-height: 330px; } }
+/* revelar ao rolar: mais natural (sai do lugar menos e assenta com a curva natural) */
+.reveal { transform: translateY(16px); transition: opacity var(--dur-longa) var(--ease-natural), transform var(--dur-longa) var(--ease-natural); }
+/* modo leve (js/movimento.js): as animações continuam, mais curtas e só com opacidade */
+html.motion-leve .reveal { transform: none; transition-duration: var(--dur-media); }
+html.motion-leve .backdrop-spot { display: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { transform: none; transition: opacity 0.2s linear; } }
+/* números do topo do jogador: o bloco começava com 38 px e crescia quando os dados chegavam, empurrando a página
+   (CLS 0,15); o espaço final já fica reservado (2 x 2 no celular, 4 numa linha no tablet, 2 x 2 na coluna do computador) */
+.jg-topo-kpis { min-height: 188px; }
+@media (min-width: 561px) and (max-width: 900px) { .jg-topo-kpis { min-height: 99px; } }
+@media (min-width: 901px) { .jg-topo-kpis { min-height: 206px; } }
