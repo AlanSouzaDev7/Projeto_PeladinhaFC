@@ -113,6 +113,16 @@
 :root[data-theme="light"] .jt-sit.tit, :root[data-theme="light"] .jt-sit.ok { color: #0d7a4a; }
 :root[data-theme="light"] .jt-sit.res { color: #2456c7; }
 :root[data-theme="light"] .jt-sit.emp, :root[data-theme="light"] .jt-sit.dif { color: #9a5b00; }
+/* cria da base: o rótulo na cor do clube que formou o jogador (fundo e borda; o texto fica legível nos dois temas) */
+.jt-sit.cria { color: var(--text); font-weight: 700; background: linear-gradient(90deg, color-mix(in srgb, var(--cria) 30%, var(--surface-2)), color-mix(in srgb, var(--cria2) 16%, var(--surface-2))); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cria) 60%, transparent); }
+.jt-sit.cria::before { background: linear-gradient(135deg, var(--cria) 50%, var(--cria2) 50%); width: 8px; height: 8px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 25%, transparent); }
+.jt-sit.cria:has(img, svg)::before { display: none; }
+.jt-sit.cria :is(img, svg) { width: 14px; height: 14px; flex: none; }
+/* selo "conferido no elenco" ao lado do nome */
+.jt-nome-l { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.jt-nome-l .jt-nome { min-width: 0; }
+.jt-conf { flex: none; display: inline-flex; color: #19c37d; cursor: help; }
+:root[data-theme="light"] .jt-conf { color: #0d7a4a; }
 .jt-card-dir { display: grid; justify-items: end; gap: 6px; }
 .jt-valor { font: 700 14.5px var(--font); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .jt-valor small { display: block; font: 500 11.5px var(--font); color: var(--text-3); }

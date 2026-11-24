@@ -477,7 +477,7 @@ def enriquecer(cid, d):
         if t.get("posTxt"):
             j["posTxt"] = t["posTxt"]
         if fm_cache and (fm_cache.get("j") or {}).get(str(j["id"])):
-            j["fotoPrivada"], j["fotoInfo"] = FOTO.campos_mercado(j["id"], fm_cache)
+            j["fotoPrivada"], j["fotoInfo"] = FOTO.campos_mercado(j["id"], fm_cache, cid)
         else:
             fp = FE.foto_privada(j["id"], fe_cache) if (FE and fotos_ok) else None
             j["fotoPrivada"] = fp["url"] if fp else None
@@ -498,7 +498,7 @@ def enriquecer(cid, d):
         e["funcao"] = hp.get("f") or FUNCAO_PADRAO.get(e["pos"], "MC")
         t = FE.do_jogador(e["id"]) if FE else {}
         if fm_cache and (fm_cache.get("j") or {}).get(str(e["id"])):
-            e["fotoPrivada"], e["fotoInfo"] = FOTO.campos_mercado(e["id"], fm_cache)
+            e["fotoPrivada"], e["fotoInfo"] = FOTO.campos_mercado(e["id"], fm_cache, cid)
         else:
             fp = FE.foto_privada(e["id"], fe_cache) if (FE and fotos_ok) else None
             e["fotoPrivada"] = fp["url"] if fp else None

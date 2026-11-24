@@ -72,6 +72,24 @@
   function estado(cid) { const e = { ...novo(), ...(ler(cid) || {}) }; e.dec = e.dec || {}; e.chegadas = e.chegadas || []; e.esc = e.esc || {}; e.pos = e.pos || {}; if (!FORMACOES[e.form]) e.form = "4-2-3-1"; return e; }
   function grava(cid, e) { try { const { _ultimaAplicada, _tit, ...g } = e; localStorage.setItem(chave(cid), JSON.stringify(g)); } catch { /* sem armazenamento: vale só nesta visita */ } }
 
+  /* ---------- sessão da janela: o que a pessoa estava vendo (só neste aparelho, por 12 h) ----------
+     As decisões ficam em placar:janela-<clube> para sempre (e vão para a conta). Aqui fica o resto da tela: se o modo
+     já foi escolhido, a etapa, os filtros dos reforços e a rolagem. Assim um recarregar (F5, puxar para baixo no
+     celular, o app reaberto) volta para o mesmo ponto em vez da escolha de modo. O prefixo cazestats: fica fora da
+     sincronização da conta de propósito: é estado de tela, não decisão. */
+  const SESSAO = "cazestats:janela-sessao", VALIDADE = 12 * 3600e3;
+  const sessaoTudo = () => { try { return JSON.parse(localStorage.getItem(SESSAO) || "{}") || {}; } catch { return {}; } };
+  const sessaoLe = (cid) => { const s = sessaoTudo()[cid]; return s && Date.now() - (s.t || 0) < VALIDADE ? s : null; };
+  function sessaoGrava(cid, parcial) {
+    try {
+      const tudo = sessaoTudo(), agora = Date.now();
+      for (const k of Object.keys(tudo)) if (!(agora - (tudo[k]?.t || 0) < VALIDADE)) delete tudo[k]; // vencidas saem
+      tudo[cid] = { ...(tudo[cid] || {}), ...parcial, t: agora };
+      localStorage.setItem(SESSAO, JSON.stringify(tudo));
+    } catch { /* sem armazenamento: vale só nesta visita */ }
+  }
+  let primeiraMontagem = true; // a primeira tela depois de abrir ou recarregar a página
+
   const OPC = {
     elenco: [["fica", "Fica"], ["emprestar", "Empresta"], ["liberar", "Sai"]],
     dentro: [["manter", "Fica"], ["comprar", "Compra"], ["devolver", "Devolve"]],
@@ -210,6 +228,13 @@
     if (j.fora) { const dest = j.lgClube === "bra.1" && j.espn ? Object.values(byId).find((c) => c.name && j.clubeEspn && (j.clubeEspn.includes(c.name) || c.name.includes(j.clubeEspn))) : null; return dest ? `#/jogador/${j.espn}-${dest.id}` : null; }
     return /^\d+$/.test(j.id) && j.min ? `#/jogador/${j.id}-${cid}` : null;
   }
+  // selo da verificação do robô (server/verifica_jogadores.py): está no clube por duas fontes ou mais
+  const conferido = (j) => {
+    const v = j.verif;
+    if (!v || v.st !== "confirmado") return "";
+    const txt = `Conferido no elenco: ${v.fontes.join(", ")}`;
+    return `<span class="jt-conf" role="img" aria-label="${esc(txt)}" title="${esc(txt)}"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 1.2l1.7 1.3 2.1-.2.7 2 1.8 1.1-.5 2.1.5 2.1-1.8 1.1-.7 2-2.1-.2L8 14.8l-1.7-1.3-2.1.2-.7-2-1.8-1.1.5-2.1-.5-2.1 1.8-1.1.7-2 2.1.2z" fill="currentColor"/><path d="M5.3 8.2l1.8 1.8 3.6-3.7" fill="none" stroke="var(--surface)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+  };
   function cartaoJogador(cid, j, e, D) {
     const c = byId[cid], tipo = tipoDe(j), d = decisao(e, j), opc = OPC[tipo];
     const f = j.funcao || CP.origem(j), maxMin = Math.max(1, (D.jogosTime || 40) * 90);
@@ -229,9 +254,12 @@
       if (tipo === "dentro") status += `<span class="jt-sit emp">emprestado pelo ${esc(j.emprestadoDe)}${j.ateQuando ? ` até ${data(j.ateQuando)}` : ""}</span>`;
       if (j.lesao) status += `<span class="jt-sit les">lesionado</span>`;
     }
+    // cria da base (carreira no ogol, conferida pelo robô): o rótulo do clube, na cor dele; revelado fora, com o escudo de lá
+    const b = j.base, cb = b && byId[b.clube];
+    if (cb) status = `<span class="jt-sit cria" style="--cria:${cb.colors[0]};--cria2:${cb.colors[1] || cb.colors[0]}" title="Formado nas categorias de base do ${esc(cb.name)} (carreira no ogol.com.br)">${b.clube === cid ? esc(b.rotulo) : `${crest(cb, 14)}Revelado pelo ${esc(cb.name)}`}</span>` + status;
     return `<li class="jt-card d-${d}" data-jt-j="${esc(j.id)}">
       ${avatar(j, c)}
-      <div class="jt-card-txt">${ficha(j, cid) ? `<a class="jt-nome" href="${ficha(j, cid)}" title="Ficha técnica: mapa de calor, jogos e notas">${esc(j.nome)}</a>` : `<b class="jt-nome">${esc(j.nome)}</b>`}<span class="jt-sub">${sub}</span><span class="jt-uso">${uso}</span>${status ? `<span class="jt-sits">${status}</span>` : ""}</div>
+      <div class="jt-card-txt"><span class="jt-nome-l">${ficha(j, cid) ? `<a class="jt-nome" href="${ficha(j, cid)}" title="Ficha técnica: mapa de calor, jogos e notas">${esc(j.nome)}</a>` : `<b class="jt-nome">${esc(j.nome)}</b>`}${conferido(j)}</span><span class="jt-sub">${sub}</span><span class="jt-uso">${uso}</span>${status ? `<span class="jt-sits">${status}</span>` : ""}</div>
       <div class="jt-card-dir"><span class="jt-valor">${eur(j.valor)}${salFaixa(j.salario)}</span>
         <div class="jt-seg" role="radiogroup" aria-label="Decisão sobre ${esc(j.nome)}">${opc.map(([v, l]) => `<button type="button" role="radio" aria-checked="${v === d}" class="${v === d ? "on" : ""} o-${v}" data-jt-dec="${v}">${l}</button>`).join("")}</div></div></li>`;
   }
@@ -257,7 +285,8 @@
 
   /* ---------- 2) reforços ---------- */
   const filtros = {};
-  const fil = (cid) => (filtros[cid] = filtros[cid] || { q: "", pos: "", lg: "", nac: "", idMin: 16, idMax: 40, vMax: 0, ord: "valor", semLes: true, n: 25 });
+  const FILTRO_PADRAO = { q: "", pos: "", lg: "", nac: "", idMin: 16, idMax: 40, vMax: 0, ord: "valor", semLes: true, n: 25 };
+  const fil = (cid) => (filtros[cid] = filtros[cid] || { ...FILTRO_PADRAO, ...(sessaoLe(cid)?.filtros || {}) });
   const norm = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   function resultados(cid, D, G, e) {
     const f = fil(cid), meus = new Set(D.elenco.map((j) => j.id)), escolhidos = new Set(e.chegadas), q = norm(f.q).trim();
@@ -580,6 +609,25 @@
     delete e._tit;
   }
 
+  /* rolagem da etapa: volta ao mesmo ponto depois de recarregar e vai sendo guardada enquanto a pessoa rola */
+  let soltaRolagem = null;
+  function guardaRolagem(cid, etapa, el, volta) {
+    soltaRolagem?.();
+    if (volta > 0) {
+      // espera a lista ter altura (fotos e o campo 3D entram depois): tenta por até 1,5 s
+      let n = 0;
+      const tenta = () => { if (!el.isConnected) return; if (document.documentElement.scrollHeight - innerHeight >= volta || ++n > 15) scrollTo({ top: volta, behavior: "instant" }); else setTimeout(tenta, 100); };
+      requestAnimationFrame(tenta);
+    }
+    let t = 0;
+    const grava = () => { if (el.isConnected) sessaoGrava(cid, { rolagem: { ...(sessaoLe(cid)?.rolagem || {}), [etapa]: Math.round(scrollY) } }); };
+    const anota = () => { if (!el.isConnected) return soltaRolagem?.(); clearTimeout(t); t = setTimeout(grava, 250); };
+    const saindo = () => { clearTimeout(t); grava(); }; // recarregar não espera o temporizador
+    addEventListener("scroll", anota, { passive: true });
+    addEventListener("pagehide", saindo);
+    soltaRolagem = () => { removeEventListener("scroll", anota); removeEventListener("pagehide", saindo); clearTimeout(t); soltaRolagem = null; };
+  }
+
   /* ---------- página ---------- */
   function page(cid, etapa) {
     const ver = /^v[mr]/.test(etapa || "");
@@ -597,7 +645,18 @@
     if (!el.isConnected) return;
     if (!D) { el.innerHTML = `<div class="jt-bloco"><div class="empty" style="padding:40px">Os dados de mercado deste clube ainda não foram gerados.</div></div>`; return; }
     let e = ver ? decodifica(D, etapa) || estado(cid) : estado(cid);
-    let G = null, confirmaReset = 0, perguntar = el.hasAttribute("data-jt-entrada");
+    // recarregou a página na janela: volta para onde estava (modo já escolhido, etapa e rolagem), se foi há menos de 12 h
+    const sess = ver ? null : sessaoLe(cid), restaura = primeiraMontagem && !!sess;
+    primeiraMontagem = false;
+    const entrada = el.hasAttribute("data-jt-entrada");
+    if (restaura && entrada && sess.modoOk && e.modo && sess.etapa && sess.etapa !== etapa && ETAPAS.some(([x]) => x === sess.etapa)) {
+      location.replace(`#/clube/${cid}/mercado/${sess.etapa}`); // o roteador desenha a etapa guardada
+      return;
+    }
+    let G = null, confirmaReset = 0, perguntar = entrada && !(restaura && sess.modoOk && e.modo);
+    // o endereço passa a dizer a etapa (sem criar um passo a mais no voltar): um recarregar cai nela, não na escolha de modo
+    const fixaEtapa = () => { const h = `#/clube/${cid}/mercado/${etapa}`; if (!ver && location.hash !== h) history.replaceState(history.state, "", h); };
+    if (!ver && !perguntar) { sessaoGrava(cid, { etapa, modoOk: !!e.modo }); if (e.modo) fixaEtapa(); }
     const precisaGlobal = () => e.chegadas.length || etapa === "reforcos";
     const pinta = () => {
       const k = contas(cid, D, e, G);
@@ -622,6 +681,7 @@
     else carregaGlobal().then((g) => { G = indexa(g); if (el.isConnected && e.chegadas.length) pinta(); });
     if (!el.isConnected) return;
     pinta();
+    if (!ver) guardaRolagem(cid, etapa, el, restaura ? sess.rolagem?.[etapa] : null);
 
     // depois de uma mudança, só a peça mexida ganha um destaque curto
     const destaca = (sel) => { const n = el.querySelector(sel); if (n && !reduz()) { n.classList.remove("pulsa"); void n.offsetWidth; n.classList.add("pulsa"); } };
@@ -631,7 +691,7 @@
       if (!t || !el.contains(t)) return;
       if (t.closest(".jt-ficha") && arraste.moveu) return; // fim de um arraste, não é toque
       const d = t.dataset, k = () => contas(cid, D, e, G);
-      if (d.jtModo) { if (d.jtModo !== e.modo && e.modo) e.caixa = null; e.modo = d.jtModo; perguntar = false; salva(); return pinta(); }
+      if (d.jtModo) { if (d.jtModo !== e.modo && e.modo) e.caixa = null; e.modo = d.jtModo; perguntar = false; salva(); sessaoGrava(cid, { etapa, modoOk: true }); fixaEtapa(); return pinta(); }
       if ("jtTrocar" in d) { perguntar = true; return pinta(); }
       if ("jtFotosOff" in d) { try { localStorage.setItem(FOTO_KEY, "0"); } catch { /* */ } return pinta(); }
       if ("jtReset" in d) {
@@ -649,8 +709,8 @@
         if (d.jtAuto === "base") D.elenco.forEach((j) => { if ((j.idade || 99) <= 21 && !j.min && tipoDe(j) === "elenco") e.dec[j.id] = "emprestar"; });
         salva(); return pinta();
       }
-      if (d.jtPos != null) { fil(cid).pos = d.jtPos; fil(cid).n = 25; return pinta(); }
-      if ("jtMais" in d) { fil(cid).n += 25; return pinta(); }
+      if (d.jtPos != null) { fil(cid).pos = d.jtPos; fil(cid).n = 25; sessaoGrava(cid, { filtros: fil(cid) }); return pinta(); }
+      if ("jtMais" in d) { fil(cid).n += 25; sessaoGrava(cid, { filtros: fil(cid) }); return pinta(); }
       if (d.jtAdd) {
         const novoReforco = !e.chegadas.includes(d.jtAdd);
         e.chegadas = novoReforco ? [...e.chegadas, d.jtAdd] : e.chegadas.filter((x) => x !== d.jtAdd);
@@ -787,7 +847,7 @@
       const f = fil(cid), nome = i.dataset.jtF;
       f[nome] = i.type === "checkbox" ? i.checked : i.type === "number" || nome === "vMax" ? +i.value : i.value;
       f.n = 25;
-      clearTimeout(espera); espera = setTimeout(pinta, nome === "q" ? 180 : 0);
+      clearTimeout(espera); espera = setTimeout(() => { if (!ver) sessaoGrava(cid, { filtros: f }); pinta(); }, nome === "q" ? 180 : 0);
     };
     el.addEventListener("input", filtra);
     el.addEventListener("change", filtra);

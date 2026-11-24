@@ -426,6 +426,10 @@ def foto_de(aid, c=None):
     return None
 
 
+# {(clube, id): foto ou None}: preenchido por server/verifica_jogadores.py quando o mesmo id é de duas pessoas
+SUBST = {}
+
+
 def do_clube(cid, c=None):
     """{id: {"u", "f", "r"?, "a"?, "p"?}} das fotos do clube."""
     c = c if c is not None else _ler()
@@ -437,15 +441,17 @@ def do_clube(cid, c=None):
     ids |= {str(j["id"]) for j in d.get("elenco", []) + d.get("emprestados", [])}
     out = {}
     for aid in ids:
-        f = foto_de(aid, c)
+        # homônimos (o mesmo id da ESPN para duas pessoas): a verificação dos jogadores decide a foto de cada clube
+        f = SUBST[(cid, aid)] if (cid, aid) in SUBST else foto_de(aid, c)
         if f:
             out[aid] = f
     return out
 
 
-def campos_mercado(aid, c=None):
-    """(fotoPrivada, fotoInfo) do elenco da janela de transferências; a foto livre (Wikimedia) já vai em "foto"."""
-    f = foto_de(aid, c)
+def campos_mercado(aid, c=None, cid=None):
+    """(fotoPrivada, fotoInfo) do elenco da janela de transferências; a foto livre (Wikimedia) já vai em "foto".
+    Com o clube, vale a decisão da verificação dos jogadores para homônimos (SUBST)."""
+    f = SUBST[(cid, str(aid))] if cid and (cid, str(aid)) in SUBST else foto_de(aid, c)
     if not f or f["f"] == "Wikimedia":
         return None, None
     info = None if f["f"] == "TheSportsDB" else {"fonte": f["f"], **{k2: f[k1] for k1, k2 in (("a", "autor"), ("p", "pagina"), ("r", "rosto")) if f.get(k1)}}

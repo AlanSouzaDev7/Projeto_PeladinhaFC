@@ -73,6 +73,14 @@ jobs:
           key: carreiras-${{ github.run_id }}
           restore-keys: carreiras-
 
+      # verificação dos jogadores (elenco do ogol, base de cada um e fotos dos homônimos): também num cache separado
+      - name: Verificação dos jogadores já feita
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: server/cache/verificacao.json
+          key: verificacao-${{ github.run_id }}
+          restore-keys: verificacao-
+
       # detector de rostos (centraliza o rosto no círculo da foto dos jogadores)
       - name: OpenCV
         run: python -m pip install --quiet "opencv-python-headless==4.12.0.88"
@@ -121,6 +129,13 @@ jobs:
         with:
           path: server/cache/carreiras.json
           key: carreiras-${{ github.run_id }}
+
+      - name: Guardar a verificação dos jogadores (mesmo se a rodada falhar)
+        if: always() && hashFiles('server/cache/verificacao.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: server/cache/verificacao.json
+          key: verificacao-${{ github.run_id }}
 
       - name: Guardar o cache (mesmo se a rodada falhar)
         if: always()

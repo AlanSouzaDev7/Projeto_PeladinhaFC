@@ -79,7 +79,7 @@ def carreira(slug, pid, nascido=None):
         if not m or not temporada:
             continue
         nome = P.clean_text(m.group(1), 50)
-        if BASE_TIME.search(nome):
+        if BASE_TIME.search(nome) or re.search(r"\[(?:S\d\d|Jun|Juv)[^\]]*\]", corpo):  # base: "Flamengo [S20]"
             continue
         ini, fim = _ano_fim(temporada)
         if ini and not (nascido and fim < nascido + 17):

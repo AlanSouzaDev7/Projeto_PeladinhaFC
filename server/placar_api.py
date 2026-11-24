@@ -707,6 +707,9 @@ import escalacoes_jogos as EJ  # noqa: E402
 import carreiras as CAR  # noqa: E402
 import fotos as FOTO  # noqa: E402
 MERC.P = FE.P = FIN.P = ESCL.P = FOTO.P = DJ.P = EJ.P = CAR.P = sys.modules[__name__]
+import carreiras_ogol as CAR_OGOL  # noqa: E402
+import verifica_jogadores as VER  # noqa: E402
+VER.ligar(sys.modules[__name__], FOTO, CAR_OGOL)
 MERC.FE, MERC.FIN, MERC.FOTO = FE, FIN, FOTO
 import wiki_series as WIKI  # noqa: E402
 ESC.P = sys.modules[__name__]
@@ -745,6 +748,12 @@ def update_fotos():
     fotos ainda abrem e renova tudo na virada da temporada. A cada rodada do robô e a cada hora no servidor ao vivo."""
     FOTO.atualizar()
     FOTO.aplicar_mercado()
+
+
+def update_verificacao():
+    """Verificação dos jogadores e das fotos (server/verifica_jogadores.py): o jogador está no clube, a foto é dele, é cria
+    da base? Em toda rodada do robô (~10 min) e a cada 10 min no servidor ao vivo, sempre depois do monitor de fotos."""
+    VER.rodar()
 
 
 def update_escalacoes():
@@ -2405,7 +2414,7 @@ def write_snapshot():
         elenco_novo = update_squads_horario()
     except Exception as ex:
         log("falha em elenco", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado), ("fontes do elenco", update_fontes_elenco), ("fotos dos jogadores", update_fotos), ("escalações anunciadas", update_escalacoes)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado), ("fontes do elenco", update_fontes_elenco), ("fotos dos jogadores", update_fotos), ("verificação dos jogadores", update_verificacao), ("escalações anunciadas", update_escalacoes)]
     falhas = []
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
@@ -3163,6 +3172,16 @@ class Handler(SimpleHTTPRequestHandler):
                 with lock:
                     md = (state.get("mercado") or {}).get(parts[2])
                 return self.send_json(md) if md else self.send_json({"ok": False, "message": "carregando dados"}, 503)
+            # verificação dos jogadores (server/verifica_jogadores.py): resumo geral ou a situação de cada jogador do clube
+            if parts[1] == "verificacao" and len(parts) in (2, 3):
+                v = VER.ultimo()
+                if not v:
+                    return self.send_json({"ok": False, "message": "carregando dados"}, 503)
+                if len(parts) == 2:
+                    return self.send_json({k: x for k, x in v.items() if k != "clubes"})
+                if parts[2] not in CLUBS:
+                    return self.send_json({"ok": False, "message": "clube desconhecido"}, 404)
+                return self.send_json({"clube": parts[2], "atualizado": v["atualizado"], "jogadores": v["clubes"].get(parts[2], {})})
             if parts[1:] == ["fotos"]:
                 return self.send_json(FOTO.resumo() or {"ok": False, "message": "carregando dados"}, 200 if FOTO.resumo() else 503)
             if len(parts) == 3 and parts[1] == "fotos":
@@ -3303,6 +3322,7 @@ def main():
     every(iv.get("mercado", 60), update_mercado)
     every(iv.get("escalacoes", 5), update_escalacoes)
     every(iv.get("fotos", 60), update_fotos)
+    every(iv.get("verificacao", 10), update_verificacao)
     threading.Thread(target=live_loop, daemon=True).start()
     log(f"PLACAR no ar: http://{'localhost' if HOST in ('127.0.0.1', 'localhost') else HOST}:{port}")
     srv = ThreadingHTTPServer((HOST, port), Handler)
