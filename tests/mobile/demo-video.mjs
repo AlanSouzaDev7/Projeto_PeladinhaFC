@@ -141,7 +141,8 @@ await golAgora("a"); await w(9000);
 await leg("Tudo testado no PC e no celular", "busca · simulador · placar ao vivo · som do gol · QA");
 await w(3200);
 
-const hist = await page.evaluate(() => window.SONS.historico.filter((h) => h.tocou).map((h) => ({ tipo: h.tipo, clube: h.clube, em: h.em })));
+// o site não tem mais som (24/11/2026): sem window.SONS o vídeo sai mudo
+const hist = await page.evaluate(() => (window.SONS ? window.SONS.historico.filter((h) => h.tocou).map((h) => ({ tipo: h.tipo, clube: h.clube, em: h.em })) : []));
 // sons em arquivos WAV, gerados pelo próprio site
 const wavs = [];
 for (const [i, h] of hist.entries()) {
@@ -159,7 +160,7 @@ const args = ["-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", `${TMP}li
 wavs.forEach((x) => args.push("-i", x.f));
 const fil = wavs.map((x, i) => `[${i + 1}:a]adelay=${x.ms}|${x.ms}[s${i}]`).join(";") + `;${wavs.map((_, i) => `[s${i}]`).join("")}amix=inputs=${wavs.length}:normalize=0:duration=longest[a]`;
 const dest = `${OUT}demo-novidades.mp4`;
-execFileSync("ffmpeg", [...args, "-filter_complex", fil, "-map", "0:v", "-map", "[a]", "-vf", "fps=30,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2", "-c:v", "libx264", "-preset", "medium", "-crf", "24", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", dest]);
+execFileSync("ffmpeg", [...args, ...(wavs.length ? ["-filter_complex", fil, "-map", "0:v", "-map", "[a]"] : ["-map", "0:v"]), "-vf", "fps=30,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2", "-c:v", "libx264", "-preset", "medium", "-crf", "24", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", dest]);
 rmSync(TMP, { recursive: true, force: true });
 console.log(`vídeo: ${dest}`);
 console.log(`sons no vídeo: ${hist.map((h) => `${h.tipo}${h.clube ? ` (${h.clube})` : ""} aos ${((h.em - tVideo) / 1000).toFixed(1)} s`).join(", ")}`);

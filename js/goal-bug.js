@@ -291,10 +291,9 @@
   // gol = { club, de, para, outro, relogio, texto, link }
   /* Com a aba em segundo plano (ou a tela do celular apagada) a animação rodaria sem ninguém ver e sumiria em 7 s:
      o gol espera a pessoa voltar para a página. Gol de mais de 10 min atrás não toca mais (o placar já mostra). */
+  // o alerta de gol é silencioso (pedido do dono em 24/11/2026: o grito de gol e a torcida, js/sons.js, saíram do site)
   function alerta(gol) {
-    // som do gol: com a aba escondida toca na hora (o alerta aparece quando ela voltar); à vista, junto com o alerta
-    const som = document.hidden ? (window.SONS?.gol(gol.club.id), true) : false;
-    fila.push({ ...gol, em: Date.now(), som });
+    fila.push({ ...gol, em: Date.now() });
     if (!tocando) proximo();
   }
   document.addEventListener("visibilitychange", () => { if (!document.hidden && !tocando) proximo(); });
@@ -312,7 +311,6 @@
     box.innerHTML = html(gol.club, "", gol) + `<p class="ga-txt"><b>GOL do ${gol.club.abbr}!</b><span>${SEG.esc(gol.texto)}</span></p>`;
     box.querySelector(".gb").setAttribute("aria-label", `Gol do ${gol.club.name}. ${gol.texto}`);
     document.body.appendChild(box);
-    if (!gol.som) window.SONS?.gol(gol.club.id);
     start(box.querySelector(".gb"));
     const sai = () => { if (!box.isConnected) return; box.classList.add("bye"); setTimeout(() => { box.remove(); proximo(); }, 420); };
     box.addEventListener("click", () => setTimeout(sai, 50));

@@ -320,17 +320,12 @@ Uma **barra de competições** no topo do Brasileirão e de cada competição le
 
 **Escudos dos adversários**: a ESPN não tem o escudo de muitos times pequenos dos estaduais e copas (Pouso Alegre, Betim, Noroeste, Maricá...). No calendário e na aba Partidas, esses times ganham um escudo desenhado com as iniciais e uma cor própria, o mesmo que entra se a imagem da ESPN falhar.
 
-## Som do gol
+## Alerta de gol sem som
 
-O único som do site (`js/sons.js`, gerado no navegador com Web Audio, sem arquivos de áudio): quando um clube marca, junto com o alerta GOL!, tocam 5 s de
-- o grito de **"GOOOOOL"** de um narrador: voz sintetizada como numa transmissão, com o pulso das pregas vocais e as pequenas irregularidades de uma voz de verdade, a rouquidão do esforço, cinco ressonâncias da boca na vogal "ô", o tom que sobe e segura com vibrato e ondas de fôlego, o "L" no fim, timbre de microfone de narrador e o eco do estádio;
-- a **torcida vibrando ao fundo**: o ronco da arquibancada, gente gritando e aplausos. A torcida fica mais baixa enquanto o grito está no ar e cresce depois dele.
-
-Cada clube muda um pouco o tom da voz, a duração do grito e a força da torcida.
-
-Dois gols juntos tocam um depois do outro. Com a aba escondida, o som toca na hora e o alerta aparece quando ela voltar. O navegador só deixa tocar som depois do primeiro toque na página. Não há botão de som nem apito.
-
-**Hinos**: têm composição e gravação protegidas pela Lei 9.610/98, e baixar o áudio do YouTube é proibido pelos termos do YouTube, por isso não estão no site. Quem tiver o instrumental licenciado pode pôr o arquivo em `media/hinos/<id do clube>.mp3` (ex.: `media/hinos/cruzeiro.mp3`) e o id em `hinos` no `js/config.js`: aí o gol toca o hino, cortado em 5 s com final suave, no lugar do som de estádio.
+Quando um clube marca, o alerta GOL! aparece por cima da página em silêncio: desde 24/11/2026 o site não toca som
+nenhum (o grito de gol e a torcida sintetizados em `js/sons.js` saíram a pedido do dono; o arquivo está no histórico
+do git, no commit anterior a esta mudança). Dois gols juntos aparecem um depois do outro; com a aba escondida, o
+alerta espera a pessoa voltar. As notificações no celular seguem o som que cada pessoa escolheu no próprio aparelho.
 
 ## Cenas dos clubes com a cidade de verdade
 
@@ -443,7 +438,6 @@ python -X utf8 tests/jogadores_api.py              # API dos jogadores: escala d
 node tests/mobile/sem-servidor.mjs                 # site funcionando só com os arquivos (GitHub Pages)
 node tests/mobile/busca.mjs                        # busca: só clubes que começam com o que foi digitado (A a Z e começos de nome, PC e celular)
 node tests/mobile/simulador.mjs                    # simulador: só jogos que faltam, conta da tabela, botões, palpites guardados, 320 px a tablet
-node tests/mobile/sons.mjs                         # som do gol (grito + torcida): toca no alerta, um gol depois do outro, nada ao navegar, os 20 clubes sem estourar
 node tests/mobile/latencia.mjs                     # atraso do placar ao vivo: versão anterior x atual, com e sem horário marcado
 node tests/mobile/demo-video.mjs                   # vídeo de demonstração das novidades, com som (tests/mobile/out/demo-novidades.mp4)
 ```
