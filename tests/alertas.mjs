@@ -80,7 +80,10 @@ await t("o service worker lê os gols recentes; a chave pública fica disponíve
 /* ---------- mais alertas do favorito: início, intervalo, escalação e fim ---------- */
 const DB2 = d1Simulado(), env2 = { ...env, DB: DB2 };
 const req2 = (caminho, corpo) => worker.fetch(new Request(`https://w.test${caminho}`, { method: "POST", body: JSON.stringify(corpo) }), env2);
-const INICIO = Date.parse("2026-11-22T21:30:00Z");
+// o jogo simulado é sempre amanhã: o envio só manda avisos dos últimos 15 min (Date.now() de verdade), e uma data fixa
+// virou bomba-relógio (o teste quebrou sozinho em 22/11/2026, quando o "jogo" passou a ficar no passado)
+const INICIO = Date.parse(new Date(Date.now() + 86400e3).toISOString().slice(0, 10) + "T21:30:00Z"); // 18:30 em Brasília
+const INICIO_ISO = new Date(INICIO).toISOString().slice(0, 16) + "Z";
 let est = { state: "pre", name: "STATUS_SCHEDULED" }, gc = 0, gf = 0, titulares = 0;
 const espn2 = async (url) => ({
   ok: true,
@@ -89,7 +92,7 @@ const espn2 = async (url) => ({
       const r = (id, ha, pref) => ({ homeAway: ha, team: { id }, roster: Array.from({ length: 18 }, (_, i) => ({ starter: i < titulares, athlete: { shortName: `${pref} ${i + 1}` } })) });
       return { rosters: [r("2026", "home", "SP"), r("2029", "away", "PAL")] };
     }
-    return url.includes("/bra.1/") ? { events: [{ id: "401999777", date: "2026-11-22T21:30Z", status: { type: est, displayClock: "" }, competitions: [{
+    return url.includes("/bra.1/") ? { events: [{ id: "401999777", date: INICIO_ISO, status: { type: est, displayClock: "" }, competitions: [{
       competitors: [{ homeAway: "home", team: { id: "2026", shortDisplayName: "São Paulo" }, score: String(gc) },
                     { homeAway: "away", team: { id: "2029", shortDisplayName: "Palmeiras" }, score: String(gf) }], details: [] }] }] } : { events: [] };
   },

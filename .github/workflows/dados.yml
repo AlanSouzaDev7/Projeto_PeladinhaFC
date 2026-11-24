@@ -159,6 +159,7 @@ jobs:
           key: partidas-${{ github.run_id }}
 
       - name: Publicar se algo mudou
+        id: grava
         env:
           DADOS_NO_RAMO: ${{ vars.DADOS_NO_RAMO }}
         run: |
@@ -169,10 +170,12 @@ jobs:
             # ponto 5: os dados vão para o ramo "dados" e o main só recebe código (o workflow Publicar junta os dois)
             git fetch origin dados 2>/dev/null && git worktree add /tmp/ramo origin/dados -B dados || git worktree add --orphan -b dados /tmp/ramo
             for a in $ARQS; do [ -e "$a" ] && mkdir -p "/tmp/ramo/$(dirname "$a")" && rm -rf "/tmp/ramo/$a" && cp -r "$a" "/tmp/ramo/$a"; done
-            cd /tmp/ramo && git add -A && { git diff --cached --quiet && echo "Nada novo." || { git commit -q -m "Dados atualizados ($(date '+%d/%m %H:%M'))" && git push origin dados; }; }
+            cd /tmp/ramo && git add -A && { git diff --cached --name-only | grep -q '^img/jogadores/' && echo "fotos=1" >> "$GITHUB_OUTPUT"; git diff --cached --quiet && echo "Nada novo." || { git commit -q -m "Dados atualizados ($(date '+%d/%m %H:%M'))" && git push origin dados; }; }
           else
             git add $ARQS 2>/dev/null || true
             git add -A img/jogadores/ 2>/dev/null || true   # cópias das fotos (o comando de retirada apaga a pasta)
+            # foto nova ou trocada: o banco D1 não guarda imagens, então o site precisa ser republicado para ela aparecer
+            git diff --cached --name-only | grep -q '^img/jogadores/' && echo "fotos=1" >> "$GITHUB_OUTPUT"
             if git diff --cached --quiet; then
               echo "Nada novo."
             else
@@ -197,8 +200,9 @@ jobs:
             echo "banco não configurado ou indisponível: o site será republicado com os dados novos"
           fi
 
-      - name: Publicar o site (Cloudflare, só se o banco não recebeu os dados)
-        if: success() && steps.d1.outputs.ok != '1'
+      # republica quando o banco não recebeu os dados, ou quando entrou foto nova (as fotos só existem no site estático)
+      - name: Publicar o site (Cloudflare, se o banco não recebeu os dados ou se há foto nova)
+        if: success() && (steps.d1.outputs.ok != '1' || steps.grava.outputs.fotos == '1')
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run publicar.yml -R "$GITHUB_REPOSITORY" --ref main || echo "publicação não disparada"

@@ -110,6 +110,14 @@ assert V.rotulo_base("cruzeiro") == "Cria da Toca" and V.rotulo_base("flamengo")
 assert V.rotulo_base("mirassol") == "Cria da base"
 caso("base: Cria da Toca, Cria do Ninho e revelado em outro clube")
 
+# --- 6b) base pela Wikipédia (youth_clubs em ordem; o último é o formador), usada quando o ogol recusa o acesso --------
+site = {"Flamengo": "flamengo", "Fluminense": "fluminense", "Corinthians": "corinthians"}.get
+pedro_wiki = {"youth_clubs1": "Flamengo", "youth_clubs2": "Duquecaxiense", "youth_clubs3": "Artsul", "youth_clubs4": "Fluminense", "currentclub": "Flamengo"}
+assert V.base_da_wikipedia(pedro_wiki, "flamengo", site, "") == (["fluminense"], True)
+assert V.base_da_wikipedia({**pedro_wiki, "currentclub": "Fluminense"}, "flamengo", site, "")[1] is False  # caixa de outro jogador
+assert V.base_da_wikipedia({"currentclub": "Corinthians"}, "corinthians", site, "") == ([], True)
+caso("base pela Wikipédia quando o ogol recusa")
+
 # --- 7) nome no elenco do ogol ------------------------------------------------------------------------------------------
 mapa = {"lucas villalba": ["lucas-villalba", "1"], "kaio jorge": ["kaio-jorge", "2"], "kaio cesar": ["kaio-cesar", "3"]}
 assert V.acha_ogol("Lucas Villalba", mapa) == ["lucas-villalba", "1"]

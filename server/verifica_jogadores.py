@@ -139,7 +139,13 @@ class Bloqueado(Exception):
 
 
 def _ogol(caminho):
-    h = OG._pagina(caminho)
+    try:
+        h = OG._pagina(caminho)
+    except Exception as ex:
+        # 403/429/503: o ogol recusa este computador (os servidores do GitHub recebem 403). Não insiste nem contorna.
+        if getattr(ex, "code", None) in (403, 429, 503):
+            raise Bloqueado(f"{caminho}: HTTP {ex.code}") from ex
+        raise
     if "Just a moment" in h[:3000] or "challenge-platform" in h[:6000] or len(h) < 20000:
         raise Bloqueado(caminho)
     return h
@@ -194,6 +200,22 @@ def base_da_carreira(html, cid_atual):
             viu_profissional = True
             recente_ok = slug == atual[0] and (len(atual) < 2 or num == atual[1])
     return bases, bool(recente_ok)
+
+
+def base_da_wikipedia(params, cid_atual, site_do_clube, nome_oficial):
+    """Da caixa de informações da Wikipédia: ([clube formador], o clube atual da caixa é o do site?).
+    Formador = o ÚLTIMO dos clubes de base (youth_clubs1..n vêm em ordem): mesma regra do ogol."""
+    juvenis = []
+    for n in range(1, 21):
+        v = params.get(f"youth_clubs{n}") or params.get(f"youthclubs{n}")
+        if v:
+            juvenis.append(v)
+    atual = params.get("currentclub") or params.get("current_club") or params.get("clubeatual") or params.get("actualclube") or ""
+    atual_ok = bool(atual) and site_do_clube(atual) == cid_atual
+    if not juvenis:
+        return [], atual_ok
+    cid = site_do_clube(juvenis[-1])
+    return ([cid] if cid else []), atual_ok
 
 
 def busca_tsdb(nome, cid):
@@ -345,9 +367,43 @@ def _elencos_ogol(c, agora):
     return {cid: r["nomes"] for cid, r in cache.items() if r.get("nomes") and agora - r.get("t", 0) < 3 * 86400}, bloqueado
 
 
+def _qids():
+    """{id do jogador: código do Wikidata} guardado pelas carreiras (server/cache/carreiras.json)."""
+    try:
+        cw = json.load(open(os.path.join(P.ROOT, "server", "cache", "carreiras.json"), encoding="utf-8")).get("clubes_wd") or {}
+    except Exception:
+        return {}
+    return {aid: q for d in cw.values() for aid, q in (d.get("qids") or {}).items() if q}
+
+
+def _wiki_base(qid, cid):
+    """Base pela Wikipédia (fonte liberada, funciona também nos servidores do GitHub): ([formador], clube atual bate?)."""
+    import carreiras_wiki as CW
+    import jogadores as J
+    CW.P = P
+    nomes = {c: J.NOME_OFICIAL.get(c, c) for c in P.CLUBS}
+
+    def site_do_clube(txt):
+        exp = CW._expande("en", [txt])[0] or txt
+        titulo, nome = CW._link(exp)
+        for c, oficial in nomes.items():
+            if CW.clube_bate(titulo, oficial) or CW.clube_bate(nome, oficial):
+                return c
+        return None
+    titulos = CW.titulo_do_wikidata(qid)
+    if not titulos.get("en"):
+        return None
+    params = CW.caixa("en", titulos["en"])
+    if not params:
+        return None
+    return base_da_wikipedia(params, cid, site_do_clube, nomes.get(cid)) + (titulos["en"],)
+
+
 def _bases(c, mercado, ogol, agora, bloqueado):
-    """Base de cada jogador pela carreira no ogol (cache de 30 dias; BASE_POR_RODADA páginas por rodada)."""
+    """Base de cada jogador (cache de 30 dias; BASE_POR_RODADA leituras por rodada). Fonte 1: carreira no ogol, quando
+    ele responde. Fonte 2: caixa de informações da Wikipédia em inglês (youth_clubs), pelo código do Wikidata."""
     cache = c.setdefault("base", {})
+    qids = _qids()
     feitos = 0
     fila = sorted(((cid, j) for cid, d in mercado.items() for j in d.get("elenco", [])), key=lambda t: -(t[1].get("min") or 0))
     for cid, j in fila:
@@ -355,21 +411,32 @@ def _bases(c, mercado, ogol, agora, bloqueado):
         r = cache.get(k)
         if r and agora - r.get("t", 0) < BASE_DIAS * 86400:
             continue
-        if bloqueado or feitos >= BASE_POR_RODADA:
+        if feitos >= BASE_POR_RODADA:
             break
-        alvo = acha_ogol(j.get("nome"), ogol.get(cid)) or acha_ogol(j.get("nomeCompleto"), ogol.get(cid))
-        if not alvo:
-            cache[k] = {"t": agora - (BASE_DIAS - 3) * 86400, "achou": False}  # tenta de novo em 3 dias
-            continue
-        feitos += 1
-        try:
-            bases, ok = base_da_carreira(_ogol(f"/jogador/{alvo[0]}/{alvo[1]}"), cid)
-            cache[k] = {"t": agora, "ogol": alvo, "bases": bases, "recenteNoClube": ok}
-        except Bloqueado:
-            P.log("verificação: o ogol pediu o desafio anti-robô; as bases continuam na próxima rodada")
-            break
-        except Exception as ex:
-            P.silencioso("verifica:ogol-jogador", ex)
+        alvo = None if bloqueado else (acha_ogol(j.get("nome"), ogol.get(cid)) or acha_ogol(j.get("nomeCompleto"), ogol.get(cid)))
+        if alvo:
+            feitos += 1
+            try:
+                bases, ok = base_da_carreira(_ogol(f"/jogador/{alvo[0]}/{alvo[1]}"), cid)
+                cache[k] = {"t": agora, "ogol": alvo, "bases": bases, "recenteNoClube": ok}
+                continue
+            except Bloqueado:
+                P.log("verificação: o ogol recusou o acesso; as bases seguem pela Wikipédia nesta rodada")
+                bloqueado = True
+            except Exception as ex:
+                P.silencioso("verifica:ogol-jogador", ex)
+        qid = qids.get(str(j["id"]))
+        if qid:
+            feitos += 1
+            try:
+                w = _wiki_base(qid, cid)
+            except Exception as ex:
+                P.silencioso("verifica:wiki-base", ex)
+                w = None
+            if w:
+                cache[k] = {"t": agora, "wiki": w[2], "bases": w[0], "recenteNoClube": w[1]}
+                continue
+        cache[k] = {"t": agora - (BASE_DIAS - 3) * 86400, "achou": False}  # nenhuma fonte agora: tenta de novo em 3 dias
     return cache
 
 
@@ -478,7 +545,7 @@ def rodar():
             "provaveis": sum(1 for v in sit.values() for r in v.values() if r["st"] == "provavel"),
             "semFonte": sum(1 for v in sit.values() for r in v.values() if r["st"] == "sem-fonte"),
             "crias": n_cria,
-            "basesConferidas": sum(1 for k in bases if bases[k].get("ogol")),
+            "basesConferidas": sum(1 for k in bases if bases[k].get("ogol") or bases[k].get("wiki")),
         },
         "colisoes": colisoes,
         "fotosTrocadas": trocadas,
