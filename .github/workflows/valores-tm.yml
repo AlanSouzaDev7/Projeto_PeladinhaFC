@@ -1,0 +1,49 @@
+# © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins.
+# CazéStats.TV — elencos completos do Transfermarkt (valor de mercado, posição, contrato, chegada e foto de todos os
+# jogadores de cada clube), uma vez por janela de transferências: 2 de janeiro e 2 de julho, e quando o dono mandar
+# (botão "Run workflow"). Lê uma página a cada 3 s e para no primeiro bloqueio (server/tm_elencos.py); o que não couber
+# no tempo continua na próxima execução. O robô de dados (dados.yml) usa o arquivo em toda rodada.
+name: Valores do Transfermarkt
+
+on:
+  schedule:
+    - cron: "0 9 2 1,7 *"
+  workflow_dispatch:
+    inputs:
+      competicoes:
+        description: "Só estas competições (códigos do Transfermarkt, separados por vírgula). Vazio = todas."
+        required: false
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: valores-tm
+  cancel-in-progress: false
+
+jobs:
+  elencos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Ler os elencos do Transfermarkt
+        timeout-minutes: 160
+        env:
+          COMPETICOES: ${{ github.event.inputs.competicoes }}
+        run: |
+          if [ -n "$COMPETICOES" ]; then python -X utf8 server/tm_elencos.py --max-min 150 --so "$COMPETICOES"; else python -X utf8 server/tm_elencos.py --max-min 150; fi
+      - name: Guardar no repositório
+        if: always()
+        run: |
+          git config user.name "cazestats-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/dados-tm/elencos.json
+          if git diff --cached --quiet; then echo "Nada novo."; exit 0; fi
+          git commit -m "Elencos do Transfermarkt ($(date '+%d/%m %H:%M'))"
+          for i in 1 2 3; do git pull --rebase -X theirs origin main && git push && break; sleep 5; done

@@ -94,6 +94,13 @@ assert V.casa({"nome": "Mykhailo Mudryk", "idade": 25, "clube": "Tottenham Hotsp
 # grafia diferente + outro clube + outra liga: só nome parecido e idade não bastam (melhor estimativa que a pessoa errada)
 assert V.casa({"nome": "Oliver McBurnie", "idade": 30, "clube": "Hull City", "liga": "eng.1"}, ind, HOJE) is None
 assert V.casa({"nome": "Oliver McBurnie", "idade": 30, "clube": "UD Las Palmas", "liga": "esp.1"}, ind, HOJE) == "901", "com o clube, casa"
+# apelido de uma palavra na ESPN para o nome completo do Transfermarkt, confirmado pelo clube
+ind_ev = V.monta_indice([jog("950", "Evertton Araújo", "2003-01-01", "Clube de Regatas do Flamengo", "BRA1", "Defensive Midfield", 14000000)], [], [], hoje=HOJE)
+assert V.casa({"nome": "Evertton", "idade": 23, "clube": "Flamengo", "liga": "bra.1"}, ind_ev, HOJE) == "950"
+assert V.casa({"nome": "Evertton", "idade": 23, "clube": "Vasco", "liga": "bra.1"}, ind_ev, HOJE) is None, "apelido sem o clube não vale"
+assert V.mesmo_nome_curto("Evertton", "Evertton Araújo") and V.mesmo_nome_curto("Walace", "Walace Falcão")
+assert not V.mesmo_nome_curto("João Souza", "João Victor"), "pessoas diferentes"
+assert V.mesmo_nome_curto("Kauã Moraes", "Kauã Moraes Silva") and V.mesmo_nome_curto("Néiser Villarreal", "Neyser Villareal") and V.mesmo_nome_curto("Matheuzinho", "Mateuzinho")
 caso("quem é quem: três Marquinhos, dois Villalba, acentos, siglas e quem trocou de clube")
 
 # --- mercado global: valor real, calibração da estimativa e colunas novas -----------------------------------------------------

@@ -282,7 +282,20 @@ def classifica_colisao(regs, apar):
     return "duvida", None
 
 
-def analisa(mercado, apar, rosters, ogol, hoje=None):
+def elencos_tm_por_clube():
+    """{clube do site: {nome normalizado: [id]}} dos elencos lidos do Transfermarkt (server/tm_elencos.py, por janela):
+    uma fonte a mais de "está no clube" (o ogol recusa os servidores do GitHub)."""
+    import valores_tm as VT
+    out = {}
+    for c in ((VT.elencos_tm() or {}).get("competicoes") or {}).values():
+        for cl in (c.get("clubes") or {}).values():
+            cid = next((k for k, v in P.CLUBS.items() if VT.mesmo_clube(v.get("busca") or k, cl.get("nome") or "")), None)
+            if cid and cl.get("jogadores"):
+                out[cid] = {_norm(r[1]): [r[0]] for r in cl["jogadores"]}
+    return out
+
+
+def analisa(mercado, apar, rosters, ogol, hoje=None, tmel=None):
     """Situação de cada jogador de cada elenco. Devolve {clube: {id: registro}} e a lista de colisões.
     registro: {"st": confirmado|provavel|sem-fonte|saiu, "fontes": [...], "homonimo": [outros clubes]?, "fotoDe": pasta?}"""
     hoje = hoje or date.today().isoformat()
@@ -294,7 +307,7 @@ def analisa(mercado, apar, rosters, ogol, hoje=None):
     out, colisoes = {}, []
     for cid, d in mercado.items():
         o = out.setdefault(cid, {})
-        rs, og = rosters.get(cid), ogol.get(cid)
+        rs, og, tm = rosters.get(cid), ogol.get(cid), (tmel or {}).get(cid)
         for j in d.get("elenco", []):
             aid = str(j["id"])
             fontes = []
@@ -302,6 +315,8 @@ def analisa(mercado, apar, rosters, ogol, hoje=None):
                 fontes.append("ESPN (cadastro)")
             if og and acha_ogol(j.get("nome"), og):
                 fontes.append("ogol (elenco atual)")
+            if tm and (acha_ogol(j.get("nome"), tm) or acha_ogol(j.get("nomeCompleto"), tm)):
+                fontes.append("Transfermarkt (elenco atual)")
             ds = apar.get(cid, {}).get(aid) or []
             if ds and ds[-1] >= corte:
                 fontes.append("súmulas (últimos 60 dias)")
@@ -376,8 +391,11 @@ def _qids():
     return {aid: q for d in cw.values() for aid, q in (d.get("qids") or {}).items() if q}
 
 
-def _wiki_base(qid, cid):
-    """Base pela Wikipédia (fonte liberada, funciona também nos servidores do GitHub): ([formador], clube atual bate?)."""
+def _wiki_base(qid, cid, nome="", idade=None):
+    """Base pela Wikipédia (fonte liberada, funciona também nos servidores do GitHub): ([formador], clube atual bate?).
+    O artigo do código do Wikidata só vale se o título tiver o nome do jogador (o cache das carreiras tinha o Pedro do
+    Flamengo apontando para o artigo do "Lucas Vera"); senão, o artigo é procurado pelo nome, com a mesma conferência de
+    clube atual e idade das carreiras (carreiras_wiki.pela_wikipedia)."""
     import carreiras_wiki as CW
     import jogadores as J
     CW.P = P
@@ -390,7 +408,14 @@ def _wiki_base(qid, cid):
             if CW.clube_bate(titulo, oficial) or CW.clube_bate(nome, oficial):
                 return c
         return None
-    titulos = CW.titulo_do_wikidata(qid)
+    titulos = CW.titulo_do_wikidata(qid) if qid else {}
+    palavras = {w for w in _norm(nome).split() if len(w) > 2}
+    if titulos.get("en") and palavras and not (palavras & set(_norm(titulos["en"]).split())):
+        titulos = {}  # o artigo é de outra pessoa
+    if not titulos.get("en") and nome:
+        achado = CW.pela_wikipedia(nome, idade, nomes.get(cid))
+        if achado and achado.get("fonte") == "wikipedia-en":
+            titulos = {"en": achado["artigo"]}
     if not titulos.get("en"):
         return None
     params = CW.caixa("en", titulos["en"])
@@ -410,7 +435,7 @@ def _bases(c, mercado, ogol, agora, bloqueado):
         k = f"{cid}:{j['id']}"
         r = cache.get(k)
         # "não achou" de antes da Wikipédia (sem a marca v2) não vale: a primeira versão só tentava o ogol
-        if r and agora - r.get("t", 0) < BASE_DIAS * 86400 and (r.get("bases") is not None or r.get("v") == 2):
+        if r and agora - r.get("t", 0) < BASE_DIAS * 86400 and (r.get("bases") or r.get("ogol") or r.get("v") == 3):
             continue
         if feitos >= BASE_POR_RODADA:
             break
@@ -427,17 +452,17 @@ def _bases(c, mercado, ogol, agora, bloqueado):
             except Exception as ex:
                 P.silencioso("verifica:ogol-jogador", ex)
         qid = qids.get(str(j["id"]))
-        if qid:
+        if qid or j.get("nome"):
             feitos += 1
             try:
-                w = _wiki_base(qid, cid)
+                w = _wiki_base(qid, cid, j.get("nome"), j.get("idade"))
             except Exception as ex:
                 P.silencioso("verifica:wiki-base", ex)
                 w = None
             if w:
-                cache[k] = {"t": agora, "wiki": w[2], "bases": w[0], "recenteNoClube": w[1]}
+                cache[k] = {"t": agora, "wiki": w[2], "bases": w[0], "recenteNoClube": w[1], "v": 3}
                 continue
-        cache[k] = {"t": agora - (BASE_DIAS - 3) * 86400, "achou": False, "v": 2}  # nenhuma fonte agora: tenta de novo em 3 dias
+        cache[k] = {"t": agora - (BASE_DIAS - 3) * 86400, "achou": False, "v": 3}  # nenhuma fonte agora: tenta de novo em 3 dias
     return cache
 
 
@@ -487,7 +512,12 @@ def rodar():
     apar = aparicoes(datas_jogos())
     rosters = rosters_espn()
     ogol, bloqueado = _elencos_ogol(c, agora)
-    sit, colisoes = analisa(mercado, apar, rosters, ogol)
+    try:
+        tmel = elencos_tm_por_clube()
+    except Exception as ex:
+        P.silencioso("verifica:tm-elencos", ex)
+        tmel = {}
+    sit, colisoes = analisa(mercado, apar, rosters, ogol, tmel=tmel)
     bases = _bases(c, mercado, ogol, agora, bloqueado)
     fotos_cache = FOTO._ler()
     subst, removidos, n_cria, trocadas = {}, [], 0, []

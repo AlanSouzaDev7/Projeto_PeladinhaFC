@@ -150,6 +150,15 @@ def casa(alvo, indice, hoje=None):
     for palavra in na.split():  # nome de uma palavra no Transfermarkt ("Danilo") para o nome completo da ESPN
         if len(palavra) > 2:
             cands += indice["porNome"].get(palavra, [])
+    # apelido de uma palavra na ESPN ("Evertton") para o nome completo do Transfermarkt ("Evertton Araújo")
+    if len(na.split()) == 1:
+        if "porPrimeiro" not in indice:
+            pp = {}
+            for tid, r in indice["j"].items():
+                for n in {r["n"], r.get("n2") or ""} - {""}:
+                    pp.setdefault(n.split()[0], []).append(tid)
+            indice["porPrimeiro"] = pp
+        cands += indice["porPrimeiro"].get(na, [])
     vistos, notas = set(), []
     for tid in cands:
         if tid in vistos:
@@ -254,6 +263,60 @@ def atualizar(forcar=False):
     _gravar(c)
     P.log(f"valores: conjunto do Transfermarkt baixado ({len(ind['j'])} jogadores, {time.time() - t0:.0f} s, versão {versoes['players'][1]})")
     return ind
+
+
+ELENCOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dados-tm", "elencos.json")
+_elencos_memo = [None, None]  # (mtime, dados)
+
+
+def elencos_tm():
+    """Elencos lidos do Transfermarkt (server/tm_elencos.py, uma vez por janela). {} se ainda não houver."""
+    try:
+        mt = os.path.getmtime(ELENCOS)
+    except OSError:
+        return {}
+    if _elencos_memo[0] != mt:
+        try:
+            _elencos_memo[:] = [mt, json.load(open(ELENCOS, encoding="utf-8"))]
+        except Exception:
+            return {}
+    return _elencos_memo[1] or {}
+
+
+def sobrepor_elencos(ind, elencos=None):
+    """Põe por cima do índice do conjunto o que veio das páginas de elenco: valor de mercado de hoje, posição, contrato,
+    foto e a chegada ao clube (com o valor pago), para todos os jogadores de todos os clubes lidos. Devolve um índice
+    novo (o do conjunto fica intacto no cache)."""
+    elencos = elencos if elencos is not None else elencos_tm()
+    comps = (elencos or {}).get("competicoes") or {}
+    if not comps:
+        return ind
+    j = dict(ind["j"])
+    for code, c in comps.items():
+        for cid, cl in (c.get("clubes") or {}).items():
+            lido = time.strftime("%Y-%m-%d", time.localtime(cl.get("lido") or 0))
+            for r in cl.get("jogadores") or []:
+                tid, nome, num, sub, nasc, nacs, alt, pe, chegou, ant, contrato, v, foto = (r + [None] * 13)[:13]
+                velho = j.get(tid) or {}
+                n = _norm(nome)
+                novo = {**velho, "n": n, "nome": nome, "d": nasc or velho.get("d", ""), "c": cl.get("nome") or velho.get("c", ""), "lg": code,
+                        "s": sub or velho.get("s", ""), "ct": contrato or velho.get("ct", ""), "f": foto or velho.get("f"), "pe": pe or velho.get("pe", ""),
+                        "al": alt or velho.get("al"), "num": num, "nac": (nacs or [None])[0], "clubeTm": cid, "fonteTm": "elenco"}
+                if v:
+                    novo.update({"v": v, "vd": lido, "vm": max(v, velho.get("vm") or 0)})
+                else:
+                    novo["v"] = velho.get("v")  # o Transfermarkt ainda não avaliou: fica a avaliação anterior, se houver
+                if chegou and ant:
+                    novo["t"] = [chegou, ant[0], cl.get("nome") or "", ant[1]]
+                if n2 := velho.get("n2"):
+                    novo["n2"] = n2
+                j[tid] = novo
+    por_nome, por_sob = {}, {}
+    for tid, r in j.items():
+        for n in {r["n"], r.get("n2") or ""} - {""}:
+            por_nome.setdefault(n, []).append(tid)
+            por_sob.setdefault(n.split()[-1], []).append(tid)
+    return {"j": j, "porNome": por_nome, "porSobrenome": por_sob}
 
 
 def versao():
@@ -416,6 +479,7 @@ def rodar():
     ind = atualizar()
     if not ind:
         return None
+    ind = sobrepor_elencos(ind)
     with P.lock:
         mercado = P.state.get("mercado") or {}
     n = enriquecer_elencos(mercado, ind) if mercado else 0
@@ -516,6 +580,78 @@ def fotos_brave(linhas, times, agora=None):
     return out
 
 
+def mesmo_nome_curto(a, b):
+    """Mesmo jogador com o nome escrito de outro jeito? Um dos nomes é de uma palavra só e ela está no outro
+    ("Evertton" x "Evertton Araújo"), ou o sobrenome é igual. "João Souza" x "João Victor" são pessoas diferentes."""
+    def som(w):  # grafias do mesmo som: y/i, th/t, ph/f, z/s, letras dobradas
+        w = w.replace("th", "t").replace("ph", "f").replace("y", "i").replace("z", "s")
+        return re.sub(r"(.)\1+", r"\1", w)
+    pa, pb = [som(w) for w in _norm(a).split()], [som(w) for w in _norm(b).split()]
+    if not pa or not pb:
+        return False
+    curto, longo = (pa, pb) if len(pa) <= len(pb) else (pb, pa)
+    if set(curto) <= set(longo):  # "Evertton" em "Evertton Araújo"; "Kauã Moraes" em "Kauã Moraes Silva"
+        return True
+    return len(pa) > 1 and len(pb) > 1 and pa[-1] == pb[-1] and pa[0] == pb[0]  # "Néiser Villarreal" x "Neyser Villareal"
+
+
+PESO_TM = {"GB1": 1.0, "ES1": 0.78, "IT1": 0.74, "L1": 0.74, "FR1": 0.58, "PO1": 0.38, "NL1": 0.36, "GB2": 0.34, "TR1": 0.3,
+           "SA1": 0.3, "BE1": 0.3, "IT2": 0.2, "ES2": 0.2, "L2": 0.22, "FR2": 0.16, "BRA1": 0.22, "MLS1": 0.24, "MEX1": 0.24}
+
+
+def extras_tm(comp, ind, hoje=None):
+    """Linhas novas para o mercado global com quem está nos elencos do Transfermarkt e não na ESPN: o clube inteiro, se
+    a ESPN não tem o clube (segundas divisões, ligas fora da lista), ou o jogador que falta num clube que a ESPN tem
+    (sem ninguém do mesmo sobrenome e idade lá, para não duplicar quem só tem o nome escrito diferente).
+    Devolve {"times", "ligas", "paises", "jogadores"} no formato do mercado global (linhas com 17 campos)."""
+    comps = (elencos_tm() or {}).get("competicoes") or {}
+    if not comps:
+        return {"times": {}, "ligas": {}, "paises": {}, "jogadores": []}
+    times = comp.get("times", {})
+    ja = {r[14] for r in comp.get("jogadores", []) if len(r) > 14 and r[14]}
+    por_time = {}
+    for r in comp.get("jogadores", []):
+        por_time.setdefault(r[6], []).append(r)
+    nome_pais = {v.lower(): k for k, v in (comp.get("paises") or {}).items() if v}
+    out = {"times": {}, "ligas": {}, "paises": {}, "jogadores": []}
+    rev_liga = {v: k for k, v in LIGA_TM.items()}
+    for code, c in comps.items():
+        lg_espn = rev_liga.get(code)
+        candidatos = [tid for tid, t in times.items() if t[2] == lg_espn] if lg_espn else list(times)
+        for cid, cl in (c.get("clubes") or {}).items():
+            if not cl.get("jogadores"):
+                continue
+            tid_espn = next((tid for tid in candidatos if mesmo_clube(times[tid][0], cl.get("nome") or "")), None)
+            tid = tid_espn or f"tm{cid}"
+            if not tid_espn:
+                lg = lg_espn or f"tm:{code}"
+                out["times"][tid] = [cl.get("nome") or cl.get("slug"), f"https://img.a.transfermarkt.technology/wappen/head/{cid}.png", lg]
+                if lg not in comp.get("ligas", {}):
+                    out["ligas"].setdefault(lg, [(c.get("nome") or code).replace(" | Transfermarkt", "").strip()[:40], "", PESO_TM.get(code, 0.12)])
+            existentes = por_time.get(tid, [])
+            for r in cl["jogadores"]:
+                tmid, nome, num, sub, nasc, nacs, alt, pe, chegou, ant, contrato, v, foto = (r + [None] * 13)[:13]
+                if tmid in ja:
+                    continue
+                idade = idade_em(nasc, hoje) if nasc else None
+                if tid_espn and any(mesmo_nome_curto(e[1], nome) and (e[2] is None or idade is None or abs(e[2] - idade) <= 1) for e in existentes):
+                    continue  # o mesmo jogador com o nome escrito de outro jeito na ESPN ("Evertton" x "Evertton Araújo")
+                setor = {"GOL": "G", "ZAG": "D", "LD": "D", "LE": "D", "VOL": "M", "MC": "M", "MEI": "M", "MD": "M", "ME": "M"}.get(sub, "A" if sub else "M")
+                nac = (nacs or [""])[0] or ""
+                pais = nome_pais.get(nac.lower(), "")
+                if not pais and nac:
+                    pais = "x-" + _norm(nac).replace(" ", "")[:12]
+                    out["paises"][pais] = nac
+                out["jogadores"].append([f"tm-{tmid}", nome, idade, setor, pais, "", tid, int(num) if str(num).isdigit() else None,
+                                         v or 0, 0, 1 if v else 0, sub or "", foto or "", (contrato or "")[:7], tmid, None, ""])
+    # quem o Transfermarkt ainda não avaliou fica com uma estimativa pela idade e pela liga (com a etiqueta)
+    for r in out["jogadores"]:
+        if not r[8]:
+            peso = ((comp.get("ligas") or {}).get(out["times"].get(r[6], times.get(r[6], ["", "", ""]))[2]) or out["ligas"].get(out["times"].get(r[6], times.get(r[6], ["", "", ""]))[2]) or [0, 0, 0.12])[2]
+            r[8] = int(max(50000, 1.5e6 * peso * (1.4 if (r[2] or 30) <= 23 else 1.0)) // 25000 * 25000)
+    return out
+
+
 def auditoria(comp, hoje=None):
     """Registro de todos os atletas contratáveis (mercado global): por liga, quantos têm o valor do Transfermarkt, quantos
     casaram mas lá estão sem valor, quantos ficaram com a estimativa; os mais valiosos sem casamento; e conferências
@@ -555,6 +691,8 @@ def global_real(comp):
     """Chamado por mercado.gravar_js: mercado global com os valores reais. Grava também os detalhes por jogador
     (dados/mercado/global-detalhes.json, lidos só quando a pessoa abre a ficha do jogador nos reforços)."""
     ind = _ler().get("indice")
+    if ind:
+        ind = sobrepor_elencos(ind)
     try:
         perfis = perfis_serie_a()
     except Exception as ex:
@@ -586,11 +724,26 @@ def global_real(comp):
         P.silencioso("valores:fotos-espn", ex)
     pasta = os.path.join(P.ROOT, "dados", "mercado")
     os.makedirs(pasta, exist_ok=True)
+    # jogadores dos elencos do Transfermarkt que a ESPN não tem: arquivo à parte (o banco aceita até 1,9 MB por arquivo)
+    try:
+        ext = extras_tm(comp, ind or {"j": {}, "porNome": {}, "porSobrenome": {}})
+        json.dump({"atualizado": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "fonte": "Transfermarkt (páginas de elenco, uma vez por janela)", **ext},
+                  open(os.path.join(pasta, "global-tm.json"), "w", encoding="utf-8", newline="\n"), ensure_ascii=False, separators=(",", ":"))
+        comp["valores"]["extrasTm"] = len(ext["jogadores"])
+    except Exception as ex:
+        P.silencioso("valores:extras-tm", ex)
     try:
         json.dump(auditoria(comp), open(os.path.join(pasta, "auditoria.json"), "w", encoding="utf-8", newline="\n"), ensure_ascii=False, separators=(",", ":"))
     except Exception as ex:
         P.silencioso("valores:auditoria", ex)
-    json.dump({"atualizado": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "fonte": "Transfermarkt (transfermarkt-datasets, CC0)", "valores": comp["valores"],
-               "perfis": {k: v for k, v in perfis.items() if v.get("def") is not None or v.get("z")}, "jogadores": det},
-              open(os.path.join(pasta, "global-detalhes.json"), "w", encoding="utf-8", newline="\n"), ensure_ascii=False, separators=(",", ":"))
+    corpo = {"atualizado": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "fonte": "Transfermarkt (transfermarkt-datasets, CC0, e páginas de elenco)", "valores": comp["valores"],
+             "perfis": {k: v for k, v in perfis.items() if v.get("def") is not None or v.get("z")}, "jogadores": det}
+    txt = json.dumps(corpo, ensure_ascii=False, separators=(",", ":"))
+    # o banco (D1) aceita até 1,9 MB por arquivo: passando de 1,7 MB, saem a altura e o pé (os campos menos usados na ficha)
+    if len(txt.encode()) > 1_700_000:
+        for d in det.values():
+            d.pop("al", None)
+            d.pop("pe", None)
+        txt = json.dumps(corpo, ensure_ascii=False, separators=(",", ":"))
+    open(os.path.join(pasta, "global-detalhes.json"), "w", encoding="utf-8", newline="\n").write(txt)
     return comp

@@ -31,6 +31,7 @@
 | J6 | Chave de teste do TheSportsDB ("123") e Flickr grátis em produto publicado. | Em uso. | Plano Patreon do TheSportsDB (pago) ou deixar de usar. |
 | J8 | Salário individual estimado. | Mostrado **em faixa** com o aviso "estimativa" sempre visível (resolvido no código do app). | — |
 | J9 | Robô sem contato na identificação. | Identificador completo com o endereço do site. | — |
+| J10 | **Valores, posições, contratos e fotos do Transfermarkt.** O `license.xml` do site declara proibido o uso do conteúdo por IA (padrão RSL, `ai-all`) e os termos de uso do Transfermarkt costumam restringir reuso comercial dos valores de mercado. | Duas fontes: o conjunto público transfermarkt-datasets (CC0, julho de 2026) e, uma vez por janela (janeiro e julho), as páginas de elenco lidas por `server/tm_elencos.py`, permitidas no robots.txt para leitores comuns, com identificação e uma página a cada 3 s, parando no primeiro bloqueio. O robô não usa IA. | Para produto: licenciar valores de mercado (o próprio Transfermarkt vende dados) ou trocar por estimativa própria; remover as fotos do Transfermarkt junto com o `MODO_VENDA=1`. |
 
 ## Dados pessoais (LGPD)
 

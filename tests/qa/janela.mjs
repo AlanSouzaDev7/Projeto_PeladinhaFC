@@ -111,8 +111,11 @@ for (const [perfil, vp] of [["celular", { width: 390, height: 844, isMobile: tru
   await fotoDe("flamengo", "x");
   const pedro = p.locator('.jt-card:has(.jt-nome:text-is("Pedro")) .jt-sit.cria');
   ok((await pedro.count()) && /Revelado pelo Fluminense/.test(await pedro.innerText()), `${perfil}: Pedro (base no Fluminense) aparece como revelado pelo Fluminense`);
-  const selos = await p.locator(".jt-conf").count(), cartoes = await p.locator(".jt-card").count();
-  ok(selos > cartoes / 2, `${perfil}: selo de conferido na maioria do elenco`, `${selos} de ${cartoes}`);
+  // quem joga (10 jogos ou mais na temporada) tem de estar conferido em duas fontes; garoto da base só no cadastro da
+  // ESPN fica "provável", e isso é o certo
+  const titulares = await p.evaluate(() => [...document.querySelectorAll(".jt-card")].map((c) => ({ jogos: +((c.querySelector(".jt-uso small")?.textContent || "").match(/(\d+) jogos?/) || [0, 0])[1], selo: !!c.querySelector(".jt-conf") })).filter((x) => x.jogos >= 10));
+  const comSelo = titulares.filter((x) => x.selo).length;
+  ok(titulares.length && comSelo >= titulares.length * 0.85, `${perfil}: selo de conferido em quem joga (10+ jogos)`, `${comSelo} de ${titulares.length}`);
   const sobra = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   ok(sobra <= 1, `${perfil}: sem rolagem para os lados`, `${sobra} px`);
   await p.locator(".jt-sit.cria").first().scrollIntoViewIfNeeded().catch(() => {});

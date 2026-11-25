@@ -41,7 +41,18 @@
       return (await DADOS.carrega(`mercado/${cid}`)) || null;
     })());
   }
-  const carregaGlobal = () => (prom.global = prom.global || Promise.all([DADOS.carrega("mercado/global"), window.FOTOS ? null : DADOS.carrega("fotos").catch(() => null)]).then(([g]) => g));
+  // mercado global: elencos da ESPN + quem está nos elencos do Transfermarkt e não na ESPN (dados/mercado/global-tm.json,
+  // arquivo à parte por causa do limite de tamanho do banco), juntos numa lista só
+  const carregaGlobal = () => (prom.global = prom.global || Promise.all([DADOS.carrega("mercado/global"), DADOS.carrega("mercado/global-tm").catch(() => null), window.FOTOS ? null : DADOS.carrega("fotos").catch(() => null)])
+    .then(([g, x]) => {
+      if (!g || !x?.jogadores?.length || g._comTm) return g;
+      g.times = { ...g.times, ...(x.times || {}) };
+      g.ligas = { ...g.ligas, ...(x.ligas || {}) };
+      g.paises = { ...(g.paises || {}), ...(x.paises || {}) };
+      g.jogadores = g.jogadores.concat(x.jogadores);
+      g._comTm = true;
+      return g;
+    }));
   // detalhes do Transfermarkt e perfis da Série A: só quando alguém abre a ficha de um jogador nos reforços
   const carregaDetalhes = () => (prom.det = prom.det || DADOS.carrega("mercado/global-detalhes").catch(() => null));
   const carregaPosicoes = () => (prom.pos = prom.pos || Promise.all([window.HEATMAPS || DADOS.carrega("heatmaps"), window.ESCALACOES || DADOS.carrega("escalacoes")]));
@@ -756,7 +767,7 @@
   function codifica(D, e, k) {
     const todos = [...D.elenco, ...D.emprestados.map((x) => ({ ...x, fora: true }))];
     const dec = todos.map((j) => LETRA[decisao(e, j)]).join("");
-    const ch = e.chegadas.map((id) => (+id).toString(36)).join("-");
+    const ch = e.chegadas.map((id) => (/^tm-\d+$/.test(id) ? "_" + (+id.slice(3)).toString(36) : (+id).toString(36))).join("-");
     const esc2 = escalacaoValida(e, k, D.clube), ordem = k.elencoFinal.map((j) => j.id);
     const tit = FORMACOES[e.form].map((_, i) => { const n = ordem.indexOf(esc2[i]); return n < 0 ? "zz" : n.toString(36).padStart(2, "0"); }).join("");
     return `v${e.modo === "manager" ? "m" : "r"}${Object.keys(FORMACOES).indexOf(e.form)}${dec}-${tit}${ch ? `-${ch}` : ""}`;
@@ -767,7 +778,7 @@
     const e = novo(); e.modo = m[1] === "m" ? "manager" : "real"; e.form = Object.keys(FORMACOES)[+m[2]] || "4-2-3-1";
     const todos = [...D.elenco, ...D.emprestados.map((x) => ({ ...x, fora: true }))];
     [...m[3]].forEach((l, i) => { if (todos[i] && DE_LETRA[l]) e.dec[todos[i].id] = DE_LETRA[l]; });
-    e.chegadas = (m[5] || "").split("-").filter(Boolean).map((x) => String(parseInt(x, 36)));
+    e.chegadas = (m[5] || "").split("-").filter(Boolean).map((x) => (x[0] === "_" ? `tm-${parseInt(x.slice(1), 36)}` : String(parseInt(x, 36))));
     e._tit = m[4];
     return e;
   }
@@ -836,6 +847,7 @@
     // outras ligas: os números da temporada pela ESPN (sem desarmes: a ESPN não publica de jogadores de fora)
     if (!st.querySelector(".jt-mini-d")) {
       try {
+        if (!/^\d+$/.test(id) || /^tm:/.test(j.lg)) throw new Error("sem ESPN");
         const r = await fetch(`https://site.web.api.espn.com/apis/common/v3/sports/soccer/${encodeURIComponent(j.lg)}/athletes/${encodeURIComponent(id)}/overview`);
         const d2 = r.ok ? await window.SEG.json(r) : null, S = d2?.statistics;
         const ix = (n) => (S?.names || []).indexOf(n);
@@ -845,7 +857,7 @@
         }).join("");
         if (!box.isConnected) return;
         st.innerHTML = linhas2 ? `<table class="jt-mini-t"><thead><tr><th>Competição</th><th title="Jogos como titular">Tit.</th><th>Gols</th><th title="Assistências">Ass.</th><th title="Finalizações">Fin.</th><th title="Faltas cometidas">Faltas</th></tr></thead><tbody>${linhas2}</tbody></table><p class="jt-mini-obs">Temporada atual pela ESPN. Desarmes e interceptações de ligas de fora não são publicados pela ESPN.</p>` : `<div class="empty" style="padding:10px">A ESPN não tem estatísticas desta temporada para ele.</div>`;
-      } catch { if (box.isConnected) st.innerHTML = `<div class="empty" style="padding:10px">Não deu para ler as estatísticas agora.</div>`; }
+      } catch { if (box.isConnected) st.innerHTML = `<div class="empty" style="padding:10px">${/^\d+$/.test(id) ? "Não deu para ler as estatísticas agora." : "Jogador do elenco do Transfermarkt que a ESPN não cadastra: sem estatísticas da temporada aqui."}</div>`; }
     }
     if (!blobs) { blobs = mapaDaPosicao(j.sub || CP.PADRAO[j.pos]); legenda.textContent = `Estimado pela posição (${SUB_NOME[j.sub] || POS_CURTO[j.pos] || "?"}): não há lances públicos com posição no campo desta liga.`; }
     requestAnimationFrame(() => { if (cv.isConnected && window.HEATMAP) HEATMAP.paint(cv, blobs); });
