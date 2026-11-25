@@ -338,7 +338,9 @@ Uma **barra de competições** no topo do Brasileirão e de cada competição le
 
   ```bash
   python -X utf8 server/tm_elencos.py
-  git add server/dados-tm/elencos.json && git commit -m "Elencos do Transfermarkt" && git push
+  git add server/dados-tm/elencos.json && git commit -m "Elencos do Transfermarkt"
+  git pull --rebase origin main   # o robô publica dados a cada ~10 min: traz os commits dele antes de enviar
+  git push
   ```
 - **Posições e perfil**: filtros por zagueiro, laterais, volante, meias, pontas, segundo atacante e centroavante;
   retorno defensivo (desarmes, interceptações e cortes por 90 min, comparados com a mesma posição) e zona de atuação
