@@ -727,9 +727,28 @@ def global_real(comp):
     # jogadores dos elencos do Transfermarkt que a ESPN não tem: arquivo à parte (o banco aceita até 1,9 MB por arquivo)
     try:
         ext = extras_tm(comp, ind or {"j": {}, "porNome": {}, "porSobrenome": {}})
-        json.dump({"atualizado": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "fonte": "Transfermarkt (páginas de elenco, uma vez por janela)", **ext},
-                  open(os.path.join(pasta, "global-tm.json"), "w", encoding="utf-8", newline="\n"), ensure_ascii=False, separators=(",", ":"))
-        comp["valores"]["extrasTm"] = len(ext["jogadores"])
+        # em partes de até ~1,2 MB (o banco aceita 1,9 MB por arquivo): global-tm.json traz times, ligas, países e a
+        # primeira parte dos jogadores e diz quantas partes há; global-tm-2.json, global-tm-3.json... trazem o resto
+        js_ext, partes, atual, tam = ext["jogadores"], [], [], 0
+        for r in js_ext:
+            t = len(json.dumps(r, ensure_ascii=False).encode()) + 1
+            if atual and tam + t > 1_200_000:
+                partes.append(atual)
+                atual, tam = [], 0
+            atual.append(r)
+            tam += t
+        partes.append(atual)
+        cab = {k: v for k, v in ext.items() if k != "jogadores"}
+        for i, parte in enumerate(partes, 1):
+            corpo = ({"atualizado": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "fonte": "Transfermarkt (páginas de elenco, uma vez por janela)", **cab, "partes": len(partes)}
+                     if i == 1 else {"parte": i}) | {"jogadores": parte}
+            json.dump(corpo, open(os.path.join(pasta, "global-tm.json" if i == 1 else f"global-tm-{i}.json"), "w", encoding="utf-8", newline="\n"),
+                      ensure_ascii=False, separators=(",", ":"))
+        for i in range(len(partes) + 1, 12):  # partes que sobraram de uma rodada maior
+            velho = os.path.join(pasta, f"global-tm-{i}.json")
+            if os.path.exists(velho):
+                os.remove(velho)
+        comp["valores"]["extrasTm"] = len(js_ext)
     except Exception as ex:
         P.silencioso("valores:extras-tm", ex)
     try:

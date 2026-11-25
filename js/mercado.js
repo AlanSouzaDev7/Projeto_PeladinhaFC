@@ -44,8 +44,14 @@
   // mercado global: elencos da ESPN + quem está nos elencos do Transfermarkt e não na ESPN (dados/mercado/global-tm.json,
   // arquivo à parte por causa do limite de tamanho do banco), juntos numa lista só
   const carregaGlobal = () => (prom.global = prom.global || Promise.all([DADOS.carrega("mercado/global"), DADOS.carrega("mercado/global-tm").catch(() => null), window.FOTOS ? null : DADOS.carrega("fotos").catch(() => null)])
-    .then(([g, x]) => {
+    .then(async ([g, x]) => {
       if (!g || !x?.jogadores?.length || g._comTm) return g;
+      // o arquivo do Transfermarkt vem em partes (limite de tamanho do banco): global-tm-2, global-tm-3...
+      if (x.partes > 1 && !x._partes) {
+        const resto = await Promise.all(Array.from({ length: Math.min(10, x.partes - 1) }, (_, i) => DADOS.carrega(`mercado/global-tm-${i + 2}`).catch(() => null)));
+        for (const r of resto) if (r?.jogadores?.length) x.jogadores = x.jogadores.concat(r.jogadores);
+        x._partes = true;
+      }
       g.times = { ...g.times, ...(x.times || {}) };
       g.ligas = { ...g.ligas, ...(x.ligas || {}) };
       g.paises = { ...(g.paises || {}), ...(x.paises || {}) };

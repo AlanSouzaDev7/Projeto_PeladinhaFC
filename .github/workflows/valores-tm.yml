@@ -3,6 +3,10 @@
 # jogadores de cada clube), uma vez por janela de transferências: 2 de janeiro e 2 de julho, e quando o dono mandar
 # (botão "Run workflow"). Lê uma página a cada 3 s e para no primeiro bloqueio (server/tm_elencos.py); o que não couber
 # no tempo continua na próxima execução. O robô de dados (dados.yml) usa o arquivo em toda rodada.
+# ATENÇÃO (25/11/2026): o Transfermarkt responde com página vazia aos servidores do GitHub (bloqueio de endereços de
+# nuvem, que não é contornado). Esta execução fica como tentativa: sem página, registra e não muda nada. A leitura que
+# funciona é a do computador do dono, uma vez por janela: python -X utf8 server/tm_elencos.py e depois um commit do
+# arquivo server/dados-tm/elencos.json (README, "Janela de transferências: valores, posições e fotos").
 name: Valores do Transfermarkt
 
 on:

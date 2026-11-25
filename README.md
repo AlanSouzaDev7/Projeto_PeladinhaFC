@@ -331,6 +331,15 @@ Uma **barra de competições** no topo do Brasileirão e de cada competição le
   vivo); só baixa de novo quando muda. O próprio conjunto parou em julho de 2026: os valores são os daquela data.
   Quem não está lá tem valor estimado, calibrado pela relação real/estimado da mesma liga. **Salário** é sempre
   estimativa (nenhuma fonte pública tem o salário de cada jogador).
+- **Elencos completos do Transfermarkt, uma vez por janela** (`server/tm_elencos.py`): valor de mercado de hoje,
+  posição, contrato, chegada com o valor pago e foto de todos os jogadores de 48 competições, por cima do conjunto de
+  julho; quem está lá e não na ESPN entra como contratável. O Transfermarkt devolve página vazia aos servidores do
+  GitHub, então a leitura é feita do computador do dono em janeiro e julho (cerca de 1 hora, uma página a cada 3 s):
+
+  ```bash
+  python -X utf8 server/tm_elencos.py
+  git add server/dados-tm/elencos.json && git commit -m "Elencos do Transfermarkt" && git push
+  ```
 - **Posições e perfil**: filtros por zagueiro, laterais, volante, meias, pontas, segundo atacante e centroavante;
   retorno defensivo (desarmes, interceptações e cortes por 90 min, comparados com a mesma posição) e zona de atuação
   pelos lances reais da ESPN (só Série A). A ficha de cada reforço traz valores, contrato, transferência, estatísticas

@@ -60,7 +60,7 @@ for (const [perfil, vp] of [["celular", { width: 390, height: 844, isMobile: tru
   await p.waitForTimeout(1200);
   const mini = (await p.locator(".jt-mini").innerText()).replace(/\s+/g, " ");
   ok(/Contrato até 30\/06\/2028/.test(mini), `${perfil}: ficha com o contrato do Transfermarkt`);
-  ok(/€ 31,4 mi/.test(mini) && /Roma → PSG/.test(mini), `${perfil}: ficha com a última transferência e o valor pago`);
+  ok(/€ 31,4 mi/.test(mini) && /Roma → (PSG|Paris Saint-Germain)/.test(mini), `${perfil}: ficha com a última transferência e o valor pago`);
   ok(/Ligue 1|Champions/i.test(mini), `${perfil}: ficha com as estatísticas da temporada (ESPN)`);
   const pintado = await p.evaluate(() => { const c = document.querySelector("[data-jt-mini-cv]"); if (!c || !c.width) return 0; const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 40) if (d[i] > 20) n++; return n; });
   ok(pintado > 50, `${perfil}: mapa de calor desenhado na ficha`, `${pintado} pontos coloridos`);
