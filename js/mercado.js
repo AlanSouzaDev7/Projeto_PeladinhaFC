@@ -600,21 +600,24 @@
   // mistura de cor (hex) com branco/preto: t > 0 clareia, t < 0 escurece
   const tom = (hex, t) => { const n = parseInt(String(hex).replace("#", "").padEnd(6, "0").slice(0, 6), 16); const r = (n >> 16) & 255, gg = (n >> 8) & 255, b = n & 255, f = (v) => Math.round(t >= 0 ? v + (255 - v) * t : v * (1 + t)); return `rgb(${f(r)},${f(gg)},${f(b)})`; };
   const lum = (hex) => { const n = parseInt(String(hex).replace("#", "").padEnd(6, "0").slice(0, 6), 16); return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
-  /* cartaz do elenco (1080 x 1350): título do clube, meio campo em perspectiva só com as linhas, foto redonda de cada
-     titular com o selo da nota média (ou do valor, para quem não tem nota), nome embaixo, faixa de chegadas e saídas e
-     a marca. Cores tiradas do clube: fundo escuro na cor dele, título e linhas na cor de destaque. */
+  /* imagem dentro de uma caixa sem achatar: mantém a proporção (escudos não são quadrados) */
+  function cabe(x, im, bx, by, bw, bh) {
+    if (!im) return;
+    const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height, k = Math.min(bw / iw, bh / ih), w = iw * k, h = ih * k;
+    x.drawImage(im, bx + (bw - w) / 2, by + (bh - h) / 2, w, h);
+  }
+  /* cartaz do elenco (1080 x 1350), com a cara do CazéStats.TV: escudo e título condensado no alto, etiquetas da
+     formação e do modo, meio campo de cantos arredondados com o gramado cortado na cor do clube, cada titular num
+     cartão (foto de cantos arredondados, pílula da nota média ou do valor, nome), faixa de chegadas e saídas e a marca */
   async function desenhaCartaz(cv, cid, D, e, k) {
     const x = cv.getContext("2d"), W = cv.width, H = cv.height, c = byId[cid];
     const [c1, c2raw] = c.colors, c2 = c2raw || "#ffffff", c3 = c.colors[2] || c2;
-    // destaque: a cor do clube que aparece bem no fundo escuro (azul escuro vira azul claro; branco fica branco)
     const vivas = [c1, c2, c3].filter((cor) => lum(cor) > 0.32 && lum(cor) < 0.97);
-    const destaque = vivas[0] || "#ffffff"; // clube só de preto e branco: título branco
-    const linhaCor = tom(destaque, -0.05);
-    try { await Promise.all(['700 90px "Space Grotesk"', '500 24px "JetBrains Mono"', '700 24px "JetBrains Mono"'].map((f) => document.fonts?.load(f))); await document.fonts?.ready; } catch { /* sem fontes */ }
-    const TIT = (s) => `700 ${s}px "Space Grotesk", "Big Shoulders Display", sans-serif`, MONO = (w, s) => `${w} ${s}px "JetBrains Mono", ui-monospace, monospace`;
+    const destaque = vivas[0] || "#ffffff";
+    try { await Promise.all(['900 96px "Big Shoulders Display"', '800 28px "Big Shoulders Display"', '700 24px "Saira"', '600 20px "Inter"'].map((f) => document.fonts?.load(f))); await document.fonts?.ready; } catch { /* sem fontes */ }
+    const DISP = (w, s) => `${w} ${s}px "Big Shoulders Display", "Saira Condensed", sans-serif`, TXT = (w, s) => `${w} ${s}px "Saira", "Inter", sans-serif`;
     const esc2 = escalacaoValida(e, k, cid), porId = new Map(k.elencoFinal.map((j) => [j.id, j]));
     const fichas = FORMACOES[e.form].map((_, i) => ({ i, j: porId.get(esc2[i]), pt: ptSlot(e, i) })).filter((f) => f.j);
-    // notas da temporada (lances da ESPN) do clube e dos clubes da Série A de onde vêm os reforços
     const clubesNota = [...new Set([cid, ...fichas.map((f) => f.j.cidSerieA).filter(Boolean)])];
     if (window.HEATMAP) await Promise.all(clubesNota.map((cc) => HEATMAP.carregaClube(cc).catch(() => null)));
     const notaDe = (j) => {
@@ -628,110 +631,100 @@
     const escudos = new Map(await Promise.all([...new Set(k.chegadas.map((j) => j.timeLogo).filter(Boolean))].map(async (u) => [u, await carregaImg(u)])));
     fichas.forEach((f, i) => { f.foto = fotos[i]; f.nota = notaDe(f.j); });
 
-    /* ---------- fundo: escuro na cor do clube, com quadradinhos nas cores dele ---------- */
-    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, tom(c1, -0.62)); g.addColorStop(1, tom(c1, -0.86));
+    /* ---------- fundo: tom escuro do clube com listras diagonais finas nas cores dele ---------- */
+    const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, tom(c1, -0.55)); g.addColorStop(1, tom(c1, -0.85));
     x.fillStyle = g; x.fillRect(0, 0, W, H);
-    let sem = cid.length * 97 + 13;
-    const rnd = () => { sem = (sem * 9301 + 49297) % 233280; return sem / 233280; };
-    for (let i = 0; i < 46; i++) { const s = 30 + Math.floor(rnd() * 3) * 30; x.globalAlpha = 0.035 + rnd() * 0.05; x.fillStyle = [c1, c2, c3][i % 3]; x.fillRect(Math.floor(rnd() * W / 30) * 30, Math.floor(rnd() * H / 30) * 30, s, s); }
-    x.globalAlpha = 1;
-    // fio fino no alto (como na moldura das referências)
-    x.strokeStyle = "rgba(255,255,255,.55)"; x.lineWidth = 2; x.beginPath(); x.moveTo(48, 92); x.lineTo(W - 48, 92); x.stroke();
+    x.save(); x.globalAlpha = 0.07; x.lineWidth = 14;
+    for (let i = -H; i < W; i += 46) { x.strokeStyle = [c1, c2, c3][Math.abs(i / 46) % 3 | 0]; x.beginPath(); x.moveTo(i, 0); x.lineTo(i + H, H); x.stroke(); }
+    x.restore();
 
-    /* ---------- topo: título, subtítulo e o escudo ---------- */
-    x.textBaseline = "alphabetic";
-    // título: encolhe até caber ao lado do escudo; abaixo de 56 px usa a sigla do clube
-    let titulo = `Meu ${c.name} 2027`, ts = 84;
-    x.fillStyle = destaque; x.font = TIT(ts);
-    while (x.measureText(titulo).width > W - 300 && ts > 40) { ts -= 4; if (ts < 56 && c.abbr) titulo = `Meu ${c.abbr} 2027`; x.font = TIT(ts); }
-    x.fillText(titulo, 52, 190);
-    x.fillStyle = "rgba(255,255,255,.88)"; x.font = MONO(500, 25);
-    x.fillText(`JANELA DE TRANSFERÊNCIAS · ${e.form} · ${e.modo === "manager" ? "MODO MANAGER" : "MODO REAL"}`, 56, 240, W - 300);
-    // escudo num círculo, no canto (onde as referências põem a bandeira)
-    x.save(); x.beginPath(); x.arc(W - 118, 166, 64, 0, Math.PI * 2); x.fillStyle = "#fff"; x.fill();
-    if (logo) x.drawImage(logo, W - 118 - 46, 166 - 46, 92, 92); x.restore();
+    /* ---------- topo: escudo, título condensado e as etiquetas ---------- */
+    x.save(); x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = 22; cabe(x, logo, 48, 48, 132, 132); x.restore();
+    let ts = 104; const titulo = `MEU ${c.name.toUpperCase()}`;
+    x.font = DISP(900, ts); while (x.measureText(titulo).width > W - 250 && ts > 60) { ts -= 4; x.font = DISP(900, ts); }
+    x.fillStyle = "#fff"; x.textBaseline = "alphabetic"; x.fillText(titulo, 204, 136);
+    x.fillStyle = destaque; x.font = DISP(800, 34); x.fillText("JANELA DE TRANSFERÊNCIAS 2027", 206, 178);
+    const pilula = (txt, px, py, fundo, cor) => { x.font = TXT(700, 19); const w = x.measureText(txt).width + 28; x.fillStyle = fundo; rr(x, px, py, w, 34, 17); x.fill(); x.fillStyle = cor; x.fillText(txt, px + 14, py + 23); return w + 10; };
+    let px = 206;
+    px += pilula(e.form, px, 198, "rgba(255,255,255,.14)", "#fff");
+    px += pilula(e.modo === "manager" ? "MODO MANAGER" : "MODO REAL", px, 198, e.modo === "manager" ? "#ffd200" : "rgba(255,255,255,.14)", e.modo === "manager" ? "#111" : "#fff");
+    if (k.chegadas.length) pilula(`${k.chegadas.length} ${k.chegadas.length === 1 ? "REFORÇO" : "REFORÇOS"} · ${eur(k.chegadas.reduce((s, j) => s + j.valor, 0))}`, px, 198, "rgba(255,255,255,.14)", "#fff");
 
-    /* ---------- meio campo em perspectiva, só as linhas ---------- */
-    const top = 300, base = 1100, topoL = 150, topoR = W - 150, baseL = 26, baseR = W - 26;
-    const P = (u, v) => { const yy = top + (base - top) * v, l = topoL + (baseL - topoL) * v, r = topoR + (baseR - topoR) * v; return { x: l + (r - l) * u, y: yy }; };
-    const traco = (pts, fechar = false) => { x.beginPath(); pts.forEach((p, i) => (i ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y))); if (fechar) x.closePath(); x.stroke(); };
-    x.strokeStyle = linhaCor; x.globalAlpha = 0.9; x.lineWidth = 3; x.lineJoin = "round";
-    traco([P(0, 1), P(0, 0), P(1, 0), P(1, 1)]); // laterais e a linha do meio
-    x.beginPath(); for (let a = 0; a <= 32; a++) { const t = (a / 32) * Math.PI, p = P(0.5 + 0.13 * Math.cos(t), 0.075 * Math.sin(t)); a ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y); } x.stroke(); // meia-lua do círculo central
-    traco([P(0.21, 1), P(0.21, 0.79), P(0.79, 0.79), P(0.79, 1)]); // grande área
-    traco([P(0.37, 1), P(0.37, 0.93), P(0.63, 0.93), P(0.63, 1)]); // pequena área
-    x.beginPath(); for (let a = 0; a <= 24; a++) { const t = Math.PI + (a / 24) * Math.PI, p = P(0.5 + 0.1 * Math.cos(t), 0.79 + 0.045 * Math.sin(t)); a ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y); } x.stroke(); // meia-lua da área
-    x.globalAlpha = 1;
-    x.strokeStyle = "rgba(255,255,255,.55)"; x.lineWidth = 2; x.beginPath(); x.moveTo(0, base); x.lineTo(W, base); x.stroke();
+    /* ---------- meio campo: retângulo de cantos arredondados, gramado cortado na cor do clube ---------- */
+    const cx0 = 36, cy0 = 262, cw = W - 72, ch = 870;
+    x.save(); rr(x, cx0, cy0, cw, ch, 30); x.clip();
+    const gg = x.createLinearGradient(0, cy0, 0, cy0 + ch); gg.addColorStop(0, tom(c1, -0.38)); gg.addColorStop(1, tom(c1, -0.6));
+    x.fillStyle = gg; x.fillRect(cx0, cy0, cw, ch);
+    for (let i = 0; i < 10; i++) if (i % 2) { x.fillStyle = "rgba(255,255,255,.035)"; x.fillRect(cx0, cy0 + (ch / 10) * i, cw, ch / 10); }
+    x.strokeStyle = "rgba(255,255,255,.22)"; x.lineWidth = 3;
+    x.beginPath(); x.arc(cx0 + cw / 2, cy0, 120, 0, Math.PI); x.stroke(); // meia-lua do círculo central (a linha do meio é o alto do cartão)
+    x.strokeRect(cx0 + cw * 0.2, cy0 + ch - 190, cw * 0.6, 192); x.strokeRect(cx0 + cw * 0.36, cy0 + ch - 66, cw * 0.28, 68); // grande e pequena área
+    x.beginPath(); x.arc(cx0 + cw / 2, cy0 + ch - 190, 72, Math.PI, 0); x.stroke();
+    x.restore();
+    x.strokeStyle = "rgba(255,255,255,.28)"; x.lineWidth = 2; rr(x, cx0, cy0, cw, ch, 30); x.stroke();
 
-    /* ---------- titulares: foto redonda, selo da nota (ou valor) e nome ---------- */
-    const R = 56;
-    // linhas da formação: quem está a menos de 9 pontos de altura fica na mesma linha (zagueiros e laterais, os dois
-    // volantes...); as linhas são espalhadas por igual do alto ao pé do campo, como nas escalações das referências
+    /* ---------- titulares em cartões, linhas da formação espalhadas por igual ---------- */
+    const L = 96, RAIO = 24; // foto 96 px (antes 112): mais espaço entre os nomes
     const alturas = [...new Set(fichas.map((f) => f.pt[1]))].sort((a, b) => a - b), linhas = [];
     for (const y of alturas) { const l = linhas[linhas.length - 1]; if (l && y - l[l.length - 1] < 9) l.push(y); else linhas.push([y]); }
     const linhaDe = (y) => linhas.findIndex((l) => l.includes(y));
-    const naTela = (pt) => { const n = Math.max(1, linhas.length - 1), v = 0.07 + (linhaDe(pt[1]) / n) * 0.78; return P(0.07 + (pt[0] / 100) * 0.86, v); };
-    // largura máxima do nome: o espaço que cada um tem na própria linha (quatro na defesa têm menos que um centroavante)
-    // largura máxima do nome: a distância até o vizinho mais perto na mesma linha (três zagueiros juntos têm menos espaço)
+    // largura toda do campo (sem perspectiva): os quatro da defesa ficam mais de 20% mais afastados que antes
+    const naTela = (pt) => { const n = Math.max(1, linhas.length - 1); return { x: cx0 + 70 + (pt[0] / 100) * (cw - 140), y: cy0 + 84 + (linhaDe(pt[1]) / n) * (ch - 226) }; };
     const larguraNome = (pt) => {
-      const l = linhas[linhaDe(pt[1])], px = naTela(pt).x;
-      const viz = fichas.filter((o) => o.pt !== pt && l.includes(o.pt[1])).map((o) => Math.abs(naTela(o.pt).x - px));
-      return Math.max(120, Math.min(260, (viz.length ? Math.min(...viz) : 400) - 18));
+      const l = linhas[linhaDe(pt[1])], px0 = naTela(pt).x;
+      const viz = fichas.filter((o) => o.pt !== pt && l.includes(o.pt[1])).map((o) => Math.abs(naTela(o.pt).x - px0));
+      return Math.max(110, Math.min(250, (viz.length ? Math.min(...viz) : 400) - 22));
     };
     for (const f of fichas) {
-      const { j, foto, nota } = f, p = naTela(f.pt), novo = !!j.reforco;
-      // foto
-      x.save(); x.beginPath(); x.arc(p.x, p.y, R, 0, Math.PI * 2); x.fillStyle = "#f4f4f2"; x.fill(); x.clip();
-      if (foto) { const iw = foto.naturalWidth, ih = foto.naturalHeight, lado = Math.min(iw, ih); x.drawImage(foto, (iw - lado) / 2, 0, lado, lado, p.x - R, p.y - R, R * 2, R * 2); }
-      else { x.fillStyle = c1; x.fillRect(p.x - R, p.y - R, R * 2, R * 2); x.fillStyle = onColor(c1) === "#111111" ? "#111" : "#fff"; x.font = TIT(44); x.textAlign = "center"; x.fillText(String(j.num || POS_CURTO[j.pos]).slice(0, 3), p.x, p.y + 15); }
+      const { j, foto, nota } = f, p = naTela(f.pt), novo = !!j.reforco, fx = p.x - L / 2, fy = p.y - L / 2;
+      // cartão da foto: sombra, borda na cor de destaque (dourada no reforço)
+      x.save(); x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = 18; x.shadowOffsetY = 8; x.fillStyle = novo ? "#ffd200" : destaque; rr(x, fx - 4, fy - 4, L + 8, L + 8, RAIO + 4); x.fill(); x.restore();
+      x.save(); rr(x, fx, fy, L, L, RAIO); x.clip(); x.fillStyle = "#eef0f3"; x.fillRect(fx, fy, L, L);
+      if (foto) { const iw = foto.naturalWidth, ih = foto.naturalHeight, lado = Math.min(iw, ih); x.drawImage(foto, (iw - lado) / 2, 0, lado, lado, fx, fy, L, L); }
+      else { x.fillStyle = c1; x.fillRect(fx, fy, L, L); x.fillStyle = onColor(c1) === "#111111" ? "#111" : "#fff"; x.font = DISP(900, 48); x.textAlign = "center"; x.fillText(String(j.num || POS_CURTO[j.pos]).slice(0, 3), p.x, p.y + 17); }
       x.restore();
-      if (novo) { x.lineWidth = 5; x.strokeStyle = "#ffd200"; x.beginPath(); x.arc(p.x, p.y, R + 3, 0, Math.PI * 2); x.stroke(); }
-      // selo: nota média (verde a partir de 7, amarelo de 6,5 a 7) ou o valor de mercado
+      // reforço: escudo do clube de origem no canto (sem achatar)
+      const eo = novo && j.timeLogo ? escudos.get(j.timeLogo) : null;
+      if (eo) { x.beginPath(); x.arc(fx + L - 4, fy + 4, 19, 0, Math.PI * 2); x.fillStyle = "#fff"; x.fill(); x.lineWidth = 3; x.strokeStyle = "#ffd200"; x.stroke(); cabe(x, eo, fx + L - 17, fy - 9, 26, 26); }
+      // pílula da nota (verde a partir de 7, amarela de 6,5 a 7) ou do valor, sobre a borda de baixo da foto
       const txt = nota != null ? nota.toFixed(2).replace(".", ",") : eur(j.valor).replace("€ ", "€").replace(" mil", "K").replace(" mi", "M").replace(",0M", "M");
-      const corSelo = nota != null ? (nota >= 7 ? "#1fb84f" : nota >= 6.5 ? "#d9a514" : "#7c8494") : tom(c1, 0.15);
-      x.font = TIT(30); const sw = x.measureText(txt).width + 22, sx = p.x + R * 0.42, sy = p.y + R * 0.12;
-      x.fillStyle = corSelo; x.fillRect(sx, sy, sw, 42);
-      x.fillStyle = nota != null || lum(corSelo) > 0.6 ? (lum(corSelo) > 0.6 ? "#111" : "#fff") : "#fff"; x.textAlign = "left"; x.fillText(txt, sx + 11, sy + 32);
-      // reforço: selo NOVO com o escudo do clube de origem
-      if (novo) {
-        const eo = j.timeLogo ? escudos.get(j.timeLogo) : null;
-        x.font = MONO(700, 15); const nw = x.measureText("NOVO").width + (eo ? 34 : 16), nx = p.x - R - 10, ny = p.y - R + 2;
-        x.fillStyle = "#ffd200"; x.fillRect(nx, ny, nw, 26); x.fillStyle = "#111"; x.fillText("NOVO", nx + (eo ? 28 : 8), ny + 18);
-        if (eo) x.drawImage(eo, nx + 5, ny + 3, 20, 20);
-      }
+      const corP = nota != null ? (nota >= 7 ? "#1fb84f" : nota >= 6.5 ? "#e0a812" : "#6f7787") : "#ffffff";
+      x.font = DISP(900, 26); const pw = x.measureText(txt).width + 24;
+      x.fillStyle = corP; rr(x, p.x - pw / 2, fy + L - 14, pw, 32, 16); x.fill();
+      x.fillStyle = nota == null || lum(corP) > 0.6 ? "#111" : "#fff"; x.textAlign = "center"; x.fillText(txt, p.x, fy + L + 11);
       // nome
-      const nome = String(j.nome || "").replace(/\s+/g, " ").trim().toUpperCase();
-      const lmax = larguraNome(f.pt);
-      let fs = 24; x.font = MONO(500, fs);
-      while (x.measureText(nome).width > lmax && fs > 15) { fs--; x.font = MONO(500, fs); }
-      x.textAlign = "center"; x.fillStyle = "#fff"; x.fillText(nome, p.x, p.y + R + 38, lmax);
+      const nome = String(j.nome || "").replace(/\s+/g, " ").trim().toUpperCase(), lmax = larguraNome(f.pt);
+      let fs = 28; x.font = DISP(800, fs);
+      while (x.measureText(nome).width > lmax && fs > 18) { fs--; x.font = DISP(800, fs); }
+      x.fillStyle = "#fff"; x.fillText(nome, p.x, fy + L + 50, lmax);
       x.textAlign = "left";
     }
 
     /* ---------- chegadas e saídas ---------- */
     const faixa = (rotulo, js, yy, cor, txt) => {
-      x.font = MONO(700, 21); x.fillStyle = cor; x.fillText(rotulo, 56, yy);
-      let px = 56 + x.measureText(rotulo).width + 22;
-      if (!js.length) { x.font = MONO(500, 21); x.fillStyle = "rgba(255,255,255,.55)"; x.fillText("—", px, yy); return; }
-      x.font = MONO(500, 20);
+      x.font = DISP(900, 28); x.fillStyle = cor; x.fillText(rotulo, 48, yy);
+      let p0 = 48 + x.measureText(rotulo).width + 18;
+      if (!js.length) { x.font = TXT(600, 19); x.fillStyle = "rgba(255,255,255,.55)"; x.fillText("ninguém", p0, yy - 2); return; }
       for (const j of js) {
-        const t = txt(j), eo = rotulo === "CHEGADAS" && j.timeLogo ? escudos.get(j.timeLogo) : null, w = x.measureText(t).width + (eo ? 30 : 0);
-        if (px + w > W - 56) { x.fillStyle = "rgba(255,255,255,.6)"; x.fillText(`+${js.length - js.indexOf(j)}`, px, yy); break; }
-        if (eo) x.drawImage(eo, px, yy - 19, 22, 22);
-        x.fillStyle = "#fff"; x.fillText(t, px + (eo ? 30 : 0), yy);
-        px += w + 26;
+        x.font = TXT(600, 19);
+        const t = txt(j), eo = rotulo === "CHEGADAS" && j.timeLogo ? escudos.get(j.timeLogo) : null, w = x.measureText(t).width + (eo ? 30 : 0) + 24;
+        if (p0 + w > W - 48) { x.fillStyle = "rgba(255,255,255,.6)"; x.fillText(`+${js.length - js.indexOf(j)}`, p0, yy - 2); break; }
+        x.fillStyle = "rgba(255,255,255,.1)"; rr(x, p0, yy - 26, w, 34, 17); x.fill();
+        if (eo) cabe(x, eo, p0 + 10, yy - 22, 24, 26);
+        x.fillStyle = "#fff"; x.fillText(t, p0 + 12 + (eo ? 30 : 0), yy - 3);
+        p0 += w + 10;
       }
     };
-    faixa("CHEGADAS", k.chegadas, 1160, "#ffd200", (j) => `${String(j.nome).toUpperCase()} ${eur(j.valor)}`);
-    faixa("SAÍDAS", k.saidas, 1200, "#ff8a8a", (j) => String(j.nome).toUpperCase());
-    x.font = MONO(500, 17); x.fillStyle = "rgba(255,255,255,.6)";
-    x.fillText(`CAIXA ${eur(k.caixa)} · FOLHA ${brl(k.folha)}/MÊS · ${k.elencoFinal.length} JOGADORES · SELO: NOTA MÉDIA NA TEMPORADA OU VALOR`, 56, 1240, W - 112);
+    faixa("CHEGADAS", k.chegadas, 1186, "#ffd200", (j) => `${j.nome} · ${eur(j.valor)}`);
+    faixa("SAÍDAS", k.saidas, 1232, "#ff8a8a", (j) => j.nome);
 
-    /* ---------- a marca ---------- */
-    x.font = TIT(46); const marcaTxt = "CazéStats.TV", mw = x.measureText(marcaTxt).width, mx = (W - mw - (marca ? 62 : 0)) / 2;
-    if (marca) x.drawImage(marca, mx, H - 92, 48, 48);
-    x.fillStyle = "#fff"; x.fillText(marcaTxt, mx + (marca ? 62 : 0), H - 54);
+    /* ---------- rodapé: a marca e o resumo ---------- */
+    x.fillStyle = "rgba(0,0,0,.35)"; x.fillRect(0, H - 82, W, 82);
+    if (marca) cabe(x, marca, 48, H - 62, 42, 42);
+    x.fillStyle = "#fff"; x.font = DISP(900, 38); x.fillText("CAZÉSTATS.TV", 102, H - 28);
+    x.textAlign = "right"; x.font = TXT(600, 17); x.fillStyle = "rgba(255,255,255,.75)";
+    x.fillText(`CAIXA ${eur(k.caixa)} · FOLHA ${brl(k.folha)}/MÊS · ${k.elencoFinal.length} NO ELENCO`, W - 48, H - 46);
+    x.fillText("pílula: nota média na temporada (ou valor de mercado)", W - 48, H - 22); x.textAlign = "left";
   }
   function rr(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
   function pdfDeJpeg(dataUrl, wpx, hpx) {
