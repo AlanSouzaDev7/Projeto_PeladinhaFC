@@ -15,7 +15,7 @@
     ["Votos e palpites do simulador da tabela e das copas", "placar:votes, placar:simulador, placar:copa-sim-*"],
     ["Escalações montadas por você (elenco, Bora pro jogo, Janela de transferências)", "placar:xi2:*, placar:bora, placar:janela-*"],
     ['Últimas 10 buscas e quando cada item foi contado no "Em alta"', "placar:busca-hist, placar:busca-enviada"],
-    ["Preferência de fotos e pausa da faixa de notícias", "placar:fotos-privadas, tk-pausa"],
+    ["Pausa da faixa de notícias", "tk-pausa"],
     ["Aberturas animadas já vistas nesta visita", "placar:intros, placar:tema-bora (apagadas ao fechar)"],
   ];
   // endereços de terceiros que o aparelho pode contatar, e por quê

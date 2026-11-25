@@ -11,8 +11,8 @@
       quando ele não está acostumado e mostra como ele jogou ali.
    4) Compartilhar: cartaz em PNG ou PDF e um link que abre o mesmo elenco para os amigos.
    Modos: "real" (caixa e folha do clube, regras de elenco) e "manager" (sem limites; o caixa pode ser editado).
-   Fotos dos jogadores: privadas do dono (sem licença comercial), ligadas por padrão; ?privado=0 desliga e
-   ?privado=fotos liga de novo. Antes de vender, rode o robô com MODO_VENDA=1 (tira as fotos dos arquivos).
+   Fotos dos jogadores: sempre ligadas, para todo mundo (sem botão nem opção de desligar, pedido do dono em 25/11/2026).
+   Antes de vender, rode o robô com MODO_VENDA=1 (tira as fotos sem licença dos arquivos).
    ========================================================================== */
 (() => {
   const { byId } = window.PD;
@@ -23,17 +23,12 @@
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const reduz = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* ---------- fotos privadas (só para o dono ver) ---------- */
-  const FOTO_KEY = "placar:fotos-privadas";
-  try {
-    const q = new URLSearchParams(location.search).get("privado");
-    if (q === "fotos" || q === "1") localStorage.removeItem(FOTO_KEY);
-    if (q === "0") localStorage.setItem(FOTO_KEY, "0");
-  } catch { /* sem armazenamento */ }
-  // regra do dono: as fotos da temporada ficam LIGADAS (site e app) até o comando de retirada (MODO_VENDA=1 no robô,
-  // que apaga as cópias). ?privado=0 desliga só neste navegador; ?privado=fotos liga de novo. Risco F2 em
-  // docs/RISCOS-APRESENTACAO.md.
-  const fotosLigadas = () => { try { return localStorage.getItem(FOTO_KEY) !== "0"; } catch { return true; } };
+  /* ---------- fotos dos jogadores: sempre ligadas ----------
+     Regra do dono (25/11/2026): todo visitante vê as fotos, sem opção de desligar. Só o comando de retirada
+     (MODO_VENDA=1 no robô) tira as fotos sem licença, apagando as cópias. A preferência "desligado" que versões antigas
+     guardavam neste navegador é apagada aqui. Risco F2 em docs/RISCOS-APRESENTACAO.md. */
+  try { localStorage.removeItem("placar:fotos-privadas"); } catch { /* sem armazenamento */ }
+  const fotosLigadas = () => true;
 
   /* ---------- dados ---------- */
   const prom = {};
@@ -815,7 +810,7 @@
       const foco = document.activeElement?.dataset?.jtF;
       const mexeu = Object.keys(e.dec).length || e.chegadas.length || Object.keys(e.pos).length || e.caixa != null;
       el.innerHTML = painel(cid, D, e, k, G)
-        + (ver ? "" : `<div class="jt-barra">${passos(cid, etapa)}<div class="jt-barra-acoes">${fotosLigadas() ? `<button type="button" class="jt-priv" data-jt-fotos-off title="Fotos sem licença: só para você ver">Fotos privadas · desligar</button>` : `<button type="button" class="jt-priv off" data-jt-fotos-on title="As fotos foram desligadas neste navegador">Fotos desligadas neste navegador · ligar</button>`}${mexeu ? `<button type="button" class="jt-reset ${confirmaReset ? "conf" : ""}" data-jt-reset>${confirmaReset ? "Confirmar: desfazer tudo" : "Desfazer tudo"}</button>` : ""}<button type="button" class="jt-trocar" data-jt-trocar>Trocar modo</button></div></div>`)
+        + (ver ? "" : `<div class="jt-barra">${passos(cid, etapa)}<div class="jt-barra-acoes">${mexeu ? `<button type="button" class="jt-reset ${confirmaReset ? "conf" : ""}" data-jt-reset>${confirmaReset ? "Confirmar: desfazer tudo" : "Desfazer tudo"}</button>` : ""}<button type="button" class="jt-trocar" data-jt-trocar>Trocar modo</button></div></div>`)
         + corpo;
       if (foco) { const i = el.querySelector(`[data-jt-f="${foco}"]`); if (i) { i.focus(); if (i.setSelectionRange && i.type === "search") i.setSelectionRange(i.value.length, i.value.length); } }
       animaNumeros(el);
@@ -844,8 +839,6 @@
       const d = t.dataset, k = () => contas(cid, D, e, G);
       if (d.jtModo) { if (d.jtModo !== e.modo && e.modo) e.caixa = null; e.modo = d.jtModo; perguntar = false; salva(); sessaoGrava(cid, { etapa, modoOk: true }); fixaEtapa(); return pinta(); }
       if ("jtTrocar" in d) { perguntar = true; return pinta(); }
-      if ("jtFotosOff" in d) { try { localStorage.setItem(FOTO_KEY, "0"); } catch { /* */ } return pinta(); }
-      if ("jtFotosOn" in d) { try { localStorage.removeItem(FOTO_KEY); } catch { /* */ } return pinta(); }
       if ("jtReset" in d) {
         if (!confirmaReset) { confirmaReset = setTimeout(() => { confirmaReset = 0; if (el.isConnected) pinta(); }, 4000); return pinta(); }
         clearTimeout(confirmaReset); confirmaReset = 0;

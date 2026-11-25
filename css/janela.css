@@ -81,10 +81,9 @@
 .jt-passos li.on a { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 .jt-passos li.on b { background: rgb(255 255 255 / .25); }
 .jt-barra-acoes { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
-.jt-trocar, .jt-reset, .jt-priv { min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--text-2); font: 600 13px var(--font); cursor: pointer; white-space: nowrap; transition: background .25s, color .25s, border-color .25s; }
+.jt-trocar, .jt-reset { min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--text-2); font: 600 13px var(--font); cursor: pointer; white-space: nowrap; transition: background .25s, color .25s, border-color .25s; }
 .jt-reset:hover, .jt-trocar:hover { color: var(--text); border-color: var(--text-3); }
 .jt-reset.conf { background: #c8283a; border-color: #c8283a; color: #fff; animation: jtTreme .4s var(--suave); }
-.jt-priv { border-style: dashed; color: #ffb020; border-color: #ffb02066; }
 @keyframes jtTreme { 25% { transform: translateX(-3px); } 50% { transform: translateX(3px); } 75% { transform: translateX(-1px); } }
 
 /* ---------- elenco: cartões por posição ---------- */
@@ -343,7 +342,7 @@ em.jt-les { font: 700 11px var(--font); font-style: normal; }
   .jt-passos li { flex: 1 0 auto; }
   .jt-passos::-webkit-scrollbar { display: none; }
   .jt-barra-acoes { margin-left: 0; justify-content: flex-end; min-width: 0; }
-  .jt-trocar, .jt-reset, .jt-priv { white-space: normal; flex: 1 1 auto; }
+  .jt-trocar, .jt-reset { white-space: normal; flex: 1 1 auto; }
   .jt-filtros { grid-template-columns: 1fr; }
   .jt-card { grid-template-columns: auto minmax(0, 1fr); }
   .jt-card-dir { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
