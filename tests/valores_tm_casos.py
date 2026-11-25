@@ -38,6 +38,10 @@ JOGADORES = [
     jog("400", "Velho Aposentado", "1980-01-01", "Clube X", "BRA1", "Centre-Back", 0, temporada="2018"),
     {**jog("600", "Gabriel", "1997-12-19", "Arsenal FC", "GB1", "Centre-Back", 75000000), "first_name": "Gabriel", "last_name": "Magalhães"},
     jog("700", "Ferdi Kadıoğlu", "1999-10-07", "Brighton & Hove Albion", "GB1", "Left-Back", 25000000),
+    jog("800", "Danilo", "2001-04-29", "S. A. F. Botafogo", "BRA1", "Central Midfield", 32000000),
+    jog("801", "Danilo", "2007-01-01", "Fluminense Football Club", "BRA1", "Centre-Forward", 500000),
+    jog("900", "Mykhaylo Mudryk", "2001-01-05", "Chelsea FC", "GB1", "Left Winger", 25000000),
+    jog("901", "Oli McBurnie", "1996-06-04", "UD Las Palmas", "ES1", "Centre-Forward", 3000000),
     jog("500", "Sem Foto", "2000-01-01", "Clube Y", "BRA1", "Centre-Forward", 500000, img="https://img.a.transfermarkt.technology/portrait/header/default.jpg?lm=1"),
 ]
 AVALIACOES = [{"player_id": "181767", "date": "2026-06-10"}, {"player_id": "181767", "date": "2025-12-20"}]
@@ -82,6 +86,14 @@ assert V.casa({"nome": "Allan", "idade": 35, "clube": "Flamengo", "nasc": "1991-
 assert V.casa({"nome": "Lucas Villalba", "nasc": "1994-08-20", "clube": "Botafogo"}, ind, HOJE) != "874844"
 assert V.casa({"nome": "Gabriel Magalhães", "idade": 28, "clube": "Arsenal", "liga": "eng.1"}, ind, HOJE) == "600", "nome e sobrenome registrados"
 assert V.casa({"nome": "Ferdi Kadioglu", "idade": 27, "clube": "Brighton & Hove Albion", "liga": "eng.1"}, ind, HOJE) == "700", "letra turca ı"
+# nome curto no Transfermarkt ("Danilo") para o nome completo da ESPN ("Danilo Santos"): o clube confirma
+assert V.casa({"nome": "Danilo Santos", "idade": 25, "clube": "Botafogo", "liga": "bra.1"}, ind, HOJE) == "800"
+assert V.casa({"nome": "Danilo Gimenes", "idade": 19, "clube": "Cruzeiro", "liga": "bra.1"}, ind, HOJE) is None, "Danilo de outro clube não vale"
+# grafias: y/i e primeiro nome abreviado, com o mesmo sobrenome e a idade batendo
+assert V.casa({"nome": "Mykhailo Mudryk", "idade": 25, "clube": "Tottenham Hotspur", "liga": "eng.1"}, ind, HOJE) == "900"
+# grafia diferente + outro clube + outra liga: só nome parecido e idade não bastam (melhor estimativa que a pessoa errada)
+assert V.casa({"nome": "Oliver McBurnie", "idade": 30, "clube": "Hull City", "liga": "eng.1"}, ind, HOJE) is None
+assert V.casa({"nome": "Oliver McBurnie", "idade": 30, "clube": "UD Las Palmas", "liga": "esp.1"}, ind, HOJE) == "901", "com o clube, casa"
 caso("quem é quem: três Marquinhos, dois Villalba, acentos, siglas e quem trocou de clube")
 
 # --- mercado global: valor real, calibração da estimativa e colunas novas -----------------------------------------------------
@@ -99,6 +111,10 @@ assert outro[10] == 0 and outro[8] == 1600000, outro  # 4 mi estimados x 0,4 (os
 assert outro[15] == 81 and outro[16] == "DE60", "perfil da Série A: retorno defensivo e zona (defesa, pela esquerda)"
 assert comp["campos"][10:] == ["real", "sub", "foto", "contrato", "tm", "def", "zona"]
 assert comp["valores"]["fatorEstimativa"]["fra.1"] == 0.4
+comp["ligas"] = {"fra.1": ["Ligue 1", "França", 0.58]}
+au = V.auditoria(comp)
+assert au["total"] == 27 and au["porLiga"]["fra.1"]["valorTransfermarkt"] == 26 and au["porLiga"]["fra.1"]["estimados"] == 1
+assert au["semCasamento"][0]["nome"] == "Desconhecido Silva" and not au["problemas"]
 caso("mercado global: valor real, estimativa calibrada pela liga e perfil")
 
 # --- zona de atuação pela grade do mapa de calor --------------------------------------------------------------------------------

@@ -57,13 +57,17 @@ def _norm(x):
     return " ".join(re.sub(r"[^a-z0-9 ]", " ", x).split())
 
 
-SIGLA = {"pr": "paranaense", "mg": "mineiro", "go": "goianiense", "rj": "", "sp": "", "athletico": "", "bragantino": "bragantino"}
+SIGLA = {"recife": "recife", "pr": "paranaense", "mg": "mineiro", "go": "goianiense", "rj": "", "sp": "", "athletico": "", "bragantino": "bragantino"}
+
+
+NOME_INTEIRO = {"sport": "Sport Recife", "sport recife": "Sport Recife"}
 
 
 def tokens_clube(nome):
     """Palavras que distinguem o clube: 'Paris Saint-Germain' -> {paris, saint, germain}; 'S. A. F. Botafogo' -> {botafogo};
     'Athletico-PR' (ESPN) -> {paranaense}, como 'Clube Atlético Paranaense' (Transfermarkt)."""
     out = set()
+    nome = NOME_INTEIRO.get(_norm(nome), nome)  # a ESPN chama o Sport Recife só de "Sport" (palavra genérica)
     for t in _norm(nome).split():
         t = SIGLA.get(t, t)
         if t and t not in GENERICAS and len(t) > 1:
@@ -103,7 +107,11 @@ def pontua(alvo, tm, hoje=None):
         if set(pa) <= set(pt) or set(pt) <= set(pa):
             return 3
         if pa[-1] == pt[-1] and pa[0][0] == pt[0][0]:
-            return 2
+            # grafias do mesmo nome: "Mykhaylo"/"Mykhailo" (y e i), "Oli"/"Oliver" (apelido no começo do nome)
+            p1, p2 = pa[0].replace("y", "i"), pt[0].replace("y", "i")
+            return 3 if len(pa) == len(pt) and (p1 == p2 or (min(len(p1), len(p2)) >= 3 and (p1.startswith(p2) or p2.startswith(p1)))) else 2
+        if len(pa) == len(pt) and pa[0][0] == pt[0][0] and pa[-1].replace("y", "i") == pt[-1].replace("y", "i") and pa[0][:3] == pt[0][:3]:
+            return 3
         return -99
     # o nome do Transfermarkt ("Gabriel") ou o nome e sobrenome registrados lá ("Gabriel Magalhães")
     s = max(nota_nome(tm["n"]), nota_nome(tm.get("n2") or ""))
@@ -123,6 +131,9 @@ def pontua(alvo, tm, hoje=None):
     # julho (Goretzka no Bayern, Bruno Guimarães no Newcastle). Mas nome de uma palavra só ("Allan") sem o clube nem o
     # nascimento para conferir é arriscado demais: fica de fora.
     bate_clube = bool(alvo.get("clube") and tm.get("c") and mesmo_clube(alvo["clube"], tm["c"]))
+    nasc_bate = bool(alvo.get("nasc") and alvo["nasc"][:10] == tm.get("d"))
+    if len(pt) == 1 and len(pa) > 1 and not bate_clube and not nasc_bate:
+        return -99
     if bate_clube:
         s += 4
     elif len(pa) < 2 and not (alvo.get("nasc") and alvo["nasc"][:10] == tm.get("d")):
@@ -136,6 +147,9 @@ def casa(alvo, indice, hoje=None):
     """O registro do Transfermarkt do jogador, ou None. Precisa de nome + (clube ou nascimento) e ninguém empatado."""
     na = _norm(alvo["nome"])
     cands = indice["porNome"].get(na, []) + indice["porSobrenome"].get(na.split()[-1] if na else "", [])
+    for palavra in na.split():  # nome de uma palavra no Transfermarkt ("Danilo") para o nome completo da ESPN
+        if len(palavra) > 2:
+            cands += indice["porNome"].get(palavra, [])
     vistos, notas = set(), []
     for tid in cands:
         if tid in vistos:
@@ -381,6 +395,19 @@ def enriquecer_elencos(mercado, ind, hoje=None):
                 j["valorEstimado"] = j.get("valorEstimado") or j.get("valor")
                 j["valor"] = x["v"]
                 j["valorReal"] = True
+        # emprestados a outros clubes: no Transfermarkt eles continuam no clube dono, então o clube do site confirma
+        for e in d.get("emprestados", []):
+            tm_id = casa({"nome": e.get("nome"), "idade": e.get("idade"), "clube": nome_clube, "liga": "bra.1"}, ind, hoje)
+            x = ind["j"].get(tm_id) if tm_id else None
+            if not x:
+                e.pop("tm", None)
+                continue
+            n += 1
+            e["tm"] = {k: x[k] for k in ("vd", "vm", "ct", "t", "s", "f") if x.get(k)} | {"id": tm_id}
+            if x.get("v"):
+                e["valorEstimado"] = e.get("valorEstimado") or e.get("valor")
+                e["valor"] = x["v"]
+                e["valorReal"] = True
     return n
 
 
@@ -489,6 +516,41 @@ def fotos_brave(linhas, times, agora=None):
     return out
 
 
+def auditoria(comp, hoje=None):
+    """Registro de todos os atletas contratáveis (mercado global): por liga, quantos têm o valor do Transfermarkt, quantos
+    casaram mas lá estão sem valor, quantos ficaram com a estimativa; os mais valiosos sem casamento; e conferências
+    (id repetido, time que não existe, valor zerado). Gravado em dados/mercado/auditoria.json a cada rodada."""
+    times, ligas = comp.get("times", {}), comp.get("ligas", {})
+    por, ids, problemas = {}, {}, []
+    for r in comp.get("jogadores", []):
+        t = times.get(r[6])
+        lg = t[2] if t else "?"
+        p = por.setdefault(lg, {"liga": (ligas.get(lg) or [lg])[0], "jogadores": 0, "valorTransfermarkt": 0, "casadoSemValor": 0, "estimados": 0, "comFoto": 0})
+        p["jogadores"] += 1
+        p["comFoto"] += bool(r[12])
+        if r[10]:
+            p["valorTransfermarkt"] += 1
+        elif r[14]:
+            p["casadoSemValor"] += 1
+        else:
+            p["estimados"] += 1
+        ids[r[0]] = ids.get(r[0], 0) + 1
+        if not t:
+            problemas.append({"id": r[0], "nome": r[1], "problema": "time que não existe na lista de times"})
+        if not r[8] or r[8] <= 0:
+            problemas.append({"id": r[0], "nome": r[1], "problema": "valor zerado"})
+    problemas += [{"id": i, "problema": f"id repetido ({n} vezes)"} for i, n in ids.items() if n > 1]
+    sem = sorted((r for r in comp.get("jogadores", []) if not r[14]), key=lambda r: -(r[8] or 0))[:60]
+    return {
+        "atualizado": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "fonteValores": "Transfermarkt (transfermarkt-datasets, CC0)", "versao": versao(),
+        "total": len(comp.get("jogadores", [])), "porLiga": por, "problemas": problemas[:200],
+        "semCasamento": [{"id": r[0], "nome": r[1], "time": (times.get(r[6]) or [""])[0], "idade": r[2], "valorEstimado": r[8],
+                          "motivo": "não está no conjunto do Transfermarkt (ou nome/idade/clube não batem com segurança)"} for r in sem],
+        "observacao": "Valor de quem casou = o do Transfermarkt no conjunto (julho de 2026). Sem casamento = estimativa calibrada pela liga.",
+    }
+
+
 def global_real(comp):
     """Chamado por mercado.gravar_js: mercado global com os valores reais. Grava também os detalhes por jogador
     (dados/mercado/global-detalhes.json, lidos só quando a pessoa abre a ficha do jogador nos reforços)."""
@@ -524,6 +586,10 @@ def global_real(comp):
         P.silencioso("valores:fotos-espn", ex)
     pasta = os.path.join(P.ROOT, "dados", "mercado")
     os.makedirs(pasta, exist_ok=True)
+    try:
+        json.dump(auditoria(comp), open(os.path.join(pasta, "auditoria.json"), "w", encoding="utf-8", newline="\n"), ensure_ascii=False, separators=(",", ":"))
+    except Exception as ex:
+        P.silencioso("valores:auditoria", ex)
     json.dump({"atualizado": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "fonte": "Transfermarkt (transfermarkt-datasets, CC0)", "valores": comp["valores"],
                "perfis": {k: v for k, v in perfis.items() if v.get("def") is not None or v.get("z")}, "jogadores": det},
               open(os.path.join(pasta, "global-detalhes.json"), "w", encoding="utf-8", newline="\n"), ensure_ascii=False, separators=(",", ":"))

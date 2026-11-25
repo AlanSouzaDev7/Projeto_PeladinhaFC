@@ -228,6 +228,15 @@ def _data_en(txt):
     return f"{m.group(1)}-12-31" if m else None
 
 
+def _limpa_destino(outro):
+    """'on loan to São Paulo until 30 June 2027' -> 'São Paulo'; 'at [[Fortaleza EC|Fortaleza]]' -> 'Fortaleza'."""
+    t = re.sub(r"\{\{[^{}]*\}\}", " ", outro or "")
+    t = re.sub(r"\{\{\w*", " ", t)  # modelo aberto que sobrou
+    t = re.sub(r"\b(until|till|for the)\b.*", "", t, flags=re.I)
+    t = re.sub(r"^\s*\(?\s*(?:(?:on\s+)?loan\s+(?:to|at)|to|at)\s+", "", t.strip(), flags=re.I)
+    return _limpa_link(t).strip(" ()-–,;")
+
+
 def emprestimos(cid):
     """{"fora": [...emprestados a outros clubes], "dentro": [...chegaram emprestados]} pelo artigo em inglês."""
     tit = artigo_en(cid)
@@ -243,6 +252,9 @@ def emprestimos(cid):
     fora, dentro = [], []
     for i in range(2, len(secoes) - 1, 3):
         nome_sec, corpo = secoes[i].strip().lower(), secoes[i + 1]
+        # modelos de formatação dentro do jogador ({{small|on loan to Goiás}}) fechavam a leitura no "}}" errado e o
+        # destino saía como "{{small": tira o modelo e fica o texto
+        corpo = re.sub(r"\{\{\s*(?:small|nowrap|abbr|sort)\s*\|([^{}|]*)(?:\|[^{}]*)?\}\}", r"\1", corpo, flags=re.I)
         for m in re.finditer(r"\{\{\s*fs player\s*\|(.*?)\}\}(?=\s*(?:\n|\{\{|$))", corpo, re.I | re.S):
             campos = {}
             for parte in re.split(r"\|(?![^\[]*\]\])", m.group(1)):
@@ -254,7 +266,7 @@ def emprestimos(cid):
             reg = {"nome": nome, "pos": {"GK": "G", "DF": "D", "MF": "M", "FW": "A"}.get(campos.get("pos", "").upper(), "M"), "nac": campos.get("nat", "")}
             if "on loan" in nome_sec or "out on loan" in nome_sec:
                 ate = _data_en(outro)
-                clube = _limpa_link(re.sub(r"\buntil\b.*", "", re.sub(r"^\s*at\s+", "", outro, flags=re.I), flags=re.I))
+                clube = _limpa_destino(outro)
                 fora.append({**reg, "clube": clube, "ate": ate})
             elif "current squad" in nome_sec and re.search(r"on loan from", outro, re.I):
                 de = _limpa_link(re.sub(r".*on loan from\s+", "", outro, flags=re.I))
@@ -367,11 +379,19 @@ def _overview_espn(aid, team_id):
         return None
 
 
-def _acha_global(nome, pos, glob):
-    """Procura o emprestado no mercado global (elencos da ESPN): confirma onde ele está e traz id, idade, camisa."""
+def _acha_global(nome, pos, glob, destino=None):
+    """Procura o emprestado no mercado global (elencos da ESPN): confirma onde ele está e traz id, idade, camisa.
+    Só vale no time do DESTINO do empréstimo: antes, o primeiro homônimo de qualquer clube servia (o Rodriguinho do
+    Cruzeiro, emprestado ao Fortaleza, virava o Rodriguinho do Bragantino, com escudo e foto de lá). Sem destino, ou o
+    destino fora das ligas do mercado global, fica sem ligação: melhor nada que a pessoa errada."""
+    import valores_tm as VT
+    if not destino:
+        return None
     alvo = P.norm_txt(nome).split()
     melhor = None
     for tid, t in (glob or {}).get("times", {}).items():
+        if not VT.mesmo_clube(t.get("nome") or "", destino):
+            continue
         for j in t["jogadores"]:
             n = P.norm_txt(j[1]).split()
             if not n or not alvo:
@@ -435,7 +455,7 @@ def elenco_clube(cid, ultimas=None, emp_cache=None):
     glob = _ler("mercado-global.json")
     fora = []
     for x in emp["fora"]:
-        g = _acha_global(x["nome"], x["pos"], glob)
+        g = _acha_global(x["nome"], x["pos"], glob, x.get("clube"))
         v = valor_estimado(g["idade"] if g else None, x["pos"], LIGAS["bra.1"][2], forca, 0.8)
         reg = {**x, "id": "emp-" + _norm(x["nome"]), "valor": int(v), "salario": salario_mensal_brl(v, LIGAS["bra.1"][2])}
         if g:
