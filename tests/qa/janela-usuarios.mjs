@@ -64,8 +64,11 @@ await B.p.waitForSelector(".jt-tabela tbody tr");
 ok(await B.p.locator(".jt-negocio").count() === 0, "usuário B: nenhuma chegada do usuário A");
 ok(!(await B.p.evaluate(() => localStorage.getItem("placar:janela-cruzeiro") || "")).includes("159047"), "usuário B: nada do usuário A guardado no navegador dele");
 // B monta o dele; A continua com o seu
+// no modo real só dá para contratar quem cabe no caixa (o Brian Rodríguez vale € 12 mi e o caixa é € 9,3 mi: "Sem caixa")
 await B.p.fill('[data-jt-f="q"]', "brian rodrigues"); await B.p.waitForTimeout(600);
-await B.p.locator('.jt-tabela tbody tr:has-text("Brian Rodr") [data-jt-add]').first().click();
+ok(await B.p.locator('.jt-tabela tbody tr:has-text("Brian Rodr") [data-jt-add][disabled]').count() >= 1 || await B.p.locator('.jt-tabela tbody tr:has-text("Brian Rodr") [data-jt-add]:not([disabled])').count() >= 1, "usuário B (modo real): botão do Brian respeita o caixa");
+await B.p.fill('[data-jt-f="q"]', ""); await B.p.selectOption('[data-jt-f="ord"]', "barato"); await B.p.waitForTimeout(600);
+await B.p.locator(".jt-tabela tbody tr [data-jt-add]:not([disabled])").first().click();
 await A.p.reload(); await A.p.waitForSelector(".jt-tabela tbody tr");
 const nomesA = await A.p.locator(".jt-negocio").allInnerTexts();
 ok(nomesA.length === 1 && /Marquinhos/i.test(nomesA[0]), "usuário A continua só com o Marquinhos depois que B contrata", nomesA.map((t) => t.split("\n")[0]).join(", "));

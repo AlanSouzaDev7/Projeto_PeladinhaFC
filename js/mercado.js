@@ -874,9 +874,9 @@
   function guardaRolagem(cid, etapa, el, volta) {
     soltaRolagem?.();
     if (volta > 0) {
-      // espera a lista ter altura (fotos e o campo 3D entram depois): tenta por até 1,5 s
+      // espera a lista ter altura (o mercado global e as fotos entram depois): tenta por até 6 s
       let n = 0;
-      const tenta = () => { if (!el.isConnected) return; if (document.documentElement.scrollHeight - innerHeight >= volta || ++n > 15) scrollTo({ top: volta, behavior: "instant" }); else setTimeout(tenta, 100); };
+      const tenta = () => { if (!el.isConnected) return; if (document.documentElement.scrollHeight - innerHeight >= volta || ++n > 60) scrollTo({ top: volta, behavior: "instant" }); else setTimeout(tenta, 100); };
       requestAnimationFrame(tenta);
     }
     let t = 0;
@@ -939,8 +939,10 @@
     };
     const ro = new ResizeObserver((ents) => { for (const en of ents) if (en.target.isConnected) montaCampo(en.target); });
     const salva = () => { if (!ver) grava(cid, e); };
-    if (precisaGlobal()) { pinta(); G = indexa(await carregaGlobal()); }
-    else carregaGlobal().then((g) => { G = indexa(g); if (el.isConnected && e.chegadas.length) pinta(); });
+    // o mercado global (26 mil jogadores em três arquivos) carrega em paralelo: a tela e os cliques (escolha de modo,
+    // decisões) funcionam desde o primeiro desenho; quando ele chega, a etapa que precisa dele é redesenhada. Antes os
+    // cliques só eram ligados depois do carregamento, e quem clicava em "Modo manager" nesses segundos ficava sem resposta.
+    carregaGlobal().then((g) => { G = indexa(g); if (el.isConnected && precisaGlobal()) pinta(); }).catch(() => {});
     if (!el.isConnected) return;
     pinta();
     if (!ver) guardaRolagem(cid, etapa, el, restaura ? sess.rolagem?.[etapa] : null);
