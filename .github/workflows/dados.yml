@@ -131,9 +131,9 @@ jobs:
           # opcional: fotos dos jogadores no Flickr (API oficial): as de licença livre e, enquanto o site é de uso do dono,
           # as fotos privadas de quem não tem outra (MODO_VENDA=1 tira)
           FLICKR_API_KEY: ${{ secrets.FLICKR_API_KEY }}
-          # opcionais: busca de imagem oficial do Google (Custom Search JSON API) para quem não tem foto em nenhuma fonte
-          GOOGLE_CSE_KEY: ${{ secrets.GOOGLE_CSE_KEY }}
-          GOOGLE_CSE_CX: ${{ secrets.GOOGLE_CSE_CX }}
+          # opcional: busca de imagem da API oficial do Brave Search para quem não tem foto em nenhuma fonte
+          # (server/busca_imagem.py; 30 buscas por dia, dentro dos US$ 5 de crédito grátis por mês)
+          BRAVE_SEARCH_KEY: ${{ secrets.BRAVE_SEARCH_KEY }}
 
       - name: Guardar as carreiras (mesmo se a rodada falhar)
         if: always() && hashFiles('server/cache/carreiras.json') != ''

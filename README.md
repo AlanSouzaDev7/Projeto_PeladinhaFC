@@ -335,8 +335,9 @@ Uma **barra de competições** no topo do Brasileirão e de cada competição le
   e mapa de calor (real na Série A, estimado pela posição nas outras ligas).
 - **Fotos**: a guardada pelo monitor (site do clube, TheSportsDB, ESPN, Transfermarkt...), depois Transfermarkt, ESPN e
   TheSportsDB direto. A que não abre passa para a próxima (`data-alt`, `js/graphics.js`); sem nenhuma, fica o número
-  da camisa. Google só pela API oficial (segredos `GOOGLE_CSE_KEY` e `GOOGLE_CSE_CX`, até 90 buscas por dia, para quem
-  não tem foto em nenhuma fonte).
+  da camisa. Último recurso: busca de imagem da API oficial do Brave Search (`server/busca_imagem.py`, segredo
+  `BRAVE_SEARCH_KEY`, 30 buscas por dia, primeiro a Série A e depois os reforços mais valiosos; o título do resultado
+  tem de trazer o nome do jogador). A API do Google não aceita contas novas desde 20/01/2026.
 
 ## Alerta de gol sem som
 

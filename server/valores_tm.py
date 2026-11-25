@@ -461,6 +461,34 @@ def fotos_tsdb(linhas, times, agora=None):
     return {i: v[0] for i, v in cache.items() if v and v[0]}
 
 
+def fotos_brave(linhas, times, agora=None):
+    """{id: caminho da cópia}: imagem achada pela busca do Brave (server/busca_imagem.py), baixada e guardada pequena
+    (160 px) em img/jogadores/global/. Só com a chave e as fotos privadas ligadas; o resto da cota do dia."""
+    BI, FOTO = getattr(P, "BI", None), getattr(P, "FOTO", None)
+    agora = agora or time.time()
+    c = _ler()
+    cache = c.setdefault("braveFoto", {})
+    out = {i: v[0] for i, v in cache.items() if v and v[0] and FOTO and FOTO._existe(v[0])}
+    if not BI or not FOTO or not BI.ligada() or not FOTO.privadas_ligadas():
+        return out
+    for r in sorted(linhas, key=lambda r: -(r[8] or 0)):
+        i = str(r[0])
+        if i in out or (cache.get(i) and agora - cache[i][1] < 60 * 86400):
+            continue
+        if BI.restante() <= 0:
+            break
+        u = BI.busca(r[1], (times.get(r[6]) or [""])[0], agora)
+        caminho = None
+        if u:
+            dados = FOTO.baixar(u)
+            caminho = FOTO.guardar("global", i, dados, lado=160) if dados else None
+        cache[i] = [caminho, agora]
+        if caminho:
+            out[i] = caminho
+    _gravar(c)
+    return out
+
+
 def global_real(comp):
     """Chamado por mercado.gravar_js: mercado global com os valores reais. Grava também os detalhes por jogador
     (dados/mercado/global-detalhes.json, lidos só quando a pessoa abre a ficha do jogador nos reforços)."""
@@ -487,6 +515,11 @@ def global_real(comp):
             u = achadas.get(str(r[0]))
             if not r[12] and u:
                 r[12] = "s:" + u.split("/images/media/player/", 1)[-1]
+        # último recurso: busca de imagem do Brave (cota do dia que a Série A não usou), dos mais valiosos para os menos
+        for i, u in fotos_brave([r for r in comp["jogadores"] if not r[12]], comp.get("times", {})).items():
+            for r in comp["jogadores"]:
+                if str(r[0]) == i and not r[12]:
+                    r[12] = "g:" + u
     except Exception as ex:
         P.silencioso("valores:fotos-espn", ex)
     pasta = os.path.join(P.ROOT, "dados", "mercado")

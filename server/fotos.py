@@ -38,12 +38,10 @@ SITES_DIAS = 3      # os sites dos clubes são relidos a cada 3 dias (e na virad
 ESPN_DIAS = 7       # quem não tem foto na ESPN é conferido de novo em 7 dias
 LADO = 360          # maior lado da cópia guardada, em pixels
 ESPN_FOTO = "https://a.espncdn.com/i/headshots/soccer/players/full/{}.png"
-ORDEM = ["Clube", "TheSportsDB", "ESPN", "Transfermarkt", "API-Football", "Flickr", "Google"]
+ORDEM = ["Clube", "TheSportsDB", "ESPN", "Transfermarkt", "API-Football", "Flickr", "Brave"]
 TM_FOTO = "https://img.a.transfermarkt.technology/portrait/header/"
-# Google: só pela API oficial (Programmable Search / Custom Search JSON API), nunca raspando a página de busca. Liga com os
-# segredos GOOGLE_CSE_KEY e GOOGLE_CSE_CX no GitHub; sem eles fica desligado. 100 buscas grátis por dia: usa no máximo
-# GOOGLE_POR_DIA, só para quem não tem foto em nenhuma outra fonte.
-GOOGLE_POR_DIA = 90
+# último recurso: busca de imagem pela API oficial do Brave Search (server/busca_imagem.py), só para quem não tem foto em
+# nenhuma outra fonte e só com o segredo BRAVE_SEARCH_KEY. A do Google não aceita contas novas desde 20/01/2026.
 RECORTE = {"TheSportsDB", "ESPN"}  # fundo transparente: o site põe o fundo na cor do clube
 
 
@@ -112,7 +110,7 @@ def baixar(url):
         return None
 
 
-def guardar(cid, aid, dados):
+def guardar(cid, aid, dados, lado=None):
     """Reduz a imagem (maior lado LADO px, mantendo o fundo transparente) e guarda em img/jogadores/<clube>/<id>.webp.
     Devolve o caminho do site, com a marca da versão (?v=) para o navegador buscar a foto nova quando ela muda."""
     try:
@@ -127,7 +125,7 @@ def guardar(cid, aid, dados):
     if img.ndim == 2:
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     h, w = img.shape[:2]
-    k = LADO / max(h, w)
+    k = (lado or LADO) / max(h, w)
     if k < 1:
         img = cv2.resize(img, (max(1, round(w * k)), max(1, round(h * k))), interpolation=cv2.INTER_AREA)
     ok, buf = cv2.imencode(".webp", img, [cv2.IMWRITE_WEBP_QUALITY, 82])
@@ -296,38 +294,9 @@ def candidatos(aid, info, fe, af, do_site, espn_ok):
     f = ((fe.get("flickr") or {}).get(aid) or {}).get("d") or {}
     if f.get("url"):
         out.append(("Flickr", {"src": f["url"], "r": f.get("rosto"), "a": f.get("autor"), "p": f.get("pagina")}))
-    if info.get("google"):
-        out.append(("Google", {"src": info["google"]}))
+    if info.get("busca"):
+        out.append(("Brave", {"src": info["busca"]}))
     return out
-
-
-def busca_google(c, nome, clube, agora):
-    """Primeira imagem da busca oficial do Google (Custom Search JSON API) para "<nome> <clube> jogador", com cache de 30
-    dias e no máximo GOOGLE_POR_DIA buscas por dia. None sem as chaves, sem cota ou sem resultado."""
-    chave, cx = os.environ.get("GOOGLE_CSE_KEY", "").strip(), os.environ.get("GOOGLE_CSE_CX", "").strip()
-    if not chave or not cx:
-        return None
-    g = c.setdefault("google", {"dia": "", "n": 0, "r": {}})
-    k = f"{nome}|{clube}"
-    r = g["r"].get(k)
-    if r and agora - r.get("t", 0) < 30 * 86400:
-        return r.get("u")
-    hoje = time.strftime("%Y-%m-%d")
-    if g["dia"] != hoje:
-        g["dia"], g["n"] = hoje, 0
-    if g["n"] >= GOOGLE_POR_DIA:
-        return None
-    g["n"] += 1
-    import urllib.parse
-    q = urllib.parse.urlencode({"key": chave, "cx": cx, "q": f"{nome} {clube} jogador de futebol", "searchType": "image", "num": 3, "imgType": "face", "safe": "active"})
-    try:
-        d = json.loads(P.get(f"https://www.googleapis.com/customsearch/v1?{q}", timeout=20))
-        u = next((i["link"] for i in d.get("items") or [] if str(i.get("link", "")).startswith("https://")), None)
-    except Exception as ex:
-        P.log("fotos: busca de imagem do Google", ex)
-        u = None
-    g["r"][k] = {"t": agora, "u": u}
-    return u
 
 
 def retirar():
@@ -400,8 +369,8 @@ def atualizar(max_baixar=400):
             for aid, info in jogs.items():
                 cands = candidatos(aid, info, fe, af, site_por_clube[cid].get(aid), (esp.get(aid) or {}).get("ok"))
                 if not cands and not _existe((js.get(aid) or {}).get("u")) and not info.get("fora"):
-                    g = busca_google(c, info["nome"], (P.CLUBS.get(cid) or {}).get("busca") or cid, agora)
-                    cands = candidatos(aid, {**info, "google": g}, fe, af, None, None) if g else []
+                    g = P.BI.busca(info["nome"], (P.CLUBS.get(cid) or {}).get("busca") or cid, agora) if getattr(P, "BI", None) else None
+                    cands = candidatos(aid, {**info, "busca": g}, fe, af, None, None) if g else []
                 if not cands:
                     continue
                 cur = js.get(aid) or {}

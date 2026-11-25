@@ -710,7 +710,8 @@ MERC.P = FE.P = FIN.P = ESCL.P = FOTO.P = DJ.P = EJ.P = CAR.P = sys.modules[__na
 import carreiras_ogol as CAR_OGOL  # noqa: E402
 import verifica_jogadores as VER  # noqa: E402
 import valores_tm as VAL  # noqa: E402
-VAL.P = sys.modules[__name__]
+import busca_imagem as BI  # noqa: E402
+VAL.P = BI.P = sys.modules[__name__]
 VER.ligar(sys.modules[__name__], FOTO, CAR_OGOL)
 MERC.FE, MERC.FIN, MERC.FOTO = FE, FIN, FOTO
 import wiki_series as WIKI  # noqa: E402

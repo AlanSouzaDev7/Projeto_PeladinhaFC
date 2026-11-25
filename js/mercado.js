@@ -172,6 +172,7 @@
     if (guardada) out.push(guardada);
     if (f === "e") out.push(ESPN_FOTO(r[0]));
     else if (f.startsWith("s:")) out.push(TSDB_FOTO + f.slice(2));
+    else if (f.startsWith("g:")) out.push(f.slice(2)); // cópia guardada da busca de imagem do Brave
     else if (f) out.push((G.fotoBase || TM_FOTO) + f);
     return out;
   }
