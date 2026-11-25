@@ -11,8 +11,26 @@
   "use strict";
   if (!("serviceWorker" in navigator)) return;
   const API = ((window.PLACAR_CONFIG && window.PLACAR_CONFIG.api) || "").replace(/\/+$/, "");
+  // versão nova publicada com o site aberto: o service worker novo assume e aparece o convite para recarregar (o código
+  // carregado na aba continua o antigo até lá). Na primeira visita não há aviso: não existia versão anterior.
+  const tinhaControle = !!navigator.serviceWorker.controller;
+  let avisado = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!tinhaControle || avisado) return;
+    avisado = true;
+    const el = document.createElement("div");
+    el.className = "offline-aviso versao-nova";
+    el.setAttribute("role", "status");
+    el.innerHTML = 'Versão nova do CazéStats.TV publicada. <button type="button">Atualizar</button>';
+    el.querySelector("button").addEventListener("click", () => location.reload());
+    document.body.appendChild(el);
+  });
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register(`sw.js?api=${encodeURIComponent(API)}`).catch(() => { /* sem service worker: o site funciona online normalmente */ });
+    navigator.serviceWorker.register(`sw.js?api=${encodeURIComponent(API)}`).then((reg) => {
+      // aba aberta por muito tempo (ou o app em segundo plano): procura versão nova a cada 30 min e ao voltar para a aba
+      setInterval(() => reg.update().catch(() => {}), 30 * 60e3);
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) reg.update().catch(() => {}); });
+    }).catch(() => { /* sem service worker: o site funciona online normalmente */ });
   });
 
   function aviso() {

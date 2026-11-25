@@ -815,7 +815,7 @@
       const foco = document.activeElement?.dataset?.jtF;
       const mexeu = Object.keys(e.dec).length || e.chegadas.length || Object.keys(e.pos).length || e.caixa != null;
       el.innerHTML = painel(cid, D, e, k, G)
-        + (ver ? "" : `<div class="jt-barra">${passos(cid, etapa)}<div class="jt-barra-acoes">${fotosLigadas() ? `<button type="button" class="jt-priv" data-jt-fotos-off title="Fotos sem licença: só para você ver">Fotos privadas · desligar</button>` : ""}${mexeu ? `<button type="button" class="jt-reset ${confirmaReset ? "conf" : ""}" data-jt-reset>${confirmaReset ? "Confirmar: desfazer tudo" : "Desfazer tudo"}</button>` : ""}<button type="button" class="jt-trocar" data-jt-trocar>Trocar modo</button></div></div>`)
+        + (ver ? "" : `<div class="jt-barra">${passos(cid, etapa)}<div class="jt-barra-acoes">${fotosLigadas() ? `<button type="button" class="jt-priv" data-jt-fotos-off title="Fotos sem licença: só para você ver">Fotos privadas · desligar</button>` : `<button type="button" class="jt-priv off" data-jt-fotos-on title="As fotos foram desligadas neste navegador">Fotos desligadas neste navegador · ligar</button>`}${mexeu ? `<button type="button" class="jt-reset ${confirmaReset ? "conf" : ""}" data-jt-reset>${confirmaReset ? "Confirmar: desfazer tudo" : "Desfazer tudo"}</button>` : ""}<button type="button" class="jt-trocar" data-jt-trocar>Trocar modo</button></div></div>`)
         + corpo;
       if (foco) { const i = el.querySelector(`[data-jt-f="${foco}"]`); if (i) { i.focus(); if (i.setSelectionRange && i.type === "search") i.setSelectionRange(i.value.length, i.value.length); } }
       animaNumeros(el);
@@ -845,6 +845,7 @@
       if (d.jtModo) { if (d.jtModo !== e.modo && e.modo) e.caixa = null; e.modo = d.jtModo; perguntar = false; salva(); sessaoGrava(cid, { etapa, modoOk: true }); fixaEtapa(); return pinta(); }
       if ("jtTrocar" in d) { perguntar = true; return pinta(); }
       if ("jtFotosOff" in d) { try { localStorage.setItem(FOTO_KEY, "0"); } catch { /* */ } return pinta(); }
+      if ("jtFotosOn" in d) { try { localStorage.removeItem(FOTO_KEY); } catch { /* */ } return pinta(); }
       if ("jtReset" in d) {
         if (!confirmaReset) { confirmaReset = setTimeout(() => { confirmaReset = 0; if (el.isConnected) pinta(); }, 4000); return pinta(); }
         clearTimeout(confirmaReset); confirmaReset = 0;

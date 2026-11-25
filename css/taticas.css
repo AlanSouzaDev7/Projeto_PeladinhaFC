@@ -283,6 +283,8 @@
 /* ---------- modo offline (js/offline.js) ---------- */
 .offline-aviso { position: fixed; z-index: 90; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: calc(100vw - 32px);
   padding: 10px 16px; border-radius: 999px; background: #f59e0b; color: #1a1300; font: 700 13px/1.3 var(--font); box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); text-align: center; }
+.versao-nova { display: flex; align-items: center; gap: 10px; }
+.versao-nova button { flex: none; min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 0; background: var(--accent); color: var(--on-accent); font: 700 13px var(--font); cursor: pointer; }
 
 /* ---------- painel do dono (js/painel.js) ---------- */
 .pn-sec .card-b { display: grid; gap: 14px; }
