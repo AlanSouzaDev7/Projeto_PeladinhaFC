@@ -109,14 +109,15 @@ comp = {"times": {"1": ["Paris Saint-Germain", None, "fra.1"], "2": ["Cruzeiro",
         "jogadores": [["159047", "Marquinhos", 32, "D", "bra", "", "1", 5, 16100000, 0], ["9", "Desconhecido Silva", 20, "M", "fra", "", "3", 8, 4000000, 0]]
         + [[f"x{i}", f"Fulano {i}", 25, "M", "fra", "", "3", 1, 10000000, 0] for i in range(25)]}
 ind2 = V.monta_indice(JOGADORES + [jog(f"x{i}", f"Fulano {i}", "2001-01-01", "Clube Z", "FR1", "Central Midfield", 4000000) for i in range(25)], [], TRANSF, hoje=HOJE)
-comp, det = V.enriquecer_global(comp, ind2, {"9": {"def": 81, "z": [[60, 30, 10], [70, 20, 10]]}}, hoje=HOJE)
+comp, det = V.enriquecer_global(comp, ind2, {"9": {"def": 81, "z": [[60, 30, 10], [70, 20, 10]]}}, hoje=HOJE, fichas={"181767": [40, {"ZAG": 40}, 3600, 1, 1, 4]})
 marq = comp["jogadores"][0]
 assert marq[8] == 28000000 and marq[10] == 1 and marq[11] == "ZAG" and marq[12] == "181767-1.jpg" and marq[13] == "2028-06"
 assert det["159047"]["t"][3] == 31400000 and det["159047"]["tm"] == "181767"
 outro = comp["jogadores"][1]
 assert outro[10] == 0 and outro[8] == 1600000, outro  # 4 mi estimados x 0,4 (os 25 Fulanos valem 40% da estimativa)
 assert outro[15] == 81 and outro[16] == "DE60", "perfil da Série A: retorno defensivo e zona (defesa, pela esquerda)"
-assert comp["campos"][10:] == ["real", "sub", "foto", "contrato", "tm", "def", "zona"]
+assert comp["campos"][10:] == ["real", "sub", "foto", "contrato", "tm", "def", "zona", "tat"]
+assert marq[17] == "" and outro[17] == "", "zagueiro e jogador sem posição não levam etiqueta"
 assert comp["valores"]["fatorEstimativa"]["fra.1"] == 0.4
 comp["ligas"] = {"fra.1": ["Ligue 1", "França", 0.58]}
 au = V.auditoria(comp)

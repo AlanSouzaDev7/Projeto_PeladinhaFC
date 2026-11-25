@@ -342,9 +342,14 @@ Uma **barra de competições** no topo do Brasileirão e de cada competição le
   git pull --rebase origin main   # o robô publica dados a cada ~10 min: traz os commits dele antes de enviar
   git push
   ```
-- **Posições e perfil**: filtros por zagueiro, laterais, volante, meias, pontas, segundo atacante e centroavante;
-  retorno defensivo (desarmes, interceptações e cortes por 90 min, comparados com a mesma posição) e zona de atuação
-  pelos lances reais da ESPN (só Série A). A ficha de cada reforço traz valores, contrato, transferência, estatísticas
+- **Posições e perfil**: filtros por zagueiro, laterais, 1º volante, 2º volante, meias, pontas, segundo atacante e
+  centroavante. Cada jogador leva etiquetas (Marca bem / Marca pouco, Recompõe bem / Recompõe pouco, Lateral de apoio) e,
+  se for volante, a função. Na Série A elas saem dos lances reais da ESPN (desarmes, interceptações e cortes por 90 min
+  e quanto das ações é no terço defensivo, comparados com a mesma posição; 2º volante = menos marcação, mais terço de
+  ataque e mais gols e assistências). No resto do mundo saem da ficha de escalações do conjunto público CC0
+  (`server/tm_fichas.py` → `server/dados-tm/fichas.json`, uma vez por janela): ponta escalado como meia pelo lado ou
+  lateral recompõe; lateral escalado de zagueiro ou volante marca bem; volante escalado como meio-campista e com mais de
+  0,15 gol ou assistência por 90 min é 2º volante. Volante sem dados fica como 1º, com asterisco. A ficha de cada reforço traz valores, contrato, transferência, estatísticas
   e mapa de calor (real na Série A, estimado pela posição nas outras ligas).
 - **Fotos**: a guardada pelo monitor (site do clube, TheSportsDB, ESPN, Transfermarkt...), depois Transfermarkt, ESPN e
   TheSportsDB direto. A que não abre passa para a próxima (`data-alt`, `js/graphics.js`); sem nenhuma, fica o número

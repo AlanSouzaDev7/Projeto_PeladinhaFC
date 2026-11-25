@@ -61,6 +61,7 @@
     }));
   // detalhes do Transfermarkt e perfis da Série A: só quando alguém abre a ficha de um jogador nos reforços
   const carregaDetalhes = () => (prom.det = prom.det || DADOS.carrega("mercado/global-detalhes").catch(() => null));
+  const carregaFichas = () => (prom.fichas = prom.fichas || DADOS.carrega("mercado/fichas").catch(() => null));
   const carregaPosicoes = () => (prom.pos = prom.pos || Promise.all([window.HEATMAPS || DADOS.carrega("heatmaps"), window.ESCALACOES || DADOS.carrega("escalacoes")]));
 
   /* ---------- números ---------- */
@@ -161,12 +162,12 @@
     if (!G) return null;
     const r = G.idx?.get(id);
     if (!r) return null;
-    const [jid, nome, idade, pos, pais, nac, tid, num, valor, lesao, real, sub, foto, contrato, tm, def, zona] = r, t = G.times[tid] || ["", null, ""];
+    const [jid, nome, idade, pos, pais, nac, tid, num, valor, lesao, real, sub, foto, contrato, tm, def, zona, tat] = r, t = G.times[tid] || ["", null, ""];
     const cambio = D?.financas?.cambio?.valor || G.eurBrl || 6;
     const sal = Math.max(15000, Math.round((valor * (pesoLiga(G, t[2]) <= 0.3 ? 0.15 : pesoLiga(G, t[2]) <= 0.6 ? 0.10 : 0.09) * cambio) / 12 / 1000) * 1000);
     const cidT = cidDoTime(G, tid);
     return { id: jid, nome, idade, pos, pais, nac: nac || G.paises?.[pais] || "", time: tid, timeNome: t[0], timeLogo: t[1], lg: t[2], num, valor, lesao: !!lesao, salario: sal, reforco: true,
-      funcao: sub && CP.NOME[sub] ? sub : CP.PADRAO[pos], sub: sub || "", real: !!real, contrato, tm, def, zona, cidSerieA: cidT, fotos: fotosGlobal(G, r, cidT) };
+      funcao: sub && CP.NOME[sub] ? sub : CP.PADRAO[pos], sub: sub || "", real: !!real, contrato, tm, def, zona, tat: tat || "", cidSerieA: cidT, fotos: fotosGlobal(G, r, cidT) };
   }
   // clube da Série A do site a partir do time da ESPN no mercado global (para a foto guardada e os lances reais)
   function cidDoTime(G, tid) {
@@ -195,6 +196,7 @@
     if (!v) return true;
     if (v.length === 1) return setorDe(r) === v;
     if (GRUPOS_POS[v]) return GRUPOS_POS[v].includes(subDe(r));
+    if (v === "VOL1" || v === "VOL2") return tipoVolante(r) === v[3];
     return subDe(r) === v;
   }
   // zona de atuação: dos lances reais (Série A) ou estimada pela posição
@@ -202,6 +204,27 @@
     if (r[16]) return { t: r[16][0], l: r[16][1], defPct: +r[16].slice(2), real: true };
     const z = ZONA_SUB[subDe(r)];
     return z ? { t: z[0], l: z[1], real: false } : null;
+  }
+  /* perfil tático (campo "tat", server/valores_tm.py: tatica): 1º caractere = tipo de volante ('1', '2', 'p' = sem dados,
+     tratado como 1º pela posição do Transfermarkt, '-' = não é volante); depois as etiquetas; por último a fonte
+     (L lances reais da Série A, F ficha de escalações do Transfermarkt, P só a posição) */
+  const ETIQUETA = {
+    M: ["Marca bem", "bom", "Boas valências defensivas"],
+    m: ["Marca pouco", "fraco", "Poucas ações defensivas para a posição"],
+    R: ["Recompõe bem", "bom", "Volta para recompor a defesa"],
+    r: ["Recompõe pouco", "fraco", "Fica mais à frente e volta pouco para marcar"],
+    O: ["Lateral de apoio", "neutro", "Joga muito avançado: apoia o ataque e deixa espaço às costas"],
+  };
+  const FONTE_TAT = { L: "pelos lances reais no Brasileirão (ESPN)", F: "pela ficha técnica: posições em que foi escalado nas últimas duas temporadas (Transfermarkt)", P: "pela posição do Transfermarkt (sem lances nem escalações para conferir)" };
+  function tatica(tat) {
+    if (!tat) return { tipo: "", tags: [], fonte: "" };
+    return { tipo: tat[0] === "-" ? "" : tat[0] === "p" ? "1" : tat[0], estimado: tat[0] === "p", tags: [...tat.slice(1, -1)].filter((c) => ETIQUETA[c]), fonte: tat.slice(-1) };
+  }
+  const tipoVolante = (r) => (subDe(r) === "VOL" ? tatica(r[17]).tipo || "1" : "");
+  function etiquetas(tat, ficha = false) {
+    const t = tatica(tat), fonte = FONTE_TAT[t.fonte] || "";
+    const vol = t.tipo ? `<em class="jt-tag vol" title="${t.tipo === "1" ? "1º volante: cabeça de área, protege a zaga e marca mais" : "2º volante: sai para o jogo, chega ao ataque e participa dos gols"} (${esc(fonte)})">${t.tipo}º volante${t.estimado ? "*" : ""}</em>` : "";
+    return vol + t.tags.map((c) => `<em class="jt-tag ${ETIQUETA[c][1]}" title="${esc(ETIQUETA[c][2])}, ${esc(fonte)}">${ETIQUETA[c][0]}${ficha || t.fonte === "L" ? "" : "*"}</em>`).join("");
   }
   function indexa(G) { if (G && !G.idx) G.idx = new Map(G.jogadores.map((r) => [r[0], r])); return G; }
 
@@ -354,9 +377,10 @@
 
   /* ---------- 2) reforços ---------- */
   const filtros = {};
-  const FILTRO_PADRAO = { q: "", pos: "", lg: "", nac: "", idMin: 16, idMax: 40, vMax: 0, ord: "valor", semLes: true, n: 25, def: "", alt: "", lado: "", soReal: false };
+  const FILTRO_PADRAO = { q: "", pos: "", lg: "", nac: "", idMin: 16, idMax: 40, vMax: 0, ord: "valor", semLes: true, n: 25, alt: "", lado: "", soReal: false };
   const fichaAberta = {}; // jogador com a mini aba aberta nos reforços, por clube
-  const fil = (cid) => (filtros[cid] = filtros[cid] || { ...FILTRO_PADRAO, ...(sessaoLe(cid)?.filtros || {}) });
+  // (filtros guardados antes de 25/11: o de retorno defensivo e a ordem "Mais recompõem" saíram)
+  const fil = (cid) => (filtros[cid] = filtros[cid] || ((f) => { delete f.def; if (f.ord === "def") f.ord = "valor"; return f; })({ ...FILTRO_PADRAO, ...(sessaoLe(cid)?.filtros || {}) }));
   const norm = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   /* busca pelo nome: cada palavra digitada precisa achar uma palavra do nome (começo ou palavra inteira), tolerando as
      grafias do mesmo som (z/s, y/i, ph/f, letras dobradas) e um erro de digitação em palavras de 5 letras ou mais:
@@ -384,20 +408,19 @@
     // quem tem o nome procurado mas está escondido pelos filtros (o aviso diz quantos e por quê)
     const pelosNomes = palavras.length ? G.jogadores.filter((r) => !meus.has(r[0]) && r[6] !== meuTime && nomeBate(r[1], palavras)) : [];
     const L = (palavras.length ? pelosNomes : G.jogadores).filter((r) => !meus.has(r[0]) && r[6] !== meuTime && posBate(r, f.pos) && (r[2] == null || (r[2] >= f.idMin && r[2] <= f.idMax))
-      && (!f.def || (r[15] != null && r[15] >= +f.def)) && (!f.soReal || r[10])
+      && (!f.soReal || r[10])
       && (!(f.alt || f.lado) || ((z) => z && (!f.alt || z.t === f.alt) && (!f.lado || z.l === f.lado))(zonaDe(r)))
       && (!f.vMax || r[8] <= f.vMax) && (!f.lg || G.times[r[6]]?.[2] === f.lg) && (!f.semLes || !r[9])
       && (!f.nac || (f.nac === "bra" ? r[4] === "bra" : f.nac === "est" ? r[4] !== "bra" : r[4] === f.nac)));
     const escondidos = pelosNomes.filter((r) => !L.includes(r));
-    const ord = { valor: (a, b) => b[8] - a[8], idade: (a, b) => (a[2] ?? 99) - (b[2] ?? 99), nome: (a, b) => a[1].localeCompare(b[1], "pt-BR"), barato: (a, b) => a[8] - b[8],
-      def: (a, b) => (b[15] ?? -1) - (a[15] ?? -1) || b[8] - a[8] }[f.ord] || ((a, b) => b[8] - a[8]);
+    const ord = { valor: (a, b) => b[8] - a[8], idade: (a, b) => (a[2] ?? 99) - (b[2] ?? 99), nome: (a, b) => a[1].localeCompare(b[1], "pt-BR"), barato: (a, b) => a[8] - b[8] }[f.ord] || ((a, b) => b[8] - a[8]);
     L.sort(ord);
     return { L, escolhidos, escondidos };
   }
   const POS_FILTRO = [
     ["Setor", [["", "Todas"], ["G", "GOL", "Goleiros"], ["D", "DEF", "Defensores"], ["M", "MEI", "Meio-campistas"], ["A", "ATA", "Atacantes"]]],
     ["Defesa", [["ZAG", "Zagueiro"], ["lat", "Laterais"], ["LD", "Lat. dir.", "Lateral-direito"], ["LE", "Lat. esq.", "Lateral-esquerdo"]]],
-    ["Meio", [["VOL", "Volante"], ["MC", "Meio-campista"], ["MEI", "Meia-atacante"], ["mei", "Todos os meias", "Meio-campista, meia-atacante e meias pelos lados"]]],
+    ["Meio", [["VOL1", "1º volante", "Cabeça de área: protege a zaga e marca mais"], ["VOL2", "2º volante", "Sai para o jogo: chega ao ataque e participa dos gols"], ["VOL", "Volantes", "1º e 2º volantes"], ["MC", "Meio-campista"], ["MEI", "Meia-atacante"], ["mei", "Todos os meias", "Meio-campista, meia-atacante e meias pelos lados"]]],
     ["Ataque", [["pon", "Pontas"], ["PD", "Ponta dir.", "Ponta direita"], ["PE", "Ponta esq.", "Ponta esquerda"], ["SA", "2º atacante", "Segundo atacante"], ["CA", "Centroavante"]]],
   ];
   const dataHttp = (t) => { const d = new Date(t); return isNaN(d) ? t : d.toLocaleDateString("pt-BR"); };
@@ -413,7 +436,7 @@
       const j = jogadorGlobal(G, r[0], D), ja = escolhidos.has(j.id), semDinheiro = k.real && !ja && j.valor > k.caixa;
       const aberta = fichaAberta[cid] === j.id, z = zonaDe(r);
       const setor = j.sub ? SUB_SETOR[j.sub] : j.pos;
-      const perfil = (j.def != null ? `<em class="jt-def ${j.def >= 70 ? "alto" : j.def >= 40 ? "medio" : "baixo"}" title="Retorno defensivo: desarmes, interceptações e cortes por 90 min, comparados com quem joga na mesma posição no Brasileirão (lances reais da ESPN)">recompõe ${j.def}</em>` : "")
+      const perfil = etiquetas(j.tat)
         + (z ? `<em class="jt-zona" title="${z.real ? "Onde mais age, pelos lances reais no Brasileirão" : "Estimado pela posição"}">${TERCO[z.t]} ${LADO[z.l]}${z.real ? "" : "*"}</em>` : "");
       return `<tr class="${ja ? "jt-ja" : ""}${aberta ? " jt-aberta" : ""}"><td class="jt-quem">${avatar(j, c, 34)}<div><b>${esc(j.nome)}</b><small>${j.timeLogo ? crestOutro(j.timeNome, j.timeLogo, 14) : ""} ${esc(j.timeNome)} · ${esc(G.ligas[j.lg]?.[0] || "")}</small>${perfil ? `<span class="jt-perfil">${perfil}</span>` : ""}</div></td>
         <td class="jt-pos"><span class="jt-pos-t p-${setor}" title="${esc(SUB_NOME[j.sub] || "")}">${j.sub || POS_CURTO[j.pos]}</span></td><td class="hide-sm">${j.idade ?? "—"}</td><td class="hide-sm">${BANDEIRA(j.pais)}</td>
@@ -426,13 +449,12 @@
       <aside class="jt-bloco jt-filtros"><div class="jt-bloco-h"><h3>Filtros</h3></div>
         <label class="jt-f-busca"><span>Nome</span><input type="search" data-jt-f="q" value="${esc(f.q)}" placeholder="Buscar jogador" autocomplete="off"></label>
         <div class="jt-f-pos" role="group" aria-label="Posição">${POS_FILTRO.map(([titulo, ops]) => `<div class="jt-f-pos-g"><span>${titulo}</span><div>${ops.map(([v, l, t]) => `<button type="button" class="chip ${f.pos === v ? "on" : ""}" data-jt-pos="${v}" aria-pressed="${f.pos === v}"${t ? ` title="${t}"` : ""}>${l}</button>`).join("")}</div></div>`).join("")}</div>
-        <label><span>Retorno defensivo</span>${sel("def", f.def, [["", "Qualquer"], ["70", "Alto: recompõe muito"], ["40", "Médio ou alto"]])}<small class="jt-f-nota">Pelos lances reais do Brasileirão (desarmes, interceptações e cortes por 90 min, comparados com a mesma posição). Só jogadores da Série A.</small></label>
         <div class="jt-f-2"><label><span>Onde atua</span>${sel("alt", f.alt, [["", "Campo todo"], ["D", "Defesa"], ["M", "Meio-campo"], ["A", "Ataque"]])}</label><label><span>Lado</span>${sel("lado", f.lado, [["", "Qualquer"], ["E", "Esquerda"], ["C", "Centro"], ["D", "Direita"]])}</label></div>
         <label><span>Liga</span>${sel("lg", f.lg, [["", "Todas as ligas"], ...Object.entries(G.ligas).map(([k2, v]) => [k2, `${v[0]} (${v[1]})`])])}</label>
         <label><span>Nacionalidade</span>${sel("nac", f.nac, [["", "Todas"], ["bra", "Só brasileiros"], ["est", "Só estrangeiros"], ...topPaises.filter((p) => p !== "bra").map((p) => [p, nomePais[p] || p])])}</label>
         <div class="jt-f-2"><label><span>Idade mín.</span><input type="number" min="15" max="45" data-jt-f="idMin" value="${f.idMin}"></label><label><span>Idade máx.</span><input type="number" min="15" max="45" data-jt-f="idMax" value="${f.idMax}"></label></div>
         <label><span>Valor até</span>${sel("vMax", f.vMax, [[0, "Qualquer valor"], [1e6, "€ 1 mi"], [3e6, "€ 3 mi"], [5e6, "€ 5 mi"], [10e6, "€ 10 mi"], [20e6, "€ 20 mi"], [40e6, "€ 40 mi"]])}</label>
-        <label><span>Ordenar por</span>${sel("ord", f.ord, [["valor", "Mais valiosos"], ["barato", "Mais baratos"], ["idade", "Mais jovens"], ["def", "Mais recompõem"], ["nome", "Nome"]])}</label>
+        <label><span>Ordenar por</span>${sel("ord", f.ord, [["valor", "Mais valiosos"], ["barato", "Mais baratos"], ["idade", "Mais jovens"], ["nome", "Nome"]])}</label>
         <label class="jt-f-chk"><input type="checkbox" data-jt-f="semLes" ${f.semLes ? "checked" : ""}> Esconder lesionados</label>
         <label class="jt-f-chk"><input type="checkbox" data-jt-f="soReal" ${f.soReal ? "checked" : ""}> Só com valor do Transfermarkt</label>
       </aside>
@@ -443,7 +465,7 @@
           <div class="jt-scroll"><table class="table jt-tabela"><thead><tr><th>Jogador</th><th>Pos.</th><th class="hide-sm">Idade</th><th class="hide-sm">Nac.</th><th>Valor · salário</th><th></th></tr></thead><tbody>${linhas || `<tr><td colspan="6"><div class="empty" style="padding:24px">Nenhum jogador com esses filtros.</div></td></tr>`}</tbody></table></div>
           ${escondidos.length ? `<p class="jt-escondidos" role="status">${escondidos.length === 1 ? `<b>${esc(escondidos[0][1])}</b> (${esc(G.times[escondidos[0][6]]?.[0] || "")}) tem esse nome mas está escondido pelos filtros` : `${escondidos.length} jogadores com esse nome estão escondidos pelos filtros`} (posição, idade, liga, valor, nacionalidade ou lesionados). <button type="button" class="chip" data-jt-limpa-f>Limpar os filtros</button></p>` : ""}
           ${L.length > f.n ? `<button type="button" class="jt-mais" data-jt-mais>Mostrar mais ${Math.min(25, L.length - f.n)}</button>` : ""}
-          <p class="source">Elencos de ${Object.keys(G.ligas).length} ligas pela ESPN (atualizados toda semana). Valor de mercado, contrato, posição e foto: Transfermarkt, pelo conjunto público transfermarkt-datasets (CC0)${G.valores?.arquivo ? `, versão de ${esc(dataHttp(G.valores.arquivo))}` : ""}, conferido a cada rodada do robô; ${(G.valores?.casados || 0).toLocaleString("pt-BR")} de ${(G.valores?.total || G.jogadores.length).toLocaleString("pt-BR")} jogadores achados lá. Quem não está lá tem valor estimado. Salário: estimativa (nenhuma fonte pública tem o salário de cada um). * zona estimada pela posição. ${esc(G.updated || "")}</p></div>
+          <p class="source">Elencos de ${Object.keys(G.ligas).length} ligas pela ESPN (atualizados toda semana). Valor de mercado, contrato, posição e foto: Transfermarkt, pelo conjunto público transfermarkt-datasets (CC0)${G.valores?.arquivo ? `, versão de ${esc(dataHttp(G.valores.arquivo))}` : ""}, conferido a cada rodada do robô; ${(G.valores?.casados || 0).toLocaleString("pt-BR")} de ${(G.valores?.total || G.jogadores.length).toLocaleString("pt-BR")} jogadores achados lá. Quem não está lá tem valor estimado. Salário: estimativa (nenhuma fonte pública tem o salário de cada um). Etiquetas: lances reais da Série A; * pela ficha de escalações do Transfermarkt (outras ligas); zona com * estimada pela posição. ${esc(G.updated || "")}</p></div>
         <div class="jt-seguir"><a class="jt-btn sec" href="#/clube/${cid}/mercado/elenco">Voltar ao elenco</a><a class="jt-btn" href="#/clube/${cid}/mercado/escalacao">Montar a escalação</a></div>
       </div></div>`;
   }
@@ -807,15 +829,31 @@
   }
   const CAMPO_SVG = `<svg class="jt-mini-linhas" viewBox="0 0 105 68" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width=".5"><rect x=".5" y=".5" width="104" height="67"/><path d="M52.5 .5v67"/><circle cx="52.5" cy="34" r="9.15"/><rect x=".5" y="13.85" width="16.5" height="40.3"/><rect x="88" y="13.85" width="16.5" height="40.3"/><rect x=".5" y="24.85" width="5.5" height="18.3"/><rect x="99" y="24.85" width="5.5" height="18.3"/></g></svg>`;
   const linhaDado = (rotulo, valor, nota = "") => `<div class="jt-mini-d"><span>${rotulo}</span><b>${valor}</b>${nota ? `<small>${nota}</small>` : ""}</div>`;
+  // bloco "Perfil tático" da ficha: as etiquetas e por que cada uma (lances reais ou escalações)
+  function perfilTatico(j, pf, f) {
+    const t = tatica(j.tat);
+    const tags = etiquetas(j.tat, true);
+    const linhas = [];
+    if (t.tipo) linhas.push(linhaDado("Função", `${t.tipo}º volante`, t.estimado ? "sem lances nem escalações para conferir: pela posição de volante no Transfermarkt" : t.tipo === "1" ? "cabeça de área: mais ações defensivas, menos presença no ataque e nos gols" : "sai para o jogo: escalado também como meio-campista e/ou com mais gols e assistências que um volante comum"));
+    if (pf?.def != null) linhas.push(linhaDado("Marcação", `${pf.def}/100`, "desarmes, interceptações e cortes por 90 min, comparados com quem joga na mesma posição no Brasileirão"));
+    if (pf?.rec != null) linhas.push(linhaDado("Recomposição", `${pf.rec}/100`, `quanto das ações dele é no terço defensivo (${pf.z?.[0]?.[0] ?? "?"}%), comparado com a mesma posição`));
+    if (f) {
+      const pos = f[1].map(([p, n]) => `${n} de ${(SUB_NOME[p] || p).toLowerCase()}`).join(", ");
+      linhas.push(linhaDado("Escalações", `${f[0]} como titular`, `desde julho de 2024: ${pos}${f[2] >= 450 ? ` · ${f[3]} gols e ${f[4]} assistências em ${mil(f[2])} min` : ""}`));
+    }
+    if (!tags && !linhas.length) return "";
+    return `<section class="jt-mini-tat"><h4>Perfil tático</h4>${tags ? `<div class="jt-perfil">${tags}</div>` : ""}${linhas.join("")}
+      <p class="jt-mini-obs">${t.fonte ? `Etiquetas ${esc(FONTE_TAT[t.fonte])}.` : ""}${t.fonte === "F" ? " Um ponta escalado como meia pelo lado ou lateral volta para fechar o lado; um lateral escalado de zagueiro ou volante marca bem." : ""}</p></section>`;
+  }
   async function montaMini(box, cid, D, G) {
     const id = box.dataset.jtMini;
     if (box.dataset.pronto === id) return;
     box.dataset.pronto = id;
     const j = jogadorGlobal(G, id, D);
     if (!j) return;
-    const det = await carregaDetalhes();
+    const [det, fichas] = await Promise.all([carregaDetalhes(), carregaFichas()]);
     if (!box.isConnected) return;
-    const x = det?.jogadores?.[id] || {}, pf = det?.perfis?.[id];
+    const x = det?.jogadores?.[id] || {}, pf = det?.perfis?.[id], esc2 = fichas?.jogadores?.[String(j.tm || "")];
     const t = x.t; // [data, de, para, valor pago]
     const pago = t ? (t[3] == null ? "valor não divulgado" : t[3] === 0 ? "sem custo (livre ou empréstimo)" : eur(t[3])) : "";
     const clubeTm = x.c && !norm(x.c).includes(norm(j.timeNome).split(" ")[0]) ? `No Transfermarkt o último clube registrado é o ${esc(x.c)} (antes da janela de julho de 2026).` : "";
@@ -829,6 +867,7 @@
           ${linhaDado("Salário", salFaixa(j.salario).replace(/<[^>]+>/g, "").replace(/ · estimativa$/, ""), "estimativa: nenhuma fonte pública tem o salário de cada jogador")}
           ${clubeTm ? `<p class="jt-mini-obs">${clubeTm}</p>` : ""}
         </section>
+        ${perfilTatico(j, pf, esc2)}
         <section><h4>Temporada</h4><div data-jt-mini-st><div class="empty" style="padding:10px">Carregando as estatísticas…</div></div></section>
         <section><h4>Mapa de calor</h4><div class="jt-mini-campo">${CAMPO_SVG}<canvas data-jt-mini-cv></canvas></div><small class="jt-mini-obs" data-jt-mini-mapa></small></section>
       </div>`;
@@ -843,7 +882,6 @@
         const s = (k2) => Object.values(J.comps || {}).reduce((a, c) => a + (c[k2] || 0), 0), min = s("min"), p90 = (v) => (min ? ((v * 90) / min).toFixed(2).replace(".", ",") : "0");
         st.innerHTML = linhaDado("Jogos", `${s("j")}`, `${s("tit")} como titular · ${mil(min)} min`) + linhaDado("Gols e assistências", `${s("g")} · ${s("a")}`, `${s("ch")} finalizações`)
           + linhaDado("Desarmes por 90 min", p90(s("desarmes"))) + linhaDado("Interceptações por 90 min", p90(s("intercept"))) + linhaDado("Cortes por 90 min", p90(s("cortes")))
-          + (pf?.def != null ? linhaDado("Retorno defensivo", `${pf.def}/100`, "comparado com quem joga na mesma posição no Brasileirão") : "")
           + (pf?.z ? linhaDado("Onde age", `${pf.z[0][0]}% na defesa · ${pf.z[0][1]}% no meio · ${pf.z[0][2]}% no ataque`, `${pf.z[1][0]}% pela esquerda · ${pf.z[1][1]}% pelo centro · ${pf.z[1][2]}% pela direita`) : "")
           + `<p class="jt-mini-obs">Todas as competições da temporada, pelas súmulas e lances da ESPN.</p>`;
         const pr = HEATMAP.profile(id, j.funcao);
@@ -876,7 +914,13 @@
     if (volta > 0) {
       // espera a lista ter altura (o mercado global e as fotos entram depois): tenta por até 6 s
       let n = 0;
-      const tenta = () => { if (!el.isConnected) return; if (document.documentElement.scrollHeight - innerHeight >= volta || ++n > 60) scrollTo({ top: volta, behavior: "instant" }); else setTimeout(tenta, 100); };
+      // depois de chegar, segura o ponto por 2 s: o resto do mercado (partes do Transfermarkt, fotos) ainda pode redesenhar a
+      // lista e o navegador empurraria a página; qualquer gesto da pessoa (roda, toque, tecla) solta na hora
+      let solto = false;
+      const solta = () => { solto = true; };
+      for (const ev of ["wheel", "touchstart", "keydown", "mousedown"]) addEventListener(ev, solta, { once: true, passive: true });
+      const segura = (k) => { if (solto || !el.isConnected || k > 20) return; if (Math.abs(scrollY - volta) > 2) scrollTo({ top: volta, behavior: "instant" }); setTimeout(() => segura(k + 1), 100); };
+      const tenta = () => { if (!el.isConnected) return; if (document.documentElement.scrollHeight - innerHeight >= volta || ++n > 60) { scrollTo({ top: volta, behavior: "instant" }); segura(0); } else setTimeout(tenta, 100); };
       requestAnimationFrame(tenta);
     }
     let t = 0;

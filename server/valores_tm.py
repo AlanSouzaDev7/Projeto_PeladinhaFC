@@ -283,6 +283,11 @@ def elencos_tm():
     return _elencos_memo[1] or {}
 
 
+def _tm_elencos():
+    import tm_elencos
+    return tm_elencos
+
+
 def sobrepor_elencos(ind, elencos=None):
     """Põe por cima do índice do conjunto o que veio das páginas de elenco: valor de mercado de hoje, posição, contrato,
     foto e a chegada ao clube (com o valor pago), para todos os jogadores de todos os clubes lidos. Devolve um índice
@@ -307,6 +312,8 @@ def sobrepor_elencos(ind, elencos=None):
                 else:
                     novo["v"] = velho.get("v")  # o Transfermarkt ainda não avaliou: fica a avaliação anterior, se houver
                 if chegou and ant:
+                    if ";" in (ant[0] or "") or ":" in (ant[0] or ""):  # lido antes de o leitor entender as frases da página
+                        ant = _tm_elencos().limpa_anterior(ant[0]) if ant[1] is None else [_tm_elencos().limpa_anterior(ant[0])[0], ant[1]]
                     novo["t"] = [chegou, ant[0], cl.get("nome") or "", ant[1]]
                 if n2 := velho.get("n2"):
                     novo["n2"] = n2
@@ -368,30 +375,120 @@ def perfis_serie_a(pasta=None):
             acoes = sum(c.get("desarmes", 0) + c.get("intercept", 0) + c.get("cortes", 0) for c in comps)
             pos = (hm.get(aid) or {}).get("f") or {"G": "GOL", "D": "ZAG", "M": "MC", "F": "CA", "A": "CA"}.get(j.get("pos"), "MC")
             z = zona(j.get("calor"), *(d.get("grade") or [24, 16]))
+            ga = sum(c.get("g", 0) + c.get("a", 0) for c in comps)
             if mi > (brutos.get(aid) or {}).get("min", -1):
-                brutos[aid] = {"min": mi, "p90": acoes * 90 / mi if mi else 0, "pos": pos, "z": z}
-    grupo = {}
+                brutos[aid] = {"min": mi, "p90": acoes * 90 / mi if mi else 0, "pos": pos, "z": z, "ga": ga * 90 / mi if mi else 0}
+    grupo, grupo_rec = {}, {}
     for aid, r in brutos.items():
         if r["min"] >= 450:
             grupo.setdefault(r["pos"], []).append(r["p90"])
+            if r["z"]:
+                grupo_rec.setdefault(r["pos"], []).append(r["z"][0][0])
+
+    def pct(g, v):
+        return round(sum(1 for x in g if x < v) / (len(g) - 1) * 100) if len(g) > 1 else 50
+
     out = {}
     for aid, r in brutos.items():
-        g = sorted(grupo.get(r["pos"], []))
-        idx = None
-        if r["min"] >= 450 and len(g) >= 5:
-            abaixo = sum(1 for x in g if x < r["p90"])
-            idx = round(abaixo / (len(g) - 1) * 100) if len(g) > 1 else 50
-        out[aid] = {"def": idx, "z": r["z"], "min": r["min"], "p90": round(r["p90"], 2), "pos": r["pos"]}
+        g, gr = grupo.get(r["pos"], []), grupo_rec.get(r["pos"], [])
+        idx = pct(g, r["p90"]) if r["min"] >= 450 and len(g) >= 5 else None
+        # recomposição: quanto das ações dele acontece no terço defensivo, comparado com quem joga na mesma posição
+        rec = pct(gr, r["z"][0][0]) if r["min"] >= 450 and r["z"] and len(gr) >= 5 else None
+        out[aid] = {"def": idx, "rec": rec, "z": r["z"], "min": r["min"], "p90": round(r["p90"], 2), "ga": round(r["ga"], 2), "pos": r["pos"]}
     return out
+
+
+# ---------------------------------------------------------------------------
+# perfil tático: 1º ou 2º volante e as etiquetas de marcação e recomposição
+# ---------------------------------------------------------------------------
+FICHAS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dados-tm", "fichas.json")
+_fichas_memo = [None, None]
+LATERAIS, PONTAS = {"LD", "LE", "ALD", "ALE"}, {"PD", "PE"}
+COM_ETIQUETA = LATERAIS | PONTAS | {"MD", "ME", "VOL", "MC", "MEI"}
+
+
+def fichas_tm():
+    """Ficha de escalações (server/tm_fichas.py): {tm_id: [titular, {pos: vezes}, min, gols, assist, amarelos]}."""
+    try:
+        mt = os.path.getmtime(FICHAS)
+    except OSError:
+        return {}
+    if _fichas_memo[0] != mt:
+        try:
+            _fichas_memo[:] = [mt, json.load(open(FICHAS, encoding="utf-8")).get("jogadores") or {}]
+        except Exception:
+            return {}
+    return _fichas_memo[1] or {}
+
+
+def tatica(sub, f=None, pf=None):
+    """Código curto do perfil tático (campo "tat" do mercado global).
+    1º caractere: '1' 1º volante, '2' 2º volante, 'p' volante sem dados (1º pela posição do Transfermarkt), '-' não é volante.
+    Depois, as etiquetas: M marca bem, m marca pouco, R recompõe bem, r recompõe pouco, O lateral que apoia muito o ataque.
+    Último caractere, a fonte: L lances reais da Série A (ESPN), F ficha de escalações (Transfermarkt), P só a posição.
+    '' para quem não tem nada a dizer (goleiros, zagueiros, atacantes)."""
+    n = f[0] if f else 0
+    ps = (f[1] if f else None) or {}
+
+    def parte(*ks):
+        return sum(ps.get(k, 0) for k in ks) / n if n else 0
+    ga = (f[3] + f[4]) * 90 / f[2] if f and f[2] >= 450 else 0
+    real = bool(pf) and pf.get("def") is not None
+    tem_ficha = n >= 5
+    tipo = "-"
+    if sub == "VOL":
+        notas = []
+        if real:  # muita ação defensiva, pouca presença no terço de ataque (a média do volante é 18%) e poucos gols/assistências = 1º volante
+            ataque = pf["z"][0][2] if pf.get("z") else 30
+            notas.append((50 - pf["def"]) / 100 + (ataque - 18) / 40 + 1.5 * min(max(0, (pf.get("ga") or 0) - 0.15), 0.3) - 0.15)
+        if tem_ficha:  # escalado como meio-campista/meia e com mais gols/assistências que um volante comum (0,15 por 90) = 2º; de zagueiro = 1º
+            notas.append(parte("MC", "MEI", "MD", "ME") + 1.5 * min(max(0, ga - 0.15), 0.3) - parte("ZAG") - 0.3)
+        tipo = ("2" if sum(notas) / len(notas) >= 0 else "1") if notas else "p"  # cada nota já vem descontada do seu limite
+    tags = []
+    if sub in COM_ETIQUETA:
+        if real:
+            if pf["def"] >= 67:
+                tags.append("M")
+            elif pf["def"] <= 33:
+                tags.append("m")
+            if sub != "VOL" and pf.get("rec") is not None:
+                tags.append("R" if pf["rec"] >= 67 else "r" if pf["rec"] <= 33 else "")
+        elif tem_ficha:
+            if sub in LATERAIS:
+                if parte("ZAG", "VOL") >= 0.1:
+                    tags.append("M")  # também é escalado de zagueiro ou volante
+                if parte("PD", "PE", "MD", "ME", "MEI", "SA", "CA") >= 0.25:
+                    tags.append("O")  # escalado muitas vezes mais à frente: lateral de apoio
+            elif sub in PONTAS:
+                if parte("LD", "LE") >= 0.1:
+                    tags.append("M")  # já foi escalado de lateral
+                volta = parte("MD", "ME", "LD", "LE", "VOL", "MC")
+                if volta >= 0.2:
+                    tags.append("R")  # escalado como meia pelo lado ou lateral: volta para fechar o lado
+                elif n >= 10 and volta == 0:
+                    tags.append("r")  # sempre escalado no ataque
+            elif sub in ("MD", "ME") and parte("LD", "LE") >= 0.1:
+                tags.append("M")
+            elif sub == "VOL" and parte("ZAG") >= 0.1:
+                tags.append("M")
+            elif sub in ("MC", "MEI") and parte("VOL") >= 0.25:
+                tags.append("R")  # meia que também joga de volante
+    tags = "".join(tags)
+    if tipo == "-" and not tags:
+        return ""
+    fonte = "L" if real else "F" if tem_ficha else "P"
+    return tipo + tags + fonte
+
 
 
 # ---------------------------------------------------------------------------
 # aplicar: mercado global (reforços) e elencos da janela
 # ---------------------------------------------------------------------------
-def enriquecer_global(comp, ind, perfis=None, hoje=None, nascs=None):
+def enriquecer_global(comp, ind, perfis=None, hoje=None, nascs=None, fichas=None):
     """Acrescenta às linhas do mercado global (gravado por mercado.global_compacto) o que veio do Transfermarkt e o perfil
-    da Série A. Linha: [... lesao, real, sub, foto, contrato, tm, def, zona]. Devolve (comp, detalhes por id)."""
+    da Série A. Linha: [... lesao, real, sub, foto, contrato, tm, def, zona, tat]. Devolve (comp, detalhes por id)."""
     perfis = perfis or {}
+    fichas = fichas_tm() if fichas is None else fichas
     times = comp.get("times", {})
     detalhes, casados, razoes = {}, 0, {}
     for r in comp.get("jogadores", []):
@@ -411,8 +508,9 @@ def enriquecer_global(comp, ind, perfis=None, hoje=None, nascs=None):
             casados += 1
             detalhes[str(r[0])] = {k: x[k] for k in ("vd", "vm", "ct", "t", "pe", "al", "c") if x.get(k)} | {"tm": tm_id}
         zz = pf.get("z")
-        r.extend([real, (x or {}).get("s") or pf.get("pos") or "", (x or {}).get("f") or "", ((x or {}).get("ct") or "")[:7],
-                  tm_id or "", pf.get("def"), zona_txt(zz) if zz else ""])
+        sub = (x or {}).get("s") or pf.get("pos") or ""
+        r.extend([real, sub, (x or {}).get("f") or "", ((x or {}).get("ct") or "")[:7],
+                  tm_id or "", pf.get("def"), zona_txt(zz) if zz else "", tatica(sub, fichas.get(str(tm_id or "")), pf)])
     # quem não casou continua com a estimativa, corrigida pela relação real/estimado dos que casaram na mesma liga
     # (mediana, entre 0,15 e 2,5 vezes): a estimativa deixa de ficar sistematicamente acima ou abaixo do mercado de lá
     fator = {}
@@ -425,10 +523,10 @@ def enriquecer_global(comp, ind, perfis=None, hoje=None, nascs=None):
             f = fator.get((times.get(r[6]) or ["", None, ""])[2])
             if f:
                 r[8] = int(round(r[8] * f / 25000) * 25000) or 25000
-    comp["campos"] = comp.get("campos", [])[:10] + ["real", "sub", "foto", "contrato", "tm", "def", "zona"]
+    comp["campos"] = comp.get("campos", [])[:10] + ["real", "sub", "foto", "contrato", "tm", "def", "zona", "tat"]
     comp["fotoBase"] = FOTO_TM
     comp["fonte"] = ("ESPN (elencos) · valores, contratos, posições e fotos: Transfermarkt (transfermarkt-datasets, CC0) · "
-                     "retorno defensivo e zona: lances reais da ESPN (Série A) · salário: estimativa")
+                     "marcação, recomposição e zona: lances reais da ESPN (Série A) e escalações do Transfermarkt · salário: estimativa")
     comp["valores"] = {**versao(), "casados": casados, "total": len(comp.get("jogadores", [])), "fatorEstimativa": {k: round(v, 2) for k, v in fator.items()}}
     return comp, detalhes
 
@@ -603,7 +701,7 @@ def extras_tm(comp, ind, hoje=None):
     """Linhas novas para o mercado global com quem está nos elencos do Transfermarkt e não na ESPN: o clube inteiro, se
     a ESPN não tem o clube (segundas divisões, ligas fora da lista), ou o jogador que falta num clube que a ESPN tem
     (sem ninguém do mesmo sobrenome e idade lá, para não duplicar quem só tem o nome escrito diferente).
-    Devolve {"times", "ligas", "paises", "jogadores"} no formato do mercado global (linhas com 17 campos)."""
+    Devolve {"times", "ligas", "paises", "jogadores"} no formato do mercado global (linhas com 18 campos)."""
     comps = (elencos_tm() or {}).get("competicoes") or {}
     if not comps:
         return {"times": {}, "ligas": {}, "paises": {}, "jogadores": []}
@@ -613,6 +711,7 @@ def extras_tm(comp, ind, hoje=None):
     for r in comp.get("jogadores", []):
         por_time.setdefault(r[6], []).append(r)
     nome_pais = {v.lower(): k for k, v in (comp.get("paises") or {}).items() if v}
+    fichas = fichas_tm()
     out = {"times": {}, "ligas": {}, "paises": {}, "jogadores": []}
     rev_liga = {v: k for k, v in LIGA_TM.items()}
     for code, c in comps.items():
@@ -643,7 +742,7 @@ def extras_tm(comp, ind, hoje=None):
                     pais = "x-" + _norm(nac).replace(" ", "")[:12]
                     out["paises"][pais] = nac
                 out["jogadores"].append([f"tm-{tmid}", nome, idade, setor, pais, "", tid, int(num) if str(num).isdigit() else None,
-                                         v or 0, 0, 1 if v else 0, sub or "", foto or "", (contrato or "")[:7], tmid, None, ""])
+                                         v or 0, 0, 1 if v else 0, sub or "", foto or "", (contrato or "")[:7], tmid, None, "", tatica(sub or "", fichas.get(str(tmid)))])
     # quem o Transfermarkt ainda não avaliou fica com uma estimativa pela idade e pela liga (com a etiqueta)
     for r in out["jogadores"]:
         if not r[8]:
@@ -725,6 +824,7 @@ def global_real(comp):
     pasta = os.path.join(P.ROOT, "dados", "mercado")
     os.makedirs(pasta, exist_ok=True)
     # jogadores dos elencos do Transfermarkt que a ESPN não tem: arquivo à parte (o banco aceita até 1,9 MB por arquivo)
+    ext = None
     try:
         ext = extras_tm(comp, ind or {"j": {}, "porNome": {}, "porSobrenome": {}})
         # em partes de até ~1,2 MB (o banco aceita 1,9 MB por arquivo): global-tm.json traz times, ligas, países e a
@@ -751,6 +851,14 @@ def global_real(comp):
         comp["valores"]["extrasTm"] = len(js_ext)
     except Exception as ex:
         P.silencioso("valores:extras-tm", ex)
+    try:  # escalações de cada jogador do mercado: a ficha mostra em que posição ele foi titular (lida só ao abrir)
+        fi = fichas_tm()
+        ids = {str(r[14]) for r in comp["jogadores"] if r[14]} | {str(r[14]) for r in (ext["jogadores"] if ext else []) if r[14]}
+        saida = {k: [v[0], sorted(v[1].items(), key=lambda kv: -kv[1])[:4], v[2], v[3], v[4]] for k, v in fi.items() if k in ids and v[0] >= 3}
+        json.dump({"desde": "2024-07", "fonte": "Transfermarkt (transfermarkt-datasets, CC0): escalações e participações", "jogadores": saida},
+                  open(os.path.join(pasta, "fichas.json"), "w", encoding="utf-8", newline="\n"), ensure_ascii=False, separators=(",", ":"))
+    except Exception as ex:
+        P.silencioso("valores:fichas", ex)
     try:
         json.dump(auditoria(comp), open(os.path.join(pasta, "auditoria.json"), "w", encoding="utf-8", newline="\n"), ensure_ascii=False, separators=(",", ":"))
     except Exception as ex:

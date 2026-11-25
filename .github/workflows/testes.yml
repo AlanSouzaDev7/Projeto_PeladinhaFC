@@ -95,6 +95,8 @@ jobs:
         run: python -X utf8 tests/disjuntor_casos.py
       - name: Elencos do Transfermarkt (leitor das páginas e valores de hoje por cima dos de julho)
         run: python -X utf8 tests/tm_elencos_casos.py
+      - name: Perfil tático (1º e 2º volante, marcação e recomposição)
+        run: python -X utf8 tests/tatica_casos.py
       - name: Worker do placar ao vivo
         timeout-minutes: 2
         run: node tests/worker.mjs

@@ -3,7 +3,8 @@
    CazéStats.TV — QA dos reforços da Janela e das fotos (celular 390x844 e computador 1366x900)
    - fotos: as linhas do mercado global e a busca do topo mostram foto de verdade (imagem carregada, não quebrada);
    - valores: o Marquinhos do PSG com o valor do Transfermarkt (€ 28 mi), não a estimativa antiga (€ 16,1 mi);
-   - posições: o filtro "Pontas" só traz pontas; "Retorno defensivo alto" só quem recompõe 70 ou mais;
+   - posições: o filtro "Pontas" só traz pontas; "1º volante" e "2º volante" só trazem volantes daquele tipo; o filtro de
+     retorno defensivo saiu e as etiquetas (marca bem, recompõe bem...) aparecem nas linhas e no "Perfil tático" da ficha;
    - ficha (mini aba): valor, contrato e última transferência do Transfermarkt, estatísticas e mapa de calor desenhado;
    - sem rolagem para os lados e sem erro de JavaScript.
    Uso: BASE=http://localhost:5173 node tests/qa/janela-reforcos.mjs   (USAR_BANCO=1 lê do banco publicado)
@@ -74,19 +75,37 @@ for (const [perfil, vp] of [["celular", { width: 390, height: 844, isMobile: tru
   await p.waitForTimeout(400);
   const posPontas = await p.locator(".jt-tabela tbody .jt-pos-t").allInnerTexts();
   ok(posPontas.length > 0 && posPontas.every((t) => /^(PD|PE)$/.test(t.trim())), `${perfil}: filtro Pontas só traz pontas`, `${posPontas.length} linhas`);
-  await p.selectOption('[data-jt-f="def"]', "70");
+  ok(!(await p.locator('[data-jt-f="def"]').count()), `${perfil}: o filtro de retorno defensivo saiu`);
+  const tagsPontas = await p.locator(".jt-tabela tbody .jt-tag").allInnerTexts();
+  ok(tagsPontas.length > 0 && tagsPontas.every((t) => /Marca|Recompõe|Lateral de apoio/.test(t)), `${perfil}: pontas com etiquetas de marcação/recomposição`, tagsPontas.slice(0, 4).join(", "));
+  // ficha de um ponta da Série A: lances reais e perfil tático
+  await p.selectOption('[data-jt-f="lg"]', "bra.1");
   await p.waitForTimeout(500);
-  const defs = await p.locator(".jt-tabela tbody .jt-def").allInnerTexts();
-  const nLinhas = await p.locator(".jt-tabela tbody tr:not(.jt-mini-tr)").count();
-  ok(defs.length > 0 && defs.length === nLinhas && defs.every((t) => +t.replace(/\D/g, "") >= 70), `${perfil}: pontas com retorno defensivo alto`, defs.slice(0, 4).join(", "));
-  // ficha de um jogador da Série A: lances reais
-  await p.locator("[data-jt-ficha]").first().click();
+  await p.locator('.jt-tabela tbody tr:has(.jt-tag) [data-jt-ficha]').first().click();
   await p.waitForSelector(".jt-mini .jt-mini-d", { timeout: 15000 });
   await p.waitForTimeout(2500);
   const mini2 = (await p.locator(".jt-mini").innerText()).replace(/\s+/g, " ");
   ok(/Desarmes por 90 min/.test(mini2) && /Lances reais/.test(mini2), `${perfil}: ficha de jogador da Série A com desarmes e mapa dos lances reais`);
+  ok(/Perfil tático/.test(mini2) && /Marcação \d+\/100/.test(mini2) && /Recomposição \d+\/100/.test(mini2), `${perfil}: ficha com o perfil tático (marcação e recomposição)`);
   await p.locator(".jt-mini").screenshot({ path: `${OUT}${perfil}-ficha-serie-a.png` });
-  await p.selectOption('[data-jt-f="def"]', "");
+  await p.selectOption('[data-jt-f="lg"]', "");
+  // 1º e 2º volante
+  for (const [pos, rot] of [["VOL1", "1º volante"], ["VOL2", "2º volante"]]) {
+    await p.click(`[data-jt-pos="${pos}"]`);
+    await p.waitForTimeout(500);
+    const vs = await p.locator(".jt-tabela tbody tr:not(.jt-mini-tr)").evaluateAll((trs) => trs.map((tr) => [tr.querySelector(".jt-pos-t")?.textContent.trim(), tr.querySelector(".jt-tag.vol")?.textContent || ""]));
+    ok(vs.length > 0 && vs.every(([s2, t]) => s2 === "VOL" && t.startsWith(rot)), `${perfil}: filtro ${rot} só traz ${rot}s`, `${vs.length} linhas, ex.: ${vs[0]?.[1]}`);
+  }
+  // ficha de um 2º volante da Europa: escalações (ficha técnica do Transfermarkt)
+  await p.fill('[data-jt-f="q"]', "elliot anderson");
+  await p.waitForTimeout(700);
+  await p.locator("[data-jt-ficha]").first().click();
+  await p.waitForSelector(".jt-mini-tat", { timeout: 15000 });
+  const mini3 = (await p.locator(".jt-mini-tat").innerText()).replace(/\s+/g, " ");
+  ok(/2º volante/.test(mini3) && /Escalações \d+ como titular/.test(mini3) && /meio-campista/.test(mini3), `${perfil}: ficha do Elliot Anderson com a função e as escalações`, mini3.slice(0, 120));
+  await p.locator(".jt-mini").screenshot({ path: `${OUT}${perfil}-ficha-volante.png` });
+  await p.locator("[data-jt-ficha]").first().click();
+  await p.fill('[data-jt-f="q"]', "");
   await p.click('[data-jt-pos=""]');
 
   const sobra = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);

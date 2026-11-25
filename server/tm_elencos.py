@@ -106,13 +106,31 @@ def _anterior(m):
     'free transfer'/'loan' -> 0; 'Returned after loan spell with Avaí FC; ...' -> ['Avaí FC', 0] (fim de empréstimo)."""
     if not m:
         return None
-    nome, taxa = html.unescape(m.group(1)), m.group(2) or ""
-    volta = re.match(r"Returned after loan spell with (.+?);", nome)
+    return limpa_anterior(html.unescape(m.group(1)), m.group(2) or "")
+
+
+def limpa_anterior(nome, taxa=""):
+    """Título do clube anterior -> [clube, valor pago | 0 | None]. Além de 'Clube: Ablöse €1m', a página usa frases:
+    'Joined from X; date: ...; fee: €5.00M' (ou free transfer, ?, -), 'Internal transfer: X U20; date: ...' (subiu da
+    base, sem custo), 'On loan from X; started on: ...' (empréstimo) e 'Returned after loan spell with X; ...'."""
+    nome = (nome or "").strip()
+    volta = re.match(r"Returned after loan spell with (.+?)\s*;", nome)
     if volta:
-        return [volta.group(1), 0]
+        return [volta.group(1).strip(), 0]
+    base = re.match(r"Internal (?:winter )?transfer:\s*(.+?)\s*;", nome, re.I)
+    if base:
+        return [base.group(1).strip(), 0]
+    emp = re.match(r"On loan from (.+?)\s*;", nome)
+    if emp:
+        return [emp.group(1).strip(), 0]
+    veio = re.match(r"Joined from (.+?)\s*;.*?(?:fee:\s*(.*))?$", nome)
+    if veio:
+        nome, taxa = veio.group(1).strip(), (veio.group(2) or "").strip()
+        if nome.lower() == "without club":
+            nome = "Sem clube"
     if "€" in taxa:
         return [nome, valor(taxa)]
-    return [nome, 0 if re.search(r"free|loan|end of", taxa, re.I) else None]
+    return [nome, 0 if re.search(r"free|loan|end of|draft", taxa, re.I) else None]
 
 
 def jogadores_do_elenco(h):
