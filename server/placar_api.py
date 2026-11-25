@@ -114,9 +114,51 @@ PROXIES_CONFIAVEIS = {x.strip() for x in os.environ.get("PROXIES_CONFIAVEIS", ""
 MAX_BYTES = 15 * 1024 * 1024   # nenhuma resposta de fonte de dados passa disso
 
 
+# disjuntor por site: depois de DISJUNTOR_LIMITE recusas seguidas (429, 502, 503, 504 ou tempo esgotado) de um mesmo
+# site, os pedidos para ele falham na hora por DISJUNTOR_PAUSA segundos. Em 23/11 e 25/11 o Google Notícias passou a
+# responder 503 para o robô e centenas de consultas (notícias, lesões, departamento médico) estouraram o limite de 38
+# min da rodada; agora a rodada segue com os dados anteriores dessas partes. 404/403 são respostas normais: não contam.
+DISJUNTOR_LIMITE, DISJUNTOR_PAUSA = 8, 15 * 60
+_disjuntor = {}  # site -> [recusas seguidas, aberto até]
+_disjuntor_lock = threading.Lock()
+
+
+class SiteRecusando(OSError):
+    """O disjuntor do site está aberto: o pedido nem sai."""
+
+
+def _site(url):
+    return urllib.parse.urlsplit(str(url)).netloc.lower()
+
+
 def get(url, timeout=20, headers=None):
     if not str(url).startswith("https://"):
         raise ValueError("só endereços https")
+    site = _site(url)
+    with _disjuntor_lock:
+        d = _disjuntor.get(site)
+        if d and d[1] > time.time():
+            raise SiteRecusando(f"{site} recusando pedidos: pausa até {time.strftime('%H:%M', time.localtime(d[1]))}")
+    try:
+        dados = _get(url, timeout, headers)
+    except Exception as ex:
+        codigo = getattr(ex, "code", None)
+        recusa = codigo in (429, 502, 503, 504) or isinstance(ex, (TimeoutError, OSError)) and codigo is None and "timed out" in str(ex).lower()
+        if recusa:
+            with _disjuntor_lock:
+                d = _disjuntor.setdefault(site, [0, 0])
+                d[0] += 1
+                if d[0] >= DISJUNTOR_LIMITE and d[1] <= time.time():
+                    d[1] = time.time() + DISJUNTOR_PAUSA
+                    print(f"[{time.strftime('%H:%M:%S')}] disjuntor: {site} recusou {d[0]} pedidos seguidos; pausa de {DISJUNTOR_PAUSA // 60} min", flush=True)
+        raise
+    with _disjuntor_lock:
+        if site in _disjuntor:
+            _disjuntor[site] = [0, 0]
+    return dados
+
+
+def _get(url, timeout=20, headers=None):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Encoding": "gzip", **(headers or {})})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         if not r.geturl().startswith("https://"):
