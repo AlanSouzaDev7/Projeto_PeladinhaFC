@@ -175,7 +175,12 @@ def rodar(max_min=100, so=None, agora=None):
                 h = pagina(f"/x/startseite/wettbewerb/{code}")
                 nome = texto((re.search(r"<title>([^<|]+)", h) or [None, code])[1])
                 lista = clubes_da_competicao(h)
-                c.update({"nome": nome, "lido": agora, "existe": bool(lista)})
+                if not lista:
+                    # página sem clubes: código que não existe, ou o site mandou outra página (não marca como lida)
+                    print(f"tm: {code}: nenhum clube na página ('{nome[:60]}', {len(h)} bytes)", flush=True)
+                    c.pop("lido", None)
+                    continue
+                c.update({"nome": nome, "lido": agora, "existe": True})
                 for cid, slug, titulo in lista:
                     c["clubes"].setdefault(cid, {"slug": slug, "nome": titulo})
                 gravar(d)
