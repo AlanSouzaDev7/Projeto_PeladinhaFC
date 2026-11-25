@@ -1,7 +1,9 @@
 <!-- © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins. -->
 # CazéStats.TV — futebol brasileiro em tempo real
 
-### ▶ [Acessar o site](https://cazestats.pages.dev) · [endereço reserva (GitHub Pages)](https://alansouzadev7.github.io/Projeto_PeladinhaFC/) · 📱 app Android **433Fut 2.0**
+### ▶ [Acessar o site](https://cazestats.pages.dev) · 📱 app Android **433Fut 2.0**
+
+> O endereço antigo do GitHub Pages (alansouzadev7.github.io/Projeto_PeladinhaFC) leva sozinho para https://cazestats.pages.dev, com a mesma página: os dois links abrem sempre a última versão.
 
 > Autor: **Alan Evangelista de Souza Martins**. Site e app compartilham o mesmo código (o app é montado a partir do site em `app/montar-www.mjs`).
 
