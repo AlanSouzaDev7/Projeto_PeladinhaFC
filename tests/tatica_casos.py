@@ -34,12 +34,15 @@ assert V.tatica("VOL", None, {"def": 95, "rec": 60, "z": [[23, 62, 15], [30, 40,
 assert V.tatica("VOL", None, {"def": 25, "rec": 40, "z": [[18, 52, 30], [30, 40, 30]], "ga": 0.1})[0] == "2", "Cristian Medina: pouca marcação e muito ataque"
 assert V.tatica("PE", None, {"def": 89, "rec": 11, "z": [[12, 35, 53], [71, 19, 10]], "ga": 0.5}) == "-MrL"
 assert V.tatica("LD", None, {"def": 50, "rec": 80, "z": [[40, 40, 20], [5, 15, 80]], "ga": 0.1}) == "-RL"
+assert V.tatica("PD", None, {"def": 50, "rec": 50, "z": [[20, 40, 40], [5, 15, 80]], "ga": 0.3}) == "-aL", "recomposição no meio da tabela: às vezes"
 assert V.tatica("CA", None, {"def": 90, "rec": 90, "z": [[5, 20, 75], [10, 80, 10]]}) == "", "centroavante não leva etiqueta"
 caso("Série A: lances reais decidem o tipo de volante e as etiquetas")
 
 assert V.tatica("PE", [40, {"PE": 25, "ME": 15}, 3000, 5, 5, 2]) == "-RF", "ponta escalado como meia pelo lado recompõe"
 assert V.tatica("PD", [30, {"PD": 30}, 2500, 8, 4, 1]) == "-rF", "ponta sempre escalado no ataque"
 assert V.tatica("PD", [6, {"PD": 6}, 500, 1, 0, 0]) == "", "poucos jogos: sem etiqueta"
+assert V.tatica("PE", [58, {"PE": 49, "PD": 3, "MD": 2, "ME": 2, "VOL": 0}, 5200, 15, 23, 2]) == "-aF", "Doku: às vezes de meia pelo lado"
+assert V.tatica("PD", [6, {"PD": 5, "MD": 1}, 500, 1, 0, 0]) == "-aF", "um jogo de meia pelo lado já conta"
 assert V.tatica("LE", [50, {"LE": 35, "ME": 16}, 4500, 3, 4, 3]) == "-OF", "lateral escalado mais à frente: de apoio"
 assert V.tatica("LD", [40, {"LD": 34, "ZAG": 6}, 3500, 0, 1, 5]) == "-MF", "lateral que também joga de zagueiro marca bem"
 caso("laterais e pontas pela ficha de escalações")

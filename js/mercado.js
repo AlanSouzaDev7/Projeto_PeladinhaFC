@@ -212,6 +212,7 @@
     M: ["Marca bem", "bom", "Boas valências defensivas"],
     m: ["Marca pouco", "fraco", "Poucas ações defensivas para a posição"],
     R: ["Recompõe bem", "bom", "Volta para recompor a defesa"],
+    a: ["Recompõe às vezes", "neutro", "Volta para recompor em parte dos jogos: nem sempre fecha o lado"],
     r: ["Recompõe pouco", "fraco", "Fica mais à frente e volta pouco para marcar"],
     O: ["Lateral de apoio", "neutro", "Joga muito avançado: apoia o ataque e deixa espaço às costas"],
   };
@@ -843,7 +844,7 @@
     }
     if (!tags && !linhas.length) return "";
     return `<section class="jt-mini-tat"><h4>Perfil tático</h4>${tags ? `<div class="jt-perfil">${tags}</div>` : ""}${linhas.join("")}
-      <p class="jt-mini-obs">${t.fonte ? `Etiquetas ${esc(FONTE_TAT[t.fonte])}.` : ""}${t.fonte === "F" ? " Um ponta escalado como meia pelo lado ou lateral volta para fechar o lado; um lateral escalado de zagueiro ou volante marca bem." : ""}</p></section>`;
+      <p class="jt-mini-obs">${t.fonte ? `Etiquetas ${esc(FONTE_TAT[t.fonte])}.` : ""}${t.fonte === "F" ? " Um ponta escalado como meia pelo lado ou lateral em 20% dos jogos ou mais recompõe bem; em menos que isso, às vezes; nunca, pouco; um lateral escalado de zagueiro ou volante marca bem." : ""}</p></section>`;
   }
   async function montaMini(box, cid, D, G) {
     const id = box.dataset.jtMini;

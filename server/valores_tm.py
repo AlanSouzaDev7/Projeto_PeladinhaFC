@@ -424,7 +424,8 @@ def fichas_tm():
 def tatica(sub, f=None, pf=None):
     """Código curto do perfil tático (campo "tat" do mercado global).
     1º caractere: '1' 1º volante, '2' 2º volante, 'p' volante sem dados (1º pela posição do Transfermarkt), '-' não é volante.
-    Depois, as etiquetas: M marca bem, m marca pouco, R recompõe bem, r recompõe pouco, O lateral que apoia muito o ataque.
+    Depois, as etiquetas: M marca bem, m marca pouco, R recompõe bem, a recompõe às vezes, r recompõe pouco,
+    O lateral que apoia muito o ataque.
     Último caractere, a fonte: L lances reais da Série A (ESPN), F ficha de escalações (Transfermarkt), P só a posição.
     '' para quem não tem nada a dizer (goleiros, zagueiros, atacantes)."""
     n = f[0] if f else 0
@@ -452,7 +453,7 @@ def tatica(sub, f=None, pf=None):
             elif pf["def"] <= 33:
                 tags.append("m")
             if sub != "VOL" and pf.get("rec") is not None:
-                tags.append("R" if pf["rec"] >= 67 else "r" if pf["rec"] <= 33 else "")
+                tags.append("R" if pf["rec"] >= 67 else "r" if pf["rec"] <= 33 else "a")
         elif tem_ficha:
             if sub in LATERAIS:
                 if parte("ZAG", "VOL") >= 0.1:
@@ -465,7 +466,9 @@ def tatica(sub, f=None, pf=None):
                 volta = parte("MD", "ME", "LD", "LE", "VOL", "MC")
                 if volta >= 0.2:
                     tags.append("R")  # escalado como meia pelo lado ou lateral: volta para fechar o lado
-                elif n >= 10 and volta == 0:
+                elif volta > 0:
+                    tags.append("a")  # às vezes escalado como meia pelo lado ou lateral
+                elif n >= 10:
                     tags.append("r")  # sempre escalado no ataque
             elif sub in ("MD", "ME") and parte("LD", "LE") >= 0.1:
                 tags.append("M")
