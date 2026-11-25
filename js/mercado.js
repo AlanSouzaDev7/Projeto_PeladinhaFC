@@ -174,7 +174,9 @@
     G.cidTime = G.cidTime || {};
     if (tid in G.cidTime) return G.cidTime[tid];
     const t = G.times[tid];
-    const c = t && t[2] === "bra.1" ? Object.values(byId).find((x) => norm(x.name) === norm(t[0]) || norm(t[0]).includes(norm(x.name)) || norm(x.name).includes(norm(t[0]))) : null;
+    // a ESPN usa siglas ("Atlético-MG", "Athletico-PR"): confere o nome, a abreviação e o id do clube do site
+    const n = t ? norm(t[0]) : "", bate = (x) => [x.name, x.abbr, x.id.replace(/-/g, " ")].filter(Boolean).map(norm).some((m) => m === n || n.includes(m) || m.includes(n) || m === n.replace(/-/g, " "));
+    const c = t && t[2] === "bra.1" ? Object.values(byId).find((x) => norm(x.name) === n) || Object.values(byId).find(bate) : null;
     return (G.cidTime[tid] = c ? c.id : null);
   }
   /* as fotos possíveis do jogador, na ordem: a guardada pelo monitor (Série A), a do Transfermarkt, a da ESPN, a do
@@ -864,7 +866,7 @@
           ${linhaDado("Valor de mercado", eur(j.valor), j.real ? `Transfermarkt${x.vd ? `, avaliação de ${data(x.vd)}` : ""}` : "estimativa do CazéStats.TV (sem o jogador no Transfermarkt)")}
           ${x.vm ? linhaDado("Maior valor da carreira", eur(x.vm), "Transfermarkt") : ""}
           ${x.ct ? linhaDado("Contrato até", data(x.ct)) : ""}
-          ${t ? linhaDado("Última transferência", pago, `${esc(t[1])} → ${esc(t[2])}, ${data(t[0])}`) : ""}
+          ${t ? linhaDado("Última transferência", pago, `${esc(/^without club$/i.test(t[1]) ? "Sem clube" : t[1])} → ${esc(t[2])}, ${data(t[0])}`) : ""}
           ${linhaDado("Salário", salFaixa(j.salario).replace(/<[^>]+>/g, "").replace(/ · estimativa$/, ""), "estimativa: nenhuma fonte pública tem o salário de cada jogador")}
           ${clubeTm ? `<p class="jt-mini-obs">${clubeTm}</p>` : ""}
         </section>
