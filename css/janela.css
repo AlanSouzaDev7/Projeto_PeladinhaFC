@@ -155,7 +155,13 @@
 .jt-filtros label, .jt-f-pos, .jt-f-2 { display: grid; gap: 5px; padding: 10px 0; border-top: 1px solid var(--line-soft); }
 .jt-filtros label > span { font: 600 12.5px var(--font); color: var(--text-2); }
 .jt-filtros input, .jt-filtros select { width: 100%; min-height: 40px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 500 14px var(--font); }
-.jt-f-pos { display: flex; flex-wrap: wrap; gap: 4px; }
+.jt-f-pos { display: grid; gap: 8px; }
+.jt-f-pos-g { display: grid; gap: 4px; }
+.jt-f-pos-g > span { font: 600 12px var(--font); color: var(--text-3); }
+.jt-f-pos-g > div { display: flex; flex-wrap: wrap; gap: 4px; }
+.jt-f-nota { font: 500 11.5px/1.35 var(--font); color: var(--text-3); }
+/* filtros mais altos que a tela: rolam por dentro em vez de esconder o fim */
+@media (min-width: 1101px) { .jt-filtros { max-height: calc(100vh - var(--header-h) - 24px); overflow-y: auto; overscroll-behavior: contain; } }
 .jt-f-2 { grid-template-columns: 1fr 1fr; }
 .jt-f-2 label { padding: 0; border: 0; }
 .jt-f-chk { display: flex !important; align-items: center; gap: 8px; font: 600 13px var(--font); }
@@ -172,6 +178,37 @@
 .jt-pos-t.p-G { background: #a87300; } .jt-pos-t.p-D { background: #1f63d6; } .jt-pos-t.p-M { background: #18834a; } .jt-pos-t.p-A { background: #c8283a; }
 .jt-v { text-align: right; font: 700 15px var(--font); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .jt-v small { display: block; font: 500 11.5px var(--font); color: var(--text-3); }
+.jt-v small.jt-real, .jt-valor .jt-real { color: #19c37d; font-weight: 700; }
+:root[data-theme="light"] .jt-v small.jt-real, :root[data-theme="light"] .jt-valor .jt-real { color: #0d7a4a; }
+.jt-pos-t { min-width: 42px; }
+/* perfil na linha: retorno defensivo e zona de atuação */
+.jt-perfil { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.jt-perfil em { font: 600 11px/1.6 var(--font); font-style: normal; padding: 0 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
+.jt-def.alto { background: color-mix(in srgb, #19c37d 22%, var(--surface-2)); color: var(--text); }
+.jt-def.medio { background: color-mix(in srgb, #ffb020 22%, var(--surface-2)); color: var(--text); }
+.jt-acao { white-space: nowrap; }
+.jt-ver { margin-left: 6px; min-height: 38px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--text); font: 600 13px var(--font); cursor: pointer; }
+.jt-ver[aria-expanded="true"] { background: var(--surface-2); }
+.jt-aberta > td { border-bottom-color: transparent; }
+/* mini aba do jogador */
+.jt-mini-tr > td { padding: 0 0 12px !important; text-align: left; }
+.jt-mini { padding: 14px; border-radius: 14px; background: var(--surface-2); text-align: left; }
+.jt-mini-topo { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.jt-mini-topo b { display: block; font: 800 17px var(--font); }
+.jt-mini-topo small { display: flex; align-items: center; gap: 5px; color: var(--text-3); font-size: 12.5px; }
+.jt-mini-g { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.jt-mini-g h4 { margin: 0 0 8px; font: 700 13px var(--font); color: var(--text-2); }
+.jt-mini-d { display: grid; grid-template-columns: 1fr auto; column-gap: 8px; padding: 6px 0; border-top: 1px solid var(--line-soft); }
+.jt-mini-d span { font: 500 12.5px var(--font); color: var(--text-2); }
+.jt-mini-d b { font: 700 14px var(--font); font-variant-numeric: tabular-nums; text-align: right; }
+.jt-mini-d small { grid-column: 1 / -1; font: 500 11.5px/1.35 var(--font); color: var(--text-3); }
+.jt-mini-obs { display: block; margin: 8px 0 0; font: 500 11.5px/1.4 var(--font); color: var(--text-3); }
+.jt-mini-t { width: 100%; border-collapse: collapse; font: 500 12.5px var(--font); }
+.jt-mini-t th, .jt-mini-t td { padding: 5px 4px; border-top: 1px solid var(--line-soft); text-align: right; font-variant-numeric: tabular-nums; }
+.jt-mini-t th:first-child { text-align: left; font-weight: 600; }
+.jt-mini-campo { position: relative; aspect-ratio: 105 / 68; border-radius: 10px; overflow: hidden; background: linear-gradient(90deg, #1d6b3a, #23803f 50%, #1d6b3a); color: rgb(255 255 255 / .55); }
+.jt-mini-campo canvas, .jt-mini-linhas { position: absolute; inset: 0; width: 100%; height: 100%; }
+@media (max-width: 900px) { .jt-mini-g { grid-template-columns: 1fr; } }
 .jt-contratar { min-width: 112px; min-height: 38px; padding: 8px 14px; border-radius: 999px; border: 0; background: var(--accent); color: var(--on-accent); font: 700 13px var(--font); cursor: pointer; transition: transform .3s var(--mola), background .25s; }
 .jt-contratar:active { transform: scale(.94); }
 .jt-contratar.ja { background: #ffd200; color: #1a1300; }

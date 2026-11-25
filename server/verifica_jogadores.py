@@ -360,7 +360,7 @@ def _elencos_ogol(c, agora):
                 cache[cid] = {"t": agora, "nomes": nomes}
         except Bloqueado:
             bloqueado = True
-            P.log("verificação: o ogol pediu o desafio anti-robô; segue sem ele nesta rodada")
+            P.log("verificação: o ogol recusou o acesso (403 ou desafio anti-robô); segue sem ele nesta rodada")
         except Exception as ex:
             P.silencioso("verifica:ogol-elenco", ex)
     # vale a última leitura boa por até 3 dias (o elenco quase não muda de um dia para o outro)
@@ -409,7 +409,8 @@ def _bases(c, mercado, ogol, agora, bloqueado):
     for cid, j in fila:
         k = f"{cid}:{j['id']}"
         r = cache.get(k)
-        if r and agora - r.get("t", 0) < BASE_DIAS * 86400:
+        # "não achou" de antes da Wikipédia (sem a marca v2) não vale: a primeira versão só tentava o ogol
+        if r and agora - r.get("t", 0) < BASE_DIAS * 86400 and (r.get("bases") is not None or r.get("v") == 2):
             continue
         if feitos >= BASE_POR_RODADA:
             break
@@ -436,7 +437,7 @@ def _bases(c, mercado, ogol, agora, bloqueado):
             if w:
                 cache[k] = {"t": agora, "wiki": w[2], "bases": w[0], "recenteNoClube": w[1]}
                 continue
-        cache[k] = {"t": agora - (BASE_DIAS - 3) * 86400, "achou": False}  # nenhuma fonte agora: tenta de novo em 3 dias
+        cache[k] = {"t": agora - (BASE_DIAS - 3) * 86400, "achou": False, "v": 2}  # nenhuma fonte agora: tenta de novo em 3 dias
     return cache
 
 

@@ -2233,7 +2233,8 @@
   const itemClube = (c, i, extra = "") => `<a href="#/clube/${c.id}" data-busca="c|${c.id}" class="${i === 0 ? "sel" : ""}" role="option">${crest(c, 32)}<b>${c.name}</b><small>${extra || c.stadium}</small></a>`;
   const itemJog = (p, i, extra = "") => {
     const c = byId[p.cid];
-    return `<a href="#/jogador/${p.key}" data-busca="j|${p.key}" class="${i === 0 ? "sel" : ""}" role="option"><span class="sr-num" style="background:${display(c)};color:${onColor(display(c))}">${p.num ?? "–"}</span><b>${SEG.esc(p.nome)}</b><small>${extra || `${crest(c, 18)} ${c.abbr} · ${JOGADOR.POS[p.pos] || "jogador"}`}</small></a>`;
+    const foto = window.GFX.imgReserva(window.GFX.fotosJogador(p.cid, String(p.key).split("-")[0]));
+    return `<a href="#/jogador/${p.key}" data-busca="j|${p.key}" class="${i === 0 ? "sel" : ""}" role="option"><span class="sr-num${foto ? " tem-foto" : ""}" style="background:${display(c)};color:${onColor(display(c))}">${p.num ?? "–"}${foto}</span><b>${SEG.esc(p.nome)}</b><small>${extra || `${crest(c, 18)} ${c.abbr} · ${JOGADOR.POS[p.pos] || "jogador"}`}</small></a>`;
   };
   const item = (x, i, extra) => (x.t === "c" ? itemClube(byId[x.id], i, extra) : itemJog(JOGADOR.get(x.id), i, extra));
   function mostrar(html) { results.innerHTML = html; results.classList.toggle("open", !!html); sel = 0; }
@@ -2298,7 +2299,14 @@
     const pg = pergunta ? `<a href="#/pergunte?q=${encodeURIComponent(input.value.trim().slice(0, 200))}" class="sel sr-pergunte" role="option"><span class="sr-pg-ic" aria-hidden="true">?</span><b>Perguntar ao CazéStats</b><small>${SEG.esc(input.value.trim().slice(0, 60))}</small></a>` : "";
     mostrar(pg + html || `<div class="empty" style="padding:16px">Nenhum clube ou jogador encontrado. <a href="#/pergunte">Fazer uma pergunta ›</a></div>`);
   });
-  input.addEventListener("focus", () => { if (!input.value.trim()) painelVazio(); });
+  // as fotos dos jogadores (dados/fotos.json) chegam ao abrir a busca; quando chegam, a lista aberta é redesenhada com elas
+  let fotosPedidas = false;
+  const pedeFotos = () => {
+    if (fotosPedidas || window.FOTOS) return;
+    fotosPedidas = true;
+    window.DADOS?.carrega("fotos").then(() => { if (results.classList.contains("open")) input.dispatchEvent(new Event("input")); }).catch(() => {});
+  };
+  input.addEventListener("focus", () => { pedeFotos(); if (!input.value.trim()) painelVazio(); });
   input.addEventListener("keydown", (e) => {
     const items = $$("a", results);
     if (e.key === "Escape") return close();

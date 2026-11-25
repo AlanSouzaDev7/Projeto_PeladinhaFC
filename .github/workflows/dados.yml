@@ -73,6 +73,15 @@ jobs:
           key: carreiras-${{ github.run_id }}
           restore-keys: carreiras-
 
+      # índice do Transfermarkt (valores, contratos, posições e fotos; server/valores_tm.py): cache separado, só é
+      # baixado de novo quando o arquivo muda
+      - name: Valores do Transfermarkt já baixados
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: server/cache/valores-tm.json
+          key: valores-tm-${{ github.run_id }}
+          restore-keys: valores-tm-
+
       # verificação dos jogadores (elenco do ogol, base de cada um e fotos dos homônimos): também num cache separado
       - name: Verificação dos jogadores já feita
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -122,6 +131,9 @@ jobs:
           # opcional: fotos dos jogadores no Flickr (API oficial): as de licença livre e, enquanto o site é de uso do dono,
           # as fotos privadas de quem não tem outra (MODO_VENDA=1 tira)
           FLICKR_API_KEY: ${{ secrets.FLICKR_API_KEY }}
+          # opcionais: busca de imagem oficial do Google (Custom Search JSON API) para quem não tem foto em nenhuma fonte
+          GOOGLE_CSE_KEY: ${{ secrets.GOOGLE_CSE_KEY }}
+          GOOGLE_CSE_CX: ${{ secrets.GOOGLE_CSE_CX }}
 
       - name: Guardar as carreiras (mesmo se a rodada falhar)
         if: always() && hashFiles('server/cache/carreiras.json') != ''
@@ -129,6 +141,13 @@ jobs:
         with:
           path: server/cache/carreiras.json
           key: carreiras-${{ github.run_id }}
+
+      - name: Guardar os valores do Transfermarkt (mesmo se a rodada falhar)
+        if: always() && hashFiles('server/cache/valores-tm.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: server/cache/valores-tm.json
+          key: valores-tm-${{ github.run_id }}
 
       - name: Guardar a verificação dos jogadores (mesmo se a rodada falhar)
         if: always() && hashFiles('server/cache/verificacao.json') != ''

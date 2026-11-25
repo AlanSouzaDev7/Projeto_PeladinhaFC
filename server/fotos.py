@@ -38,7 +38,12 @@ SITES_DIAS = 3      # os sites dos clubes são relidos a cada 3 dias (e na virad
 ESPN_DIAS = 7       # quem não tem foto na ESPN é conferido de novo em 7 dias
 LADO = 360          # maior lado da cópia guardada, em pixels
 ESPN_FOTO = "https://a.espncdn.com/i/headshots/soccer/players/full/{}.png"
-ORDEM = ["Clube", "TheSportsDB", "ESPN", "API-Football", "Flickr"]
+ORDEM = ["Clube", "TheSportsDB", "ESPN", "Transfermarkt", "API-Football", "Flickr", "Google"]
+TM_FOTO = "https://img.a.transfermarkt.technology/portrait/header/"
+# Google: só pela API oficial (Programmable Search / Custom Search JSON API), nunca raspando a página de busca. Liga com os
+# segredos GOOGLE_CSE_KEY e GOOGLE_CSE_CX no GitHub; sem eles fica desligado. 100 buscas grátis por dia: usa no máximo
+# GOOGLE_POR_DIA, só para quem não tem foto em nenhuma outra fonte.
+GOOGLE_POR_DIA = 90
 RECORTE = {"TheSportsDB", "ESPN"}  # fundo transparente: o site põe o fundo na cor do clube
 
 
@@ -150,7 +155,8 @@ def alvos():
         o = out.setdefault(cid, {})
         d = mc.get(cid) or {}
         for j in d.get("elenco", []):
-            o[str(j["id"])] = {"nome": j["nome"], "completo": j.get("nomeCompleto"), "num": j.get("num"), "espn": str(j["id"]), "clubes": []}
+            o[str(j["id"])] = {"nome": j["nome"], "completo": j.get("nomeCompleto"), "num": j.get("num"), "espn": str(j["id"]), "clubes": [],
+                               "tmFoto": (j.get("tm") or {}).get("f")}
         for e in d.get("emprestados", []):
             o[str(e["id"])] = {"nome": e["nome"], "espn": str(e.get("espn") or ""), "clubes": [x for x in (e.get("clube"), e.get("clubeEspn")) if x], "fora": True}
         for aid, j in ((jg.get(cid) or {}).get("jogadores") or {}).items():
@@ -285,10 +291,43 @@ def candidatos(aid, info, fe, af, do_site, espn_ok):
         achado = next((v for v in af.values() if P.FE.mesmo_nome(info["nome"], v.get("nome"))), None)
         if achado:
             out.append(("API-Football", {"src": achado["foto"]}))
+    if info.get("tmFoto"):
+        out.append(("Transfermarkt", {"src": TM_FOTO + info["tmFoto"]}))
     f = ((fe.get("flickr") or {}).get(aid) or {}).get("d") or {}
     if f.get("url"):
         out.append(("Flickr", {"src": f["url"], "r": f.get("rosto"), "a": f.get("autor"), "p": f.get("pagina")}))
+    if info.get("google"):
+        out.append(("Google", {"src": info["google"]}))
     return out
+
+
+def busca_google(c, nome, clube, agora):
+    """Primeira imagem da busca oficial do Google (Custom Search JSON API) para "<nome> <clube> jogador", com cache de 30
+    dias e no máximo GOOGLE_POR_DIA buscas por dia. None sem as chaves, sem cota ou sem resultado."""
+    chave, cx = os.environ.get("GOOGLE_CSE_KEY", "").strip(), os.environ.get("GOOGLE_CSE_CX", "").strip()
+    if not chave or not cx:
+        return None
+    g = c.setdefault("google", {"dia": "", "n": 0, "r": {}})
+    k = f"{nome}|{clube}"
+    r = g["r"].get(k)
+    if r and agora - r.get("t", 0) < 30 * 86400:
+        return r.get("u")
+    hoje = time.strftime("%Y-%m-%d")
+    if g["dia"] != hoje:
+        g["dia"], g["n"] = hoje, 0
+    if g["n"] >= GOOGLE_POR_DIA:
+        return None
+    g["n"] += 1
+    import urllib.parse
+    q = urllib.parse.urlencode({"key": chave, "cx": cx, "q": f"{nome} {clube} jogador de futebol", "searchType": "image", "num": 3, "imgType": "face", "safe": "active"})
+    try:
+        d = json.loads(P.get(f"https://www.googleapis.com/customsearch/v1?{q}", timeout=20))
+        u = next((i["link"] for i in d.get("items") or [] if str(i.get("link", "")).startswith("https://")), None)
+    except Exception as ex:
+        P.log("fotos: busca de imagem do Google", ex)
+        u = None
+    g["r"][k] = {"t": agora, "u": u}
+    return u
 
 
 def retirar():
@@ -360,6 +399,9 @@ def atualizar(max_baixar=400):
             af = _af_clube(c, cid, agora) if af_on else None
             for aid, info in jogs.items():
                 cands = candidatos(aid, info, fe, af, site_por_clube[cid].get(aid), (esp.get(aid) or {}).get("ok"))
+                if not cands and not _existe((js.get(aid) or {}).get("u")) and not info.get("fora"):
+                    g = busca_google(c, info["nome"], (P.CLUBS.get(cid) or {}).get("busca") or cid, agora)
+                    cands = candidatos(aid, {**info, "google": g}, fe, af, None, None) if g else []
                 if not cands:
                     continue
                 cur = js.get(aid) or {}

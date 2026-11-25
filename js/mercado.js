@@ -46,7 +46,9 @@
       return (await DADOS.carrega(`mercado/${cid}`)) || null;
     })());
   }
-  const carregaGlobal = () => (prom.global = prom.global || DADOS.carrega("mercado/global"));
+  const carregaGlobal = () => (prom.global = prom.global || Promise.all([DADOS.carrega("mercado/global"), window.FOTOS ? null : DADOS.carrega("fotos").catch(() => null)]).then(([g]) => g));
+  // detalhes do Transfermarkt e perfis da Série A: só quando alguém abre a ficha de um jogador nos reforços
+  const carregaDetalhes = () => (prom.det = prom.det || DADOS.carrega("mercado/global-detalhes").catch(() => null));
   const carregaPosicoes = () => (prom.pos = prom.pos || Promise.all([window.HEATMAPS || DADOS.carrega("heatmaps"), window.ESCALACOES || DADOS.carrega("escalacoes")]));
 
   /* ---------- números ---------- */
@@ -60,6 +62,17 @@
   const data = (iso) => (iso ? iso.split("-").reverse().join("/") : "");
   const pesoLiga = (G, lg) => G?.ligas?.[lg]?.[2] ?? 0.3;
   const POS_CURTO = { G: "GOL", D: "DEF", M: "MEI", A: "ATA" };
+  /* posição detalhada (Transfermarkt, ou a posição mais jogada no Brasileirão) e a zona de atuação */
+  const SUB_NOME = { GOL: "Goleiro", ZAG: "Zagueiro", LD: "Lateral-direito", LE: "Lateral-esquerdo", VOL: "Volante", MC: "Meio-campista", MEI: "Meia-atacante",
+    MD: "Meia pela direita", ME: "Meia pela esquerda", PD: "Ponta direita", PE: "Ponta esquerda", SA: "Segundo atacante", CA: "Centroavante" };
+  const SUB_SETOR = { GOL: "G", ZAG: "D", LD: "D", LE: "D", VOL: "M", MC: "M", MEI: "M", MD: "M", ME: "M", PD: "A", PE: "A", SA: "A", CA: "A" };
+  const GRUPOS_POS = { lat: ["LD", "LE"], pon: ["PD", "PE"], mei: ["MC", "MEI", "MD", "ME"], ata: ["SA", "CA"] };
+  // onde cada posição costuma agir (terço D/M/A + lado E/C/D): só quando não há lances reais do jogador
+  const ZONA_SUB = { GOL: "DC", ZAG: "DC", LD: "DD", LE: "DE", VOL: "MC", MC: "MC", MEI: "AC", MD: "MD", ME: "ME", PD: "AD", PE: "AE", SA: "AC", CA: "AC" };
+  const TERCO = { D: "defesa", M: "meio-campo", A: "ataque" }, LADO = { E: "pela esquerda", C: "pelo centro", D: "pela direita" };
+  const TM_FOTO = "https://img.a.transfermarkt.technology/portrait/header/";
+  const ESPN_FOTO = (id) => `https://a.espncdn.com/i/headshots/soccer/players/full/${id}.png`;
+  const TSDB_FOTO = "https://r2.thesportsdb.com/images/media/player/";
   const GRUPOS = [["Goleiros", ["GOL"]], ["Zagueiros", ["ZAG"]], ["Laterais", ["LD", "LE", "ALD", "ALE"]], ["Volantes", ["VOL"]], ["Meias", ["MC", "MEI", "MD", "ME"]], ["Pontas", ["PD", "PE"]], ["Centroavantes", ["CA"]]];
   const BANDEIRA = (p) => (p ? `<img class="jt-flag" src="https://a.espncdn.com/i/teamlogos/countries/500/${esc(p)}.png" alt="" width="16" height="16" loading="lazy" decoding="async" referrerpolicy="no-referrer" />` : "");
   const brasileiro = (j) => j.pais === "bra" || /brazil|brasil/i.test(j.nac || "");
@@ -136,19 +149,62 @@
     if (!G) return null;
     const r = G.idx?.get(id);
     if (!r) return null;
-    const [jid, nome, idade, pos, pais, nac, tid, num, valor, lesao] = r, t = G.times[tid] || ["", null, ""];
+    const [jid, nome, idade, pos, pais, nac, tid, num, valor, lesao, real, sub, foto, contrato, tm, def, zona] = r, t = G.times[tid] || ["", null, ""];
     const cambio = D?.financas?.cambio?.valor || G.eurBrl || 6;
     const sal = Math.max(15000, Math.round((valor * (pesoLiga(G, t[2]) <= 0.3 ? 0.15 : pesoLiga(G, t[2]) <= 0.6 ? 0.10 : 0.09) * cambio) / 12 / 1000) * 1000);
-    return { id: jid, nome, idade, pos, pais, nac: nac || G.paises?.[pais] || "", time: tid, timeNome: t[0], timeLogo: t[1], lg: t[2], num, valor, lesao: !!lesao, salario: sal, reforco: true, funcao: CP.PADRAO[pos] };
+    const cidT = cidDoTime(G, tid);
+    return { id: jid, nome, idade, pos, pais, nac: nac || G.paises?.[pais] || "", time: tid, timeNome: t[0], timeLogo: t[1], lg: t[2], num, valor, lesao: !!lesao, salario: sal, reforco: true,
+      funcao: sub && CP.NOME[sub] ? sub : CP.PADRAO[pos], sub: sub || "", real: !!real, contrato, tm, def, zona, cidSerieA: cidT, fotos: fotosGlobal(G, r, cidT) };
+  }
+  // clube da Série A do site a partir do time da ESPN no mercado global (para a foto guardada e os lances reais)
+  function cidDoTime(G, tid) {
+    G.cidTime = G.cidTime || {};
+    if (tid in G.cidTime) return G.cidTime[tid];
+    const t = G.times[tid];
+    const c = t && t[2] === "bra.1" ? Object.values(byId).find((x) => norm(x.name) === norm(t[0]) || norm(t[0]).includes(norm(x.name)) || norm(x.name).includes(norm(t[0]))) : null;
+    return (G.cidTime[tid] = c ? c.id : null);
+  }
+  /* as fotos possíveis do jogador, na ordem: a guardada pelo monitor (Série A), a do Transfermarkt, a da ESPN, a do
+     TheSportsDB. A imagem que não abrir passa para a próxima (GFX: data-alt); sem nenhuma, fica o número da camisa. */
+  function fotosGlobal(G, r, cidT) {
+    const out = [], f = r[12] || "";
+    const guardada = cidT && window.FOTOS?.[cidT]?.[r[0]]?.u;
+    if (guardada) out.push(guardada);
+    if (f === "e") out.push(ESPN_FOTO(r[0]));
+    else if (f.startsWith("s:")) out.push(TSDB_FOTO + f.slice(2));
+    else if (f) out.push((G.fotoBase || TM_FOTO) + f);
+    return out;
+  }
+  // posição detalhada da linha do mercado global; sem ela, só o setor (G/D/M/A) da ESPN
+  const subDe = (r) => r[11] || "";
+  const setorDe = (r) => (r[11] ? SUB_SETOR[r[11]] : r[3]);
+  function posBate(r, v) {
+    if (!v) return true;
+    if (v.length === 1) return setorDe(r) === v;
+    if (GRUPOS_POS[v]) return GRUPOS_POS[v].includes(subDe(r));
+    return subDe(r) === v;
+  }
+  // zona de atuação: dos lances reais (Série A) ou estimada pela posição
+  function zonaDe(r) {
+    if (r[16]) return { t: r[16][0], l: r[16][1], defPct: +r[16].slice(2), real: true };
+    const z = ZONA_SUB[subDe(r)];
+    return z ? { t: z[0], l: z[1], real: false } : null;
   }
   function indexa(G) { if (G && !G.idx) G.idx = new Map(G.jogadores.map((r) => [r[0], r])); return G; }
 
   /* ---------- avatar: foto (modo privado) ou o número na camisa do clube ---------- */
   function avatar(j, c, tam = 44) {
+    // candidatas: a guardada pelo monitor, depois Transfermarkt, ESPN, TheSportsDB (a que não abrir passa para a próxima)
+    const lista = fotosLigadas() ? [...new Set([j.fotoPrivada, ...(j.fotos || [j.tm?.f ? TM_FOTO + j.tm.f : null, /^\d+$/.test(j.id) ? ESPN_FOTO(j.id) : null])].filter(Boolean))] : [];
+    if (!j.fotoPrivada && lista.length) {
+      const alt = lista.slice(1).map((u) => window.SEG.url(u)).join("|");
+      return `<span class="jt-av foto" style="--t:${tam}px"><img src="${esc(window.SEG.url(lista[0]))}"${alt ? ` data-alt="${esc(alt)}"` : ""} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"><b>${esc(j.num || POS_CURTO[j.pos] || "")}</b></span>`;
+    }
     const foto = fotosLigadas() && j.fotoPrivada;
     const r = j.fotoInfo?.rosto;
     if (foto && r) { const [x, y, sx, sy] = r, pc = (v) => `${(v * 100).toFixed(2)}%`; return `<span class="jt-av foto rosto" style="--t:${tam}px"><img src="${esc(window.SEG.url(foto))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" style="width:${pc(1 / sx)};height:${pc(1 / sy)};left:${pc(-x / sx)};top:${pc(-y / sy)}"><b>${esc(j.num || POS_CURTO[j.pos] || "")}</b></span>`; }
-    if (foto) return `<span class="jt-av foto" style="--t:${tam}px"><img src="${esc(window.SEG.url(foto))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"><b>${esc(j.num || POS_CURTO[j.pos] || "")}</b></span>`;
+    const altP = lista.slice(1).map((u) => window.SEG.url(u)).join("|");
+    if (foto) return `<span class="jt-av foto" style="--t:${tam}px"><img src="${esc(window.SEG.url(foto))}"${altP ? ` data-alt="${esc(altP)}"` : ""} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"><b>${esc(j.num || POS_CURTO[j.pos] || "")}</b></span>`;
     return `<span class="jt-av" style="--t:${tam}px"><b>${esc(j.num || POS_CURTO[j.pos] || "")}</b></span>`;
   }
 
@@ -260,7 +316,7 @@
     return `<li class="jt-card d-${d}" data-jt-j="${esc(j.id)}">
       ${avatar(j, c)}
       <div class="jt-card-txt"><span class="jt-nome-l">${ficha(j, cid) ? `<a class="jt-nome" href="${ficha(j, cid)}" title="Ficha técnica: mapa de calor, jogos e notas">${esc(j.nome)}</a>` : `<b class="jt-nome">${esc(j.nome)}</b>`}${conferido(j)}</span><span class="jt-sub">${sub}</span><span class="jt-uso">${uso}</span>${status ? `<span class="jt-sits">${status}</span>` : ""}</div>
-      <div class="jt-card-dir"><span class="jt-valor">${eur(j.valor)}${salFaixa(j.salario)}</span>
+      <div class="jt-card-dir"><span class="jt-valor">${eur(j.valor)}${j.valorReal ? `<small class="jt-real" title="Valor de mercado do Transfermarkt${j.tm?.vd ? `, avaliação de ${data(j.tm.vd)}` : ""}">Transfermarkt</small>` : ""}${salFaixa(j.salario)}</span>
         <div class="jt-seg" role="radiogroup" aria-label="Decisão sobre ${esc(j.nome)}">${opc.map(([v, l]) => `<button type="button" role="radio" aria-checked="${v === d}" class="${v === d ? "on" : ""} o-${v}" data-jt-dec="${v}">${l}</button>`).join("")}</div></div></li>`;
   }
   function etapaElenco(cid, D, e) {
@@ -285,20 +341,31 @@
 
   /* ---------- 2) reforços ---------- */
   const filtros = {};
-  const FILTRO_PADRAO = { q: "", pos: "", lg: "", nac: "", idMin: 16, idMax: 40, vMax: 0, ord: "valor", semLes: true, n: 25 };
+  const FILTRO_PADRAO = { q: "", pos: "", lg: "", nac: "", idMin: 16, idMax: 40, vMax: 0, ord: "valor", semLes: true, n: 25, def: "", alt: "", lado: "", soReal: false };
+  const fichaAberta = {}; // jogador com a mini aba aberta nos reforços, por clube
   const fil = (cid) => (filtros[cid] = filtros[cid] || { ...FILTRO_PADRAO, ...(sessaoLe(cid)?.filtros || {}) });
   const norm = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   function resultados(cid, D, G, e) {
     const f = fil(cid), meus = new Set(D.elenco.map((j) => j.id)), escolhidos = new Set(e.chegadas), q = norm(f.q).trim();
     const meuTime = Object.entries(G.times).find(([, t]) => t[0] && norm(t[0]) === norm(byId[cid].name))?.[0];
-    const L = G.jogadores.filter((r) => !meus.has(r[0]) && r[6] !== meuTime && (!f.pos || r[3] === f.pos) && (r[2] == null || (r[2] >= f.idMin && r[2] <= f.idMax))
+    const L = G.jogadores.filter((r) => !meus.has(r[0]) && r[6] !== meuTime && posBate(r, f.pos) && (r[2] == null || (r[2] >= f.idMin && r[2] <= f.idMax))
+      && (!f.def || (r[15] != null && r[15] >= +f.def)) && (!f.soReal || r[10])
+      && (!(f.alt || f.lado) || ((z) => z && (!f.alt || z.t === f.alt) && (!f.lado || z.l === f.lado))(zonaDe(r)))
       && (!f.vMax || r[8] <= f.vMax) && (!f.lg || G.times[r[6]]?.[2] === f.lg) && (!f.semLes || !r[9])
       && (!f.nac || (f.nac === "bra" ? r[4] === "bra" : f.nac === "est" ? r[4] !== "bra" : r[4] === f.nac))
       && (!q || norm(r[1]).split(/\s+/).some((w) => w.startsWith(q)) || (q.length > 2 && norm(r[1]).includes(q))));
-    const ord = { valor: (a, b) => b[8] - a[8], idade: (a, b) => (a[2] ?? 99) - (b[2] ?? 99), nome: (a, b) => a[1].localeCompare(b[1], "pt-BR"), barato: (a, b) => a[8] - b[8] }[f.ord];
+    const ord = { valor: (a, b) => b[8] - a[8], idade: (a, b) => (a[2] ?? 99) - (b[2] ?? 99), nome: (a, b) => a[1].localeCompare(b[1], "pt-BR"), barato: (a, b) => a[8] - b[8],
+      def: (a, b) => (b[15] ?? -1) - (a[15] ?? -1) || b[8] - a[8] }[f.ord] || ((a, b) => b[8] - a[8]);
     L.sort(ord);
     return { L, escolhidos };
   }
+  const POS_FILTRO = [
+    ["Setor", [["", "Todas"], ["G", "GOL", "Goleiros"], ["D", "DEF", "Defensores"], ["M", "MEI", "Meio-campistas"], ["A", "ATA", "Atacantes"]]],
+    ["Defesa", [["ZAG", "Zagueiro"], ["lat", "Laterais"], ["LD", "Lat. dir.", "Lateral-direito"], ["LE", "Lat. esq.", "Lateral-esquerdo"]]],
+    ["Meio", [["VOL", "Volante"], ["MC", "Meio-campista"], ["MEI", "Meia-atacante"], ["mei", "Todos os meias", "Meio-campista, meia-atacante e meias pelos lados"]]],
+    ["Ataque", [["pon", "Pontas"], ["PD", "Ponta dir.", "Ponta direita"], ["PE", "Ponta esq.", "Ponta esquerda"], ["SA", "2º atacante", "Segundo atacante"], ["CA", "Centroavante"]]],
+  ];
+  const dataHttp = (t) => { const d = new Date(t); return isNaN(d) ? t : d.toLocaleDateString("pt-BR"); };
   function etapaReforcos(cid, D, e, k, G) {
     if (!G) return `<div class="jt-bloco"><div class="empty" style="padding:40px">Carregando o mercado global…</div></div>`;
     const c = byId[cid], f = fil(cid), { L, escolhidos } = resultados(cid, D, G, e);
@@ -309,21 +376,30 @@
     const sel = (nome, v, ops) => `<select data-jt-f="${nome}">${ops.map(([x, l]) => `<option value="${esc(x)}"${String(x) === String(v) ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
     const linhas = L.slice(0, f.n).map((r) => {
       const j = jogadorGlobal(G, r[0], D), ja = escolhidos.has(j.id), semDinheiro = k.real && !ja && j.valor > k.caixa;
-      return `<tr class="${ja ? "jt-ja" : ""}"><td class="jt-quem">${avatar(j, c, 34)}<div><b>${esc(j.nome)}</b><small>${j.timeLogo ? crestOutro(j.timeNome, j.timeLogo, 14) : ""} ${esc(j.timeNome)} · ${esc(G.ligas[j.lg]?.[0] || "")}</small></div></td>
-        <td class="jt-pos"><span class="jt-pos-t p-${j.pos}">${POS_CURTO[j.pos]}</span></td><td class="hide-sm">${j.idade ?? "—"}</td><td class="hide-sm">${BANDEIRA(j.pais)}</td>
-        <td class="jt-v">${eur(j.valor)}${salFaixa(j.salario)}</td>
-        <td class="jt-acao"><button type="button" class="jt-contratar ${ja ? "ja" : ""}" data-jt-add="${esc(j.id)}" ${semDinheiro ? `disabled title="Sem caixa no modo real"` : ""}>${ja ? "Contratado" : semDinheiro ? "Sem caixa" : "Contratar"}</button></td></tr>`;
+      const aberta = fichaAberta[cid] === j.id, z = zonaDe(r);
+      const setor = j.sub ? SUB_SETOR[j.sub] : j.pos;
+      const perfil = (j.def != null ? `<em class="jt-def ${j.def >= 70 ? "alto" : j.def >= 40 ? "medio" : "baixo"}" title="Retorno defensivo: desarmes, interceptações e cortes por 90 min, comparados com quem joga na mesma posição no Brasileirão (lances reais da ESPN)">recompõe ${j.def}</em>` : "")
+        + (z ? `<em class="jt-zona" title="${z.real ? "Onde mais age, pelos lances reais no Brasileirão" : "Estimado pela posição"}">${TERCO[z.t]} ${LADO[z.l]}${z.real ? "" : "*"}</em>` : "");
+      return `<tr class="${ja ? "jt-ja" : ""}${aberta ? " jt-aberta" : ""}"><td class="jt-quem">${avatar(j, c, 34)}<div><b>${esc(j.nome)}</b><small>${j.timeLogo ? crestOutro(j.timeNome, j.timeLogo, 14) : ""} ${esc(j.timeNome)} · ${esc(G.ligas[j.lg]?.[0] || "")}</small>${perfil ? `<span class="jt-perfil">${perfil}</span>` : ""}</div></td>
+        <td class="jt-pos"><span class="jt-pos-t p-${setor}" title="${esc(SUB_NOME[j.sub] || "")}">${j.sub || POS_CURTO[j.pos]}</span></td><td class="hide-sm">${j.idade ?? "—"}</td><td class="hide-sm">${BANDEIRA(j.pais)}</td>
+        <td class="jt-v">${eur(j.valor)}${j.real ? `<small class="jt-real" title="Valor de mercado do Transfermarkt">Transfermarkt</small>` : `<small class="jt-est" title="Sem o jogador no Transfermarkt: estimativa do CazéStats.TV, calibrada pelos valores reais da mesma liga">estimativa</small>`}${salFaixa(j.salario)}</td>
+        <td class="jt-acao"><button type="button" class="jt-contratar ${ja ? "ja" : ""}" data-jt-add="${esc(j.id)}" ${semDinheiro ? `disabled title="Sem caixa no modo real"` : ""}>${ja ? "Contratado" : semDinheiro ? "Sem caixa" : "Contratar"}</button>
+          <button type="button" class="jt-ver" data-jt-ficha="${esc(j.id)}" aria-expanded="${aberta}" aria-controls="jt-mini-${esc(j.id)}">${aberta ? "Fechar" : "Ficha"}</button></td></tr>
+        ${aberta ? `<tr class="jt-mini-tr"><td colspan="6"><div class="jt-mini" id="jt-mini-${esc(j.id)}" data-jt-mini="${esc(j.id)}"><div class="empty" style="padding:16px">Abrindo a ficha…</div></div></td></tr>` : ""}`;
     }).join("");
     return `<div class="jt-mercado">
       <aside class="jt-bloco jt-filtros"><div class="jt-bloco-h"><h3>Filtros</h3></div>
         <label class="jt-f-busca"><span>Nome</span><input type="search" data-jt-f="q" value="${esc(f.q)}" placeholder="Buscar jogador" autocomplete="off"></label>
-        <div class="jt-f-pos" role="group" aria-label="Posição">${[["", "Todas"], ["G", "GOL"], ["D", "DEF"], ["M", "MEI"], ["A", "ATA"]].map(([v, l]) => `<button type="button" class="chip ${f.pos === v ? "on" : ""}" data-jt-pos="${v}">${l}</button>`).join("")}</div>
+        <div class="jt-f-pos" role="group" aria-label="Posição">${POS_FILTRO.map(([titulo, ops]) => `<div class="jt-f-pos-g"><span>${titulo}</span><div>${ops.map(([v, l, t]) => `<button type="button" class="chip ${f.pos === v ? "on" : ""}" data-jt-pos="${v}" aria-pressed="${f.pos === v}"${t ? ` title="${t}"` : ""}>${l}</button>`).join("")}</div></div>`).join("")}</div>
+        <label><span>Retorno defensivo</span>${sel("def", f.def, [["", "Qualquer"], ["70", "Alto: recompõe muito"], ["40", "Médio ou alto"]])}<small class="jt-f-nota">Pelos lances reais do Brasileirão (desarmes, interceptações e cortes por 90 min, comparados com a mesma posição). Só jogadores da Série A.</small></label>
+        <div class="jt-f-2"><label><span>Onde atua</span>${sel("alt", f.alt, [["", "Campo todo"], ["D", "Defesa"], ["M", "Meio-campo"], ["A", "Ataque"]])}</label><label><span>Lado</span>${sel("lado", f.lado, [["", "Qualquer"], ["E", "Esquerda"], ["C", "Centro"], ["D", "Direita"]])}</label></div>
         <label><span>Liga</span>${sel("lg", f.lg, [["", "Todas as ligas"], ...Object.entries(G.ligas).map(([k2, v]) => [k2, `${v[0]} (${v[1]})`])])}</label>
         <label><span>Nacionalidade</span>${sel("nac", f.nac, [["", "Todas"], ["bra", "Só brasileiros"], ["est", "Só estrangeiros"], ...topPaises.filter((p) => p !== "bra").map((p) => [p, nomePais[p] || p])])}</label>
         <div class="jt-f-2"><label><span>Idade mín.</span><input type="number" min="15" max="45" data-jt-f="idMin" value="${f.idMin}"></label><label><span>Idade máx.</span><input type="number" min="15" max="45" data-jt-f="idMax" value="${f.idMax}"></label></div>
         <label><span>Valor até</span>${sel("vMax", f.vMax, [[0, "Qualquer valor"], [1e6, "€ 1 mi"], [3e6, "€ 3 mi"], [5e6, "€ 5 mi"], [10e6, "€ 10 mi"], [20e6, "€ 20 mi"], [40e6, "€ 40 mi"]])}</label>
-        <label><span>Ordenar por</span>${sel("ord", f.ord, [["valor", "Mais valiosos"], ["barato", "Mais baratos"], ["idade", "Mais jovens"], ["nome", "Nome"]])}</label>
+        <label><span>Ordenar por</span>${sel("ord", f.ord, [["valor", "Mais valiosos"], ["barato", "Mais baratos"], ["idade", "Mais jovens"], ["def", "Mais recompõem"], ["nome", "Nome"]])}</label>
         <label class="jt-f-chk"><input type="checkbox" data-jt-f="semLes" ${f.semLes ? "checked" : ""}> Esconder lesionados</label>
+        <label class="jt-f-chk"><input type="checkbox" data-jt-f="soReal" ${f.soReal ? "checked" : ""}> Só com valor do Transfermarkt</label>
       </aside>
       <div>
         <div class="jt-bloco"><div class="jt-bloco-h"><h3>Chegadas</h3><span>${k.chegadas.length} · ${eur(k.chegadas.reduce((s, j) => s + j.valor, 0))}</span></div>
@@ -331,7 +407,7 @@
         <div class="jt-bloco jt-tab-card"><div class="jt-bloco-h"><h3>Mercado global</h3><span>${L.length.toLocaleString("pt-BR")} jogadores · ${Object.keys(G.ligas).length} ligas</span></div>
           <div class="jt-scroll"><table class="table jt-tabela"><thead><tr><th>Jogador</th><th>Pos.</th><th class="hide-sm">Idade</th><th class="hide-sm">Nac.</th><th>Valor · salário</th><th></th></tr></thead><tbody>${linhas || `<tr><td colspan="6"><div class="empty" style="padding:24px">Nenhum jogador com esses filtros.</div></td></tr>`}</tbody></table></div>
           ${L.length > f.n ? `<button type="button" class="jt-mais" data-jt-mais>Mostrar mais ${Math.min(25, L.length - f.n)}</button>` : ""}
-          <p class="source">Elencos de ${Object.keys(G.ligas).length} ligas pela ESPN (atualizados toda semana). Valores e salários: estimativa do CazéStats.TV. ${esc(G.updated || "")}</p></div>
+          <p class="source">Elencos de ${Object.keys(G.ligas).length} ligas pela ESPN (atualizados toda semana). Valor de mercado, contrato, posição e foto: Transfermarkt, pelo conjunto público transfermarkt-datasets (CC0)${G.valores?.arquivo ? `, versão de ${esc(dataHttp(G.valores.arquivo))}` : ""}, conferido a cada rodada do robô; ${(G.valores?.casados || 0).toLocaleString("pt-BR")} de ${(G.valores?.total || G.jogadores.length).toLocaleString("pt-BR")} jogadores achados lá. Quem não está lá tem valor estimado. Salário: estimativa (nenhuma fonte pública tem o salário de cada um). * zona estimada pela posição. ${esc(G.updated || "")}</p></div>
         <div class="jt-seguir"><a class="jt-btn sec" href="#/clube/${cid}/mercado/elenco">Voltar ao elenco</a><a class="jt-btn" href="#/clube/${cid}/mercado/escalacao">Montar a escalação</a></div>
       </div></div>`;
   }
@@ -609,6 +685,78 @@
     delete e._tit;
   }
 
+  /* ---------- mini aba do jogador nos reforços: valores, contrato, transferência, estatísticas e mapa de calor ---------- */
+  const PE_NOME = { D: "direito", E: "esquerdo", A: "os dois" };
+  const espelha = (b) => b.map(([x, y, sx, sy, w]) => [x, 100 - y, sx, sy, w]);
+  // mapa estimado pela posição (ligas sem lances públicos): o modelo da posição no js/heatmap.js, espelhado para a direita
+  function mapaDaPosicao(sub) {
+    const T = window.HEATMAP?.T || {};
+    const m = { LD: () => espelha(T.LE || []), PD: () => espelha(T.PE || []), MD: () => espelha(T.ME || []), SA: () => [...(T.MEI || []), ...(T.CA || [])] }[sub];
+    return m ? m() : T[sub] || T.MC || [];
+  }
+  const CAMPO_SVG = `<svg class="jt-mini-linhas" viewBox="0 0 105 68" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width=".5"><rect x=".5" y=".5" width="104" height="67"/><path d="M52.5 .5v67"/><circle cx="52.5" cy="34" r="9.15"/><rect x=".5" y="13.85" width="16.5" height="40.3"/><rect x="88" y="13.85" width="16.5" height="40.3"/><rect x=".5" y="24.85" width="5.5" height="18.3"/><rect x="99" y="24.85" width="5.5" height="18.3"/></g></svg>`;
+  const linhaDado = (rotulo, valor, nota = "") => `<div class="jt-mini-d"><span>${rotulo}</span><b>${valor}</b>${nota ? `<small>${nota}</small>` : ""}</div>`;
+  async function montaMini(box, cid, D, G) {
+    const id = box.dataset.jtMini;
+    if (box.dataset.pronto === id) return;
+    box.dataset.pronto = id;
+    const j = jogadorGlobal(G, id, D);
+    if (!j) return;
+    const det = await carregaDetalhes();
+    if (!box.isConnected) return;
+    const x = det?.jogadores?.[id] || {}, pf = det?.perfis?.[id];
+    const t = x.t; // [data, de, para, valor pago]
+    const pago = t ? (t[3] == null ? "valor não divulgado" : t[3] === 0 ? "sem custo (livre ou empréstimo)" : eur(t[3])) : "";
+    const clubeTm = x.c && !norm(x.c).includes(norm(j.timeNome).split(" ")[0]) ? `No Transfermarkt o último clube registrado é o ${esc(x.c)} (antes da janela de julho de 2026).` : "";
+    box.innerHTML = `<div class="jt-mini-topo">${avatar(j, byId[cid], 64)}<div><b>${esc(j.nome)}</b><small>${esc(SUB_NOME[j.sub] || POS_CURTO[j.pos] || "")} · ${j.idade ?? "—"} anos${x.pe ? ` · pé ${PE_NOME[x.pe]}` : ""}${x.al ? ` · ${(x.al / 100).toFixed(2).replace(".", ",")} m` : ""}</small><small>${j.timeLogo ? crestOutro(j.timeNome, j.timeLogo, 14) : ""} ${esc(j.timeNome)}</small></div></div>
+      <div class="jt-mini-g">
+        <section><h4>Valor e contrato</h4>
+          ${linhaDado("Valor de mercado", eur(j.valor), j.real ? `Transfermarkt${x.vd ? `, avaliação de ${data(x.vd)}` : ""}` : "estimativa do CazéStats.TV (sem o jogador no Transfermarkt)")}
+          ${x.vm ? linhaDado("Maior valor da carreira", eur(x.vm), "Transfermarkt") : ""}
+          ${x.ct ? linhaDado("Contrato até", data(x.ct)) : ""}
+          ${t ? linhaDado("Última transferência", pago, `${esc(t[1])} → ${esc(t[2])}, ${data(t[0])}`) : ""}
+          ${linhaDado("Salário", salFaixa(j.salario).replace(/<[^>]+>/g, "").replace(/ · estimativa$/, ""), "estimativa: nenhuma fonte pública tem o salário de cada jogador")}
+          ${clubeTm ? `<p class="jt-mini-obs">${clubeTm}</p>` : ""}
+        </section>
+        <section><h4>Temporada</h4><div data-jt-mini-st><div class="empty" style="padding:10px">Carregando as estatísticas…</div></div></section>
+        <section><h4>Mapa de calor</h4><div class="jt-mini-campo">${CAMPO_SVG}<canvas data-jt-mini-cv></canvas></div><small class="jt-mini-obs" data-jt-mini-mapa></small></section>
+      </div>`;
+    const st = box.querySelector("[data-jt-mini-st]"), cv = box.querySelector("[data-jt-mini-cv]"), legenda = box.querySelector("[data-jt-mini-mapa]");
+    // Série A: lances e números reais de cada jogo (dados/jogadores/<clube>.json)
+    let blobs = null;
+    if (j.cidSerieA && window.HEATMAP) {
+      await HEATMAP.carregaClube(j.cidSerieA);
+      if (!box.isConnected) return;
+      const J = window.JOGADORES_CLUBE?.[j.cidSerieA]?.jogadores?.[id];
+      if (J) {
+        const s = (k2) => Object.values(J.comps || {}).reduce((a, c) => a + (c[k2] || 0), 0), min = s("min"), p90 = (v) => (min ? ((v * 90) / min).toFixed(2).replace(".", ",") : "0");
+        st.innerHTML = linhaDado("Jogos", `${s("j")}`, `${s("tit")} como titular · ${mil(min)} min`) + linhaDado("Gols e assistências", `${s("g")} · ${s("a")}`, `${s("ch")} finalizações`)
+          + linhaDado("Desarmes por 90 min", p90(s("desarmes"))) + linhaDado("Interceptações por 90 min", p90(s("intercept"))) + linhaDado("Cortes por 90 min", p90(s("cortes")))
+          + (pf?.def != null ? linhaDado("Retorno defensivo", `${pf.def}/100`, "comparado com quem joga na mesma posição no Brasileirão") : "")
+          + (pf?.z ? linhaDado("Onde age", `${pf.z[0][0]}% na defesa · ${pf.z[0][1]}% no meio · ${pf.z[0][2]}% no ataque`, `${pf.z[1][0]}% pela esquerda · ${pf.z[1][1]}% pelo centro · ${pf.z[1][2]}% pela direita`) : "")
+          + `<p class="jt-mini-obs">Todas as competições da temporada, pelas súmulas e lances da ESPN.</p>`;
+        const pr = HEATMAP.profile(id, j.funcao);
+        if (pr?.blobs?.length) { blobs = pr.blobs; legenda.textContent = pr.estimado === "lances" ? `Lances reais: ${mil(J.lances || 0)} ações com posição no campo` : "Estimado pelas escalações"; }
+      }
+    }
+    // outras ligas: os números da temporada pela ESPN (sem desarmes: a ESPN não publica de jogadores de fora)
+    if (!st.querySelector(".jt-mini-d")) {
+      try {
+        const r = await fetch(`https://site.web.api.espn.com/apis/common/v3/sports/soccer/${encodeURIComponent(j.lg)}/athletes/${encodeURIComponent(id)}/overview`);
+        const d2 = r.ok ? await window.SEG.json(r) : null, S = d2?.statistics;
+        const ix = (n) => (S?.names || []).indexOf(n);
+        const linhas2 = (S?.splits || []).filter((x2) => /20\d\d/.test(x2.displayName || "")).slice(0, 4).map((x2) => {
+          const v = (n) => (ix(n) >= 0 ? x2.stats[ix(n)] : "–");
+          return `<tr><th>${esc(x2.displayName)}</th><td>${v("starts")}</td><td>${v("totalGoals")}</td><td>${v("goalAssists")}</td><td>${v("totalShots")}</td><td>${v("foulsCommitted")}</td></tr>`;
+        }).join("");
+        if (!box.isConnected) return;
+        st.innerHTML = linhas2 ? `<table class="jt-mini-t"><thead><tr><th>Competição</th><th title="Jogos como titular">Tit.</th><th>Gols</th><th title="Assistências">Ass.</th><th title="Finalizações">Fin.</th><th title="Faltas cometidas">Faltas</th></tr></thead><tbody>${linhas2}</tbody></table><p class="jt-mini-obs">Temporada atual pela ESPN. Desarmes e interceptações de ligas de fora não são publicados pela ESPN.</p>` : `<div class="empty" style="padding:10px">A ESPN não tem estatísticas desta temporada para ele.</div>`;
+      } catch { if (box.isConnected) st.innerHTML = `<div class="empty" style="padding:10px">Não deu para ler as estatísticas agora.</div>`; }
+    }
+    if (!blobs) { blobs = mapaDaPosicao(j.sub || CP.PADRAO[j.pos]); legenda.textContent = `Estimado pela posição (${SUB_NOME[j.sub] || POS_CURTO[j.pos] || "?"}): não há lances públicos com posição no campo desta liga.`; }
+    requestAnimationFrame(() => { if (cv.isConnected && window.HEATMAP) HEATMAP.paint(cv, blobs); });
+  }
+
   /* rolagem da etapa: volta ao mesmo ponto depois de recarregar e vai sendo guardada enquanto a pessoa rola */
   let soltaRolagem = null;
   function guardaRolagem(cid, etapa, el, volta) {
@@ -674,6 +822,8 @@
       if (campo) { montaCampo(campo); ro.observe(campo); }
       const cv = el.querySelector("[data-jt-cartaz]");
       if (cv) desenhaCartaz(cv, cid, D, e, k);
+      const mini = el.querySelector("[data-jt-mini]");
+      if (mini && G) montaMini(mini, cid, D, G);
     };
     const ro = new ResizeObserver((ents) => { for (const en of ents) if (en.target.isConnected) montaCampo(en.target); });
     const salva = () => { if (!ver) grava(cid, e); };
@@ -709,6 +859,7 @@
         if (d.jtAuto === "base") D.elenco.forEach((j) => { if ((j.idade || 99) <= 21 && !j.min && tipoDe(j) === "elenco") e.dec[j.id] = "emprestar"; });
         salva(); return pinta();
       }
+      if (d.jtFicha) { fichaAberta[cid] = fichaAberta[cid] === d.jtFicha ? null : d.jtFicha; pinta(); el.querySelector(`[data-jt-mini]`)?.closest("tr")?.scrollIntoView({ block: "nearest", behavior: reduz() ? "auto" : "smooth" }); return; }
       if (d.jtPos != null) { fil(cid).pos = d.jtPos; fil(cid).n = 25; sessaoGrava(cid, { filtros: fil(cid) }); return pinta(); }
       if ("jtMais" in d) { fil(cid).n += 25; sessaoGrava(cid, { filtros: fil(cid) }); return pinta(); }
       if (d.jtAdd) {

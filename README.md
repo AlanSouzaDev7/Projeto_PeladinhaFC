@@ -320,6 +320,24 @@ Uma **barra de competições** no topo do Brasileirão e de cada competição le
 
 **Escudos dos adversários**: a ESPN não tem o escudo de muitos times pequenos dos estaduais e copas (Pouso Alegre, Betim, Noroeste, Maricá...). No calendário e na aba Partidas, esses times ganham um escudo desenhado com as iniciais e uma cor própria, o mesmo que entra se a imagem da ESPN falhar.
 
+## Janela de transferências: valores, posições e fotos
+
+- **Valores reais** (`server/valores_tm.py`): valor de mercado, maior valor da carreira, contrato, última transferência
+  (com o valor pago), posição detalhada e foto vêm do Transfermarkt, pelo conjunto público
+  [transfermarkt-datasets](https://github.com/dcaribou/transfermarkt-datasets) (CC0). O site do Transfermarkt recusa
+  robôs e isso não é contornado. A versão do arquivo é conferida em toda rodada do robô (e a cada 5 min no servidor ao
+  vivo); só baixa de novo quando muda. O próprio conjunto parou em julho de 2026: os valores são os daquela data.
+  Quem não está lá tem valor estimado, calibrado pela relação real/estimado da mesma liga. **Salário** é sempre
+  estimativa (nenhuma fonte pública tem o salário de cada jogador).
+- **Posições e perfil**: filtros por zagueiro, laterais, volante, meias, pontas, segundo atacante e centroavante;
+  retorno defensivo (desarmes, interceptações e cortes por 90 min, comparados com a mesma posição) e zona de atuação
+  pelos lances reais da ESPN (só Série A). A ficha de cada reforço traz valores, contrato, transferência, estatísticas
+  e mapa de calor (real na Série A, estimado pela posição nas outras ligas).
+- **Fotos**: a guardada pelo monitor (site do clube, TheSportsDB, ESPN, Transfermarkt...), depois Transfermarkt, ESPN e
+  TheSportsDB direto. A que não abre passa para a próxima (`data-alt`, `js/graphics.js`); sem nenhuma, fica o número
+  da camisa. Google só pela API oficial (segredos `GOOGLE_CSE_KEY` e `GOOGLE_CSE_CX`, até 90 buscas por dia, para quem
+  não tem foto em nenhuma fonte).
+
 ## Alerta de gol sem som
 
 Quando um clube marca, o alerta GOL! aparece por cima da página em silêncio: desde 24/11/2026 o site não toca som

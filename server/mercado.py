@@ -578,7 +578,13 @@ def gravar_js(clubes, glob=None):
                + json.dumps(P.clean_deep(d), ensure_ascii=False, separators=(",", ":")) + ";\n")
         open(os.path.join(pasta, f"{cid}.js"), "w", encoding="utf-8", newline="\n").write(txt)
     if glob:
-        txt = ("/* CazéStats.TV · autor: Alan Evangelista de Souza Martins — mercado global: elencos das principais ligas (ESPN). Valores: estimativa do PLACAR. Gerado por: python server/placar_api.py --snapshot */\n"
-               "window.MERCADO_GLOBAL = " + json.dumps(P.clean_deep(global_compacto(glob)), ensure_ascii=False, separators=(",", ":")) + ";\n")
+        comp = global_compacto(glob)
+        if getattr(P, "VAL", None):  # valores reais, posições, fotos e contratos do Transfermarkt (server/valores_tm.py)
+            try:
+                comp = P.VAL.global_real(comp)
+            except Exception as ex:
+                P.log("mercado: valores do Transfermarkt", ex)
+        txt = ("/* CazéStats.TV · autor: Alan Evangelista de Souza Martins — mercado global: elencos das principais ligas (ESPN). Valores: Transfermarkt (CC0) ou estimativa do PLACAR. Gerado por: python server/placar_api.py --snapshot */\n"
+               "window.MERCADO_GLOBAL = " + json.dumps(P.clean_deep(comp), ensure_ascii=False, separators=(",", ":")) + ";\n")
         open(os.path.join(pasta, "global.js"), "w", encoding="utf-8", newline="\n").write(txt)
     P.log("mercado gravado em js/mercado/")

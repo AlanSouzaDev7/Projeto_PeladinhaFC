@@ -163,5 +163,30 @@
     return `<img class="foto-r" ${base} style="width:${pc(1 / sx)};height:${pc(1 / sy)};left:${pc(-x / sx)};top:${pc(-y / sy)}" />`;
   }
 
-  window.GFX = { crest, crestOutro, iniCrest, fotoImg, svgCrest, jersey, kitBg, kitRects, onColor, lum, shade, display, flagBR };
+  /* foto de reserva: <img data-alt="url2|url3"> que não abrir tenta a próxima (Transfermarkt, ESPN, TheSportsDB...).
+     Sem mais nenhuma, o evento segue e cada tela faz o de sempre (fica o número da camisa ou as iniciais).
+     Na fase de captura do document: roda antes dos tratadores das telas. */
+  document.addEventListener("error", (ev) => {
+    const im = ev.target;
+    if (!im || im.tagName !== "IMG") return;
+    if (!im.dataset.alt) { if ("some" in im.dataset) { ev.stopImmediatePropagation(); im.parentNode?.classList.remove("tem-foto"); im.remove(); } return; }
+    const [prox, ...resto] = im.dataset.alt.split("|").filter(Boolean);
+    if (!prox) { delete im.dataset.alt; return; }
+    ev.stopImmediatePropagation();
+    if (resto.length) im.dataset.alt = resto.join("|"); else delete im.dataset.alt;
+    im.src = prox;
+  }, true);
+  /* fotos de um jogador da Série A, na ordem: a guardada pelo monitor (dados/fotos.json, nunca a da Wikipédia) e a da
+     ESPN pelo número dele. A que não abre passa para a próxima; nenhuma abrindo, fica o que está por baixo. */
+  function fotosJogador(cid, aid) {
+    let guardada = null;
+    try { if (window.MERCADO_UI?.fotosLigadas?.() !== false) { const f = window.FOTOS?.[cid]?.[aid]; if (f?.u && f.f !== "Wikimedia") guardada = f.u; } } catch { /* sem fotos */ }
+    return [guardada, /^\d+$/.test(String(aid)) ? `https://a.espncdn.com/i/headshots/soccer/players/full/${aid}.png` : null].filter(Boolean);
+  }
+  function imgReserva(urls, alt = "") {
+    if (!urls.length) return "";
+    const [a, ...r] = urls, s = (u) => window.SEG.esc(window.SEG.url(u));
+    return `<img src="${s(a)}"${r.length ? ` data-alt="${r.map(s).join("|")}"` : ""} data-some alt="${window.SEG.esc(alt)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+  }
+  window.GFX = { crest, crestOutro, iniCrest, fotoImg, svgCrest, jersey, kitBg, kitRects, onColor, lum, shade, display, flagBR, fotosJogador, imgReserva };
 })();
