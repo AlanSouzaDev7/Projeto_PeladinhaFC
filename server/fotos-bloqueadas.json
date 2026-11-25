@@ -1,0 +1,9 @@
+{
+  "_sobre": "Fotos que uma fonte publica com o nome errado (a pessoa da imagem é outra). O monitor de fotos (server/fotos.py) nunca usa um endereço desta lista e troca pela próxima fonte. Chave: id do jogador na ESPN.",
+  "383096": {
+    "nome": "Kaique Kenji (Cruzeiro)",
+    "src": ["https://r2.thesportsdb.com/images/media/player/cutout/if07cu1767456123.png"],
+    "motivo": "O TheSportsDB cadastrou no Kaique Kenji a foto de Kaique Bruno, vendido ao Como (Itália). Conferido em 25/11/2026: a do Transfermarkt é a dele.",
+    "quando": "2026-11-25"
+  }
+}

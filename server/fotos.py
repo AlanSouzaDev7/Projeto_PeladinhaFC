@@ -45,6 +45,24 @@ TM_FOTO = "https://img.a.transfermarkt.technology/portrait/header/"
 RECORTE = {"TheSportsDB", "ESPN"}  # fundo transparente: o site põe o fundo na cor do clube
 
 
+_bloq = [None]
+
+
+def bloqueadas():
+    """{id: {endereços}}: fotos publicadas com o nome errado (server/fotos-bloqueadas.json), nunca usadas."""
+    if _bloq[0] is None:
+        try:
+            d = json.load(open(os.path.join(P.ROOT, "server", "fotos-bloqueadas.json"), encoding="utf-8"))
+            _bloq[0] = {str(k): set(v.get("src") or []) for k, v in d.items() if not k.startswith("_") and isinstance(v, dict)}
+        except Exception:
+            _bloq[0] = {}
+    return _bloq[0]
+
+
+def bloqueada(aid, src):
+    return bool(src) and src in bloqueadas().get(str(aid), set())
+
+
 def _posto(fonte):
     return ORDEM.index(fonte) if fonte in ORDEM else len(ORDEM)
 
@@ -296,7 +314,7 @@ def candidatos(aid, info, fe, af, do_site, espn_ok):
         out.append(("Flickr", {"src": f["url"], "r": f.get("rosto"), "a": f.get("autor"), "p": f.get("pagina")}))
     if info.get("busca"):
         out.append(("Brave", {"src": info["busca"]}))
-    return out
+    return [(f, x) for f, x in out if not bloqueada(aid, x.get("src"))]
 
 
 def retirar():
@@ -375,7 +393,7 @@ def atualizar(max_baixar=400):
                     continue
                 cur = js.get(aid) or {}
                 fonte, foto = cands[0]
-                tem = _existe(cur.get("u"))
+                tem = _existe(cur.get("u")) and not bloqueada(aid, cur.get("src"))
                 if tem and cur.get("src") == foto["src"]:
                     if fonte == "Clube" and cur.get("temp") != T:
                         cur["temp"] = T  # o clube ainda mostra esta foto: é a da temporada
@@ -425,8 +443,8 @@ def foto_de(aid, c=None):
     c = c if c is not None else _ler()
     if privadas_ligadas():
         r = (c.get("j") or {}).get(str(aid)) or {}
-        if not r.get("u") or not _existe(r["u"]):
-            return None
+        if not r.get("u") or not _existe(r["u"]) or bloqueada(aid, r.get("src")):
+            return None  # sem foto, ou a guardada é de outra pessoa (fotos-bloqueadas.json): fica o número até a troca
         return {k: r[k] for k in ("u", "f", "r", "a", "p") if r.get(k)}
     with P.lock:
         jg = P.state.get("jogadores") or {}

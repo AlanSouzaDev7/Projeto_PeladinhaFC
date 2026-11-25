@@ -566,67 +566,185 @@
         <p class="jt-share-msg" data-jt-msg role="status"></p></div></div>`;
   }
   const carregaImg = (src) => new Promise((res) => { if (!src) return res(null); const im = new Image(); im.crossOrigin = "anonymous"; im.referrerPolicy = "no-referrer"; im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  // a primeira foto que abrir para o canvas: a guardada no site (mesmo endereço), Transfermarkt e ESPN (liberam CORS);
+  // a do TheSportsDB não libera e travaria o PNG, então fica de fora. Nenhuma abrindo: o número da camisa.
+  async function fotoCartaz(j) {
+    const lista = [...new Set([j.fotoPrivada, ...(j.fotos || []), j.tm?.f ? TM_FOTO + j.tm.f : null, /^\d+$/.test(j.id) ? ESPN_FOTO(j.id) : null]
+      .filter((u) => u && !/thesportsdb/.test(u)).map((u) => (/^https?:/.test(u) ? u : new URL(window.SEG.url(u), location.href).href)))];
+    for (const u of lista) { const im = await carregaImg(u); if (im) return im; }
+    return null;
+  }
+  // mistura de cor (hex) com branco/preto: t > 0 clareia, t < 0 escurece
+  const tom = (hex, t) => { const n = parseInt(String(hex).replace("#", "").padEnd(6, "0").slice(0, 6), 16); const r = (n >> 16) & 255, gg = (n >> 8) & 255, b = n & 255, f = (v) => Math.round(t >= 0 ? v + (255 - v) * t : v * (1 + t)); return `rgb(${f(r)},${f(gg)},${f(b)})`; };
+  const lum = (hex) => { const n = parseInt(String(hex).replace("#", "").padEnd(6, "0").slice(0, 6), 16); return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+  /* cartaz do elenco (1080 x 1350, formato de story/feed): cabeçalho do clube, campo 3D com as fotos e nomes, painel de
+     embarque com chegadas e saídas (o clube de origem → o destino e o valor) e o carimbo do visto da janela */
   async function desenhaCartaz(cv, cid, D, e, k) {
-    const x = cv.getContext("2d"), W = cv.width, H = cv.height, c = byId[cid], [c1, c2] = c.colors;
-    try { await document.fonts?.load('900 100px "Big Shoulders Display"'); await document.fonts?.ready; } catch { /* sem fontes */ }
-    const F = (w, s, fam = "d") => `${w} ${s}px ${fam === "d" ? '"Big Shoulders Display", "Saira Condensed"' : "Saira"}, sans-serif`;
-    // fundo: cor do clube escurecendo para o grafite, com uma faixa diagonal de notícia
-    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, c1); g.addColorStop(0.55, "#0b1220"); g.addColorStop(1, "#05080f");
-    x.fillStyle = g; x.fillRect(0, 0, W, H);
-    x.save(); x.globalAlpha = 0.12; x.strokeStyle = "#fff"; x.lineWidth = 1.2;
-    for (let i = 0; i < 9; i++) { x.beginPath(); x.ellipse(W - 120, 200, 60 + i * 34, 200, 0, 0, Math.PI * 2); x.stroke(); }
-    x.restore();
-    const logo = await carregaImg(c.logo);
-    if (logo) x.drawImage(logo, 64, 60, 120, 120);
-    x.fillStyle = "#fff"; x.font = F(700, 28, "s"); x.globalAlpha = 0.85; x.fillText("Janela de transferências 2027", 210, 96); x.globalAlpha = 1;
-    x.font = F(900, 104); x.fillText(`MEU ${c.name.toUpperCase()}`.slice(0, 18), 204, 184);
-    x.fillStyle = e.modo === "manager" ? "#ffd200" : c2 === "#ffffff" || c2 === "#fff" ? "#fff" : "#00a859";
-    rr(x, 210, 206, e.modo === "manager" ? 210 : 160, 40, 20); x.fill();
-    x.fillStyle = "#0b1220"; x.font = F(800, 24, "s"); x.fillText(e.modo === "manager" ? "MODO MANAGER" : "MODO REAL", 228, 234);
-    // campo 3D com a escalação
+    const x = cv.getContext("2d"), W = cv.width, H = cv.height, c = byId[cid];
+    const [c1, c2raw] = c.colors, c2 = c2raw || "#ffffff", c3 = c.colors[2] || c2;
+    const sigla = (c.abbr && c.abbr.length <= 4 ? c.abbr : c.name.normalize("NFD").replace(/[̀-ͯ]/g, "").slice(0, 3)).toUpperCase();
+    // "Paris Saint-Germain" -> "PSG"; nome curto fica como está
+    const curto = (n) => { n = String(n || "?"); const ps = n.split(/[\s-]+/).filter((w) => w.length > 2 || /^[A-Z]/.test(w)); return n.length <= 13 ? n : ps.length >= 2 ? ps.map((w) => w[0]).join("").toUpperCase().slice(0, 4) : n.slice(0, 12); };
+    const destaque = lum(c1) < 0.18 && lum(c2) > 0.85 ? "#ffffff" : lum(c2) > 0.25 ? c2 : tom(c1, 0.55); // cor de texto/realce que contrasta no fundo escuro
+    try { await document.fonts?.load('900 100px "Big Shoulders Display"'); await document.fonts?.load('700 30px "Saira"'); await document.fonts?.ready; } catch { /* sem fontes */ }
+    const F = (w, s, fam = "d") => `${w} ${s}px ${fam === "d" ? '"Big Shoulders Display", "Saira Condensed"' : '"Saira", "Inter"'}, sans-serif`;
     const esc2 = escalacaoValida(e, k, cid), porId = new Map(k.elencoFinal.map((j) => [j.id, j]));
-    const pw = 720, ph = 760, gm = CP.geometria(pw, ph), ox = (W - pw) / 2, oy = 300;
+    const fichas = FORMACOES[e.form].map((_, i) => ({ i, j: porId.get(esc2[i]), pt: ptSlot(e, i) })).filter((f) => f.j);
+    // tudo o que é imagem carrega junto (fotos, escudo do clube e dos clubes de origem)
+    const [logo, ...fotos] = await Promise.all([carregaImg(c.logo), ...fichas.map((f) => fotoCartaz(f.j))]);
+    const escudosOrigem = new Map(await Promise.all([...new Set(k.chegadas.map((j) => j.timeLogo).filter(Boolean))].map(async (u) => [u, await carregaImg(u)])));
+    fichas.forEach((f, i) => { f.foto = fotos[i]; });
+
+    /* ---------- fundo: noite de estádio na cor do clube ---------- */
+    const g = x.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, tom(c1, -0.35)); g.addColorStop(0.42, tom(c1, -0.72)); g.addColorStop(1, "#04060b");
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    // faixas diagonais nas cores do clube (a camisa) atrás do cabeçalho
+    x.save(); x.beginPath(); x.rect(0, 0, W, 300); x.clip();
+    [[c1, 0.55], [c2, 0.18], [c3, 0.3]].forEach(([cor, a], i) => { x.globalAlpha = a; x.fillStyle = cor; x.beginPath(); x.moveTo(W - 380 + i * 90, 0); x.lineTo(W - 300 + i * 90, 0); x.lineTo(W - 520 + i * 90, 300); x.lineTo(W - 600 + i * 90, 300); x.closePath(); x.fill(); });
+    x.restore();
+    // escudo grande em marca d'água
+    if (logo) { x.save(); x.globalAlpha = 0.07; x.drawImage(logo, W - 470, 30, 520, 520); x.restore(); }
+
+    /* ---------- cabeçalho ---------- */
+    if (logo) { x.save(); x.shadowColor = "rgba(0,0,0,.5)"; x.shadowBlur = 24; x.drawImage(logo, 56, 52, 132, 132); x.restore(); }
+    x.fillStyle = "rgba(255,255,255,.82)"; x.font = F(700, 26, "s"); x.fillText(`JANELA DE TRANSFERÊNCIAS · ${String(c.stadium || "").toUpperCase()}`.slice(0, 52), 214, 88);
+    x.fillStyle = "#fff"; x.font = F(900, 96); x.fillText(`MEU ${c.name.toUpperCase()}`.slice(0, 17), 210, 172);
+    x.font = F(800, 30); x.fillStyle = destaque; x.fillText(`${e.form} · ${e.modo === "manager" ? "MODO MANAGER" : "MODO REAL"}`, 214, 216);
+    // carimbo do visto (a janela de 2027), girado como um carimbo de passaporte
+    x.save(); x.translate(W - 150, 168); x.rotate(-0.22); x.globalAlpha = 0.92;
+    x.strokeStyle = "#ffd200"; x.fillStyle = "#ffd200"; x.lineWidth = 5; x.beginPath(); x.arc(0, 0, 86, 0, Math.PI * 2); x.stroke(); x.lineWidth = 2; x.beginPath(); x.arc(0, 0, 74, 0, Math.PI * 2); x.stroke();
+    x.textAlign = "center"; x.font = F(900, 58); x.fillText("2027", 0, 22); x.font = F(800, 13, "s"); x.fillText("VISTO DE ENTRADA", 0, -32, 120); x.font = F(900, 20); x.fillText(sigla, 0, 50); x.restore(); x.textAlign = "left";
+
+    /* ---------- campo 3D ---------- */
+    const pw = 900, ph = 800, gm = CP.geometria(pw, ph), ox = (W - pw) / 2, oy = 318;
     const P = (u, v) => { const p = gm.tela(u, v); return { x: ox + p.x, y: oy + (p.y - gm.topo), s: p.s }; };
     const quad = (u0, v0, u1, v1) => { const a = P(u0, v0), b = P(u1, v0), cc = P(u1, v1), d = P(u0, v1); x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.lineTo(cc.x, cc.y); x.lineTo(d.x, d.y); x.closePath(); };
-    for (let i = 0; i < 12; i++) { quad(0, i / 12, 1, (i + 1) / 12); x.fillStyle = i % 2 ? "#1f7a3a" : "#238a42"; x.fill(); }
-    x.strokeStyle = "rgba(255,255,255,.7)"; x.lineWidth = 3;
-    quad(0.03, 0.02, 0.97, 0.98); x.stroke();
-    const linha = (u0, v0, u1, v1) => { const a = P(u0, v0), b = P(u1, v1); x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.stroke(); };
-    linha(0.03, 0.5, 0.97, 0.5);
-    quad(0.2, 0.02, 0.8, 0.185); x.stroke(); quad(0.2, 0.815, 0.8, 0.98); x.stroke();
-    x.beginPath(); for (let a = 0; a <= 64; a++) { const t = (a / 64) * Math.PI * 2, p = P(0.5 + 0.135 * Math.cos(t), 0.5 + 0.0915 * Math.sin(t)); a ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y); } x.stroke();
-    const fichas = FORMACOES[e.form].map((_, i) => ({ i, j: porId.get(esc2[i]), pt: ptSlot(e, i) })).filter((f) => f.j).sort((a, b) => a.pt[1] - b.pt[1]);
-    for (const { j, pt } of fichas) {
-      const p = P(pt[0] / 100, pt[1] / 100), r = 34 * p.s;
-      x.beginPath(); x.ellipse(p.x, p.y + r * 0.9, r * 0.9, r * 0.28, 0, 0, Math.PI * 2); x.fillStyle = "rgba(0,0,0,.35)"; x.fill();
-      x.beginPath(); x.arc(p.x, p.y, r, 0, Math.PI * 2); x.fillStyle = j.reforco ? "#ffd200" : c1; x.fill();
-      x.lineWidth = 4; x.strokeStyle = j.reforco ? "#0b1220" : "#fff"; x.stroke();
-      x.fillStyle = j.reforco ? "#0b1220" : onColor(c1) === "#111111" ? "#111" : "#fff"; x.font = F(900, Math.round(30 * p.s)); x.textAlign = "center"; x.fillText(String(j.num || POS_CURTO[j.pos]).slice(0, 3), p.x, p.y + 10 * p.s);
-      x.fillStyle = "#fff"; x.font = F(800, Math.round(26 * p.s)); x.fillText(sobrenome(j.nome).toUpperCase().slice(0, 13), p.x, p.y + r + 26 * p.s);
-      const cod = CP.zona(pt[0], pt[1]), a = CP.avalia(j, cod);
-      if (a.tipo !== "igual") { x.font = F(800, 18, "s"); const t = `${a.de} → ${a.para}`, w = x.measureText(t).width + 16; x.fillStyle = a.tipo === "nova" ? "#ffb020" : "#5ab0ff"; rr(x, p.x - w / 2, p.y - r - 30, w, 24, 12); x.fill(); x.fillStyle = "#0b1220"; x.fillText(t, p.x, p.y - r - 12); }
+    const tl = P(-0.04, -0.03), tr = P(1.04, -0.03), br = P(1.04, 1.03), bl = P(-0.04, 1.03);
+    // arquibancada atrás do gol do fundo: degraus e a torcida em pontos com as cores do clube
+    x.save();
+    const ag = x.createLinearGradient(0, tl.y - 120, 0, tl.y); ag.addColorStop(0, "rgba(255,255,255,0)"); ag.addColorStop(1, tom(c1, -0.5));
+    x.fillStyle = ag; x.beginPath(); x.moveTo(tl.x - 50, tl.y - 66); x.lineTo(tr.x + 50, tr.y - 66); x.lineTo(tr.x, tr.y); x.lineTo(tl.x, tl.y); x.closePath(); x.fill();
+    let sem = 7;
+    const rnd = () => { sem = (sem * 9301 + 49297) % 233280; return sem / 233280; };
+    for (let fila = 0; fila < 4; fila++) {
+      const yy = tl.y - 12 - fila * 14, lx = tl.x - fila * 10, rx = tr.x + fila * 10;
+      for (let px = lx; px < rx; px += 9) { x.globalAlpha = 0.35 + rnd() * 0.5; x.fillStyle = [c1, c2, c3, "#ffffff"][Math.floor(rnd() * 4)]; x.fillRect(px + rnd() * 4, yy + rnd() * 4, 5, 5); }
     }
-    x.textAlign = "left";
-    x.fillStyle = "rgba(255,255,255,.9)"; x.font = F(800, 30); x.fillText(e.form, 64, 340);
-    // chegadas e saídas
-    const topoL = 1040;
-    const lista = async (tit, js, lx, cor, det) => {
-      x.fillStyle = cor; x.font = F(900, 44); x.fillText(tit, lx, topoL);
-      x.font = F(600, 27, "s"); x.fillStyle = "#fff";
-      const n = Math.min(js.length, 4);
-      for (let i = 0; i < n; i++) {
-        const j = js[i], yy = topoL + 46 + i * 44;
-        x.fillText(`${j.nome}`.slice(0, 22), lx, yy);
-        x.globalAlpha = 0.7; x.font = F(600, 21, "s"); x.fillText(det(j).slice(0, 30), lx + 300, yy); x.globalAlpha = 1; x.font = F(600, 27, "s");
-      }
-      if (js.length > 4) { x.globalAlpha = 0.75; x.fillText(`e mais ${js.length - 4}`, lx, topoL + 46 + 4 * 44); x.globalAlpha = 1; }
-      if (!js.length) { x.globalAlpha = 0.7; x.fillText("ninguém", lx, topoL + 46); x.globalAlpha = 1; }
+    x.restore();
+    // espessura do gramado (a borda que dá volume) e sombra no chão
+    x.save(); x.shadowColor = "rgba(0,0,0,.6)"; x.shadowBlur = 50; x.shadowOffsetY = 30;
+    x.fillStyle = "#0f3d1f"; x.beginPath(); x.moveTo(bl.x, bl.y); x.lineTo(br.x, br.y); x.lineTo(br.x, br.y + 26); x.lineTo(bl.x, bl.y + 26); x.closePath(); x.fill(); x.restore();
+    x.fillStyle = "#0b2e17"; x.beginPath(); x.moveTo(bl.x, bl.y); x.lineTo(br.x, br.y); x.lineTo(br.x, br.y + 26); x.lineTo(bl.x, bl.y + 26); x.closePath(); x.fill();
+    // gramado em faixas, com a luz dos refletores
+    quad(-0.04, -0.03, 1.04, 1.03); x.fillStyle = "#1c6b34"; x.fill();
+    for (let i = 0; i < 14; i++) { quad(-0.04, -0.03 + i * (1.06 / 14), 1.04, -0.03 + (i + 1) * (1.06 / 14)); x.fillStyle = i % 2 ? "#1f7a3b" : "#238944"; x.fill(); }
+    x.save(); quad(-0.04, -0.03, 1.04, 1.03); x.clip();
+    const luz = x.createRadialGradient(W / 2, oy + 120, 40, W / 2, oy + 300, 620); luz.addColorStop(0, "rgba(255,255,230,.22)"); luz.addColorStop(1, "rgba(0,0,0,.28)");
+    x.fillStyle = luz; x.fillRect(0, oy - 50, W, ph + 120);
+    x.restore();
+    // linhas do campo
+    x.strokeStyle = "rgba(255,255,255,.78)"; x.lineWidth = 3; x.lineJoin = "round";
+    const linha = (u0, v0, u1, v1) => { const a = P(u0, v0), b = P(u1, v1); x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.stroke(); };
+    quad(0.03, 0.02, 0.97, 0.98); x.stroke(); linha(0.03, 0.5, 0.97, 0.5);
+    quad(0.2, 0.02, 0.8, 0.185); x.stroke(); quad(0.2, 0.815, 0.8, 0.98); x.stroke();
+    quad(0.37, 0.02, 0.63, 0.07); x.stroke(); quad(0.37, 0.93, 0.63, 0.98); x.stroke();
+    x.beginPath(); for (let a = 0; a <= 64; a++) { const t = (a / 64) * Math.PI * 2, p = P(0.5 + 0.135 * Math.cos(t), 0.5 + 0.0915 * Math.sin(t)); a ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y); } x.stroke();
+    // gols em 3D (traves e rede) nas duas pontas
+    const gol = (v, h) => {
+      const a = P(0.44, v), b = P(0.56, v), alt = 46 * a.s;
+      x.save(); x.strokeStyle = "rgba(255,255,255,.35)"; x.lineWidth = 1;
+      for (let i = 0; i <= 8; i++) { const xx = a.x + ((b.x - a.x) * i) / 8; x.beginPath(); x.moveTo(xx, a.y - alt); x.lineTo(xx + (h ? 0 : 0), a.y); x.stroke(); }
+      x.restore();
+      x.strokeStyle = "#fff"; x.lineWidth = 5 * a.s; x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(a.x, a.y - alt); x.lineTo(b.x, b.y - alt); x.lineTo(b.x, b.y); x.stroke();
     };
-    await lista("CHEGADAS", k.chegadas, 64, "#ffd200", (j) => eur(j.valor));
-    await lista("SAÍDAS", k.saidas, W / 2 + 24, "#ff8a8a", (j) => ({ emprestar: "emprestado", liberar: "saiu", vender: "vendido", devolver: "devolvido" }[decisao(e, j)] || ""));
-    x.fillStyle = "rgba(255,255,255,.08)"; x.fillRect(0, H - 92, W, 92);
-    x.fillStyle = "#fff"; x.font = F(800, 30); x.fillText(`CAIXA ${eur(k.caixa)}   ·   FOLHA ${brl(k.folha)}/MÊS   ·   ${k.elencoFinal.length} JOGADORES`, 64, H - 36);
-    x.textAlign = "right"; x.font = F(900, 36); x.fillText("O CAZÉSTATS.TV", W - 64, H - 34); x.textAlign = "left";
+    gol(0.02, true); gol(0.98, false);
+
+    /* ---------- jogadores: foto no medalhão, nome e sobrenome na placa ---------- */
+    fichas.sort((a, b) => a.pt[1] - b.pt[1]);
+    const placas = [];
+    for (const { j, pt, foto } of fichas) {
+      const p = P(pt[0] / 100, pt[1] / 100), r = 42 * p.s, novo = !!j.reforco;
+      // sombra no gramado
+      x.beginPath(); x.ellipse(p.x, p.y + r * 1.05, r * 0.95, r * 0.3, 0, 0, Math.PI * 2); x.fillStyle = "rgba(0,0,0,.4)"; x.fill();
+      // anel: cor do clube (dourado para reforço) e um brilho
+      const anel = x.createLinearGradient(p.x - r, p.y - r, p.x + r, p.y + r);
+      anel.addColorStop(0, novo ? "#fff2a6" : tom(c1, 0.35)); anel.addColorStop(1, novo ? "#c99700" : tom(c1, -0.2));
+      x.beginPath(); x.arc(p.x, p.y, r + 6 * p.s, 0, Math.PI * 2); x.fillStyle = anel; x.fill();
+      // foto (recorte quadrado de cima: o rosto) ou o número
+      x.save(); x.beginPath(); x.arc(p.x, p.y, r, 0, Math.PI * 2); x.clip();
+      x.fillStyle = tom(c1, -0.45); x.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+      if (foto) {
+        const iw = foto.naturalWidth, ih = foto.naturalHeight, lado = Math.min(iw, ih);
+        x.drawImage(foto, (iw - lado) / 2, ih > iw ? 0 : 0, lado, lado, p.x - r, p.y - r, r * 2, r * 2);
+      } else {
+        x.fillStyle = onColor(c1) === "#111111" ? "#111" : "#fff"; x.font = F(900, Math.round(38 * p.s)); x.textAlign = "center"; x.fillText(String(j.num || POS_CURTO[j.pos]).slice(0, 3), p.x, p.y + 13 * p.s);
+      }
+      x.restore();
+      // (o número da camisa vai na placa, à esquerda do nome: um selo no medalhão ficaria debaixo da placa de quem está atrás)
+      if (false) { const sr = 14 * p.s; x.beginPath(); x.arc(p.x + r * 0.78, p.y - r * 0.78, sr, 0, Math.PI * 2); x.fillStyle = novo ? "#ffd200" : c1; x.fill(); x.lineWidth = 2; x.strokeStyle = "#fff"; x.stroke(); x.fillStyle = novo ? "#0b1220" : onColor(c1) === "#111111" ? "#111" : "#fff"; x.font = F(900, Math.round(16 * p.s)); x.textAlign = "center"; x.fillText(String(j.num).slice(0, 2), p.x + r * 0.78, p.y - r * 0.78 + 6 * p.s); }
+      // reforço: escudo do clube de origem
+      const eo = novo && j.timeLogo ? escudosOrigem.get(j.timeLogo) : null;
+      // na lateral direita do medalhão: a placa de quem está atrás cobre o alto, a do próprio jogador cobre o pé
+      if (eo) { const s2 = 30 * p.s, ex = p.x + r * 0.98, ey = p.y + r * 0.1; x.save(); x.beginPath(); x.arc(ex, ey, s2 * 0.62, 0, Math.PI * 2); x.fillStyle = "#fff"; x.fill(); x.lineWidth = 2; x.strokeStyle = "#ffd200"; x.stroke(); x.drawImage(eo, ex - s2 / 2.4, ey - s2 / 2.4, s2 / 1.2, s2 / 1.2); x.restore(); }
+      placas.push({ j, pt, p, r, novo });
+    }
+    // placas com nome e sobrenome, por cima de todos os medalhões (nenhuma fica escondida atrás de quem está na frente)
+    for (const { j, pt, p, r, novo } of placas) {
+      const nome = String(j.nome || "").replace(/\s+/g, " ").trim().toUpperCase();
+      let fs = Math.round(21 * p.s); x.font = F(800, fs); x.textAlign = "center";
+      while (x.measureText(nome).width > 200 * p.s && fs > 13) { fs--; x.font = F(800, fs); }
+      const num = String(j.num || POS_CURTO[j.pos] || "").slice(0, 3), nw = num ? (num.length * 11 + 14) * p.s : 0;
+      const tnome = Math.min(x.measureText(nome).width, 200 * p.s), tw = tnome + 18 * p.s + nw, ty = p.y + r + 12 * p.s, th = fs + 12 * p.s, x0 = p.x - tw / 2;
+      x.fillStyle = novo ? "#ffd200" : "rgba(5,8,15,.88)"; rr(x, x0, ty, tw, th, 7 * p.s); x.fill();
+      if (num) { x.save(); rr(x, x0, ty, tw, th, 7 * p.s); x.clip(); x.fillStyle = novo ? "#0b1220" : c1; x.fillRect(x0, ty, nw, th); x.restore(); x.fillStyle = novo ? "#ffd200" : onColor(c1) === "#111111" ? "#111" : "#fff"; x.font = F(900, fs); x.fillText(num, x0 + nw / 2, ty + th - 8 * p.s); x.font = F(800, fs); }
+      x.fillStyle = novo ? "#0b1220" : "#fff"; x.fillText(nome, x0 + nw + (tw - nw) / 2, ty + th - 8 * p.s, 200 * p.s);
+      // fora de posição
+      const a = CP.avalia(j, CP.zona(pt[0], pt[1]));
+      if (a.tipo !== "igual") { x.font = F(800, 15, "s"); const t = `${a.de} → ${a.para}`, w = x.measureText(t).width + 14; x.fillStyle = a.tipo === "nova" ? "#ffb020" : "#5ab0ff"; rr(x, p.x - w / 2, p.y - r - 34 * p.s, w, 22, 11); x.fill(); x.fillStyle = "#0b1220"; x.fillText(t, p.x, p.y - r - 34 * p.s + 16); }
+      x.textAlign = "left";
+    }
+
+    /* ---------- painel de embarque: chegadas e saídas ---------- */
+    const py = 1062, ph2 = 210;
+    x.fillStyle = "#0a0d14"; rr(x, 40, py, W - 80, ph2, 18); x.fill();
+    x.strokeStyle = "rgba(255,255,255,.08)"; x.lineWidth = 2; rr(x, 40, py, W - 80, ph2, 18); x.stroke();
+    // letra de placa de aeroporto: cada caractere numa célula com a dobra no meio
+    const placa = (txt, px0, py0, n, cor = "#f5f5f0", tam = 24) => {
+      const cw = tam * 0.78, chh = tam * 1.25;
+      x.font = F(800, tam); x.textAlign = "center";
+      const t = String(txt).toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").padEnd(n, " ").slice(0, n);
+      for (let i = 0; i < n; i++) {
+        const cx = px0 + i * (cw + 2);
+        x.fillStyle = "#1a1f2b"; x.fillRect(cx, py0, cw, chh);
+        x.fillStyle = "rgba(0,0,0,.55)"; x.fillRect(cx, py0 + chh / 2 - 1, cw, 2);
+        x.fillStyle = cor; x.fillText(t[i], cx + cw / 2, py0 + chh * 0.78);
+      }
+      x.textAlign = "left";
+      return n * (cw + 2);
+    };
+    const aviao = (ax, ay, sobe, cor) => { x.save(); x.translate(ax, ay); x.rotate(sobe ? -0.5 : 0.5); x.fillStyle = cor; x.beginPath(); x.moveTo(14, 0); x.lineTo(-10, -4); x.lineTo(-14, -12); x.lineTo(-18, -12); x.lineTo(-14, -3); x.lineTo(-18, -2); x.lineTo(-20, -7); x.lineTo(-23, -7); x.lineTo(-21, 0); x.lineTo(-23, 7); x.lineTo(-20, 7); x.lineTo(-18, 2); x.lineTo(-14, 3); x.lineTo(-18, 12); x.lineTo(-14, 12); x.lineTo(-10, 4); x.closePath(); x.fill(); x.restore(); };
+    const coluna = (tit, js, lx, cor, sobe, rota) => {
+      aviao(lx + 14, py + 40, sobe, cor);
+      x.fillStyle = cor; x.font = F(900, 36); x.fillText(tit, lx + 38, py + 52);
+      const n = Math.min(js.length, js.length > 4 ? 3 : 4);
+      for (let i = 0; i < n; i++) {
+        const j = js[i], yy = py + 70 + i * 34;
+        const larg = placa(j.nome, lx, yy, 12, "#f5f5f0", 20);
+        x.fillStyle = "rgba(255,255,255,.7)"; x.font = F(600, 16, "s"); x.fillText(rota(j), lx + larg + 10, yy + 18, W / 2 - 64 - larg - 24);
+      }
+      if (!js.length) placa(sobe ? "SEM SAIDAS" : "SEM REFORCOS", lx, py + 70, 12, "rgba(245,245,240,.5)", 20);
+      if (js.length > n) { x.fillStyle = "rgba(255,255,255,.6)"; x.font = F(600, 16, "s"); x.fillText(`e mais ${js.length - n}`, lx, py + 70 + n * 34 + 16); }
+    };
+    coluna("CHEGADAS", k.chegadas, 64, "#ffd200", false, (j) => `${curto(j.timeNome)} → ${sigla} · ${eur(j.valor)}`);
+    coluna("SAÍDAS", k.saidas, W / 2 + 14, "#ff8a8a", true, (j) => `${sigla} → ${{ emprestar: "empréstimo", liberar: "livre", vender: `venda · ${eur(j.valor)}`, devolver: `volta ao ${curto(j.emprestadoDe || "dono")}` }[decisao(e, j)] || ""}`);
+
+    /* ---------- rodapé ---------- */
+    x.fillStyle = c1; x.fillRect(0, H - 66, W, 66);
+    x.fillStyle = c2; x.fillRect(0, H - 66, W, 4);
+    x.fillStyle = onColor(c1) === "#111111" ? "#111" : "#fff"; x.font = F(800, 26);
+    x.fillText(`CAIXA ${eur(k.caixa)}  ·  FOLHA ${brl(k.folha)}/MÊS  ·  ${k.elencoFinal.length} JOGADORES`, 56, H - 24);
+    x.textAlign = "right"; x.font = F(900, 32); x.fillText("CAZÉSTATS.TV", W - 56, H - 22); x.textAlign = "left";
   }
   function rr(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
   function pdfDeJpeg(dataUrl, wpx, hpx) {
