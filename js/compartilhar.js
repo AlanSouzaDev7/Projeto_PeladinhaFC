@@ -4,6 +4,7 @@
      · partida: escudos, placar (ou data e hora) e a chance de vitória antes do jogo
      · jogador: nome, clube e os números da temporada
      · bolão: apelido, pontos e posição no ranking
+     · artilharia: os 5 primeiros, cada um na faixa do clube (js/arte-artilharia.js)
    Desenhado num <canvas> no próprio aparelho (nada vai para servidor). No celular abre o menu de compartilhar
    (WhatsApp, Instagram...); onde não dá, baixa a imagem. Escudos: o mesmo arquivo da página (Wikimedia, que libera
    o uso em canvas) ou, se não carregar, o escudo desenhado pelo site.
@@ -267,7 +268,7 @@
       await document.fonts?.ready;
       const tipo = b.dataset.cp, id = b.dataset.cpId;
       const card = tipo === "partida" ? await cardPartida(origens.partida?.(id) || (() => { throw new Error("jogo não encontrado"); })())
-        : tipo === "jogador" ? await cardJogador(id) : tipo === "comparacao" ? await cardComparacao(id) : tipo === "rodada" ? await cardRodada(id) : tipo === "selecao" ? await cardSelecao(id) : tipo === "replay" ? await cardReplay(id) : await cardBolao();
+        : tipo === "jogador" ? await cardJogador(id) : tipo === "comparacao" ? await cardComparacao(id) : tipo === "rodada" ? await cardRodada(id) : tipo === "selecao" ? await cardSelecao(id) : tipo === "replay" ? await cardReplay(id) : tipo === "artilharia" ? await window.ARTE_ARTILHARIA.monta(id) : await cardBolao();
       const r = await entrega(card);
       if (msg) msg.textContent = r;
     } catch (err) {
@@ -278,6 +279,6 @@
   });
 
   // _monta: só desenha (sem compartilhar nem baixar); usado para conferir a imagem
-  const _monta = async (tipo, id) => { pegaFontes(); await document.fonts?.ready; return tipo === "partida" ? cardPartida(origens.partida(id)) : tipo === "jogador" ? cardJogador(id) : tipo === "comparacao" ? cardComparacao(id) : tipo === "rodada" ? cardRodada(id) : tipo === "selecao" ? cardSelecao(id) : tipo === "replay" ? cardReplay(id) : cardBolao(); };
+  const _monta = async (tipo, id) => { pegaFontes(); await document.fonts?.ready; return tipo === "partida" ? cardPartida(origens.partida(id)) : tipo === "jogador" ? cardJogador(id) : tipo === "comparacao" ? cardComparacao(id) : tipo === "rodada" ? cardRodada(id) : tipo === "selecao" ? cardSelecao(id) : tipo === "replay" ? cardReplay(id) : tipo === "artilharia" ? window.ARTE_ARTILHARIA.monta(id) : cardBolao(); };
   window.COMPARTILHAR = { botao, origem: (tipo, fn) => { origens[tipo] = fn; }, _arquivo: arquivo, _monta };
 })();

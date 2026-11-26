@@ -367,11 +367,13 @@
           <div class="source">Só título, veículo, data e link · Google Notícias</div></div>
       </div></div>`;
   }
+  const COM_ARTE = new Set(["libertadores", "sul-americana", "copa-do-brasil"]); // arte da artilharia (js/arte-artilharia.js)
+  const botaoArte = (id) => (COM_ARTE.has(id) && window.COMPARTILHAR && window.ARTE_ARTILHARIA ? `<div class="cp-wrap">${COMPARTILHAR.botao("artilharia", id)}</div>` : "");
   function artilharia(id, D, n) {
     const L = D.artilharia.slice(0, n);
     if (!L.length) return `<div class="empty" style="padding:20px">Ainda sem gols.</div>`;
     const max = L[0].gols;
-    return `<ul class="squad-list cp-art">${L.map((a, i) => `<li><span class="n">${i + 1}º</span>${escudo({ clube: a.clube, nome: a.timeNome, logo: a.logo }, 30)}<div style="flex:1;min-width:0"><b>${esc(a.nome)}</b><small class="sl-sub">${esc(a.clube && byId[a.clube] ? byId[a.clube].abbr : a.timeNome || "")}${a.jogos ? ` · ${a.jogos} jogo${a.jogos > 1 ? "s" : ""} com gol` : ""}${a.pen ? ` · ${a.pen} de pênalti` : ""}</small><div class="bar" style="height:5px;margin-top:5px"><i data-w="${(a.gols / max) * 100}" style="width:${(a.gols / max) * 100}%;background:var(--accent)"></i></div></div><b class="goals">${a.gols}</b></li>`).join("")}</ul>`;
+    return `<ul class="squad-list cp-art">${L.map((a, i) => `<li><span class="n">${i + 1}º</span>${escudo({ clube: a.clube, nome: a.timeNome, logo: a.logo }, 30)}<div style="flex:1;min-width:0"><b>${esc(a.nome)}</b><small class="sl-sub">${esc(a.clube && byId[a.clube] ? byId[a.clube].abbr : a.timeNome || "")}${a.jogos ? ` · ${a.jogos} jogo${a.jogos > 1 ? "s" : ""} com gol` : ""}${a.pen ? ` · ${a.pen} de pênalti` : ""}</small><div class="bar" style="height:5px;margin-top:5px"><i data-w="${(a.gols / max) * 100}" style="width:${(a.gols / max) * 100}%;background:var(--accent)"></i></div></div><b class="goals">${a.gols}</b></li>`).join("")}</ul>${botaoArte(id)}`;
   }
   function confronto(id, x) {
     const lado = (t, g, p) => `<a class="cp-c-t ${x.vencedor === t.id ? "ven" : x.vencedor ? "per" : ""}" href="${linkT(id, t)}">${escudo(t, 24)}<b>${nomeT(t)}</b><span>${g ?? ""}${p != null ? `<small>(${p})</small>` : ""}</span></a>`;

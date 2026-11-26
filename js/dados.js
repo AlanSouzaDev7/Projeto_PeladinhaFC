@@ -24,6 +24,7 @@
     "raio-x": "RAIO_X",
     escalacoes: "ESCALACOES",
     fotos: "FOTOS",
+    "fotos-artilharia": "FOTOS_ARTILHARIA",
     squads: ["SQUADS", "SQUADS_LAST", "SQUADS_META"],
     "mercado/global": "MERCADO_GLOBAL",
     "jogadores/*": "JOGADORES_CLUBE",

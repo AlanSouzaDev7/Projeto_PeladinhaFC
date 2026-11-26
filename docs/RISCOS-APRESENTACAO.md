@@ -58,3 +58,4 @@
 | 17/11/2026 | Identidade 433 no site e nome CazéStats.TV | N1 (marca CazéTV). |
 | 17/11/2026 | Campinho tático editável da partida e aba Escalações | Usa escalações da ESPN (J4). |
 | 17/11/2026 | Banco de dados (Cloudflare D1) para dados não essenciais | Guarda contagens de busca e palpites anônimos: citar na política de privacidade (J7). |
+| 25/11/2026 | Arte da artilharia para compartilhar (Brasileirão, Libertadores, Sul-Americana, Copa do Brasil) | Layout inspirado num post de terceiros (faixas com bandeira, foto, número e escudo): cores, fontes e marca próprias, sem logotipo de terceiros, mas a composição lembra a original. Usa escudos oficiais (marcas dos clubes), fotos da ESPN, dos sites dos clubes e do Transfermarkt (J10) e bandeiras da ESPN. Para produto: licença de imagem dos atletas e dos escudos. |

@@ -753,7 +753,9 @@ import carreiras_ogol as CAR_OGOL  # noqa: E402
 import verifica_jogadores as VER  # noqa: E402
 import valores_tm as VAL  # noqa: E402
 import busca_imagem as BI  # noqa: E402
+import fotos_artilharia as FART  # noqa: E402
 VAL.P = BI.P = sys.modules[__name__]
+FART.P, FART.FOTO, FART.BI = sys.modules[__name__], FOTO, BI
 VER.ligar(sys.modules[__name__], FOTO, CAR_OGOL)
 MERC.FE, MERC.FIN, MERC.FOTO = FE, FIN, FOTO
 import wiki_series as WIKI  # noqa: E402
@@ -793,6 +795,12 @@ def update_fotos():
     fotos ainda abrem e renova tudo na virada da temporada. A cada rodada do robô e a cada hora no servidor ao vivo."""
     FOTO.atualizar()
     FOTO.aplicar_mercado()
+
+
+def update_fotos_artilharia():
+    """Foto garantida para os 10 primeiros de cada artilharia (server/fotos_artilharia.py), usada na arte da artilharia.
+    Depois do monitor de fotos: quem já tem a foto do clube ou da ESPN fica de fora."""
+    FART.rodar()
 
 
 def update_valores():
@@ -2466,7 +2474,7 @@ def write_snapshot():
         elenco_novo = update_squads_horario()
     except Exception as ex:
         log("falha em elenco", ex)
-    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado), ("fontes do elenco", update_fontes_elenco), ("valores (Transfermarkt)", update_valores), ("fotos dos jogadores", update_fotos), ("verificação dos jogadores", update_verificacao), ("escalações anunciadas", update_escalacoes)]
+    steps = [("tabela e jogos", update_standings_and_fixtures), ("notícias", update_news), ("manchetes", update_headlines), ("arbitragem", update_referees), ("jogadores", update_players), ("raio-x", update_raiox), ("departamento médico", update_dm), ("histórico", update_form), ("jogadores da temporada", update_jogadores), ("competições", update_competicoes), ("mercado", update_mercado), ("fontes do elenco", update_fontes_elenco), ("valores (Transfermarkt)", update_valores), ("fotos dos jogadores", update_fotos), ("fotos da artilharia", update_fotos_artilharia), ("verificação dos jogadores", update_verificacao), ("escalações anunciadas", update_escalacoes)]
     falhas = []
     for name, fn in steps:  # uma etapa que falhar não impede as outras
         try:
@@ -3374,6 +3382,7 @@ def main():
     every(iv.get("mercado", 60), update_mercado)
     every(iv.get("escalacoes", 5), update_escalacoes)
     every(iv.get("fotos", 60), update_fotos)
+    every(iv.get("fotos", 60), update_fotos_artilharia)
     every(iv.get("verificacao", 10), update_verificacao)
     every(iv.get("valores", 5), update_valores)
     threading.Thread(target=live_loop, daemon=True).start()

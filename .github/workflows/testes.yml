@@ -97,6 +97,8 @@ jobs:
         run: python -X utf8 tests/tm_elencos_casos.py
       - name: Perfil tático (1º e 2º volante, marcação e recomposição)
         run: python -X utf8 tests/tatica_casos.py
+      - name: Fotos da artilharia (Transfermarkt e TheSportsDB para quem a ESPN não fotografa)
+        run: python -X utf8 tests/fotos_artilharia_casos.py
       - name: Worker do placar ao vivo
         timeout-minutes: 2
         run: node tests/worker.mjs

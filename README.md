@@ -322,6 +322,16 @@ Uma **barra de competições** no topo do Brasileirão e de cada competição le
 
 **Escudos dos adversários**: a ESPN não tem o escudo de muitos times pequenos dos estaduais e copas (Pouso Alegre, Betim, Noroeste, Maricá...). No calendário e na aba Partidas, esses times ganham um escudo desenhado com as iniciais e uma cor própria, o mesmo que entra se a imagem da ESPN falhar.
 
+## Arte da artilharia
+
+No card da artilharia do Brasileirão, da Libertadores, da Sul-Americana e da Copa do Brasil, o botão "Compartilhar imagem"
+monta no aparelho (`js/arte-artilharia.js`) uma arte 1080 x 1400 com os 5 primeiros: sobrenome na vertical, bandeira do
+país, foto, gols, idade e escudo, cada faixa na cor do clube (clube de fora: a cor do escudo). País, idade e foto vêm do
+perfil do atleta na ESPN; a foto, na ordem: a guardada do site do clube, a da ESPN e, para quem ficaria sem nenhuma, a
+que o robô guarda em `img/jogadores/artilharia/` (`server/fotos_artilharia.py`: Transfermarkt pelos elencos da janela,
+TheSportsDB e busca de imagem do Brave; lista em `dados/fotos-artilharia.json`). Foto com fundo liso de estúdio perde o
+fundo para o jogador ficar recortado. QA: `BASE=http://localhost:5173 node tests/qa/arte-artilharia.mjs`.
+
 ## Janela de transferências: valores, posições e fotos
 
 - **Valores reais** (`server/valores_tm.py`): valor de mercado, maior valor da carreira, contrato, última transferência

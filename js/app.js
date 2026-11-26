@@ -676,8 +676,13 @@
       <ul class="squad-list">${list.map(([name, cid, g, vivo, rolando], k) => {
         const ficha = scorerOf(name, cid);
         return `<li${scorerAttrs(name, cid)}><span class="n">${k + 1}º</span>${crest(byId[cid], 36)}<div style="flex:1;min-width:0"><b>${SEG.esc(name)}</b>${golHoje(vivo, rolando)}<div class="bar" style="height:5px;margin-top:5px"><i data-w="${(g / max) * 100}" style="background:${display(byId[cid])}"></i></div></div><b class="goals">${g}</b>${ficha ? `<span class="sc-more" aria-hidden="true">›</span>` : ""}</li>`;
-      }).join("")}</ul>${list.some(([n, c]) => scorerOf(n, c)) ? `<div class="source">Clique (ou toque) no jogador para ver a ficha; clique de novo para fechar</div>` : ""}</div>`;
+      }).join("")}</ul>${list.some(([n, c]) => scorerOf(n, c)) ? `<div class="source">Clique (ou toque) no jogador para ver a ficha; clique de novo para fechar</div>` : ""}${window.COMPARTILHAR && window.ARTE_ARTILHARIA ? `<div class="cp-wrap">${COMPARTILHAR.botao("artilharia", "brasileirao")}</div>` : ""}</div>`;
   }
+  // arte da artilharia (js/arte-artilharia.js): os 5 primeiros da lista da página, com o id da ESPN de cada um
+  window.ARTE_ARTILHARIA?.fonte("brasileirao", () => artilhariaGeral().slice(0, 5).map(([name, cid, g]) => {
+    const p = (window.PLAYER_STATS?.artilheiros || []).find((x) => x.name === name && x.club === cid) || (window.PLAYER_STATS?.artilhariaClubes?.[cid] || []).find((x) => x.name === name);
+    return { nome: name, id: p?.id || null, gols: g, jogos: p?.jogos, idade: p?.idade, cid };
+  }));
 
   /* partida: top 5 de cada time lado a lado (1º contra 1º, 2º contra 2º...), como nos comparativos dos apps */
   function scorersDuel(m) {
