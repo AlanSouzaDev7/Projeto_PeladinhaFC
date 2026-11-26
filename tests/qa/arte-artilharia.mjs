@@ -33,6 +33,15 @@ for (const [comp, rota] of [["brasileirao", "#/tabela"], ["libertadores", "#/cop
   }, comp);
   ok(r.url && r.w === 1080 && r.h === 1400, `${comp}: imagem 1080 x 1400 exportada`, r.erro || `${Math.round((r.url?.length || 0) * 0.75 / 1024)} KB`);
   ok(r.semFoto && !r.semFoto.length, `${comp}: todos os jogadores com foto`, r.semFoto?.length ? `sem foto: ${r.semFoto.join(", ")}` : "");
+  // clique no botão: abre a pré-visualização com a imagem pronta; Esc fecha e o foco volta ao botão
+  await p.click(sel);
+  const prev = await p.waitForSelector(".cp-dlg[open] [data-cp-img][src^='blob:']", { timeout: 30000 }).then(() => true).catch(() => false);
+  const botoes = await p.locator(".cp-dlg[open] .cp-dlg-b:visible").allInnerTexts().catch(() => []);
+  ok(prev && botoes.some((t) => /Baixar/.test(t)), `${comp}: clique abre a pré-visualização com Baixar${botoes.some((t) => /Compartilhar/.test(t)) ? " e Compartilhar" : ""}`);
+  await p.keyboard.press("Escape");
+  const fechou = await p.waitForFunction(() => !document.querySelector(".cp-dlg[open]"), null, { timeout: 5000 }).then(() => true).catch(() => false);
+  await p.waitForTimeout(300); // o evento "close" chega depois que a janela fecha
+  ok(fechou && (await p.evaluate((s2) => !!document.activeElement?.matches?.(s2), sel)), `${comp}: Esc fecha a pré-visualização e devolve o foco ao botão`);
   if (r.url) writeFileSync(`${OUT}artilharia-${comp}.png`, Buffer.from(r.url.split(",")[1], "base64"));
 }
 ok(!erros.length, "nenhum erro de JavaScript", erros.slice(0, 2).join(" | ").slice(0, 200));

@@ -14,6 +14,11 @@ Escudo de cada clube, nesta ordem (sempre por link; nenhum arquivo de escudo é 
   3. o logotipo livre no Wikimedia Commons (P154);
   4. nada: o site desenha o escudo com as iniciais (GFX.crestOutro).
 
+Transfermarkt (server/carreiras_tm.py, conjunto aberto CC0 das transferências): quando a carreira pelas transferências tem
+clubes que a das outras fontes não tem (empréstimos e passagens que a Wikipédia/ogol/Wikidata não trazem), ela vira a
+espinha da linha do tempo, herdando nomes e escudos dos trechos iguais. Vale na gravação de cada rodada, sem rede
+(as transferências ficam no cache, chave "tm"; o arquivo só é baixado de novo quando muda).
+
 Grava dados/carreiras/<clube>.json = {id ESPN do jogador: [{c, q, i, f, l, s}, ...]} (clube, item do Wikidata, ano de
 entrada, ano de saída ou null, link do escudo, id do clube no site). Atualiza uma vez por semana, ou quando o elenco muda.
 """
@@ -365,6 +370,74 @@ def mescla_publicados(jog, publicados, agora):
     return n
 
 
+def _ler_json(caminho, padrao=None):
+    try:
+        return json.loads(Path(caminho).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return padrao
+
+
+def melhor_com_tm(lista, tm, cid, nome_atual, escudos=None, nomes_site=None):
+    """A carreira mais completa: a das transferências do Transfermarkt (com nomes/escudos herdados) quando ela tem clubes
+    que `lista` não tem; senão `lista` como está. tm = carreira validada de carreiras_tm.carreiras_tm (ou None)."""
+    import carreiras_tm as T
+    if not tm or (lista and not T.faltando(lista, tm)):
+        return lista
+    nova = T.mescla(lista or [], tm, cid, nome_atual, escudos, nomes_site)
+    return nova or lista
+
+
+def preparar_tm(cache, squads, arquivo=None, publicados=None):
+    """(carreiras TM por id ESPN, escudos) para a gravação. As transferências ficam em cache["tm"] (baixadas só quando o
+    arquivo muda). Sem rede e sem nada guardado: ({}, None), e as carreiras saem como antes."""
+    import carreiras_tm as T
+    T.P = T.P or P
+    try:
+        mapa = T.mapa_espn_tm(RAIZ)
+        ids = {mapa[str(r[4])] for el in squads.values() for r in el if r[4] and str(r[4]) in mapa}
+        linhas = T.transferencias(cache.setdefault("tm", {}), ids, arquivo=arquivo)
+        if not linhas:
+            return {}, None
+        indice = (_ler_json(RAIZ / "server" / "cache" / "valores-tm.json", {}) or {}).get("indice")
+        tm = T.carreiras_tm(squads, linhas, mapa, T.elencos_tm(RAIZ), indice=indice)
+        listas = [x.get("lista") for x in (cache.get("jogadores") or {}).values()]
+        for d in (publicados or {}).values():
+            listas += list((d or {}).values())
+        times = (_ler_json(RAIZ / "dados" / "mercado" / "global.json", {}) or {}).get("times") or {}
+        return tm, T.Escudos(listas, times, cache.get("busca_espn") or {})
+    except Exception as ex:
+        if P:
+            P.log("carreiras (Transfermarkt)", ex)
+        return {}, None
+
+
+def refazer_com_tm(arquivo=None, gravar_arquivos=True):
+    """Aplica o Transfermarkt às carreiras já publicadas (dados/carreiras/*.json), sem pesquisar nada de novo nas outras
+    fontes. arquivo = transfers.csv.gz local (sem rede). Devolve {clube: {id ESPN: lista}}."""
+    import jogadores as J
+    squads = (_ler_json(RAIZ / "dados" / "squads.json", {}) or {}).get("SQUADS") or {}
+    publicados = {f.stem: _ler_json(f, {}) for f in SAIDA.glob("*.json")}
+    cache = _ler_cache()
+    tm, escudos = preparar_tm(cache, squads, arquivo, publicados)
+    nomes_site = {cid: J.NOME_OFICIAL.get(cid, cid) for cid in squads}
+    out = {}
+    for cid, elenco in squads.items():
+        pub = publicados.get(cid) or {}
+        saida = {}
+        for r in elenco:
+            aid = str(r[4] or "")
+            if not aid:
+                continue
+            lista = melhor_com_tm(pub.get(aid) or [], tm.get(aid), cid, nomes_site[cid], escudos, nomes_site)
+            if lista:
+                saida[aid] = lista
+        out[cid] = saida
+        if gravar_arquivos:
+            SAIDA.mkdir(parents=True, exist_ok=True)
+            (SAIDA / f"{cid}.json").write_text(json.dumps(saida, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    return out
+
+
 def gravar(forcar=False, limite=POR_RODADA, refazer_vazios=False):
     """Atualiza dados/carreiras/*.json, jogador por jogador (limite de pesquisas por rodada; None = todos)."""
     import jogadores as J
@@ -449,13 +522,30 @@ def gravar(forcar=False, limite=POR_RODADA, refazer_vazios=False):
     CACHE.parent.mkdir(parents=True, exist_ok=True)
     CACHE.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
     SAIDA.mkdir(parents=True, exist_ok=True)
+    # Transfermarkt (transferências): completa as carreiras que as outras fontes deixaram com clubes faltando
+    publicados = {f.stem: _ler_json(f, {}) for f in SAIDA.glob("*.json")}
+    tm, escudos = preparar_tm(cache, squads, publicados=publicados)
+    if tm:
+        CACHE.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")  # guarda as transferências baixadas
     total = 0
     for cid, elenco in squads.items():
         saida = {}
         for r in elenco:
             x = jog.get(str(r[4]))
-            if x and x.get("cid") == cid and x.get("lista"):  # já validada em fecha() (2+ trechos ou um clube só com data)
-                saida[str(r[4])] = x["lista"]
+            lista = x["lista"] if x and x.get("cid") == cid and x.get("lista") else []  # já validada em fecha() (2+ trechos ou um clube só com data)
+            lista = melhor_com_tm(lista, tm.get(str(r[4])), cid, nomes_site.get(cid, cid), escudos, nomes_site)
+            if lista:
+                saida[str(r[4])] = lista
         (SAIDA / f"{cid}.json").write_text(json.dumps(saida, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         total += len(saida)
     return total
+
+
+if __name__ == "__main__":
+    # python -X utf8 server/carreiras.py --tm [transfers.csv.gz]: refaz dados/carreiras/*.json com o Transfermarkt, sem rede
+    import sys
+    if "--tm" in sys.argv:
+        k = sys.argv.index("--tm")
+        arq = sys.argv[k + 1] if len(sys.argv) > k + 1 else None
+        res = refazer_com_tm(arq)
+        print("carreiras refeitas com o Transfermarkt:", sum(len(v) for v in res.values()), "jogadores")

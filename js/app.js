@@ -589,7 +589,7 @@
       <div class="source">Todas as competições que o ${c.abbr} disputa na temporada${d.all.some((e) => e.src === "API-Football") ? "" : " (estaduais do PR, BA, SC e PA e Copa do Nordeste/Verde só com a API-Football)"} · fonte: ESPN${d.all.some((e) => e.src === "API-Football") ? " e API-Football" : ""} · horários de Brasília · placar com o mandante primeiro · toque num jogo para ver as estatísticas</div>`;
   }
   function calendarCard(id) {
-    return `<div class="card reveal cal" data-cal="${id}"><div class="card-h">Calendário <small>todas as competições</small></div>${calInner(id, window.CLUB_FORM?.clubs?.[id])}</div>`;
+    return `<div class="card reveal cal" data-cal="${id}"><div class="card-h">Calendário <small>todas as competições</small></div><div class="card-b cal-b">${calInner(id, window.CLUB_FORM?.clubs?.[id])}</div></div>`;
   }
   // partida do Brasileirão no site (para o link "Ver a partida")
   function calPartida(id, e) {
@@ -1388,7 +1388,7 @@
     const chips = Object.entries(RANKINGS).map(([k, x]) => `<a class="chip ${k === key ? "on" : ""}" href="#/tabela/${k}">${x.title}</a>`).join("");
     const podium = [1, 0, 2].map((i) => {
       const r = list[i], c = byId[r.id];
-      return `<a class="podium-step p${i + 1}" href="#/clube/${c.id}" style="--c1:${display(c)};--i:${i}">
+      return `<a class="podium-step p${i + 1}" href="#/clube/${c.id}" style="--c1:${display(c)};--on:${onColor(display(c))};--i:${i}">
         ${crest(c, i ? 66 : 88)}<b>${R.value(r)}</b><span>${c.abbr}</span><i>${i + 1}º</i></a>`;
     }).join("");
     const rows = list.map((r, i) => {
@@ -1922,6 +1922,9 @@
       if (!ink || !on) return;
       ink.style.width = on.offsetWidth + "px";
       ink.style.transform = `translateX(${on.offsetLeft}px)`;
+      // no celular a faixa de abas rola: a aba ativa (Janela, Estatísticas...) fica à vista, no meio
+      const faixa = t.matches(".tabs") ? t : $(".tabs", t) || t;
+      if (faixa.scrollWidth > faixa.clientWidth && !faixa.dataset.centrou) { faixa.scrollLeft = on.offsetLeft - (faixa.clientWidth - on.offsetWidth) / 2; faixa.dataset.centrou = "1"; }
     });
   }
   new ResizeObserver(() => requestAnimationFrame(placeInk)).observe(document.documentElement);
@@ -2023,7 +2026,7 @@
       else if (el.dataset.cal) {
         // o painel aberto continua aberto quando os dados chegam atualizados
         const aberto = $("[data-cal-det]", el)?.dataset.jogo;
-        el.innerHTML = el.querySelector(".card-h").outerHTML + calInner(el.dataset.cal, d);
+        el.innerHTML = el.querySelector(".card-h").outerHTML + `<div class="card-b cal-b">${calInner(el.dataset.cal, d)}</div>`;
         const e = aberto && d?.all?.find((x) => x.id === aberto);
         if (e && mesDe(e.date) === state.cal[el.dataset.cal]) calDetalhe($("[data-cal-det]", el), el.dataset.cal, e);
       }
@@ -2078,7 +2081,8 @@
       tip.style.width = w + "px";
       tip.style.left = Math.max(12, Math.min(innerWidth - w - 12, b.left + b.width / 2 - w / 2)) + "px";
       const h = tip.offsetHeight || 300;
-      tip.style.top = (b.bottom + 10 + h < innerHeight ? b.bottom + 10 : Math.max(12, b.top - 10 - h)) + "px";
+      const topo = (document.querySelector(".header")?.getBoundingClientRect().bottom || 0) + 8; // abaixo do cabeçalho fixo
+      tip.style.top = (b.bottom + 10 + h < innerHeight ? b.bottom + 10 : Math.max(topo, b.top - 10 - h)) + "px";
       tip.classList.add("open");
       tip.setAttribute("aria-hidden", "false");
     };
@@ -2134,7 +2138,7 @@
       if (nav && d) {
         const ms = calMeses(d);
         state.cal[id] = nav.dataset.calHoje != null ? calMesInicial(d) : ms[Math.max(0, Math.min(ms.length - 1, ms.indexOf(state.cal[id]) + +nav.dataset.calNav))];
-        cal.innerHTML = cal.querySelector(".card-h").outerHTML + calInner(id, d);
+        cal.innerHTML = cal.querySelector(".card-h").outerHTML + `<div class="card-b cal-b">${calInner(id, d)}</div>`;
         $(".cal-mes", cal)?.focus?.();
         return;
       }

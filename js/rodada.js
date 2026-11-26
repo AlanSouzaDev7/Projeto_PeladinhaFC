@@ -108,10 +108,13 @@
     return com.length ? Math.max(...com) : PD.ROUND;
   }
   function page(id) {
-    const PD = window.PD, rd = Number(id) || rodadaPadrao();
-    const chips = (PD.ROUNDS || []).filter((r) => PD.realMatches(r).some((m) => m.status === "ft")).map((r) => `<a class="chip ${r === rd ? "on" : ""}" href="#/rodada/${r}">${r}ª</a>`).join("");
+    const PD = window.PD, feitas = (PD.ROUNDS || []).filter((r) => PD.realMatches(r).some((m) => m.status === "ft"));
+    // só rodadas com jogo encerrado (#/rodada/999, -3 ou uma rodada sem jogos lidos caem na mais recente)
+    const pedida = Number(id), rd = feitas.includes(pedida) ? pedida : rodadaPadrao();
+    const aviso = id && pedida !== rd ? `<p class="st-txt rd-aviso">A ${esc(String(id))}ª rodada não tem jogos encerrados por aqui: este é o resumo da ${rd}ª.</p>` : "";
+    const chips = feitas.map((r) => `<a class="chip ${r === rd ? "on" : ""}" href="#/rodada/${r}">${r}ª</a>`).join("");
     return `<div class="page-head"><div><h1>Resumo da ${rd}ª rodada</h1><p>Resultados e destaques automáticos do Brasileirão.</p></div></div>
-      <div class="chips rd-chips">${chips}</div><div data-rodada="${rd}"><p class="st-txt">Montando o resumo…</p></div>`;
+      ${aviso}<div class="chips rd-chips">${chips}</div><div data-rodada="${rd}"><p class="st-txt">Montando o resumo…</p></div>`;
   }
   function jogosPorRodada() {
     const PD = window.PD, out = {};
@@ -160,17 +163,33 @@
     const box = el.querySelector("[data-rd-selecao] .card-b");
     const ft = jogos.filter((m) => m.status === "ft" && m.espn).map((m) => String(m.espn));
     const D = window.NOTAS_JOGOS || (await DADOS.carrega("notas-jogos").catch(() => null), window.NOTAS_JOGOS);
+    if (!window.FOTOS) await DADOS.carrega("fotos").catch(() => null); // fotos guardadas dos sites dos clubes (o campinho mostra os jogadores)
     if (!box?.isConnected) return;
     const S = D && selecao(D.jogos, ft);
     if (!S) { box.innerHTML = `<p class="st-txt">A seleção aparece quando as notas dos jogos encerrados forem lidas.</p>`; return; }
     selecoes[rd] = S;
-    const peca = (j) => `<a class="rd-jg${j === S.craque ? " craque" : ""}" href="#/jogador/${esc(j.aid)}-${esc(j.clube)}">
-        <span class="nota ${NOTA_COR(j.nota)}">${notaTxt(j.nota)}</span>${escudo(j.clube, 26)}<b>${esc(j.nome)}</b>
+    // jogador no campinho: a foto em destaque (guardada do site do clube ou da ESPN; sem nenhuma, as iniciais na cor do
+    // clube), o escudo pequeno no canto, a nota em cima e o nome embaixo
+    const cor = (cid) => (window.GFX?.display ? GFX.display(byId[cid]) : byId[cid]?.colors?.[0]) || "#1f6b3a";
+    // nome que cabe embaixo da foto: "Túlio Eduardo Silva De Oliveira" -> "T. Oliveira", "Bruno Pacheco" -> "B. Pacheco"
+    const curto = (n) => { const p = String(n).trim().split(/\s+/); return n.length <= 10 || p.length < 2 ? n : `${p[0][0]}. ${p[p.length - 1]}`; };
+    const ini = (n) => String(n).split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+    const foto = (j, cls = "rd-foto") => `<span class="${cls}" style="--cc:${esc(cor(j.clube))}"><i aria-hidden="true">${esc(ini(j.nome))}</i>${window.GFX?.imgReserva ? GFX.imgReserva(GFX.fotosJogador(j.clube, j.aid), "") : ""}<span class="rd-esc">${escudo(j.clube, 22)}</span></span>`;
+    const peca = (j) => `<a class="rd-jg${j === S.craque ? " craque" : ""}" href="#/jogador/${esc(j.aid)}-${esc(j.clube)}" aria-label="${esc(j.nome)}, ${esc(byId[j.clube]?.name || j.clube)}, nota ${notaTxt(j.nota)}">
+        <span class="nota ${NOTA_COR(j.nota)}">${notaTxt(j.nota)}</span>${foto(j)}<b title="${esc(j.nome)}">${esc(curto(j.nome))}</b>
         <small>${esc(ab(j.clube))}${j.g ? ` · ${j.g} gol${j.g > 1 ? "s" : ""}` : ""}${j.a ? ` · ${j.a} assist.` : ""}</small></a>`;
-    const linha = (pos) => `<div class="rd-linha" data-n="${S.time[pos].length}">${S.time[pos].map(peca).join("")}</div>`;
+    const linha = (pos) => `<div class="rd-linha rd-l-${pos}" data-n="${S.time[pos].length}">${S.time[pos].map(peca).join("")}</div>`;
     const c = S.craque;
-    box.innerHTML = `<div class="rd-sel-grid"><div class="rd-campo" role="group" aria-label="Seleção da ${rd}ª rodada em 4-3-3">${linha("F")}${linha("M")}${linha("D")}${linha("G")}</div>
-      <div class="rd-sel-lado"><p class="rd-craque"><span>Craque da rodada</span><b>${esc(c.nome)}</b><small>${esc(byId[c.clube]?.name || c.clube)} · nota ${notaTxt(c.nota)}${c.g ? ` · ${c.g} gol${c.g > 1 ? "s" : ""}` : ""}${c.a ? ` · ${c.a} assist.` : ""}</small></p>
+    const gramado = `<svg class="rd-linhas" viewBox="0 0 68 105" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,0.78)" stroke-width="0.45">
+      <rect x="1" y="1" width="66" height="103"/><path d="M1 52.5h66"/><circle cx="34" cy="52.5" r="9.15"/><circle cx="34" cy="52.5" r="0.5" fill="rgba(255,255,255,0.85)"/>
+      <rect x="13.84" y="1" width="40.32" height="16.5"/><rect x="24.84" y="1" width="18.32" height="5.5"/><path d="M26.7 17.5a9.15 9.15 0 0 0 14.6 0"/>
+      <rect x="13.84" y="87.5" width="40.32" height="16.5"/><rect x="24.84" y="98.5" width="18.32" height="5.5"/><path d="M26.7 87.5a9.15 9.15 0 0 1 14.6 0"/>
+      <circle cx="34" cy="12" r="0.5" fill="rgba(255,255,255,0.85)"/><circle cx="34" cy="93" r="0.5" fill="rgba(255,255,255,0.85)"/></g></svg>`;
+    box.innerHTML = `<div class="rd-sel-grid"><div class="rd-campo3d" role="group" aria-label="Seleção da ${rd}ª rodada em 4-3-3">
+        <div class="rd-gramado" aria-hidden="true">${gramado}</div>
+        <div class="rd-jogadores">${linha("F")}${linha("M")}${linha("D")}${linha("G")}</div></div>
+      <div class="rd-sel-lado"><a class="rd-craque" href="#/jogador/${esc(c.aid)}-${esc(c.clube)}">${foto(c, "rd-foto rd-foto-g")}<span class="rd-craque-txt"><span>Craque da rodada</span><b>${esc(c.nome)}</b>
+          <small>${esc(byId[c.clube]?.name || c.clube)}${c.g ? ` · ${c.g} gol${c.g > 1 ? "s" : ""}` : ""}${c.a ? ` · ${c.a} assist.` : ""}</small></span><em class="rd-craque-nota" title="Nota do CazéStats.TV">${notaTxt(c.nota)}</em></a>
         <ul class="rd-dest"><li><span>Nota média</span><b>${notaTxt(S.media)}</b></li>${S.clubeMais ? `<li><span>Mais escalado</span><b>${esc(byId[S.clubeMais.id]?.name || S.clubeMais.id)}, ${S.clubeMais.n} jogadores</b></li>` : ""}
         ${S.completo ? "" : `<li><span>Time incompleto</span><b>faltam notas de alguns jogos</b></li>`}</ul>
         ${window.COMPARTILHAR ? `<div class="cp-wrap">${COMPARTILHAR.botao("selecao", String(rd))}</div>` : ""}

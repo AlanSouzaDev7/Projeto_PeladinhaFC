@@ -1421,7 +1421,13 @@ def club_player_stats(cid, matches, squad_names, news):
     for it in news:
         t = it.get("title") or ""
         if re.search(r"pendurad", t, re.I):
+            # "João Pedro está suspenso, e Grêmio tem dois titulares pendurados": quem aparece no trecho do "suspenso"
+            # não está pendurado (o trecho é o pedaço do título entre vírgulas, ponto e vírgula, "e" e "mas")
+            trechos = re.split(r"[,;:]|\s+e\s+|\s+mas\s+", t)
             for pid in cited(t):
+                nome = norm_txt(squad_names.get(pid, ""))
+                if nome and any(re.search(r"suspens", x, re.I) and nome.split()[-1] in norm_txt(x) for x in trechos):
+                    continue
                 press.setdefault(pid, item(it))
     for p in pend:
         p["imprensa"] = press.get(p["id"])
@@ -1429,6 +1435,8 @@ def club_player_stats(cid, matches, squad_names, news):
     for pid, it in press.items():
         if pid not in known:  # a imprensa cita, a súmula não fecha a conta: mostra marcado como "segundo a imprensa"
             q = P.get(pid, {})
+            if q.get("yc") and q["yc"] % 3 == 0:
+                continue  # 3, 6, 9 amarelos na súmula: cumpre suspensão (ou já cumpriu), não está pendurado
             pend.append({"id": pid, "name": squad_names[pid], "amarelos": q.get("yc"), "ultimo": q.get("last_yc"), "imprensa": it, "so_imprensa": True})
     return {"jogos": n, "pendurados": pend, "sequencia": seq[:12], "lesionados": lesionados[:10], "reservas": res[:12],
             "fontes": {"sumulas": "ESPN", "imprensa": sorted({x["fonte"] for q in inj.values() for x in q["noticias"] if x["fonte"]})}}

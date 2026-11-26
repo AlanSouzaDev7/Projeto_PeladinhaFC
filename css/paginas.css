@@ -89,7 +89,7 @@
   font: 900 13px var(--font);
   padding: 5px 9px;
   border-radius: 8px;
-  background: rgb(0 0 0 / 0.35);
+  background: rgb(0 0 0 / 0.55); /* clube claro (cinza, branco): o número continua legível */
   color: #fff;
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
@@ -114,7 +114,8 @@
 /* ==========================================================================
    Página do clube
    ========================================================================== */
-.club-page { --accent: var(--c1); }
+/* .club-page não troca mais o --accent pela cor crua do clube: o app (applyTheme) já calcula um --accent legível
+   com o --on-accent; com a cor crua, clube branco (Santos, Corinthians, São Paulo) deixava botão ativo branco no branco */
 
 .hero {
   position: relative;

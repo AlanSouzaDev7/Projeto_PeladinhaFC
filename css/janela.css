@@ -360,13 +360,16 @@ em.jt-les { font: 700 11px var(--font); font-style: normal; }
   .jt-scroll { overflow: visible; }
   .jt-tabela { min-width: 0; }
   .jt-tabela thead { display: none; }
-  .jt-tabela tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px 10px; padding: 10px 2px; border-top: 1px solid var(--line-soft); }
+  .jt-tabela tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 10px; padding: 12px 2px; border-top: 1px solid var(--line-soft); }
+  .jt-tabela .jt-v { grid-column: 1 / -1; text-align: left; white-space: normal; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  .jt-tabela .jt-v small { display: inline; }
   .jt-tabela tbody tr > td { padding: 0; border: 0; }
   .jt-tabela .hide-sm { display: none; }
   .jt-tabela .jt-quem { min-width: 0; }
   .jt-tabela .jt-quem b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .jt-tabela .jt-acao { grid-column: 1 / -1; }
-  .jt-tabela .jt-contratar { width: 100%; min-height: 42px; }
+  .jt-tabela .jt-acao { grid-column: 1 / -1; display: flex; gap: 8px; white-space: normal; }
+  .jt-tabela .jt-contratar { flex: 1; width: auto; min-height: 42px; }
+  .jt-tabela .jt-ver { margin-left: 0; }
   .jt-ficha small { font-size: 11px; }
   .jt-ficha .cp-selo.s-igual { display: none; } /* no celular, só a troca de posição ganha selo: as fichas ficam mais perto */
   .jt-ficha .jt-av { --t: 36px !important; width: 36px; height: 36px; }
@@ -390,7 +393,7 @@ a.jt-nome:hover { color: var(--ink); text-decoration: underline; text-underline-
 /* notas (3 a 10) na ficha do jogador e na página do jogo */
 .nota { display: inline-grid; place-items: center; min-width: 34px; padding: 2px 6px; border-radius: 6px; font: 800 13px/1.4 var(--font); font-variant-numeric: tabular-nums; color: #fff; }
 .kpi .nota { font-size: 26px; min-width: 64px; padding: 2px 10px; }
-.nota.n-top { background: #1f6fe5; } .nota.n-boa { background: #12a150; } .nota.n-ok { background: #8bbf2a; color: #0d1a00; }
+.nota.n-top { background: #1f6fe5; } .nota.n-boa { background: #0f8a44; } .nota.n-ok { background: #8bbf2a; color: #0d1a00; }
 .nota.n-med { background: #f0a92e; color: #1a1100; } .nota.n-ruim { background: #e5484d; } .nota.n-sem { background: var(--surface-3); color: var(--text-3); }
 .nota.vivo { box-shadow: 0 0 0 2px var(--live); }
 .jg-ult .nota { margin-left: 6px; }
@@ -419,6 +422,7 @@ a.jt-nome:hover { color: var(--ink); text-decoration: underline; text-underline-
 /* salário individual da janela: faixa + "estimativa" (J8) */
 .jt-sal { display: block; white-space: normal; }
 .jt-sal em { font-style: normal; font-weight: 700; color: var(--warn, #f5a524); }
+:root[data-theme="light"] .jt-sal em { color: #8a5a00; }
 @media (max-width: 760px) {
   /* a faixa do salário é mais longa que o número: o valor encolhe e quebra a linha, os botões de decisão ficam na tela */
   .jt-card-dir .jt-valor { min-width: 0; flex: 0 1 auto; white-space: normal; }

@@ -356,5 +356,8 @@
     return { canvas: cv, nome: `artilharia-${comp}`, semFoto: L5.filter((e, i) => !extras[i].foto).map((e) => e.nome) };
   }
 
-  window.ARTE_ARTILHARIA = { monta, fonte: (comp, fn) => { fontesDeDados[comp] = fn; }, _sobrenome: sobrenome };
+  // também usados pela arte da seleção da rodada (js/compartilhar.js): foto (recortada quando dá) e escudo de um jogador
+  const fotoJogador = (aid, cid) => fotoDe({ id: String(aid), cid }, null);
+  const escudoClube = (cid) => escudoDe({ cid });
+  window.ARTE_ARTILHARIA = { monta, fonte: (comp, fn) => { fontesDeDados[comp] = fn; }, fotoJogador, escudoClube, corDoClube: (cid) => corDoClube(clubes()[cid]), _sobrenome: sobrenome };
 })();

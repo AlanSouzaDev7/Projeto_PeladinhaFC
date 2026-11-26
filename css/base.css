@@ -65,9 +65,9 @@
   --text: #121821;
   --text-2: #4c5768;
   --text-3: #5a6577; /* contraste ≥ 5:1 sobre o fundo claro */
-  --win: #0b7f4e;
+  --win: #0a6e43;
   --draw: #5d6779;
-  --loss: #c8283a;
+  --loss: #b42318;
   --shadow: 0 10px 30px -14px rgb(20 30 60 / 0.25);
   color-scheme: light;
 }

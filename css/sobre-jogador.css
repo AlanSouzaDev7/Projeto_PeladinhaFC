@@ -92,6 +92,7 @@
   background: var(--line-soft); color: var(--text-2); }
 .dm-st.bad { background: color-mix(in srgb, var(--loss, #e0182a) 15%, transparent); color: var(--loss, #e0182a); }
 .dm-st.mid { background: color-mix(in srgb, #2f7df6 16%, transparent); color: #2f7df6; }
+:root[data-theme="light"] .dm-st.bad { color: #a3141f; } :root[data-theme="light"] .dm-st.mid { color: #1d4fb0; }
 .dm-st.warn { background: color-mix(in srgb, #f5c518 26%, transparent); color: #6b4f00; }
 :root:not([data-theme="light"]) .dm-st.warn { color: #f5c518; }
 .dm-li .ps-src { display: block; line-height: 1.35; min-height: 0; padding: 2px 0; }
@@ -418,6 +419,7 @@
 .hero-credit { position: absolute; z-index: 3; right: 14px; bottom: 8px; max-width: min(56%, 480px); font-size: 11px; line-height: 1.3;
   color: rgb(255 255 255 / 0.66); text-decoration: none; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 4px rgb(0 0 0 / 0.85); }
 .hero-credit:hover { color: #fff; text-decoration: underline; }
+:root[data-theme="light"] .hero-credit { color: rgb(255 255 255 / 0.92); text-shadow: 0 1px 3px rgb(0 0 0 / 0.95), 0 0 10px rgb(0 0 0 / 0.6); }
 @media (max-width: 700px) { .hero-credit { left: 12px; right: 12px; max-width: none; text-align: center; bottom: 6px; } }
 
 /* vídeo da cidade por baixo da cena do clube (js/hero-scenes-clubes.js) */
@@ -516,9 +518,9 @@
 .cal-w { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); text-align: center; padding: 2px 0 4px; }
 .cal-d { min-height: 74px; border-radius: 10px; background: color-mix(in srgb, var(--surface-2) 70%, transparent); padding: 4px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .cal-d.vazio { background: transparent; }
-.cal-d.hoje { box-shadow: inset 0 0 0 2px var(--accent); }
+.cal-d.hoje { box-shadow: inset 0 0 0 2px var(--ink); }
 .cal-n { font-size: 11px; font-weight: 700; color: var(--text-3); line-height: 1; padding: 2px 2px 0; }
-.cal-d.hoje .cal-n { color: var(--accent); }
+.cal-d.hoje .cal-n { color: var(--ink); }
 .cal-j {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; width: 100%;
   border: 1px solid color-mix(in srgb, var(--cc) 45%, var(--line)); border-left: 3px solid var(--cc); border-radius: 8px;
@@ -619,8 +621,11 @@
 .sr-num img, .jg-av.sem img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; background: var(--surface-2); }
 .jg-av.sem { position: relative; overflow: hidden; }
 .search-results small .crest { width: 18px; height: 18px; vertical-align: -4px; }
-.search-results a b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.search-results a small { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.search-results a { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; row-gap: 1px; align-items: center; }
+.search-results a > :first-child { grid-row: span 2; }
+.search-results a b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25; }
+.search-results a small { margin-left: 0; justify-self: start; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; line-height: 1.2; }
+@media (min-width: 761px) { .search-results { left: auto; right: 0; width: max(100%, 420px); } }
 
 /* ---------- Bora pro jogo: foto no cartão do mapa de calor ---------- */
 .hc-foto { position: relative; flex: none; width: 44px; height: 44px; }
@@ -765,7 +770,9 @@
    Escudos de 38 px em círculos de 55 px; empréstimo: círculo tracejado. */
 .jg-topo { position: relative; overflow: hidden; }
 .jg-topo > * { position: relative; z-index: 1; }
-.jg-topo > .jg-linha { position: absolute; z-index: 0; top: 50%; left: 38%; right: 340px; height: 104px; margin-top: -52px; display: grid; grid-template-columns: auto minmax(0, 1fr);
+/* faixa própria, abaixo do nome e dos números (antes ficava solta no meio do bloco e passava por cima de nome comprido,
+   como "Matheus Pereira" ou "Giorgian de Arrascaeta") */
+.jg-topo > .jg-linha { position: relative; z-index: 0; grid-column: 1 / -1; grid-row: 2; height: 96px; display: grid; grid-template-columns: auto minmax(0, 1fr);
   pointer-events: none; animation: jgl-entra 0.7s var(--ease) both; }
 .jgl-tag { position: relative; z-index: 2; display: grid; align-content: center; gap: 4px; padding: 0 30px 0 14px; color: #fff;
   background: linear-gradient(160deg, rgb(255 255 255 / 0.18), transparent 50%), linear-gradient(120deg, var(--tc), color-mix(in srgb, var(--tc) 62%, #000));
@@ -798,7 +805,6 @@
 }
 @media (max-width: 900px) {
   /* sem espaço livre ao lado: a fita vira uma faixa entre o nome e os números */
-  .jg-topo > .jg-linha { position: relative; grid-column: 1 / -1; grid-row: 2; top: auto; left: auto; right: auto; margin-top: 0; height: 96px; }
   .jg-topo.com-linha .jg-topo-kpis { grid-row: 3; }
 }
 

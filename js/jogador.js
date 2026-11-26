@@ -116,7 +116,7 @@
       return anos ? `${nomeDe(x)} (${anos})` : nomeDe(x);
     }).join(", ");
     return `<div class="jg-linha" role="img" aria-label="${esc(`Carreira de ${p.nome}: ${resumo}`)}">
-      <div class="jgl-tag"><b>Carreira</b><span>${clubes} ${clubes === 1 ? "clube" : "clubes"}</span><a class="jgl-fonte" href="#/creditos" title="Fontes: Wikipédia (CC BY-SA), Wikidata, ogol e ESPN">fontes</a></div>
+      <div class="jgl-tag"><b>Carreira</b><span>${clubes} ${clubes === 1 ? "clube" : "clubes"}</span><a class="jgl-fonte" href="#/creditos" title="Fontes: Transfermarkt (transfermarkt-datasets, CC0), Wikipédia (CC BY-SA), Wikidata, ogol e ESPN">fontes</a></div>
       <div class="jgl-fita"><ol class="jgl-trilho">${itensHTML(lista)}</ol></div></div>`;
   }
   // fita em looping + foco: repete os clubes até cobrir a fita duas vezes e anda uma "volta" (a largura de uma cópia)
@@ -126,7 +126,7 @@
     const uma = trilho.scrollWidth;
     if (!uma || !fita.clientWidth) return;
     if (parado || !trilho.animate || lista.length < 2) { // um clube só: nada para passar na fita
-      if (lista.length > 1) trilho.style.marginLeft = `${Math.max(0, fita.clientWidth - uma)}px`; // parado: o clube atual fica à direita
+      if (lista.length > 1) trilho.style.marginLeft = `${fita.clientWidth - uma}px`; // parado: o clube atual fica à direita
       return;
     }
     const copias = Math.max(2, Math.ceil((fita.clientWidth * 2) / uma) + 1);
@@ -205,6 +205,25 @@
     ["Interceptações", "intercept", 1], ["Cortes", "cortes", 1], ["Chutes bloqueados", "bloq", 1], ["Duelos aéreos", "aereos", 1], ["Perdas de posse", "perdas", 1], ["Defesas (goleiro)", "defesas", 1],
     ["Amarelos", "ca"], ["Vermelhos", "cv"]];
 
+  // gols do Brasileirão iguais em todo o site: vale o número da artilharia oficial (o mesmo da home e da tabela); o que as
+  // súmulas somam fica guardado em gSumulas para a nota logo abaixo da tabela
+  function oficial(p, j) {
+    if (!j?.comps?.["Brasileirão"]) return j;
+    const id = String(p.id || p.aid || String(p.key || "").split("-")[0]);
+    const a = (window.PLAYER_STATS?.artilheiros || []).find((x) => String(x.id) === id);
+    const br = j.comps["Brasileirão"];
+    if (!a || a.gols == null || a.gols === br.g) return j;
+    return { ...j, comps: { ...j.comps, "Brasileirão": { ...br, g: a.gols, gSumulas: br.g } } };
+  }
+  // a artilharia (home, tabela) usa o número oficial da ESPN; esta tabela soma as súmulas jogo a jogo. Quando os dois
+  // não batem (gol revisado, contra ou contestado), a diferença fica explicada aqui, como na ficha do artilheiro
+  function notaArtilharia(p, C) {
+    const id = String(p.id || String(p.key || "").split("-")[0]);
+    const a = (window.PLAYER_STATS?.artilheiros || []).find((x) => String(x.id) === id);
+    const sum = C["Brasileirão"]?.gSumulas;
+    if (!a || sum == null || a.gols === sum) return "";
+    return `<p class="source jg-nota-art">Gols no Brasileirão pela artilharia oficial (ESPN): <b>${a.gols}</b>, o mesmo número da artilharia do site. As súmulas jogo a jogo registram ${sum} (gol revisado depois do jogo, contra ou contestado entra numa conta e não na outra).</p>`;
+  }
   function geral(p, j, D) {
     const C = j.comps || {}, comps = Object.keys(C);
     const jogos = (j.jogos || []).map((r) => jogoObj(D.campos, r)), ult = jogos.slice(-5).reverse();
@@ -216,7 +235,7 @@
       .map(([l, k]) => `<li><b>${fmt(p90(soma(C, k), min))}</b><span>${l}</span></li>`).join("");
     return `<div class="grid-2 jg-grid">
       <div>
-        <div class="card"><div class="card-h">Temporada por competição <small>${D.updated ? `atualizado em ${esc(D.updated)}` : ""}</small></div>${tabela}</div>
+        <div class="card"><div class="card-h">Temporada por competição <small>${D.updated ? `atualizado em ${esc(D.updated)}` : ""}</small></div>${tabela}${notaArtilharia(p, C)}</div>
         <div class="card"><div class="card-h">Por 90 minutos <small>todas as competições</small></div><ul class="jg-p90">${min ? por90 : `<li class="empty">Sem minutos em campo.</li>`}</ul></div>
         <div class="card"><div class="card-h">Últimos jogos <small><a href="#/jogador/${esc(p.key)}/ultimos" style="color:var(--ink)">ver os 10 ›</a></small></div>
           <ul class="jg-ult">${ult.map((x) => `<li><span class="jg-d">${dm(x.date)}</span><span class="jg-o">${oppHTML(x.opp)}</span><span class="jg-s ${res(x)}">${x.gf ?? "–"}–${x.ga ?? "–"}</span><span class="jg-m">${x.min}'</span>${notaBotao(x, p.pos)}<span class="jg-ga">${x.g ? `⚽${x.g > 1 ? `×${x.g}` : ""}` : ""}${x.a ? ` 🅰${x.a > 1 ? `×${x.a}` : ""}` : ""}</span></li>`).join("") || `<li class="empty">Sem jogos.</li>`}</ul></div>
@@ -409,7 +428,7 @@
     const p = get(el.dataset.jogador), c = byId[p.cid], aba = el.dataset.aba;
     const D = await HEATMAP.carregaClube(p.cid);
     if (!el.isConnected) return;
-    const j = D?.jogadores?.[p.aid];
+    const j = oficial(p, D?.jogadores?.[p.aid]);
     const corpo = el.querySelector("[data-jg-corpo]");
     pintaCarreira(el, p).catch(() => {}); // linha do tempo da carreira (fundo do topo); sem dados, nada aparece
     if (!j) {

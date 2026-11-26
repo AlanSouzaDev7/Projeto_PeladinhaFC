@@ -141,6 +141,9 @@ def jogo(ev, lg):
         elif "red card" in tipo:
             det.append({**base, "t": "vermelho"})
         elif "yellow card" in tipo:
+            # a ESPN às vezes repete o mesmo amarelo (mesmo jogador, 1-2 min depois): conta uma vez só
+            if any(d["t"] == "amarelo" and d["atleta"] and d["atleta"] == base["atleta"] and abs(_minuto(d["min"]) - _minuto(base["min"])) <= 2 for d in det):
+                continue
             det.append({**base, "t": "amarelo"})
     if (lados.get("home") or {}).get("team") is None or (lados.get("away") or {}).get("team") is None:
         return None
@@ -379,6 +382,12 @@ def fase_atual(fases, jogos):
     return jogos[-1]["faseNome"] if jogos else None
 
 
+def _minuto(m):
+    """'45'+2' -> 47; texto sem número -> -99 (nunca casa com outro)."""
+    n = [int(x) for x in re.findall(r"\d+", str(m or ""))]
+    return sum(n[:2]) if n else -99
+
+
 def nome_grupo(n):
     n = str(n or "")
     if re.search(r"relegation|rebaixamento", n, re.I):
@@ -389,11 +398,20 @@ def nome_grupo(n):
 
 
 def rodadas(jogos):
-    """Rodada de cada jogo de pontos corridos: o n-ésimo jogo de cada clube (adiados entram na rodada de origem pela ordem)."""
-    cont = {}
+    """Rodada de cada jogo de pontos corridos: o n-ésimo jogo de cada clube (adiados entram na rodada de origem pela ordem).
+    Turno e returno têm 2 x (clubes - 1) rodadas; jogo além disso, ou um 3º jogo entre os mesmos dois clubes, é do
+    mata-mata de acesso que a ESPN põe na mesma fase (Série B 2026: os confrontos de 22/11 e 27-28/11) e sai da tabela."""
+    clubes = {t for j in jogos for t in (j["casa"]["id"], j["fora"]["id"])}
+    limite = 2 * (len(clubes) - 1) if len(clubes) > 2 else None
+    cont, pares = {}, {}
     for j in sorted(jogos, key=lambda j: (j["data"], j["hora"] or "99:99")):
         a, b = j["casa"]["id"], j["fora"]["id"]
+        par = frozenset((a, b))
         r = max(cont.get(a, 0), cont.get(b, 0)) + 1
+        if limite and (r > limite or pares.get(par, 0) >= 2):
+            j.update({"rodada": None, "mata": True, "faseNome": "Mata-mata de acesso", "fase": "playoff"})
+            continue
+        pares[par] = pares.get(par, 0) + 1
         cont[a] = cont.get(a, 0) + 1; cont[b] = cont.get(b, 0) + 1
         j["rodada"] = r
 
