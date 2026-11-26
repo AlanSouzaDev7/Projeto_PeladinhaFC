@@ -81,7 +81,7 @@ t = "Atlético gasta R$ 27 milhões por mês com salários, mas Cruzeiro tem fol
 ok(not F.numero_do_clube("cruzeiro", t) and F.numero_do_clube("cruzeiro", "Cruzeiro tem folha de R$ 30 milhões por mês"), "o número só é do clube citado antes dele (o Cruzeiro, na manchete do Atlético, não)")
 ok(not F.cita_clube("cruzeiro", "Motorista de caminhão em Cruzeiro, SP: R$ 2.933"), "manchete sem futebol (cidade de Cruzeiro) não conta")
 d = F.do_clube("chapecoense")
-ok(d["folha"]["valor"] > 0 and d["orcamento"]["valor"] == round(d["folha"]["valor"] * 2 / 1e5) * 1e5 or d["orcamento"]["tipo"] == "noticia", "sem notícia: caixa estimado em duas folhas")
+ok(d["folha"]["valor"] > 0 and (d["orcamento"]["tipo"] in ("noticia", "ultima-janela")) and d["orcamento"].get("obs" if d["orcamento"]["tipo"] == "ultima-janela" else "fonte"), "sem orçamento divulgado: caixa pelo gasto da última janela (ge), com a observação")
 
 # salário: veterano titular ganha mais que garoto sem minutos, mesmo valendo menos
 ok(M.peso_salario(37, 0.8, 0.1) > M.peso_salario(18, 0.0, 0.3), "peso na folha: veterano titular > garoto da base")

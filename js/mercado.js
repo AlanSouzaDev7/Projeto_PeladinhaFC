@@ -279,13 +279,15 @@
     const pontos = k.saidas.slice(0, 14).map((j) => `<i class="d-${decisao(e, j)}" title="${esc(j.nome)}"></i>`).join("") + (k.saidas.length > 14 ? `<em>+${k.saidas.length - 14}</em>` : "");
     const escudos = k.chegadas.slice(0, 4).map((j) => (j.timeLogo ? crestOutro(j.timeNome, j.timeLogo, 18) : "")).join("") + (k.chegadas.length > 4 ? `<em>+${k.chegadas.length - 4}</em>` : "");
     const disp = k.orcamento + k.receita;
-    const origemCaixa = k.real || e.caixa == null ? (fin.orcamento?.tipo === "noticia" ? `orçamento divulgado (${esc(fin.orcamento.fonte)})` : "estimativa: duas folhas mensais") : "valor definido por você";
+    // caixa: orçamento divulgado (ge/ESPN) ou o que o clube gastou na última janela (balanço do ge), com a observação
+    const origemCaixa = k.real || e.caixa == null ? (fin.orcamento?.tipo === "noticia" ? `orçamento divulgado (${esc(fin.orcamento.fonte)}, ${data(fin.orcamento.data)})`
+      : fin.orcamento?.tipo === "ultima-janela" ? `base: ${esc(fin.orcamento.obs)}` : "estimativa: duas folhas mensais") : "valor definido por você";
     const origemFolha = fin.folha ? (fin.folha.tipo === "estimativa" ? "estimativa do CazéStats.TV" : `${esc(fin.folha.fonte)}, ${data(fin.folha.data)}`) : "estimativa do CazéStats.TV";
     return `<section class="jt-mesa" style="--c1:${c.colors[0]};--c2:${c.colors[1]};--c3:${c.colors[2] || c.colors[1]};--tom:${onColor(c.colors[0]) === "#111111" ? c.colors[1] : c.colors[0]}">
       <svg class="jt-globo" viewBox="0 0 200 200" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width=".8"><circle cx="100" cy="100" r="96"/><ellipse cx="100" cy="100" rx="40" ry="96"/><ellipse cx="100" cy="100" rx="72" ry="96"/><path d="M4 100h192M14 52h172M14 148h172"/></g></svg>
       <div class="jt-mesa-topo">
         <span class="jt-escudo">${crest(c, 64)}</span>
-        <div class="jt-mesa-tit"><small>Janela de transferências 2027</small><h2>${esc(c.name)}</h2></div>
+        <div class="jt-mesa-tit"><small>${fin.janela ? `${esc(fin.janela.rotulo[0].toUpperCase() + fin.janela.rotulo.slice(1))}: ${data(fin.janela.abre)} a ${data(fin.janela.fecha)}` : "Janela de transferências 2027"}</small><h2>${esc(c.name)}</h2></div>
         <span class="jt-modo ${e.modo === "manager" ? "mg" : ""}">${e.modo === "manager" ? "Modo manager" : "Modo real"}</span>
       </div>
       <div class="jt-stats">

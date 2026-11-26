@@ -833,7 +833,8 @@ def update_mercado():
         ult = state.get("mercado_t", 0)
     mc = state.get("mercado") or {}
     # cache feito por uma versão anterior do código (sem o elenco conferido): relê já
-    if time.time() - ult < 20 * 3600 and mc and all((d or {}).get("v", 1) >= MERC.VERSAO for d in mc.values()):
+    # (ou o balancete com uma regra antiga: folha e caixa só do ge/ESPN, server/financas.py VERSAO)
+    if time.time() - ult < 20 * 3600 and mc and all((d or {}).get("v", 1) >= MERC.VERSAO and ((d or {}).get("financas") or {}).get("v") == FIN.VERSAO for d in mc.values()):
         return
     cl = MERC.atualizar_clubes()
     g = MERC.atualizar_global()

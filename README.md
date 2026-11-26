@@ -227,8 +227,16 @@ Aba **Janela** na página de cada clube da Série A (`#/clube/<id>/mercado`): o 
 - **Dados** (`server/mercado.py`, `server/financas.py`, `server/fontes_elenco.py`; API `/api/mercado/<clube>` e `/api/mercado-global`; arquivos `js/mercado/`):
   - **elenco**: cadastro da ESPN, conferido com o **TheSportsDB** (cadastro no clube e posição detalhada) e com as súmulas (quem jogou nos últimos 45 dias entra mesmo se a ESPN tirou do cadastro: assim o Matheus Pereira está no Cruzeiro);
   - **titular ou reserva**: súmulas dos últimos 5 jogos, último jogo e manchetes de escalação da semana (Google Notícias, só títulos); "titular" com 3 fontes concordando (ou 4 de 5 jogos como titular e no último XI); com a chave da API-Football, as escalações dela entram como quarta fonte;
-  - **folha mensal**: levantamento do ge de 14/10/2026 (valores aproximados de cada clube), substituído automaticamente quando uma manchete mais nova traz a folha do clube ("folha de R$ X milhões por mês", com o clube citado antes do número); o salário de cada jogador não é público: a folha é dividida pelo tempo de carreira, pelos minutos e pelo valor;
-  - **caixa para reforços**: nenhum clube publica caixa disponível; quando uma manchete traz o orçamento de reforços, ele é usado; sem isso, a estimativa é de duas folhas mensais, e o painel diz qual dos dois está valendo;
+  - **fontes do balancete**: só o ge e a ESPN, para os números ficarem coerentes entre os clubes;
+  - **folha mensal**: ranking do ge de 14/10/2026 (com a atualização de 16/10: Flamengo, Bahia, Internacional e Remo
+    com o valor oficial do clube). A folha **não** é relida todo dia: o robô consulta as manchetes do ge e da ESPN uma
+    vez por janela, nos 10 dias antes de ela abrir (datas do calendário da CBF publicado pelo ge: 1ª janela de 2027 de
+    04/01 a 02/03, 2ª de 19/07 a 10/09), e manchete de variação ("reduzir a folha em R$ 5 milhões") não conta. O salário
+    de cada jogador não é público: a folha é dividida pelo tempo de carreira, pelos minutos e pelo valor;
+  - **caixa disponível**: nenhum clube publica. A base é quanto o clube gastou em reforços na última janela (balanços
+    do ge das janelas de 2026, em `server/financas.py`, `GASTOS`, atualizados depois de cada janela); sem gasto
+    divulgado, vale a média por janela do ano. O painel mostra essa observação ao lado do caixa. Orçamento divulgado em
+    manchete do ge ou da ESPN tem preferência;
   - **câmbio**: euro PTAX do **Banco Central do Brasil** (API pública Olinda), do último dia útil;
   - **posição de origem e histórico por posição**: súmulas do Brasileirão (posição de cada jogador em cada jogo);
   - **valor de mercado**: estimativa do Placar.TV (o Transfermarkt não é usado: os termos dele proíbem robôs).
