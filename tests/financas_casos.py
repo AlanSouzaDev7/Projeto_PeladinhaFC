@@ -1,6 +1,6 @@
 # © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Todos os direitos reservados. Autor: Alan Evangelista de Souza Martins.
 """Balancete da janela (server/financas.py): folha e caixa só pelo ge e pela ESPN, folha conferida só antes de cada
-janela abrir, caixa pela última janela. Sem rede. Uso: python -X utf8 tests/financas_casos.py"""
+janela abrir, caixa pela média das janelas do ano. Sem rede. Uso: python -X utf8 tests/financas_casos.py"""
 import json
 import os
 import re
@@ -57,13 +57,15 @@ assert d["folha"]["valor"] == 30e6 and d["folha"]["fonte"].startswith("ge"), d["
 assert d["janela"]["abre"] == "2027-01-04" or d["janela"]["abre"] > "2027-01-04"
 caso("folha do Cruzeiro: R$ 30 mi do ranking do ge, não os R$ 5 mi da Rede 98")
 
-# 5. caixa pela última janela (balanços do ge)
+# 5. caixa pela média das janelas de 2026 (balanços do ge)
 g = F.gasto_janelas("cruzeiro")
-assert g["valor"] == 110.296e6 and "2ª janela de 2026" in g["obs"] and "R$ 110,3 mi" in g["obs"], g
-assert d["orcamento"]["tipo"] == "ultima-janela" and d["orcamento"]["valor"] == 110.3e6 and d["orcamento"]["obs"] == g["obs"]
+assert abs(g["valor"] - (174.141e6 + 110.296e6) / 2) < 1 and "R$ 142,2 mi" in g["obs"] and "1ª janela de 2026: R$ 174,1 mi" in g["obs"] and "2ª janela de 2026: R$ 110,3 mi" in g["obs"], g
+assert d["orcamento"]["tipo"] == "ultima-janela" and d["orcamento"]["valor"] == 142.2e6 and d["orcamento"]["obs"] == g["obs"]
+i = F.gasto_janelas("internacional")
+assert abs(i["valor"] - (37.835e6 + 1.808e6) / 2) < 1, "Internacional: média das duas janelas, não só a do meio do ano"
 c = F.gasto_janelas("corinthians")
-assert abs(c["valor"] - 4.898e6 / 2) < 1 and "média" in c["obs"], "sem gasto na última janela: média do ano"
-caso("caixa: gasto da última janela (Cruzeiro R$ 110,3 mi); sem gasto, a média por janela do ano")
+assert abs(c["valor"] - 4.898e6 / 2) < 1
+caso("caixa: média do que o clube gastou por janela em 2026 (Cruzeiro R$ 142,2 mi; Internacional R$ 19,8 mi)")
 
 # 6. os 20 clubes têm folha e gasto, e nenhuma folha incoerente (entre R$ 3 mi e R$ 40 mi por mês)
 assert len(F.FOLHA_BASE) == 20 and all(3e6 <= v <= 40e6 for v in F.FOLHA_BASE.values())

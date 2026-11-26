@@ -233,9 +233,8 @@ Aba **Janela** na página de cada clube da Série A (`#/clube/<id>/mercado`): o 
     vez por janela, nos 10 dias antes de ela abrir (datas do calendário da CBF publicado pelo ge: 1ª janela de 2027 de
     04/01 a 02/03, 2ª de 19/07 a 10/09), e manchete de variação ("reduzir a folha em R$ 5 milhões") não conta. O salário
     de cada jogador não é público: a folha é dividida pelo tempo de carreira, pelos minutos e pelo valor;
-  - **caixa disponível**: nenhum clube publica. A base é quanto o clube gastou em reforços na última janela (balanços
-    do ge das janelas de 2026, em `server/financas.py`, `GASTOS`, atualizados depois de cada janela); sem gasto
-    divulgado, vale a média por janela do ano. O painel mostra essa observação ao lado do caixa. Orçamento divulgado em
+  - **caixa disponível**: nenhum clube publica. A base é a média do que o clube gastou em reforços por janela no último
+    ano (balanços do ge das duas janelas de 2026, em `server/financas.py`, `GASTOS`, atualizados depois de cada janela). O painel mostra essa observação ao lado do caixa. Orçamento divulgado em
     manchete do ge ou da ESPN tem preferência;
   - **câmbio**: euro PTAX do **Banco Central do Brasil** (API pública Olinda), do último dia útil;
   - **posição de origem e histórico por posição**: súmulas do Brasileirão (posição de cada jogador em cada jogo);

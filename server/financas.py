@@ -7,9 +7,8 @@ Fontes: só o ge (ge.globo.com) e a ESPN (espn.com.br), para o balancete ficar c
   dia: o robô consulta as manchetes do ge e da ESPN uma vez por janela, nos dias antes de a janela abrir (datas do
   calendário da CBF, publicado pelo ge). Número achado só vale se a manchete for de folha mensal do clube (nunca
   "reduzir a folha em R$ 5 milhões", "aumento de R$ 2 milhões" e parecidos: isso é a variação, não a folha).
-- caixa disponível: nenhum clube publica. A base é quanto o clube gastou em reforços na última janela, pelos
-  balanços do ge; se ele não gastou nada (ou o valor não foi divulgado), vale a média por janela do ano. O site mostra
-  essa observação ao lado do caixa. Orçamento divulgado em manchete do ge/ESPN (consultada junto com a folha) tem
+- caixa disponível: nenhum clube publica. A base é a média do que o clube gastou em reforços por janela no último
+  ano, pelos balanços do ge (2026: as duas janelas). O site mostra essa observação ao lado do caixa. Orçamento divulgado em manchete do ge/ESPN (consultada junto com a folha) tem
   preferência.
 - câmbio euro/real: cotação PTAX oficial do Banco Central do Brasil (API pública Olinda), do último dia útil.
 Tudo vai para o site com a origem e a data de cada número.
@@ -55,7 +54,7 @@ GASTOS = [
 ]
 # manchete só conta se for do ge ou da ESPN
 FONTE_OK = re.compile(r"^(ge|globoesporte|ge\.globo\.com|globoesporte\.globo\.com|espn|espn brasil|espn\.com\.br|www\.espn\.com\.br)$", re.I)
-VERSAO = 2  # sobe quando a regra do balancete muda: o robô recalcula a janela de todos os clubes na rodada seguinte
+VERSAO = 3  # sobe quando a regra do balancete muda: o robô recalcula a janela de todos os clubes na rodada seguinte
 EUR_BRL_PADRAO = 6.0
 CACHE = "financas.json"
 
@@ -160,19 +159,16 @@ def janela_para_consultar(hoje=None, consultadas=()):
 
 
 def gasto_janelas(cid):
-    """Caixa pela última janela: o gasto do clube na última janela dos balanços do ge; se foi zero (ou não divulgado),
-    a média por janela do ano. Devolve {valor, obs, link}."""
+    """Caixa pela média do ano: o que o clube gastou em reforços, em média, nas janelas do último ano dos balanços do ge
+    (2026: a de janeiro a março e a de julho a setembro). Só a última janela deixava quem gastou pouco no meio do ano
+    (Internacional, Grêmio, Bahia) quase sem caixa. Devolve {valor, obs, link}."""
     ult = GASTOS[-1]
-    v = ult["valores"].get(cid)
-    ano = [g["valores"].get(cid) or 0 for g in GASTOS if g["id"][:4] == ult["id"][:4]]
-    media = sum(ano) / len(ano) if ano else 0
+    ano = [g for g in GASTOS if g["id"][:4] == ult["id"][:4]]
+    vals = [g["valores"].get(cid) or 0 for g in ano]
+    media = sum(vals) / len(vals) if vals else 0
     mi = lambda x: f"R$ {x / 1e6:.1f} mi".replace(".", ",")
-    if v:
-        obs = f"gasto do clube em reforços na {ult['rotulo']}: {mi(v)} (ge)"
-        if len(ano) > 1:
-            obs += f"; média de {mi(media)} por janela em {ult['id'][:4]}"
-        return {"valor": v, "obs": obs, "link": ult["link"]}
-    return {"valor": media, "obs": f"sem gasto divulgado na {ult['rotulo']}: média de {mi(media)} por janela em {ult['id'][:4]} (ge)", "link": ult["link"]}
+    partes = "; ".join(f"{g['rotulo'].split(' (')[0]}: {mi(v)}" for g, v in zip(ano, vals))
+    return {"valor": media, "obs": f"média do que o clube gastou em reforços por janela em {ult['id'][:4]}: {mi(media)} ({partes}; ge)", "link": ult["link"]}
 
 
 def manchetes(cid):
@@ -253,7 +249,7 @@ def do_clube(cid, folha_estimada_brl=None):
         orc = {**reg["orcamento"], "tipo": "noticia"}
     elif cid in GASTOS[-1]["valores"]:
         g = gasto_janelas(cid)
-        orc = {"valor": round(g["valor"] / 1e5) * 1e5, "fonte": "ge (balanço da última janela)", "obs": g["obs"], "link": g["link"], "data": None, "tipo": "ultima-janela"}
+        orc = {"valor": round(g["valor"] / 1e5) * 1e5, "fonte": "ge (balanços das janelas de 2026)", "obs": g["obs"], "link": g["link"], "data": None, "tipo": "ultima-janela"}
     else:
         orc = {"valor": round(folha["valor"] * 2 / 1e5) * 1e5, "fonte": "estimativa do CazéStats.TV: duas folhas mensais", "link": None, "data": None, "tipo": "estimativa"}
     j = janela_atual_ou_proxima()
