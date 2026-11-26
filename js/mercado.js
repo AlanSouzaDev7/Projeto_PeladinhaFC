@@ -141,7 +141,9 @@
     const elencoFinal = [...todos.filter((j) => fica(e, j)), ...chegadas];
     const folha = elencoFinal.reduce((s, j) => s + (j.salario || 0), 0);
     const cambio = D.financas?.cambio?.valor || D.eurBrl || 6;
-    const orcReal = D.financas?.orcamento?.valor ? Math.round(D.financas.orcamento.valor / cambio / 1e5) * 1e5 : Math.round(D.valorTotal * 0.08 / 1e5) * 1e5;
+    // caixa em euros: arredonda a € 100 mil; abaixo de € 1 mi, a € 10 mil (Chapecoense: R$ 150 mil não vira "€ 0 mil")
+    const arred = (v) => (v >= 1e6 ? Math.round(v / 1e5) * 1e5 : Math.round(v / 1e4) * 1e4);
+    const orcReal = D.financas?.orcamento?.valor ? arred(D.financas.orcamento.valor / cambio) : arred(D.valorTotal * 0.08);
     const real = e.modo !== "manager";
     const orcamento = !real && e.caixa != null ? e.caixa : orcReal;
     const saidas = todos.filter((j) => ["emprestar", "liberar", "vender", "devolver"].includes(decisao(e, j)));
