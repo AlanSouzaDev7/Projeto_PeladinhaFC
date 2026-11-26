@@ -1,6 +1,6 @@
 /* QA funcional — coerência dos arquivos de dados (sem navegador).
    Tabela: P = 3V+E, J = V+E+D, ordem (P, V, SG, GP), soma GP = soma GC; CA/CV do clube x soma dos jogadores (Brasileirão);
-   jogadores: gols ≤ chutes, no alvo ≤ chutes, titular ≤ jogos, minutos ≥ jogos, idade 15–45; artilharia x jogadores.
+   jogadores: gols ≤ chutes, no alvo ≤ chutes, titular ≤ jogos, minutos ≥ jogos, idade 15–48 (Fábio, do Fluminense, tem 46); artilharia x jogadores.
    Uso: node tests/qa/funcional-dados.mjs */
 import { readFileSync, readdirSync } from "node:fs";
 const R = new URL("../../dados/", import.meta.url);
@@ -34,7 +34,7 @@ for (const f of arq) {
   const D = ler(`jogadores/${f}`), cid = f.replace(".json", "");
   let ca = 0, cv = 0, g = 0;
   for (const [pid, j] of Object.entries(D.jogadores || {})) {
-    if (j.idade != null && (j.idade < 15 || j.idade > 45)) prob.push(`jogador ${cid}/${pid} ${j.n}: idade ${j.idade}`);
+    if (j.idade != null && (j.idade < 15 || j.idade > 48)) prob.push(`jogador ${cid}/${pid} ${j.n}: idade ${j.idade}`);
     for (const [comp, s] of Object.entries(j.comps || {})) {
       const tag = `${cid}/${pid} ${j.n} [${comp}]`;
       if (s.g > s.ch && s.ch > 0) prob.push(`${tag}: gols ${s.g} > chutes ${s.ch}`);
@@ -49,8 +49,10 @@ for (const f of arq) {
   }
   const r = st.find((x) => x.id === cid);
   if (r) {
-    if (r.ca !== ca) (Math.abs(r.ca - ca) > 3 ? prob : aviso).push(`cartões ${cid}: tabela CA ${r.ca} x soma jogadores ${ca}`);
-    if (r.cv !== cv) (Math.abs(r.cv - cv) > 1 ? prob : aviso).push(`cartões ${cid}: tabela CV ${r.cv} x soma jogadores ${cv}`);
+    // o clube pode ter mais cartões que a soma do elenco de hoje (quem saiu do clube não está no arquivo, cartão no banco);
+    // o contrário (elenco com mais cartões que o clube) é que seria erro
+    if (ca > r.ca + 1) prob.push(`cartões ${cid}: soma jogadores CA ${ca} > tabela ${r.ca}`); else if (r.ca !== ca) aviso.push(`cartões ${cid}: tabela CA ${r.ca} x soma do elenco atual ${ca}`);
+    if (cv > r.cv + 1) prob.push(`cartões ${cid}: soma jogadores CV ${cv} > tabela ${r.cv}`); else if (r.cv !== cv) aviso.push(`cartões ${cid}: tabela CV ${r.cv} x soma do elenco atual ${cv}`);
     if (g > r.gf) prob.push(`gols ${cid}: soma jogadores ${g} > GP da tabela ${r.gf}`);
     else if (r.gf - g > 4) aviso.push(`gols ${cid}: GP ${r.gf} x soma jogadores ${g} (diferença ${r.gf - g}: contra/sem autor?)`);
   }

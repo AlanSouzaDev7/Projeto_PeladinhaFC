@@ -434,3 +434,6 @@ a.jt-nome:hover { color: var(--ink); text-decoration: underline; text-underline-
 .dados-idade { margin: 8px auto 0; max-width: 1200px; padding: 6px 16px; font: 600 12.5px var(--font); color: var(--text-2); text-align: center; }
 .dados-idade.velho { color: var(--text); background: color-mix(in srgb, #f5a524 18%, transparent); border-radius: 10px; width: calc(100% - 32px); }
 .dados-idade[hidden] { display: none; }
+
+/* foto do jogador não é arrastada como imagem (o arraste é o da escalação, js/mercado.js) */
+.jt-av img { -webkit-user-drag: none; user-select: none; }

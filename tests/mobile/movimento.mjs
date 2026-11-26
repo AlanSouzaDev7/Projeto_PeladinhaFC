@@ -1,8 +1,9 @@
 /* © 2026 Alan Evangelista de Souza Martins (AlanSouzaDev7). Autor: Alan Evangelista de Souza Martins. Todos os direitos reservados. */
 /* Fita de notícias andando e escudos grandes da faixa da partida, em aparelhos de tamanhos e formatos diferentes
    (Chrome e Safari/WebKit; telas de 320 px a 2560 px; retrato e paisagem).
-   Fita: anda normalmente, com as animações do aparelho desligadas (Windows, iPhone, Android), depois de clicar numa
-   notícia (o foco fica no link) e depois de um toque no celular; para com o mouse em cima e no botão de pausa.
+   Fita: anda normalmente, depois de clicar numa notícia (o foco fica no link) e depois de um toque no celular; para com
+   o mouse em cima e no botão de pausa. Com as animações do aparelho desligadas (Windows, iPhone, Android) começa parada,
+   com o botão mostrando o play, e anda depois do play.
    Escudos: grandes, nítidos (imagem de 330 px), entram com animação, sem sair da faixa nem criar rolagem para os lados.
    Uso: python -m http.server 5173 --bind 127.0.0.1  e depois  node tests/mobile/movimento.mjs */
 import { chromium, webkit, devices } from "playwright";
@@ -42,7 +43,15 @@ for (const [nome, eng, opts, launch] of APARELHOS) {
     for (let i = 0; i < 20 && !(await p.evaluate(() => !!document.querySelector(".tk-track"))); i++) await p.waitForTimeout(250);
     await p.waitForTimeout(600);
     const tag = `${nome}${reduz ? " · animações do aparelho desligadas" : ""}`;
-    ok((await anda(p)) > 40, `${tag}: a fita anda`);
+    if (reduz) {
+      // desde 20/11/2026 a fita começa parada com "menos movimento" no aparelho (js/ticker.js); o botão mostra o play
+      const b0 = await p.evaluate(() => { const t = document.querySelector(".ticker"), b = t.querySelector(".tk-pause"); return { pausado: t.classList.contains("pausado"), pressed: b.getAttribute("aria-pressed"), rotulo: b.getAttribute("aria-label") }; });
+      ok(Math.abs(await anda(p, 1500)) < 2 && b0.pausado && b0.pressed === "true" && /Continuar/.test(b0.rotulo), `${tag}: a fita começa parada e o botão mostra o play`);
+      // quem aperta o play continua com ela andando (mais devagar)
+      await p.evaluate(() => document.querySelector(".tk-pause").click());
+      await p.waitForTimeout(200);
+      ok((await anda(p)) > 40 && (await p.getAttribute(".tk-pause", "aria-pressed")) === "false", `${tag}: depois do play a fita anda`);
+    } else ok((await anda(p)) > 40, `${tag}: a fita anda`);
     // depois de clicar numa notícia (abre em outra aba; o foco fica no link)
     await p.evaluate(() => { const a = document.querySelectorAll(".tk-item").forEach((a) => a.addEventListener("click", (e) => e.preventDefault())); });
     if (toque) { const bb = await p.locator(".tk-run").boundingBox(); await p.touchscreen.tap(bb.x + bb.width / 2, bb.y + bb.height / 2); } else { await p.click(".tk-copy .tk-item", { force: true }); await p.mouse.move(10, 700); }

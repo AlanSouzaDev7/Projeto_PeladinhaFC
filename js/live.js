@@ -7,6 +7,9 @@
    Sem a API, nada muda: o site usa os dados dos arquivos.
    ========================================================================== */
 (() => {
+  // quantas atualizações ao vivo já saíram (js/app.js confere ao ficar pronto: se perdeu alguma, sincroniza)
+  window.PD_LIVE_N = 0;
+  window.addEventListener("placar:data", () => { window.PD_LIVE_N++; });
   const API = "/api";
   const PD = window.PD;
   // no app Android (js/app-nativo.js): não há API local, o placar vem da ESPN a cada 5 s e tudo para em segundo plano

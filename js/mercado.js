@@ -1074,8 +1074,11 @@
       if (!id) return;
       arraste.on = { ficha, res, id, x: ev.clientX, y: ev.clientY, pid: ev.pointerId, ativo: false, toque: ev.pointerType === "touch", t: Date.now() };
       arraste.moveu = false;
-      if (ficha) ev.preventDefault();
+      // no mouse, a foto do reserva é uma <img>: sem isto o navegador começa a arrastar a imagem e cancela o arraste
+      // (pointercancel), e o reserva não entra no campo; no toque o padrão continua (a página precisa rolar)
+      if (ficha || ev.pointerType !== "touch") ev.preventDefault();
     });
+    el.addEventListener("dragstart", (ev) => { if (ev.target.closest(".jt-ficha, .jt-res")) ev.preventDefault(); });
     el.addEventListener("pointermove", (ev) => {
       const a = arraste.on;
       if (!a || ev.pointerId !== a.pid) return;

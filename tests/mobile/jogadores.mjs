@@ -257,8 +257,10 @@ for (const [nome, opts] of [["celular 320", { ...devices["iPhone SE"], viewport:
     await page.waitForTimeout(2200);
     const r = await page.evaluate(() => {
       const vw = document.documentElement.clientWidth, fora = [];
-      // o vídeo e o GOL! do topo do clube são decorativos e ficam recortados dentro do topo
-      document.querySelectorAll(".view *").forEach((el) => { if (el.closest(".jg-tab-wrap, .tabs, .ticker, .hero")) return; const b = el.getBoundingClientRect(); if (b.width && (b.right > vw + 1 || b.left < -1)) fora.push(el.className || el.tagName); });
+      // o vídeo e o GOL! do topo do clube são decorativos e ficam recortados dentro do topo; a fita da carreira
+      // (.jgl-fita, na linha própria .jg-linha embaixo do nome) anda como letreiro: o que está dentro dela é recortado de
+      // propósito (a própria fita continua conferida)
+      document.querySelectorAll(".view *").forEach((el) => { if (el.closest(".jg-tab-wrap, .tabs, .ticker, .hero") || el.parentElement?.closest(".jgl-fita")) return; const b = el.getBoundingClientRect(); if (b.width && (b.right > vw + 1 || b.left < -1)) fora.push(el.className || el.tagName); });
       return { rolagem: document.documentElement.scrollWidth > vw + 1, fora: [...new Set(fora)].slice(0, 4) };
     });
     if (r.rolagem || r.fora.length) erro(`${nome} ${h}: ${r.rolagem ? "rolagem lateral; " : ""}fora da tela: ${r.fora.join(", ")}`);

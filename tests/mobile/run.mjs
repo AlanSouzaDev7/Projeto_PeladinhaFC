@@ -5,8 +5,8 @@
    Para cada página: erros, rolagem para os lados, alvos de toque pequenos,
    texto pequeno demais, fluidez da animação do topo e prints.
 
-   Uso:  npm run api            (em outro terminal)
-         npm run test:mobile    (resultado em tests/mobile/out/)
+   Uso:  npm run api            (em outro terminal; ou qualquer servidor da raiz do site, com BASE=http://127.0.0.1:<porta>)
+         npm run test:mobile    (resultado em tests/mobile/out/; sai com código 1 se houver FALHAS)
    ========================================================================== */
 import { chromium, webkit, devices } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -93,6 +93,12 @@ for (const D of DEVICES) {
         const from = lu.querySelector('[data-slot="bench"][data-i="0"]'), to = [...lu.querySelectorAll('[data-slot="xi"]')].pop();
         const full = (el) => (el.getAttribute("title") || "").split(" · ")[0]; // nome inteiro (no campo aparece abreviado)
         const name = full(from), before = full(to);
+        // o dedo de verdade sempre solta dentro da tela: espera a rolagem da página assentar (logo depois de abrir ela
+        // ainda muda: 0, 429 ou 532 px no iPhone) e traz o centroavante para a tela; senão o elementFromPoint do soltar cai fora dela
+        const quadro = () => new Promise((r) => requestAnimationFrame(() => r()));
+        for (let y = -1, k = 0; k < 60 && y !== scrollY; k++) { y = scrollY; await new Promise((r) => setTimeout(r, 120)); }
+        to.scrollIntoView({ block: "center", behavior: "instant" });
+        await quadro(); await quadro();
         const p = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + 12]; };
         const ev = (type, el, [x, y]) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 7, pointerType: "touch", isPrimary: true }));
         const a = p(from), b = p(to);
@@ -126,3 +132,14 @@ for (const [dev, pages] of Object.entries(report)) {
     if (r.unnamed.length) console.log("   sem nome:", r.unnamed.join(" | "));
   }
 }
+
+/* o que reprova (código de saída 1, para o CI não esconder): erro na página, rolagem para os lados e o arrastar com o dedo.
+   Alvos pequenos, texto pequeno, fps e acessibilidade básica ficam só no relatório (são avisos, não falhas). */
+const falhas = [];
+for (const [dev, pages] of Object.entries(report)) for (const [p, r] of Object.entries(pages)) {
+  if (r.errors.length) falhas.push(`${dev} ${p}: ${r.errors.length} erro(s) na página (${r.errors[0].slice(0, 120)})`);
+  if (r.overflow) falhas.push(`${dev} ${p}: rola para o lado (${r.scrollW}px > ${r.vw}px)`);
+  if (r.touchDrag && !r.touchDrag.ok) falhas.push(`${dev} ${p}: arrastar com o dedo falhou (${r.touchDrag.moved} no lugar de ${r.touchDrag.before})`);
+}
+if (falhas.length) { console.log("\nFALHAS:\n" + falhas.join("\n")); process.exitCode = 1; }
+else console.log("\ntestes em celular ok (sem erros, sem rolagem para os lados, arrastar com o dedo ok)");

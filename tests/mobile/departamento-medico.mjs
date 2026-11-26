@@ -2,7 +2,8 @@
 /* Departamento médico na página do clube: quem está fora (situação, desde quando, parte do corpo, quantos veículos
    confirmam e a manchete com link), e na aba Estatísticas também quem voltou ao time na temporada.
    Usa dados fixos (não depende das notícias do dia). Também confere que nada vaza para os lados no celular.
-   Uso: python -m http.server 5174 --bind 127.0.0.1  e depois  node tests/mobile/departamento-medico.mjs */
+   Uso: sirva a raiz do site (ex.: python -m http.server 5174 --bind 127.0.0.1) e depois  node tests/mobile/departamento-medico.mjs
+   (outra porta: BASE=http://127.0.0.1:5191 node tests/mobile/departamento-medico.mjs) */
 import { chromium, webkit, devices } from "playwright";
 const BASE = process.env.BASE || "http://127.0.0.1:5174";
 const erros = [], ok = (c, m) => (c ? console.log("ok ·", m) : erros.push(m));
@@ -21,9 +22,13 @@ const DM = { updated: "05/11 12:00", temporada: 2026, clubs: { cruzeiro: {
 
 for (const [dev, L, opts] of [["pc", chromium, { viewport: { width: 1440, height: 900 } }], ["iphone", webkit, devices["iPhone 15"]], ["pixel", chromium, devices["Pixel 7"]]]) {
   const b = await L.launch(L === chromium ? { channel: "chrome" } : {});
-  const p = await (await b.newContext({ ...opts, locale: "pt-BR" })).newPage();
+  // sem service worker (sw.js): na 2ª página ele serviria os dados do cache dele, por fora do p.route
+  const p = await (await b.newContext({ ...opts, locale: "pt-BR", serviceWorkers: "block" })).newPage();
   p.on("pageerror", (e) => erros.push(`${dev}: ${e.message}`));
+  // o site lê o DM por js/dados.js: primeiro o banco (Worker D1, <api>/dados/departamento-medico.json), depois a cópia
+  // estática dados/departamento-medico.json; o js/departamento-medico.js antigo ainda vem no index.html. Os três dão os dados fixos.
   await p.route(/js\/departamento-medico\.js/, (r) => r.fulfill({ contentType: "application/javascript", body: `window.DM = ${JSON.stringify(DM)};` }));
+  await p.route(/\/dados\/departamento-medico\.json/, (r) => r.fulfill({ json: DM }));
   for (const [rota, cheio] of [["#/clube/cruzeiro", false], ["#/clube/cruzeiro/estatisticas", true]]) {
     await p.goto(`${BASE}/?d=${Date.now()}${rota}`, { waitUntil: "load" });
     await p.waitForTimeout(1600);

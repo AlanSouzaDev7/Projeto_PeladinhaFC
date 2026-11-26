@@ -2,7 +2,7 @@
 /* Faixa de notícias embaixo do menu: aparece em todas as páginas, a manchete troca a cada 8 s, a fita anda
    (e para com o mouse em cima), cada notícia é um link para a matéria, não cria rolagem para os lados e se atualiza
    sozinha (relógio adiantado em 30 min: busca o js/live-data.js novo, sem recarregar a página).
-   Com as animações do aparelho desligadas ("reduzir movimento"), a fita continua andando, mais devagar.
+   Com as animações do aparelho desligadas ("reduzir movimento"), a fita começa parada (botão no play) e anda, mais devagar, depois do play.
    Uso: python -m http.server 5174 --bind 127.0.0.1  e depois  node tests/mobile/faixa.mjs */
 import { chromium, webkit, devices } from "playwright";
 const BASE = process.env.BASE || "http://127.0.0.1:5173";
@@ -10,6 +10,9 @@ const erros = [], ok = (c, m) => (c ? console.log("ok ·", m) : erros.push(m));
 for (const [dev, L, opts] of [["pc", chromium, { viewport: { width: 1440, height: 900 } }], ["iphone", webkit, devices["iPhone 15"]], ["pixel", chromium, devices["Pixel 7"]]]) {
   const b = await L.launch(L === chromium ? { channel: "chrome" } : {});
   const ctx = await b.newContext({ ...opts, locale: "pt-BR" });
+  // sem service worker (como num navegador sem suporte; js/offline.js então não registra o sw.js): com ele, o pedido do
+  // js/live-data.js sai pelo service worker e o p.route abaixo não o enxerga
+  await ctx.addInitScript(() => { delete Navigator.prototype.serviceWorker; });
   const p = await ctx.newPage();
   p.on("pageerror", (e) => erros.push(`${dev}: ${e.message}`));
   await p.clock.install();
@@ -55,11 +58,20 @@ for (const [dev, L, opts] of [["pc", chromium, { viewport: { width: 1440, height
   const ctx2 = await b.newContext({ ...opts, reducedMotion: "reduce" });
   const q = await ctx2.newPage();
   await q.goto(`${BASE}/?f=${Date.now()}#/`, { waitUntil: "load" }); await q.waitForTimeout(1200);
+  // desde 20/11/2026 (js/ticker.js) a fita começa parada e o botão de pausa mostra o play
   const x2 = await q.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector(".tk-track")).transform).m41);
   await q.waitForTimeout(2500);
   const x3 = await q.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector(".tk-track")).transform).m41);
-  ok(x2 - x3 > 40, `${dev}: com as animações do aparelho desligadas a fita continua andando, mais devagar (${Math.round(x2 - x3)} px em 2,5 s)`);
+  const bt = await q.evaluate(() => { const t = document.querySelector(".ticker"), b = t.querySelector(".tk-pause"); return t.classList.contains("pausado") && b.getAttribute("aria-pressed") === "true" && /Continuar/.test(b.getAttribute("aria-label")); });
+  ok(Math.abs(x2 - x3) < 2 && bt, `${dev}: com as animações do aparelho desligadas a fita começa parada e o botão mostra o play (${Math.round(x2 - x3)} px em 2,5 s)`);
+  // depois do play ela anda, mais devagar
+  await q.evaluate(() => document.querySelector(".tk-pause").click());
+  const x4 = await q.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector(".tk-track")).transform).m41);
+  await q.waitForTimeout(2500);
+  const x5 = await q.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector(".tk-track")).transform).m41);
+  ok(x4 - x5 > 40, `${dev}: depois do play a fita anda, mais devagar (${Math.round(x4 - x5)} px em 2,5 s)`);
   await ctx2.close();
   await b.close();
 }
 console.log(erros.length ? "\nFALHAS:\n" + erros.join("\n") : "\nfaixa de notícias ok no PC, iPhone e Android");
+if (erros.length) process.exitCode = 1; // o CI precisa ver a falha

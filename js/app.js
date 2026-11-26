@@ -2372,6 +2372,10 @@
     if (img && img.matches && img.matches("img[data-sem-foto]")) { img.parentNode?.classList.remove("has-photo"); img.remove(); }
   }, true);
   window.addEventListener("placar:data", refresh);
+  // atualização ao vivo que chegou enquanto o app montava (js/live.js consulta a ESPN logo que PD_BOOT sai e conta em
+  // PD_LIVE_N): sincroniza agora e ela vira a base, sem alerta. Antes ela se perdia e o primeiro gol depois de abrir
+  // a página não ganhava o GOL!
+  if (window.PD_LIVE_N > 0) setTimeout(refresh, 0);
 
   /* gol ao vivo: quando o placar de um jogo em andamento sobe, toca o GOL! do clube que marcou.
      A primeira atualização só serve de base (não anuncia gols que já tinham saído antes de abrir o site). */

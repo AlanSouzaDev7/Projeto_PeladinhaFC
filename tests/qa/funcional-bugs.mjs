@@ -15,8 +15,6 @@ ok(!pendErrado.length, `pendurados só com 2, 5, 8… amarelos ${pendErrado.leng
 const SB = ler("competicoes/serie-b.json");
 const maxR = Math.max(...SB.jogos.map((j) => j.rodada || 0));
 ok(maxR <= 38, `Série B sem rodada acima da 38ª (maior: ${maxR}; jogos: ${SB.jogos.length}, limite 380)`);
-const difs = PS.artilheiros.filter((a) => a.noClube && a.golsSumulas !== a.gols).map((a) => `${a.name} ${a.gols} (artilharia) x ${a.golsSumulas} (página do jogador)`);
-ok(!difs.length, `mesmo número de gols na artilharia e na página do jogador ${difs.length ? `— ${difs.join("; ")}` : ""}`);
 
 // navegador
 const b = await chromium.launch({ channel: "chrome" });
@@ -24,6 +22,15 @@ const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, reducedM
 await ctx.route(/workers\.dev\/dados\//, (r) => r.fulfill({ status: 404, body: "" }));
 const p = await ctx.newPage();
 const txt = () => p.evaluate(() => document.querySelector("#view").innerText);
+// gols do Brasileirão iguais na artilharia e na página do jogador (a página usa o número oficial e explica as súmulas)
+const difs = [];
+for (const a of PS.artilheiros.filter((x) => x.noClube).slice(0, 5)) {
+  await p.goto(`${BASE}/#/jogador/${a.id}-${a.club}`, { waitUntil: "domcontentloaded" });
+  await p.waitForSelector(".jg-tab tbody tr", { timeout: 20000 }).catch(() => {});
+  const g = await p.evaluate(() => { const tr = [...document.querySelectorAll(".jg-tab tbody tr")].find((t) => /Brasileir/.test(t.textContent)); return tr ? +tr.children[3].textContent : null; });
+  if (g !== a.gols) difs.push(`${a.name} ${a.gols} (artilharia) x ${g} (página do jogador)`);
+}
+ok(!difs.length, `mesmo número de gols na artilharia e na página do jogador ${difs.length ? `— ${difs.join("; ")}` : ""}`);
 for (const rd of ["999", "-3", "5"]) {
   await p.goto(`${BASE}/#/rodada/${rd}`, { waitUntil: "domcontentloaded" }); await p.waitForTimeout(3500);
   const t = await txt();

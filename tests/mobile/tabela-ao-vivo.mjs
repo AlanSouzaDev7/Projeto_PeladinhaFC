@@ -4,13 +4,61 @@
    Confere: a tabela soma os placares parciais (pontos, jogos, posição, ▲▼ e o placar ao lado do clube),
    a artilharia soma os gols de agora, o GOL! aparece com o nome de quem marcou e, com a aba escondida,
    espera a pessoa voltar. Também confere que um jogo já contado pela tabela da ESPN não é somado duas vezes.
-   Uso: python -m http.server 5174 --bind 127.0.0.1  e depois  node tests/mobile/tabela-ao-vivo.mjs */
+   Os dados gravados (live-data e player-stats) são os de hoje "voltados" para 04/11 20:20: o site lê esses arquivos
+   por js/dados.js (banco D1 do Worker, depois dados/<nome>.json) e o index.html ainda carrega os js/<nome>.js antigos,
+   então os três endereços devolvem o mesmo retrato. Sai com código 1 se algo falhar.
+   Uso: sirva a raiz do site (ex.: python -m http.server 5174 --bind 127.0.0.1) e depois  node tests/mobile/tabela-ao-vivo.mjs
+   (outra porta: BASE=http://127.0.0.1:5191 node tests/mobile/tabela-ao-vivo.mjs) */
 import { chromium, devices } from "playwright";
 import { readFileSync } from "node:fs";
 
 const BASE = process.env.BASE || "http://127.0.0.1:5174";
 const TABELA = JSON.parse(readFileSync(new URL("./fixtures-standings.json", import.meta.url)));
 const erros = [], ok = (c, msg) => { if (!c) erros.push(msg); else console.log("ok ·", msg); };
+
+/* ---------- retrato dos dados gravados em 04/11/2026 às 20:15 (antes de Athletico x Vasco e Flamengo x Grêmio) ----------
+   Parte dos arquivos de hoje (dados/live-data.json e dados/player-stats.json) e volta no tempo:
+   - a tabela gravada é a mesma da ESPN simulada (fixtures-standings.json, 33 rodadas);
+   - todo jogo a partir de 04/11 19:30 volta a "a disputar", sem placar, menos os dois das 19:30, gravados rolando
+     (Athletico 1 x 0 Vasco e Flamengo 2 x 0 Grêmio); o placar de agora vem da ESPN simulada;
+   - as súmulas desses jogos saem da lista das já contadas, e Pedro e Kevin Viveros ficam com os números da época
+     (Pedro 18 gols em 33 jogos, nenhum no Grêmio: os 2 dele em 04/11 são os primeiros; Kevin Viveros 21). */
+const ld = (nome) => JSON.parse(readFileSync(new URL(`../../dados/${nome}.json`, import.meta.url), "utf8"));
+const RAIZ = { live: ld("live-data"), stats: ld("player-stats") };
+const ESPN_CLUB = { 3458: "athletico-pr", 7632: "atletico-mg", 9967: "bahia", 6086: "botafogo", 6079: "bragantino", 9318: "chapecoense", 874: "corinthians", 3456: "coritiba", 2022: "cruzeiro", 819: "flamengo", 3445: "fluminense", 6273: "gremio", 1936: "internacional", 9169: "mirassol", 2029: "palmeiras", 4936: "remo", 2674: "santos", 2026: "sao-paulo", 3454: "vasco", 3457: "vitoria" };
+const LIVE = structuredClone(RAIZ.live), STATS = structuredClone(RAIZ.stats);
+LIVE.updated = "04/11/2026 às 20:15";
+{
+  const velho = Object.fromEntries(RAIZ.live.standings.map((r) => [r[0], r]));
+  LIVE.standings = TABELA.children[0].standings.entries.map((e) => {
+    const s = Object.fromEntries(e.stats.map((x) => [x.name, x.value])), cid = ESPN_CLUB[e.team.id], o = velho[cid] || [];
+    return [+s.rank, [cid, s.points, s.gamesPlayed, s.wins, s.ties, s.losses, s.pointsFor, s.pointsAgainst, o[8] ?? null, o[9] ?? null, o[10] ?? null]];
+  }).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+}
+const LIMITE = Date.parse("2026-11-04T19:30:00-03:00"), voltados = new Set();
+for (const gs of Object.values(LIVE.fixtures)) for (const g of gs) {
+  if (!g[4] || Date.parse(`${g[4]}T${g[5] || "00:00"}:00-03:00`) < LIMITE) continue;
+  if (g[7]) voltados.add(String(g[7]));
+  g[2] = g[3] = null; g[8] = { state: "pre", clock: "0'", detail: "Scheduled", gols: [] };
+}
+// às 20:15 o robô já tinha gravado os dois jogos das 19:30 rolando (o mesmo placar que a ESPN simulada dá às 20:20)
+const golGravado = (aid, nome, cid) => [aid, nome, cid, false, false];
+for (const g of Object.values(LIVE.fixtures).flat()) {
+  if (g[7] === "401841306") { g[2] = 1; g[3] = 0; g[8] = { state: "in", clock: "50'", detail: "50'", gols: [golGravado("197049", "Stiven Mendoza", "athletico-pr")] }; }
+  if (g[7] === "401841307") { g[2] = 2; g[3] = 0; g[8] = { state: "in", clock: "52'", detail: "52'", gols: [golGravado("253937", "Samuel Lino", "flamengo"), golGravado("235017", "Pedro", "flamengo")] }; }
+}
+STATS.updated = LIVE.updated;
+STATS.sumulas = (STATS.sumulas || []).filter((id) => !voltados.has(String(id)));
+const RETRATO = {
+  "235017": { gols: 18, golsSumulas: 18, golsClube: 18, jogos: 33, jogosComGol: 13, ultimoGol: "2026-11-01", clubes: [["flamengo", 33, 18]],
+    adversarios: [["vasco", 3], ["cruzeiro", 2], ["fluminense", 2], ["atletico-mg", 2], ["chapecoense", 2], ["mirassol", 2], ["botafogo", 1], ["santos", 1], ["athletico-pr", 1], ["coritiba", 1], ["bragantino", 1]] },
+  "268476": { gols: 21, golsSumulas: 21, golsClube: 21 },
+};
+for (const L of [STATS.artilheiros || [], ...Object.values(STATS.artilhariaClubes || {})]) for (const x of L) if (RETRATO[x.id]) Object.assign(x, structuredClone(RETRATO[x.id]));
+for (const L of Object.values(STATS.golsClubes || {})) for (const r of L) if (RETRATO[r[0]]) r[2] = RETRATO[r[0]].gols;
+for (const r of LIVE.scorers || []) { if (r[0] === "Pedro") r[2] = 18; if (r[0] === "Kevin Viveros") r[2] = 21; }
+if (!STATS.artilheiros?.some((x) => x.id === "235017") || !voltados.has("401841306") || !voltados.has("401841307"))
+  erros.push("dados: Pedro fora da artilharia gravada ou jogos de 04/11 ausentes de dados/live-data.json (atualize o retrato do teste)");
 
 const gol = (min, aid, nome, team) => ({ scoringPlay: true, clock: { displayValue: `${min}'` }, team: { id: team }, athletesInvolved: [{ id: aid, displayName: nome }], ownGoal: false, penaltyKick: false });
 const ev = (id, h, a, hs, as, clock, details, state = "in") => ({ id, date: "2026-11-04T22:30Z", competitions: [{ venue: {}, details,
@@ -19,16 +67,23 @@ const ev = (id, h, a, hs, as, clock, details, state = "in") => ({ id, date: "202
 
 for (const [dev, opts] of [["pc", { viewport: { width: 1440, height: 900 } }], ["pixel", devices["Pixel 7"]]]) {
   const b = await chromium.launch({ channel: "chrome" });
-  const p = await (await b.newContext({ ...opts, locale: "pt-BR" })).newPage();
+  // rotas no contexto (não na página): no Chromium elas também pegam o que o service worker (sw.js) busca depois de assumir a aba
+  const ctx = await b.newContext({ ...opts, locale: "pt-BR" });
+  const p = await ctx.newPage();
   p.on("pageerror", (e) => erros.push(`${dev}: ${e.message}`));
+  // dados gravados: js/<nome>.js (index.html), e por js/dados.js o banco <api>/dados/<nome>.json e a cópia dados/<nome>.json
+  for (const [nome, glob, d] of [["live-data", "LIVE_DATA", LIVE], ["player-stats", "PLAYER_STATS", STATS]]) {
+    await ctx.route(new RegExp(`/js/${nome}\\.js`), (r) => r.fulfill({ contentType: "application/javascript", body: `window.${glob} = ${JSON.stringify(d)};` }));
+    await ctx.route(new RegExp(`/dados/${nome}\\.json`), (r) => r.fulfill({ json: d }));
+  }
   await p.clock.install({ time: new Date("2026-11-04T20:20:00-03:00") });
   let cap = 1, fimFla = false, tabelaContou = false;
-  await p.route(/espn\.com.*scoreboard/, (r) => r.fulfill({ json: { leagues: [{ calendar: [] }], events: [
+  await ctx.route(/espn\.com.*scoreboard/, (r) => r.fulfill({ json: { leagues: [{ calendar: [] }], events: [
     ev("401841306", "3458", "3454", cap, 0, cap > 1 ? "61'" : "55'", [gol(22, "197049", "Stiven Mendoza", "3458"), ...(cap > 1 ? [gol(60, "268476", "Kevin Viveros", "3458")] : [])]),
     ev("401841307", "819", "6273", 2, 0, fimFla ? "FT" : "57'", [gol(20, "253937", "Samuel Lino", "819"), gol(28, "235017", "Pedro", "819")], fimFla ? "post" : "in"),
   ] } }));
   // tabela da ESPN: sem os jogos de agora; no fim, já com Flamengo 2 x 0 Grêmio contado
-  await p.route(/espn\.com.*standings/, (r) => {
+  await ctx.route(/espn\.com.*standings/, (r) => {
     const t = structuredClone(TABELA);
     if (tabelaContou) for (const e of t.children[0].standings.entries) {
       const s = Object.fromEntries(e.stats.map((x) => [x.name, x]));
@@ -104,4 +159,5 @@ for (const [dev, opts] of [["pc", { viewport: { width: 1440, height: 900 } }], [
   ok(!!(await p.$(".goal-alert")), `${dev}: ao voltar para a aba, o GOL! toca`);
   await b.close();
 }
-console.log(erros.length ? "\nFALHAS:\n" + erros.join("\n") : "\ntabela, artilharia e GOL! ao vivo ok");
+if (erros.length) { console.log("\nFALHAS:\n" + erros.join("\n")); process.exitCode = 1; }
+else console.log("\ntabela, artilharia e GOL! ao vivo ok");

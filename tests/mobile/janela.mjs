@@ -81,8 +81,12 @@ console.log("fluxo no PC (modo real)");
   await page.selectOption('[data-jt-f="vMax"]', "5000000");
   await page.click('[data-jt-pos="M"]');
   await page.waitForTimeout(300);
-  const lista = await page.evaluate(() => [...document.querySelectorAll(".jt-mercado tbody tr")].map((t) => t.innerText));
-  if (lista.some((t) => !/MEI/.test(t))) erro("filtro de posição deixou passar outra posição");
+  // setor M = meio-campistas: com as posições detalhadas (js/mercado.js: SUB_SETOR) entram volantes, meio-campistas,
+  // meias-atacantes e meias pelos lados (VOL, MC, MEI, MD, ME); sem posição detalhada, o selo é o do setor (MEI)
+  const lista = await page.evaluate(() => [...document.querySelectorAll(".jt-mercado tbody tr:not(.jt-mini-tr) .jt-pos-t")].map((t) => ({ txt: t.textContent.trim(), meio: t.classList.contains("p-M") })));
+  const outras = lista.filter((t) => !t.meio || !/^(VOL|MC|MEI|MD|ME)$/.test(t.txt));
+  if (!lista.length || outras.length) erro(`filtro de posição deixou passar outra posição: ${outras.slice(0, 5).map((t) => t.txt).join(", ")}`);
+  else ok(`filtro meio-campistas: ${lista.length} jogadores, só ${[...new Set(lista.map((t) => t.txt))].join("/")}`);
   if (!(await ateQue(page, () => !!document.querySelector("[data-jt-add]:not([disabled])")))) erro(`nenhum meia brasileiro até € 5 mi contratável: ${(await page.evaluate(() => document.querySelector(".jt-mercado tbody")?.innerText.slice(0, 200)))}`);
   const nome = await page.evaluate(() => { const b = document.querySelector("[data-jt-add]:not([disabled])"); const n = b.closest("tr").querySelector(".jt-quem div b").textContent; b.click(); return n; });
   await ateQue(page, () => document.querySelectorAll(".jt-negocio").length === 1);
@@ -145,6 +149,9 @@ console.log("fluxo no PC (modo real)");
   await page.evaluate(() => localStorage.removeItem("placar:janela-cruzeiro"));
   await page.goto(url.replace(/^https?:\/\/[^/]+/, BASE));
   await ateQue(page, () => !!document.querySelector(".jt-resumo"));
+  // os reforços vêm do mercado global, que carrega em paralelo (js/mercado.js: carregaGlobal): o resumo é redesenhado
+  // quando ele chega, então espera o resumo completo antes de comparar
+  await ateQue(page, (r) => [...document.querySelectorAll(".jt-resumo b")].map((b) => b.textContent).join("|") === r, resumo, 20000);
   const resumo2 = await page.evaluate(() => [...document.querySelectorAll(".jt-resumo b")].map((b) => b.textContent).join("|"));
   const apagou = await page.evaluate(() => localStorage.getItem("placar:janela-cruzeiro"));
   if (resumo !== resumo2) erro(`link não reabriu o mesmo elenco: ${resumo} × ${resumo2}`); else ok(`link reabre o mesmo elenco (${resumo2})`);
