@@ -147,11 +147,11 @@ jobs:
 
   navegador:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Playwright (Chromium e WebKit)
-        timeout-minutes: 15   # o download do WebKit às vezes passa de 8 min (3 vezes em 18/11)
+        timeout-minutes: 25   # o download do WebKit às vezes passa de 8 min (3 vezes em 18/11) e de 15 (2 vezes em 26/11)
         run: |
           npm ci --no-audit --no-fund
           npx playwright install --with-deps chromium webkit
