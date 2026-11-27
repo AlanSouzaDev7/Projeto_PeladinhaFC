@@ -56,6 +56,13 @@ assert f and f["u"].startswith("img/jogadores/cruzeiro/176810-h.webp?v="), f
 assert F.foto_clube("botafogo", "176810", monitor)["u"].startswith("img/jogadores/botafogo/"), "o Botafogo fica com a dele"
 caso("Lucas Villalba do Cruzeiro volta para a foto dele (não a do Botafogo); a do Botafogo continua lá")
 
+# 1b) como no site: o homônimo do Botafogo nem está no elenco da janela, só nas estatísticas; a <id>-h do Cruzeiro vale
+P.state["mercado"]["botafogo"]["elenco"] = []
+f = F.foto_clube("cruzeiro", "176810", monitor)
+assert f and f["u"].startswith("img/jogadores/cruzeiro/176810-h.webp?v="), f
+P.state["mercado"]["botafogo"]["elenco"] = [{"id": "176810"}]
+caso("foto própria do homônimo (<id>-h) vale mais que a da pasta de outro clube, mesmo fora do elenco da janela")
+
 # 2) a foto travada não muda, mesmo com uma foto nova no monitor
 publica({"cruzeiro": {"1": {"u": "img/jogadores/cruzeiro/1.webp?v=antiga", "f": "TheSportsDB"}}})
 assert F.foto_clube("cruzeiro", "1", monitor) == {"u": "img/jogadores/cruzeiro/1.webp?v=antiga", "f": "TheSportsDB"}

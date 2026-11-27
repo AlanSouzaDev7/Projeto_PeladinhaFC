@@ -530,11 +530,15 @@ def foto_clube(cid, aid, c=None, pub=None, elencos=None):
     f = SUBST[(cid, aid)] if (cid, aid) in SUBST else foto_de(aid, c)
     dono = pasta_de((f or {}).get("u"))
     if f and dono and dono != cid:
+        # a foto própria do homônimo neste clube (<id>-h, guardada quando a verificação achou duas pessoas com o mesmo
+        # id) vale sempre mais que uma foto da pasta de outro clube
+        rel = f"img/jogadores/{cid}/{re.sub(r'[^a-z0-9-]', '', aid.lower())}-h.webp"
+        v = _versao(rel) if privadas_ligadas() and not bloqueada(aid, rel) else None
+        if v:
+            return {"u": f"{rel}?v={v}", "f": "TheSportsDB"}
         el = elencos if elencos is not None else elencos_ativos()
         if aid in el.get(dono, set()) and aid in el.get(cid, set()):
-            rel = f"img/jogadores/{cid}/{re.sub(r'[^a-z0-9-]', '', aid.lower())}-h.webp"
-            v = _versao(rel) if privadas_ligadas() and not bloqueada(aid, rel) else None
-            return {"u": f"{rel}?v={v}", "f": "TheSportsDB"} if v else None
+            return None  # outro clube tem alguém com o mesmo id no elenco: a foto é de outra pessoa
     return f
 
 
