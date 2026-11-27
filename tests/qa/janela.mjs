@@ -38,10 +38,10 @@ for (const [perfil, vp] of [["celular", { width: 390, height: 844, isMobile: tru
   await p.click('[data-jt-modo="real"]');
   await espera(".jt-cards");
   ok(/#\/clube\/cruzeiro\/mercado\/elenco$/.test(p.url()), `${perfil}: escolher o modo leva o endereço para a etapa`, p.url().split("#")[1]);
-  // balancete: folha mensal em euros (fonte em reais, convertida pela PTAX), caixa com a base do ge e a janela da CBF
+  // balancete: folha mensal em reais (ranking do ge), caixa em euros com a base do ge e a janela da CBF
   const painel = (await p.locator(".jt-stats").innerText()).replace(/\s+/g, " ");
-  ok(/Folha mensal € [\d,]+ mi/.test(painel) && /limite € [\d,]+ mi/.test(painel), `${perfil}: folha mensal e limite em euros`, painel.match(/Folha mensal[^·]+/)?.[0]);
-  ok(/Caixa disponível € [\d,]+ (mi|mil)/.test(painel) && /média do que o clube gastou/.test(painel) && /\(ge\)|; ge\)/.test(painel), `${perfil}: caixa em euros com a base do ge`);
+  ok(/Folha mensal R\$ [\d,]+ mi/.test(painel) && /limite R\$ [\d,]+ mi/.test(painel), `${perfil}: folha mensal e limite em reais`, painel.match(/Folha mensal[^·]+/)?.[0]);
+  ok(/Caixa disponível € [\d,]+ (mi|mil)/.test(painel) && /média do que o clube gastou/.test(painel) && /; ge\)/.test(painel), `${perfil}: caixa em euros com a base do ge`);
   ok(/1ª janela de 2027: 04\/01\/2027 a 02\/03\/2027/.test(await p.locator(".jt-mesa-tit small").innerText()), `${perfil}: datas da janela pelo calendário da CBF`);
 
   // decisão e recarregar

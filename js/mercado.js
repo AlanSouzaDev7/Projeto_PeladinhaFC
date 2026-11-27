@@ -154,7 +154,7 @@
     const alertas = [];
     if (real) {
       if (caixa < 0) alertas.push(`Caixa estourado em ${eur(-caixa)}: venda alguém ou desista de um reforço.`);
-      if (folha > limiteFolha) alertas.push(`A folha passou do limite de ${eur(limiteFolha / cambio)} por mês (10% acima da atual).`);
+      if (folha > limiteFolha) alertas.push(`A folha passou do limite de ${brl(limiteFolha)} por mês (10% acima da atual).`);
       if (elencoFinal.length > teto) alertas.push(`Elenco com ${elencoFinal.length} jogadores: o limite aqui é ${teto}.`);
       if (elencoFinal.length < 22) alertas.push(`Elenco com ${elencoFinal.length} jogadores: são precisos pelo menos 22.`);
     }
@@ -299,8 +299,8 @@
           <span class="jt-faixa-el" title="Mínimo 22, máximo ${k.teto}">${barra(k.elencoFinal.length / 44, k.real && (k.elencoFinal.length < 22 || k.elencoFinal.length > k.teto) ? "neg" : "")}<i class="m" style="--x:${(22 / 44).toFixed(3)}"></i><i class="m" style="--x:${(k.teto / 44).toFixed(3)}"></i></span></div>
         <div class="jt-stat larga ${k.real && k.caixa < 0 ? "neg" : ""}"><span class="jt-stat-l">Caixa disponível ${!k.real && !editandoCaixa ? `<button type="button" class="jt-edita" data-jt-caixa aria-label="Editar o caixa">Editar</button>` : ""}</span>${!k.real && editandoCaixa ? `<form class="jt-caixa-f" data-jt-caixa-f><label><span class="sr-only">Caixa para reforços em milhões de euros</span>€ <input type="number" inputmode="decimal" min="0" max="5000" step="0.5" value="${(k.orcamento / 1e6).toFixed(1)}" data-jt-caixa-v autofocus> mi</label><button type="submit" class="jt-edita">Salvar</button></form>` : contador(cid + "x", k.caixa, "eur")}
           ${barra(disp > 0 ? k.gasto / disp : 0, k.caixa < 0 ? "neg" : "")}<small class="jt-origem">${k.gasto ? `${eur(k.gasto)} gastos de ${eur(disp)}` : `${eur(disp)} para reforços`} · ${origemCaixa}</small></div>
-        <div class="jt-stat larga ${k.real && k.folha > k.limiteFolha ? "neg" : ""}"><span class="jt-stat-l">Folha mensal</span>${contador(cid + "f", k.folha / k.cambio, "eur")}
-          ${barra(k.folha / (k.limiteFolha || 1), k.folha > k.limiteFolha ? "neg" : "")}<small class="jt-origem">${k.real ? `limite ${eur(k.limiteFolha / k.cambio)}` : "sem limite"} · ${brl(k.folha)} por mês · base: ${origemFolha}</small></div>
+        <div class="jt-stat larga ${k.real && k.folha > k.limiteFolha ? "neg" : ""}"><span class="jt-stat-l">Folha mensal</span>${contador(cid + "f", k.folha, "brl")}
+          ${barra(k.folha / (k.limiteFolha || 1), k.folha > k.limiteFolha ? "neg" : "")}<small class="jt-origem">${k.real ? `limite ${brl(k.limiteFolha)}` : "sem limite"} · base: ${origemFolha}</small></div>
       </div>
       ${k.alertas.length ? `<ul class="jt-alertas" role="status">${k.alertas.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}
     </section>`;
@@ -369,7 +369,7 @@
     if (resto.length) porGrupo.push(["Outros", resto]);
     const fin = D.financas;
     return `<div class="jt-bloco">
-        <div class="jt-bloco-h"><h3>Elenco atual</h3><span>${D.elenco.length} jogadores · valor estimado ${eur(D.valorTotal)} · folha ${eur(D.folhaMensal / (D.financas?.cambio?.valor || D.eurBrl || 6))}/mês</span></div>
+        <div class="jt-bloco-h"><h3>Elenco atual</h3><span>${D.elenco.length} jogadores · valor estimado ${eur(D.valorTotal)} · folha ${brl(D.folhaMensal)}/mês</span></div>
         <div class="jt-atalhos"><button type="button" class="chip" data-jt-auto="limpa">Todos ficam</button><button type="button" class="chip" data-jt-auto="veteranos">Liberar quem tem 34+</button><button type="button" class="chip" data-jt-auto="base">Emprestar a base sem minutos</button></div>
         ${porGrupo.filter(([, js]) => js.length).map(([nome, js]) => `<section class="jt-grupo"><h4>${nome} <small>${js.length}</small></h4><ul class="jt-cards">${js.map((j) => cartaoJogador(cid, j, e, D)).join("")}</ul></section>`).join("")}
       </div>
@@ -631,7 +631,7 @@
           <button type="button" class="jt-btn sec" data-jt-link>${navigator.share ? "Compartilhar" : "Copiar link"}</button>
           ${ver ? `<button type="button" class="jt-btn sec" data-jt-usar>Usar como ponto de partida</button><a class="jt-btn sec" href="#/clube/${cid}/mercado/elenco">Montar o meu do zero</a>` : `<a class="jt-btn sec" href="#/clube/${cid}/mercado/elenco">Revisar decisões</a>`}
         </div>
-        <ul class="jt-resumo"><li><small>Chegadas</small><b>${k.chegadas.length}</b></li><li><small>Saídas</small><b>${k.saidas.length}</b></li><li><small>Caixa</small><b>${eur(k.caixa)}</b></li><li><small>Folha</small><b>${eur(k.folha / k.cambio)}/mês</b></li></ul>
+        <ul class="jt-resumo"><li><small>Chegadas</small><b>${k.chegadas.length}</b></li><li><small>Saídas</small><b>${k.saidas.length}</b></li><li><small>Caixa</small><b>${eur(k.caixa)}</b></li><li><small>Folha</small><b>${brl(k.folha)}</b></li></ul>
         <p class="jt-share-msg" data-jt-msg role="status"></p></div></div>`;
   }
   const carregaImg = (src) => new Promise((res) => { if (!src) return res(null); const im = new Image(); im.crossOrigin = "anonymous"; im.referrerPolicy = "no-referrer"; im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
@@ -769,7 +769,7 @@
     if (marca) cabe(x, marca, 48, H - 62, 42, 42);
     x.fillStyle = "#fff"; x.font = DISP(900, 38); x.fillText("CAZÉSTATS.TV", 102, H - 28);
     x.textAlign = "right"; x.font = TXT(600, 17); x.fillStyle = "rgba(255,255,255,.75)";
-    x.fillText(`CAIXA ${eur(k.caixa)} · FOLHA ${eur(k.folha / k.cambio)}/MÊS · ${k.elencoFinal.length} NO ELENCO`, W - 48, H - 46);
+    x.fillText(`CAIXA ${eur(k.caixa)} · FOLHA ${brl(k.folha)}/MÊS · ${k.elencoFinal.length} NO ELENCO`, W - 48, H - 46);
     x.fillText("pílula: nota média na temporada (ou valor de mercado)", W - 48, H - 22); x.textAlign = "left";
   }
   function rr(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
