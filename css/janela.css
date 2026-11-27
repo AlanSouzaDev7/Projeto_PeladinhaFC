@@ -471,3 +471,9 @@ a.jt-nome:hover { color: var(--ink); text-decoration: underline; text-underline-
 .jt-as-limpa:hover { background: var(--surface-2); color: var(--text); }
 .jt-as-limpa:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .jt-as-conversa { scroll-behavior: auto; } }
+/* filtros: botão para limpar todos */
+.jt-filtros .jt-bloco-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.jt-f-limpa { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--text); font: 600 13px var(--font); cursor: pointer; }
+.jt-f-limpa:hover:not(:disabled) { background: var(--surface-2); }
+.jt-f-limpa:disabled { opacity: .45; cursor: default; }
+.jt-f-limpa:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

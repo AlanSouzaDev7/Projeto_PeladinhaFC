@@ -107,6 +107,13 @@ for (const [perfil, vp] of [["celular", { width: 390, height: 844, isMobile: tru
   await q.click("[data-jt-as-limpa]");
   await q.waitForTimeout(400);
   ok(!(await q.locator(".jt-as-eu").count()) && !(await q.locator("[data-jt-as-limpa]").count()), `${perfil}: "Limpar conversa" apaga as perguntas e respostas`);
+  // "Limpar" nos filtros: volta tudo ao padrão (inclusive a busca por nome) e fica desativado
+  await q.fill('[data-jt-f="q"]', "Silva"); await q.selectOption('[data-jt-f="cont"]', "europa"); await q.waitForTimeout(600);
+  const antesL = await q.locator("[data-jt-limpa-tudo]").evaluate((x) => ({ d: x.disabled, t: x.textContent.trim() }));
+  await q.click("[data-jt-limpa-tudo]");
+  await q.waitForTimeout(600);
+  const depoisL = await q.evaluate(() => ({ q: document.querySelector('[data-jt-f="q"]').value, cont: document.querySelector('[data-jt-f="cont"]').value, v: document.querySelector('[data-jt-f="vMax"]').value, pos: document.querySelector("[data-jt-pos].on")?.dataset.jtPos || "", off: document.querySelector("[data-jt-limpa-tudo]").disabled }));
+  ok(!antesL.d && /\(\d+\)/.test(antesL.t) && depoisL.q === "" && depoisL.cont === "" && +depoisL.v === 0 && !depoisL.pos && depoisL.off, `${perfil}: "Limpar" zera todos os filtros, inclusive o nome`, JSON.stringify({ antesL, depoisL }));
   const sobra = await q.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   ok(sobra <= 1, `${perfil}: sem rolagem para os lados`, `${sobra} px`);
   await q.locator(".jt-as").screenshot({ path: `tests/qa/out/janela/${perfil}-assistente.png` }).catch(() => {});

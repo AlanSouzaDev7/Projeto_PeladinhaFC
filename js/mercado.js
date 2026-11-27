@@ -504,6 +504,9 @@
     f.ord = af.ord === "barato" ? "barato" : af.ord === "idade" || af.ord === "promessa" ? (af.ord === "promessa" ? "valor" : "idade") : "valor";
     return f;
   }
+  // quantos filtros estão diferentes do padrão (o botão "Limpar" mostra o número e some quando não há nenhum)
+  const filtrosAtivos = (f) => ["q", "pos", "lg", "nac", "idMin", "idMax", "vMax", "ord", "semLes", "alt", "lado", "soReal", "cont", "contPor"]
+    .filter((k) => k !== "contPor" || f.cont).filter((k) => String(f[k] ?? "") !== String(FILTRO_PADRAO[k] ?? "")).length;
   const POS_FILTRO = [
     ["Setor", [["", "Todas"], ["G", "GOL", "Goleiros"], ["D", "DEF", "Defensores"], ["M", "MEI", "Meio-campistas"], ["A", "ATA", "Atacantes"]]],
     ["Defesa", [["ZAG", "Zagueiro"], ["lat", "Laterais"], ["LD", "Lat. dir.", "Lateral-direito"], ["LE", "Lat. esq.", "Lateral-esquerdo"]]],
@@ -533,7 +536,7 @@
         ${aberta ? `<tr class="jt-mini-tr"><td colspan="6"><div class="jt-mini" id="jt-mini-${esc(j.id)}" data-jt-mini="${esc(j.id)}"><div class="empty" style="padding:16px">Abrindo a ficha…</div></div></td></tr>` : ""}`;
     }).join("");
     return `<div class="jt-mercado">
-      <aside class="jt-bloco jt-filtros"><div class="jt-bloco-h"><h3>Filtros</h3></div>
+      <aside class="jt-bloco jt-filtros"><div class="jt-bloco-h"><h3>Filtros</h3>${(() => { const n = filtrosAtivos(f); return `<button type="button" class="jt-f-limpa" data-jt-limpa-tudo ${n ? "" : "disabled"} aria-label="Limpar todos os filtros${n ? ` (${n} ativos)` : ""}"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M3 5h18l-7 8v6l-4 2v-8L3 5Z"/><path d="M15 15l5 5m0-5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Limpar${n ? ` (${n})` : ""}</button>`; })()}</div>
         <label class="jt-f-busca"><span>Nome</span><input type="search" data-jt-f="q" value="${esc(f.q)}" placeholder="Buscar jogador" autocomplete="off"></label>
         <div class="jt-f-pos" role="group" aria-label="Posição">${POS_FILTRO.map(([titulo, ops]) => `<div class="jt-f-pos-g"><span>${titulo}</span><div>${ops.map(([v, l, t]) => `<button type="button" class="chip ${f.pos === v ? "on" : ""}" data-jt-pos="${v}" aria-pressed="${f.pos === v}"${t ? ` title="${t}"` : ""}>${l}</button>`).join("")}</div></div>`).join("")}</div>
         <div class="jt-f-2"><label><span>Onde atua</span>${sel("alt", f.alt, [["", "Campo todo"], ["D", "Defesa"], ["M", "Meio-campo"], ["A", "Ataque"]])}</label><label><span>Lado</span>${sel("lado", f.lado, [["", "Qualquer"], ["E", "Esquerda"], ["C", "Centro"], ["D", "Direita"]])}</label></div>
@@ -1111,6 +1114,7 @@
       if (d.jtAsVer) { const j = G && jogadorGlobal(G, d.jtAsVer, D); if (j) { filtros[cid] = { ...FILTRO_PADRAO, q: j.nome, semLes: false, idMin: 15, idMax: 45 }; fichaAberta[cid] = j.id; sessaoGrava(cid, { filtros: filtros[cid] }); pinta(); el.querySelector("[data-jt-mini]")?.closest("tr")?.scrollIntoView({ block: "center", behavior: reduz() ? "auto" : "smooth" }); } return; }
       if (d.jtFicha) { fichaAberta[cid] = fichaAberta[cid] === d.jtFicha ? null : d.jtFicha; pinta(); el.querySelector(`[data-jt-mini]`)?.closest("tr")?.scrollIntoView({ block: "nearest", behavior: reduz() ? "auto" : "smooth" }); return; }
       if (d.jtPos != null) { fil(cid).pos = d.jtPos; fil(cid).n = 25; sessaoGrava(cid, { filtros: fil(cid) }); return pinta(); }
+      if ("jtLimpaTudo" in d) { filtros[cid] = { ...FILTRO_PADRAO }; fichaAberta[cid] = null; sessaoGrava(cid, { filtros: filtros[cid] }); pinta(); el.querySelector('[data-jt-f="q"]')?.focus({ preventScroll: true }); return; }
       if ("jtLimpaF" in d) { filtros[cid] = { ...FILTRO_PADRAO, q: fil(cid).q, semLes: false }; sessaoGrava(cid, { filtros: filtros[cid] }); return pinta(); }
       if ("jtMais" in d) { fil(cid).n += 25; sessaoGrava(cid, { filtros: fil(cid) }); return pinta(); }
       if (d.jtAdd) {
