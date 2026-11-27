@@ -26,7 +26,7 @@ P = None  # módulo placar_api
 FE = None  # server/fontes_elenco.py (ligado pelo placar_api)
 FIN = None  # server/financas.py
 FOTO = None  # server/fotos.py (monitor das fotos; ligado pelo placar_api)
-VERSAO = 2  # sobe quando o formato do elenco muda (o robô relê o cache antigo)
+VERSAO = 3  # sobe quando o formato do elenco muda (o robô relê o cache antigo); 3: posição cruzando as fontes (funcao_de)
 
 SB = "https://site.api.espn.com/apis/site/v2/sports/soccer"
 CORE = "https://sports.core.api.espn.com/v2/sports/soccer"
@@ -357,6 +357,68 @@ def _norm(x):
 
 
 FUNCAO_PADRAO = {"G": "GOL", "D": "ZAG", "M": "MC", "A": "CA"}
+CORRECOES_POS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "posicoes-corrigidas.json")
+
+
+def _correcoes_pos():
+    """Posição corrigida à mão, com a fonte (server/posicoes-corrigidas.json): jogador sem jogos pelo clube e sem
+    Transfermarkt ligado, cuja posição de cadastro (ESPN: só G/D/M/A) não diz a função."""
+    try:
+        return {k: v for k, v in json.load(open(CORRECOES_POS, encoding="utf-8")).items() if not k.startswith("_")}
+    except Exception:
+        return {}
+
+
+SETOR_POS = {"GOL": "G", "ZAG": "D", "LD": "D", "LE": "D", "ALD": "D", "ALE": "D", "VOL": "M", "MC": "M", "MEI": "M", "MD": "M", "ME": "M",
+             "PD": "A", "PE": "A", "SA": "A", "CA": "A"}
+
+
+def _setor_ok(cod, pos_espn):
+    """A posição do Transfermarkt combina com o setor do cadastro da ESPN? (protege de jogador homônimo ligado errado:
+    goleiro x linha e defesa x ataque não; meio x ataque sim, a ESPN chama meia e ponta das duas formas)"""
+    a, b = SETOR_POS.get(cod), pos_espn
+    if not a or not b:
+        return True
+    return a == b or {a, b} == {"M", "A"}
+
+
+def funcao_de(j, hp, t, corr=None):
+    """Posição do jogador na janela, cruzando as fontes. Devolve (posição, fonte, outras posições em que também joga).
+    1. correção com fonte (server/posicoes-corrigidas.json);
+    2. com tempo de jogo pelo clube (90 min ou mais, escalações da ESPN): a do Transfermarkt se ele jogou nela pelo
+       clube (25% dos minutos ou mais); senão a de mais minutos, se domina (35% ou mais); senão a ÚLTIMA posição
+       em que jogou, se também foi frequente. Só a última partida não basta: a ESPN marca a casa da formação, e um
+       jogo improvisado mudaria a posição (Calleri de meia pela direita, Walace de lateral);
+    3. sem tempo pelo clube: a do Transfermarkt (se combina com o setor do cadastro), a de mais minutos, a do
+       TheSportsDB ou a do cadastro."""
+    s = hp.get("s") or {}
+    tot = sum(v[1] for v in s.values()) or 0
+    parte = lambda k: (s.get(k) or [0, 0])[1] / tot if tot else 0
+    tm = (j.get("tm") or {}).get("s")
+    tm = tm if tm and _setor_ok(tm, j.get("pos")) else None
+    data = "/".join(reversed((hp.get("ud") or "").split("-")))
+    if corr and corr.get("pos"):
+        f, fonte = corr["pos"], corr.get("fonte") or "correção"
+    elif tot >= 90 and tm and parte(tm) >= 0.25:
+        f, fonte = tm, f"Transfermarkt, e é onde joga pelo clube ({round(parte(tm) * 100)}% dos minutos)"
+    elif tot >= 90 and hp.get("f") and parte(hp["f"]) >= 0.35:
+        f, fonte = hp["f"], f"posição em que mais jogou pelo clube ({round(parte(hp['f']) * 100)}% dos minutos)"
+    elif tot >= 90 and hp.get("u") and parte(hp["u"]) >= 0.25:
+        f, fonte = hp["u"], f"última posição em que jogou pelo clube ({data}); nenhuma posição domina"
+    elif tot >= 90 and hp.get("f"):
+        f, fonte = hp["f"], "posição em que mais jogou pelo clube"
+    elif tm:
+        f, fonte = tm, "Transfermarkt"
+    elif hp.get("f"):
+        f, fonte = hp["f"], "posição em que jogou pelo clube"
+    elif t.get("pos"):
+        f, fonte = t["pos"], "TheSportsDB"
+    else:
+        f, fonte = FUNCAO_PADRAO.get(j.get("pos"), "MC"), "cadastro da ESPN"
+    tambem = [k for k, v in sorted(s.items(), key=lambda kv: (-kv[1][0], -kv[1][1])) if k != f and parte(k) >= 0.1][:3]
+    if tm and tm != f and tm not in tambem:
+        tambem.append(tm)
+    return f, fonte, tambem
 
 
 def _overview_espn(aid, team_id):
@@ -474,6 +536,7 @@ def enriquecer(cid, d):
     histórico por posição (escalações), fotos privadas e cadastro (TheSportsDB), situação (3+ fontes), finanças."""
     js, _ = _jogadores_clube(cid)
     pos = _posicoes()
+    correcoes = _correcoes_pos()
     xi = _ultimo_xi(cid)
     try:
         noticias = FE.noticias_escalacao(cid) if FE and os.environ.get("PLACAR_OFFLINE") != "1" else []
@@ -491,7 +554,7 @@ def enriquecer(cid, d):
             j["foto"] = x["foto"]
         hp = pos.get(j["id"]) or {}
         t = FE.do_jogador(j["id"]) if FE else {}
-        j["funcao"] = hp.get("f") or t.get("pos") or FUNCAO_PADRAO.get(j["pos"], "MC")
+        j["funcao"], j["funcaoFonte"], j["tambem"] = funcao_de(j, hp, t, correcoes.get(str(j["id"])))
         j["hist"] = hp.get("s") or {}
         j["fontes"] = ["ESPN (cadastro)"] + (["TheSportsDB (cadastro)"] if t else []) + (["súmulas"] if j["jogos"] else [])
         if t.get("posTxt"):
@@ -515,7 +578,7 @@ def enriquecer(cid, d):
             if xx:
                 e["min"], e["jogos"], e["titular"] = xx["min"], xx["jogos"], xx["tit"]
         hp = pos.get(str(e["espn"])) or {}
-        e["funcao"] = hp.get("f") or FUNCAO_PADRAO.get(e["pos"], "MC")
+        e["funcao"], e["funcaoFonte"], e["tambem"] = funcao_de(e, hp, {}, correcoes.get(str(e.get("espn") or e["id"])))
         t = FE.do_jogador(e["id"]) if FE else {}
         if fm_cache and (fm_cache.get("j") or {}).get(str(e["id"])):
             e["fotoPrivada"], e["fotoInfo"] = FOTO.campos_mercado(e["id"], fm_cache, cid)

@@ -1592,7 +1592,7 @@ def position_profiles(matches):
     """Onde cada jogador atuou no Brasileirão: minutos em cada posição (formação + nº da posição + sigla da ESPN),
     jogos, minutos, gols e finalizações. É a base do mapa de calor estimado do "Bora pro jogo".
     "s": por posição em português, [jogos, minutos, gols, assistências, jogos como titular]; "f": a posição de origem
-    (a de mais minutos). O campinho da janela de transferências usa isso para a prévia "como ele jogou ali"."""
+    (a de mais minutos); "u" e "ud": a última posição em que jogou (com 15 min ou mais) e a data do jogo. O campinho da janela de transferências usa isso para a prévia "como ele jogou ali"."""
     P = {}
     for m in (m for m in matches.values() if m.get("v", 1) >= 3):
         for rows in m["teams"].values():
@@ -1610,6 +1610,9 @@ def position_profiles(matches):
                     if pt:
                         s = q["s"].setdefault(pt, [0, 0, 0, 0, 0])
                         s[0] += 1; s[1] += mins; s[2] += g; s[3] += a; s[4] += 1 if starter else 0
+                        # a última posição em que jogou (com pelo menos 15 min: entrada no fim não conta)
+                        if mins >= 15 and (m.get("date") or "") >= q.get("ud", ""):
+                            q["u"], q["ud"] = pt, m.get("date") or ""
     # posições ordenadas pelos minutos; corta o que tem menos de 3% do tempo (ruído)
     for q in P.values():
         tot = sum(q["p"].values()) or 1

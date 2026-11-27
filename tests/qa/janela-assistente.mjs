@@ -91,6 +91,22 @@ for (const [perfil, vp] of [["celular", { width: 390, height: 844, isMobile: tru
   await q.waitForTimeout(600);
   const f = await q.evaluate(() => ({ pos: document.querySelector("[data-jt-pos].on")?.dataset.jtPos, v: document.querySelector('[data-jt-f="vMax"]')?.value }));
   ok(f.pos === "pon" && +f.v === 5e6, `${perfil}: "Ver todos na lista" leva os filtros (pontas, até € 5 mi)`, JSON.stringify(f));
+  // pergunta nova: a pergunta e o começo da resposta aparecem na tela, sem rolar
+  await q.fill(".jt-as-f input", "Zagueiros europeus experientes");
+  await q.click(".jt-as-f .jt-btn");
+  await q.waitForTimeout(1200);
+  const vis = await q.evaluate(() => {
+    const conv = document.querySelector(".jt-as-conversa"), eus = conv.querySelectorAll(".jt-as-eu"), eu = eus[eus.length - 1], resp = eu.nextElementSibling;
+    const rc = conv.getBoundingClientRect(), re = eu.getBoundingClientRect(), rr = resp?.querySelector("p")?.getBoundingClientRect();
+    const naConversa = re.top >= rc.top - 1 && re.bottom <= rc.bottom + 1 && rr && rr.top < rc.bottom;
+    const naTela = re.top >= 0 && re.bottom <= innerHeight && rr && rr.top < innerHeight;
+    return { naConversa, naTela, eu: eu.innerText.slice(0, 30) };
+  });
+  ok(vis.naConversa && vis.naTela, `${perfil}: a pergunta nova e a resposta aparecem sem rolar`, JSON.stringify(vis));
+  // limpar a conversa
+  await q.click("[data-jt-as-limpa]");
+  await q.waitForTimeout(400);
+  ok(!(await q.locator(".jt-as-eu").count()) && !(await q.locator("[data-jt-as-limpa]").count()), `${perfil}: "Limpar conversa" apaga as perguntas e respostas`);
   const sobra = await q.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   ok(sobra <= 1, `${perfil}: sem rolagem para os lados`, `${sobra} px`);
   await q.locator(".jt-as").screenshot({ path: `tests/qa/out/janela/${perfil}-assistente.png` }).catch(() => {});

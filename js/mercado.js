@@ -346,7 +346,9 @@
         : t ? `${barra((t.tit || 0) / 38)}<small>${t.tit} ${t.tit === 1 ? "jogo" : "jogos"} como titular lá${t.g ? ` · ${t.g} ${t.g === 1 ? "gol" : "gols"}` : ""}</small>` : `<small class="jt-sem-dado">Sem minutos divulgados pela fonte</small>`;
       status = j.confirmado ? `<span class="jt-sit ok" title="Wikipédia e elenco da ESPN batem">confirmado</span>` : j.clubeEspn ? `<span class="jt-sit dif" title="A Wikipédia diz ${esc(j.clube || "")}; a ESPN lista no ${esc(j.clubeEspn)}">ESPN: ${esc(j.clubeEspn)}</span>` : "";
     } else {
-      sub = `<span>${CP.NOME[f] || ""}${j.num ? ` · ${esc(j.num)}` : ""}${j.idade ? ` · ${j.idade} anos` : ""}</span>${BANDEIRA(j.pais)}`;
+      // posição (passe o mouse: de onde ela veio) e as outras em que também joga
+      const tambem = (j.tambem || []).filter((x) => x !== f && CP.NOME[x]).slice(0, 3);
+      sub = `<span><span class="jt-func" title="${esc(j.funcaoFonte ? `Posição: ${j.funcaoFonte}` : "Posição de origem")}">${CP.NOME[f] || ""}</span>${j.num ? ` · ${esc(j.num)}` : ""}${j.idade ? ` · ${j.idade} anos` : ""}</span>${BANDEIRA(j.pais)}${tambem.length ? `<small class="jt-tambem" title="Outras posições em que jogou pelo clube ou que o Transfermarkt registra">também ${esc(tambem.map((x) => CP.NOME[x].toLowerCase()).join(", "))}</small>` : ""}`;
       uso = `${barra((j.min || 0) / maxMin)}<small>${j.min ? `${mil(j.min)} min · ${j.jogos} ${j.jogos === 1 ? "jogo" : "jogos"}${j.tit ? ` · ${j.tit} como titular` : ""}` : "Sem minutos na temporada"}</small>`;
       const s = j.situacao;
       if (s) status = `<span class="jt-sit ${s.st === "titular" ? "tit" : s.st === "reserva" ? "res" : "pou"}" title="${esc((s.fontes || []).join(" · "))}">${s.st}${s.st === "titular" ? ` · ${s.conf}/${s.de} fontes` : ""}</span>`;
@@ -459,10 +461,20 @@
       }).join("");
       return `<li class="jt-as-bot"><p>${m.texto}</p>${linhas ? `<ol class="jt-as-lista">${linhas}</ol>` : ""}${m.aplicar ? `<button type="button" class="chip" data-jt-as-aplica="${m.i}">Ver todos na lista do mercado</button>` : ""}</li>`;
     };
-    return `<section class="jt-bloco jt-as" aria-labelledby="jt-as-t-${cid}"><div class="jt-bloco-h"><h3 id="jt-as-t-${cid}">Assistente de reforços</h3><span>pergunte do seu jeito</span></div>
+    return `<section class="jt-bloco jt-as" aria-labelledby="jt-as-t-${cid}"><div class="jt-bloco-h"><h3 id="jt-as-t-${cid}">Assistente de reforços</h3>${c.length ? `<button type="button" class="jt-as-limpa" data-jt-as-limpa><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 12H7L6 9Z"/></svg>Limpar conversa</button>` : `<span>pergunte do seu jeito</span>`}</div>
       <ol class="jt-as-conversa" aria-live="polite">${c.length ? c.map(fala).join("") : `<li class="jt-as-bot"><p>Diga o que procura e eu busco nos ${G.jogadores.length.toLocaleString("pt-BR")} jogadores do mercado: posição, liga, continente, nacionalidade, idade, valor, contrato e estilo (marca bem, recompõe).</p></li>`}</ol>
       <form class="jt-as-f" data-jt-as-f><label class="sr-only" for="jt-as-q-${cid}">Pergunta para o assistente</label><input id="jt-as-q-${cid}" type="text" name="q" maxlength="160" autocomplete="off" placeholder="Ex.: promessas da Série B, pontas que recompõem até 5 milhões"><button type="submit" class="jt-btn">Buscar</button></form>
       <div class="jt-as-sug" role="group" aria-label="Exemplos de perguntas">${A.SUGESTOES.map((x) => `<button type="button" class="chip" data-jt-as-q="${esc(x)}">${esc(x)}</button>`).join("")}</div></section>`;
+  }
+  // depois de responder: a última pergunta vai para o alto da conversa e a conversa fica à vista na tela,
+  // com a pergunta e o começo da resposta juntos (antes era preciso rolar para achar a resposta)
+  function mostraUltima(el) {
+    const conv = el.querySelector(".jt-as-conversa"), eus = conv?.querySelectorAll(".jt-as-eu");
+    const eu = eus && eus[eus.length - 1];
+    if (!conv || !eu) return;
+    conv.scrollTop = Math.max(0, eu.offsetTop - 8);
+    const topo = (document.querySelector(".header")?.getBoundingClientRect().bottom || 0) + 12, r = conv.getBoundingClientRect();
+    if (r.top < topo || r.top > innerHeight * 0.35) scrollBy({ top: r.top - topo, behavior: reduz() ? "auto" : "smooth" });
   }
   // pergunta → resposta (a busca e a frase do que foi entendido)
   function responde(cid, D, G, pergunta) {
@@ -1093,7 +1105,8 @@
         if (d.jtAuto === "base") D.elenco.forEach((j) => { if ((j.idade || 99) <= 21 && !j.min && tipoDe(j) === "elenco") e.dec[j.id] = "emprestar"; });
         salva(); return pinta();
       }
-      if (d.jtAsQ && G) { responde(cid, D, G, d.jtAsQ); pinta(); return el.querySelector(".jt-as-conversa li:last-child")?.scrollIntoView({ block: "nearest", behavior: reduz() ? "auto" : "smooth" }); }
+      if (d.jtAsQ && G) { responde(cid, D, G, d.jtAsQ); pinta(); return mostraUltima(el); }
+      if ("jtAsLimpa" in d) { conversas[cid] = []; pinta(); el.querySelector(".jt-as-f input")?.focus(); return; }
       if (d.jtAsAplica != null) { const m = (conversas[cid] || [])[+d.jtAsAplica]; if (m?.af) { aplicaNosFiltros(cid, m.af); sessaoGrava(cid, { filtros: fil(cid) }); pinta(); el.querySelector(".jt-tab-card")?.scrollIntoView({ block: "start", behavior: reduz() ? "auto" : "smooth" }); } return; }
       if (d.jtAsVer) { const j = G && jogadorGlobal(G, d.jtAsVer, D); if (j) { filtros[cid] = { ...FILTRO_PADRAO, q: j.nome, semLes: false, idMin: 15, idMax: 45 }; fichaAberta[cid] = j.id; sessaoGrava(cid, { filtros: filtros[cid] }); pinta(); el.querySelector("[data-jt-mini]")?.closest("tr")?.scrollIntoView({ block: "center", behavior: reduz() ? "auto" : "smooth" }); } return; }
       if (d.jtFicha) { fichaAberta[cid] = fichaAberta[cid] === d.jtFicha ? null : d.jtFicha; pinta(); el.querySelector(`[data-jt-mini]`)?.closest("tr")?.scrollIntoView({ block: "nearest", behavior: reduz() ? "auto" : "smooth" }); return; }
@@ -1247,7 +1260,7 @@
       if (ev.target.matches("[data-jt-as-f]")) {
         ev.preventDefault();
         const q = String(new FormData(ev.target).get("q") || "").trim().slice(0, 160);
-        if (q && G) { responde(cid, D, G, q); pinta(); el.querySelector(".jt-as-f input")?.focus(); el.querySelector(".jt-as-conversa li:last-child")?.scrollIntoView({ block: "nearest", behavior: reduz() ? "auto" : "smooth" }); }
+        if (q && G) { responde(cid, D, G, q); pinta(); el.querySelector(".jt-as-f input")?.focus({ preventScroll: true }); mostraUltima(el); }
         return;
       }
       if (!ev.target.matches("[data-jt-caixa-f]")) return;

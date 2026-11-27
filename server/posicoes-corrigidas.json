@@ -1,0 +1,9 @@
+{
+ "_leia": "Posição corrigida à mão quando nenhuma fonte automática diz a função (sem jogos pelo clube e sem Transfermarkt ligado). Chave: id da ESPN. Sempre com a fonte.",
+ "421402": {
+  "nome": "Eduardo Pape",
+  "clube": "cruzeiro",
+  "pos": "VOL",
+  "fonte": "Cruzeiro, na convocação para a Seleção Sub-17 (\"o volante Eduardo Pape\")"
+ }
+}
