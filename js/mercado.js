@@ -650,16 +650,48 @@
     for (const [s, id] of Object.entries(e.esc)) if (ids.has(id) && +s < FORMACOES[e.form].length) esc2[s] = id;
     return Object.keys(esc2).length >= 11 ? esc2 : { ...autoEscala(k, e.form), ...esc2 };
   }
+  /* banco de reservas: os escolhidos pela pessoa (e.banco, na ordem) e, se faltar gente, os que mais jogaram;
+     quem é titular nunca está no banco. Os demais do elenco ficam fora da relação. */
+  const BANCO = 12;
+  function bancoDe(e, k, titulares) {
+    const fora = k.elencoFinal.filter((j) => !titulares.has(j.id)).sort((a, b) => uso(b) - uso(a));
+    const porId = new Map(fora.map((j) => [j.id, j])), banco = [], ja = new Set();
+    for (const id of e.banco || []) { const j = porId.get(id); if (j && !ja.has(id) && banco.length < BANCO) { banco.push(j); ja.add(id); } }
+    for (const j of fora) { if (banco.length >= BANCO) break; if (!ja.has(j.id)) { banco.push(j); ja.add(j.id); } }
+    return { banco, demais: fora.filter((j) => !ja.has(j.id)) };
+  }
+  // reserva do banco entrou no campo no lugar de um titular: o titular que saiu fica com a vaga dele no banco
+  function entraDoBanco(e, k, cid, entra, sai) {
+    const titulares = new Set(Object.values(escalacaoValida(e, k, cid)));
+    const ids = bancoDe(e, k, titulares).banco.map((j) => j.id), i = ids.indexOf(entra);
+    if (i >= 0 && sai && sai !== entra) { ids[i] = sai; e.banco = ids; }
+  }
+  // troca entre o banco e os demais do elenco (ou põe no banco, se houver vaga)
+  function trocaBanco(e, k, cid, a, b) {
+    const titulares = new Set(Object.values(escalacaoValida(e, k, cid)));
+    const ids = bancoDe(e, k, titulares).banco.map((j) => j.id), ia = ids.indexOf(a), ib = ids.indexOf(b);
+    if ((ia >= 0) === (ib >= 0)) return false; // os dois no banco ou os dois fora: não é troca com o banco
+    if (ia >= 0) ids[ia] = b; else ids[ib] = a;
+    e.banco = ids;
+    return true;
+  }
+  const selBanco = {}; // jogador escolhido para trocar com o banco (por clube, só nesta visita)
   function etapaEscalacao(cid, D, e, k) {
     const c = byId[cid], esc2 = escalacaoValida(e, k, cid), porId = new Map(k.elencoFinal.map((j) => [j.id, j]));
     const titulares = new Set(Object.values(esc2)), sel = estadoSlot[cid];
     const L = (window.SQUADS_LAST || {})[cid], an = anunciada(cid);
     const origem = e.escManual ? "" : an ? `<p class="jt-ultima anunciada">Escalação anunciada para ${an.home ? `${esc(c.abbr)} x ${esc(an.vs)}` : `${esc(an.vs)} x ${esc(c.abbr)}`} (${esc(an.comp)}, ${data(an.date)}) · fonte: ${an.fonte.link ? `<a href="${esc(window.SEG.url(an.fonte.link))}" target="_blank" rel="noopener noreferrer">${esc(an.fonte.fonte)}</a>` : esc(an.fonte.fonte)}${an.anunciada.fontes.length > 1 ? ` e mais ${an.anunciada.fontes.length - 1}` : ""}</p>`
       : L && ultimaEscalacao(cid, k) ? `<p class="jt-ultima">Escalação do último jogo: ${esc(L.comp)}, ${L.home ? `${esc(c.abbr)} ${esc(L.score.replace("-", " x "))} ${esc(L.vs)}` : `${esc(L.vs)} ${esc(L.score.split("-").reverse().join(" x "))} ${esc(c.abbr)}`} · ${data(L.date)} · ${esc(L.formation)}</p>` : "";
-    const fora = k.elencoFinal.filter((j) => !titulares.has(j.id)).sort((a, b) => uso(b) - uso(a));
-    const banco = fora.slice(0, 12), demais = fora.slice(12);
+    const { banco, demais } = bancoDe(e, k, titulares), noBanco = new Set(banco.map((j) => j.id));
+    const sb = selBanco[cid] && (noBanco.has(selBanco[cid]) || demais.some((j) => j.id === selBanco[cid])) ? selBanco[cid] : null;
+    const sbJ = sb ? porId.get(sb) : null, sbNoBanco = sb && noBanco.has(sb);
     const estr = [...titulares].map((id) => porId.get(id)).filter((j) => j && !brasileiro(j)).length;
-    const item = (j) => { const f = CP.origem(j); return `<li><button type="button" class="jt-res" data-jt-poe="${esc(j.id)}">${avatar(j, c, 34)}<span><b>${esc(j.nome)}</b><small>${f} · ${CP.NOME[f] || ""}${j.min ? ` · ${mil(j.min)} min` : ""}</small></span>${j.reforco ? '<em class="jt-novo">reforço</em>' : ""}${j.lesao ? '<em class="jt-les">lesão</em>' : ""}</button></li>`; };
+    const item = (j, lista) => {
+      const f = CP.origem(j), escolhido = sb === j.id, alvo = sb && !escolhido && (lista === "banco") !== sbNoBanco;
+      const rotulo = escolhido ? "Cancelar" : alvo ? (lista === "banco" ? "Sai" : "Entra") : lista === "demais" && banco.length < BANCO ? "Pôr no banco" : "Trocar";
+      const dica = escolhido ? `Cancelar a troca de ${j.nome}` : alvo ? `Trocar ${sbJ.nome} por ${j.nome}` : lista === "banco" ? `Trocar ${j.nome} por um dos demais do elenco` : `Pôr ${j.nome} no banco`;
+      return `<li class="jt-res-li ${escolhido ? "sel" : ""} ${alvo ? "alvo" : ""}"><button type="button" class="jt-res" data-jt-poe="${esc(j.id)}" data-jt-lista="${lista}">${avatar(j, c, 34)}<span><b>${esc(j.nome)}</b><small>${f} · ${CP.NOME[f] || ""}${j.min ? ` · ${mil(j.min)} min` : ""}</small></span>${j.reforco ? '<em class="jt-novo">reforço</em>' : ""}${j.lesao ? '<em class="jt-les">lesão</em>' : ""}</button><button type="button" class="jt-troca" data-jt-bt="${esc(j.id)}" aria-pressed="${escolhido}" aria-label="${esc(dica)}">${rotulo}</button></li>`;
+    };
     const selJ = sel != null ? porId.get(esc2[sel]) : null;
     const pv = selJ ? CP.previa(selJ, CP.zona(...ptSlot(e, sel))) : null;
     return `<div class="jt-esc">
@@ -679,9 +711,10 @@
         <div class="jt-previa" data-jt-previa aria-live="polite">${pv ? pv.html : `<p class="cp-cab">Toque num titular para ver onde ele costuma jogar e como foi em cada posição.</p>`}</div>
       </div>
       <div class="jt-bloco jt-banco-bloco">
-        <div class="jt-bloco-h"><h3>Banco</h3><span>${banco.length} de 12</span></div>
-        <ul class="jt-banco">${banco.map(item).join("")}</ul>
-        ${demais.length ? `<div class="jt-bloco-h"><h3>Demais do elenco</h3><span>${demais.length}</span></div><ul class="jt-banco">${demais.map(item).join("")}</ul>` : ""}
+        <div class="jt-bloco-h"><h3>Banco</h3><span>${banco.length} de ${BANCO}</span></div>
+        <p class="jt-banco-dica" aria-live="polite">${sbJ ? `Escolha ${sbNoBanco ? "quem dos demais entra no banco no lugar de" : "quem sai do banco para entrar"} <b>${esc(sbJ.nome)}</b>.` : "Toque em Trocar (ou arraste) para trocar alguém do banco com os demais do elenco."}</p>
+        <ul class="jt-banco" data-jt-lista-banco>${banco.map((j) => item(j, "banco")).join("")}</ul>
+        ${demais.length ? `<div class="jt-bloco-h"><h3>Demais do elenco</h3><span>${demais.length}</span></div><ul class="jt-banco" data-jt-lista-demais>${demais.map((j) => item(j, "demais")).join("")}</ul>` : ""}
       </div>
       <div class="jt-seguir"><a class="jt-btn sec" href="#/clube/${cid}/mercado/reforcos">Voltar aos reforços</a><a class="jt-btn" href="#/clube/${cid}/mercado/compartilhar">Compartilhar o elenco</a></div></div>`;
   }
@@ -1126,14 +1159,26 @@
       }
       if (d.jtDel) { e.chegadas = e.chegadas.filter((x) => x !== d.jtDel); salva(); return pinta(); }
       if (d.jtForm) { e.form = d.jtForm; e.pos = {}; e.esc = autoEscala(k(), e.form); e.escManual = true; estadoSlot[cid] = null; salva(); return pinta(); }
-      if ("jtAutoEsc" in d) { e.esc = autoEscala(k(), e.form); e.pos = {}; e.escManual = true; estadoSlot[cid] = null; salva(); return pinta(); }
+      if ("jtAutoEsc" in d) { e.esc = autoEscala(k(), e.form); e.pos = {}; delete e.banco; selBanco[cid] = null; e.escManual = true; estadoSlot[cid] = null; salva(); return pinta(); }
       if ("jtUltima" in d) { e.escManual = false; e._ultimaAplicada = false; estadoSlot[cid] = null; salva(); return pinta(); }
       if ("jtAlinha" in d) { e.pos = {}; salva(); return pinta(); }
       if (d.jtSlot != null) { estadoSlot[cid] = estadoSlot[cid] === +d.jtSlot ? null : +d.jtSlot; return pinta(); }
+      if (d.jtBt) {
+        const kk = k(), titulares = new Set(Object.values(escalacaoValida(e, kk, cid))), { banco } = bancoDe(e, kk, titulares);
+        const noBanco = (id) => banco.some((j) => j.id === id), sel = selBanco[cid];
+        if (sel === d.jtBt) selBanco[cid] = null; // cancelar
+        else if (sel && noBanco(sel) !== noBanco(d.jtBt) && trocaBanco(e, kk, cid, sel, d.jtBt)) { selBanco[cid] = null; salva(); pinta(); return destaca(`[data-jt-bt="${CSS.escape(noBanco(sel) ? d.jtBt : sel)}"]`); }
+        else if (!noBanco(d.jtBt) && banco.length < BANCO) { e.banco = [...banco.map((j) => j.id), d.jtBt]; selBanco[cid] = null; salva(); }
+        else selBanco[cid] = d.jtBt;
+        pinta();
+        return el.querySelector(`[data-jt-bt="${CSS.escape(d.jtBt)}"]`)?.focus({ preventScroll: true });
+      }
       if (d.jtPoe) {
         const s = estadoSlot[cid];
         if (s == null) { const msg = el.querySelector(".jt-campo"); msg?.classList.add("pisca"); setTimeout(() => msg?.classList.remove("pisca"), 700); return; }
-        e.esc = { ...escalacaoValida(e, k(), cid), [s]: d.jtPoe }; e.escManual = true; salva(); pinta();
+        const kk = k(), antes = escalacaoValida(e, kk, cid);
+        entraDoBanco(e, kk, cid, d.jtPoe, antes[s]);
+        e.esc = { ...antes, [s]: d.jtPoe }; e.escManual = true; salva(); pinta();
         return destaca(`[data-jt-slot="${s}"]`);
       }
       const msg = el.querySelector("[data-jt-msg]"), cv = el.querySelector("[data-jt-cartaz]");
@@ -1212,11 +1257,18 @@
       if (!ev || ev.type === "pointercancel") return;
       const k = contas(cid, D, e, G), esc2 = escalacaoValida(e, k, cid), campo = el.querySelector("[data-jt-campo]");
       const alvo = alvoFicha(ev.clientX, ev.clientY, a.ficha);
+      if (!alvo && a.res) {
+        const r2 = document.elementsFromPoint(ev.clientX, ev.clientY).map((n) => n.closest?.(".jt-res")).find((n) => n && n !== a.res && el.contains(n));
+        if (r2) {
+          if (r2.dataset.jtLista !== a.res.dataset.jtLista && trocaBanco(e, k, cid, a.id, r2.dataset.jtPoe)) { selBanco[cid] = null; salva(); pinta(); destaca(`[data-jt-bt="${CSS.escape(a.id)}"]`); }
+          return;
+        }
+      }
       let slotMexido = null;
       if (alvo) {
         const s2 = +alvo.dataset.jtSlot;
         if (a.ficha) { const s1 = +a.ficha.dataset.jtSlot; [esc2[s1], esc2[s2]] = [esc2[s2], esc2[s1]]; }
-        else esc2[s2] = a.id;
+        else { entraDoBanco(e, k, cid, a.id, esc2[s2]); esc2[s2] = a.id; }
         slotMexido = s2;
       } else if (a.ficha) {
         const pt = pontoNoCampo(campo, ev.clientX, ev.clientY);
@@ -1230,7 +1282,7 @@
         let melhor = null, dm = 14;
         FORMACOES[e.form].forEach((_, i) => { const [x, y] = ptSlot(e, i), dd = Math.hypot(x - pt.x, (y - pt.y) * 0.7); if (dd < dm) { dm = dd; melhor = i; } });
         if (melhor == null) return;
-        esc2[melhor] = a.id; slotMexido = melhor;
+        entraDoBanco(e, k, cid, a.id, esc2[melhor]); esc2[melhor] = a.id; slotMexido = melhor;
       }
       e.esc = esc2; e.escManual = true; estadoSlot[cid] = slotMexido; salva(); pinta();
       destaca(`[data-jt-slot="${slotMexido}"]`);

@@ -477,3 +477,14 @@ a.jt-nome:hover { color: var(--ink); text-decoration: underline; text-underline-
 .jt-f-limpa:hover:not(:disabled) { background: var(--surface-2); }
 .jt-f-limpa:disabled { opacity: .45; cursor: default; }
 .jt-f-limpa:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* banco: trocar com os demais do elenco */
+.jt-res-li { display: flex; align-items: stretch; gap: 6px; border-radius: 12px; }
+.jt-res-li .jt-res { flex: 1; min-width: 0; }
+.jt-troca { flex: none; min-width: 64px; min-height: 44px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--text); font: 600 12.5px var(--font); cursor: pointer; transition: background .2s, border-color .2s, color .2s; }
+.jt-troca:hover { background: var(--surface-2); }
+.jt-troca:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.jt-res-li.sel .jt-res { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.jt-res-li.sel .jt-troca { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.jt-res-li.alvo .jt-troca { border-color: var(--accent); color: var(--accent); }
+.jt-banco-dica { margin: -4px 0 10px; color: var(--text-3); font-size: 13px; }
+.jt-banco-dica b { color: var(--text); }
