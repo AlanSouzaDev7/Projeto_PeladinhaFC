@@ -16,6 +16,12 @@ Fontes, na ordem em que valem:
 A foto livre da Wikipédia/Wikimedia NÃO aparece enquanto as fotos privadas estão ligadas (decisão do dono): sem
 nenhuma das cinco, o site mostra o número da camisa.
 
+TRAVA POR CLUBE (decisão do dono, 27/11/2026): a foto que um clube já mostra para um jogador (js/fotos.js, guardada na
+pasta desse clube) NÃO muda mais, nem por uma foto melhor ou mais nova. Ela só muda quando o jogador vai para outro
+clube (no clube novo ele começa sem trava) ou quando a foto entra em server/fotos-bloqueadas.json (é de outra pessoa).
+Uma foto baixada para OUTRO clube que tem no elenco alguém com o mesmo id (homônimo: o mesmo id da ESPN para duas
+pessoas, como os dois Lucas Villalba de Cruzeiro e Botafogo) nunca aparece neste clube.
+
 As fotos NUNCA saem sozinhas: cada uma é baixada e guardada no site (img/jogadores/), e só é trocada por uma melhor
 ou mais nova (o clube publicou outra foto). Só o comando de retirada as tira: MODO_VENDA=1 (ou FOTOS_PRIVADAS=0) apaga
 img/jogadores/ e deixa o site só com as fotos livres (que têm licença).
@@ -385,10 +391,12 @@ def atualizar(max_baixar=400):
                 if ok is not None:
                     esp[aid] = {"t": agora, "ok": bool(ok)}
         # o que baixar: foto nova (ninguém tinha), foto melhor (fonte que vale mais) ou foto trocada pelo clube
-        tarefas = []
+        tarefas, pub = [], publicadas_por_clube()
         for cid, jogs in alvo.items():
             af = _af_clube(c, cid, agora) if af_on else None
             for aid, info in jogs.items():
+                if travada(cid, aid, pub):
+                    continue  # trava por clube: a foto que o clube já mostra só muda se o jogador trocar de clube
                 cands = candidatos(aid, info, fe, af, site_por_clube[cid].get(aid), (esp.get(aid) or {}).get("ok"))
                 if not cands and not _existe((js.get(aid) or {}).get("u")) and not info.get("fora"):
                     g = P.BI.busca(info["nome"], (P.CLUBS.get(cid) or {}).get("busca") or cid, agora) if getattr(P, "BI", None) else None
@@ -461,6 +469,73 @@ def foto_de(aid, c=None):
 
 # {(clube, id): foto ou None}: preenchido por server/verifica_jogadores.py quando o mesmo id é de duas pessoas
 SUBST = {}
+CAMPOS = ("u", "f", "r", "a", "p")
+
+
+def pasta_de(u):
+    """O clube da pasta da foto guardada (img/jogadores/<clube>/...) ou None."""
+    m = re.match(r"img/jogadores/([a-z0-9-]+)/", str(u or ""))
+    return m.group(1) if m else None
+
+
+_PUB = [None, None]  # (data de modificação de js/fotos.js, {clube: {id: foto}})
+
+
+def publicadas_por_clube():
+    """{clube: {id: foto}} que o site já mostra (js/fotos.js): é a base da trava por clube."""
+    arq = os.path.join(P.ROOT, "js", "fotos.js")
+    try:
+        mt = os.path.getmtime(arq)
+        if _PUB[0] != mt:
+            s = open(arq, encoding="utf-8").read()
+            _PUB[0], _PUB[1] = mt, json.JSONDecoder().raw_decode(s[s.index("window.FOTOS = ") + len("window.FOTOS = "):])[0]
+    except Exception as ex:
+        P.silencioso("fotos:publicadas-clube", ex)
+        return {}
+    return _PUB[1] or {}
+
+
+def travada(cid, aid, pub=None):
+    """A foto que o clube já mostra para o jogador, guardada na pasta do próprio clube: não muda mais (None se não há)."""
+    if not privadas_ligadas():
+        return None
+    p = ((pub if pub is not None else publicadas_por_clube()).get(cid) or {}).get(str(aid))
+    if not p or pasta_de(p.get("u")) != cid or not _existe(p.get("u")) or bloqueada(aid, p.get("u")) or bloqueada(aid, p.get("src")):
+        return None
+    return {k: p[k] for k in CAMPOS if p.get(k)}
+
+
+def elencos_ativos():
+    """{clube: {ids do elenco atual}} da janela de transferências (sem os emprestados a outros clubes)."""
+    # sem a trava do servidor (threading.Lock não reentra): pode ser chamada de dentro de quem já a segura
+    mc = dict(P.state.get("mercado") or {})
+    return {cid: {str(j["id"]) for j in list(d.get("elenco") or [])} for cid, d in mc.items()}
+
+
+def _versao(rel):
+    try:
+        return hashlib.sha1(open(os.path.join(P.ROOT, rel.replace("/", os.sep)), "rb").read()).hexdigest()[:8]
+    except OSError:
+        return None
+
+
+def foto_clube(cid, aid, c=None, pub=None, elencos=None):
+    """A foto do jogador NESTE clube: a travada; senão a decisão dos homônimos (SUBST) ou a do monitor, desde que não
+    seja a baixada para outro clube que tem alguém com o mesmo id no elenco (aí, a própria do homônimo, <id>-h, ou
+    nenhuma: número da camisa)."""
+    aid = str(aid)
+    t = travada(cid, aid, pub)
+    if t:
+        return t
+    f = SUBST[(cid, aid)] if (cid, aid) in SUBST else foto_de(aid, c)
+    dono = pasta_de((f or {}).get("u"))
+    if f and dono and dono != cid:
+        el = elencos if elencos is not None else elencos_ativos()
+        if aid in el.get(dono, set()) and aid in el.get(cid, set()):
+            rel = f"img/jogadores/{cid}/{re.sub(r'[^a-z0-9-]', '', aid.lower())}-h.webp"
+            v = _versao(rel) if privadas_ligadas() and not bloqueada(aid, rel) else None
+            return {"u": f"{rel}?v={v}", "f": "TheSportsDB"} if v else None
+    return f
 
 
 def do_clube(cid, c=None):
@@ -472,10 +547,9 @@ def do_clube(cid, c=None):
     ids = set(((jg.get(cid) or {}).get("jogadores") or {}).keys())
     d = mc.get(cid) or {}
     ids |= {str(j["id"]) for j in d.get("elenco", []) + d.get("emprestados", [])}
-    out = {}
+    out, pub, el = {}, publicadas_por_clube(), elencos_ativos()
     for aid in ids:
-        # homônimos (o mesmo id da ESPN para duas pessoas): a verificação dos jogadores decide a foto de cada clube
-        f = SUBST[(cid, aid)] if (cid, aid) in SUBST else foto_de(aid, c)
+        f = foto_clube(cid, aid, c, pub, el)
         if f:
             out[aid] = f
     return out
@@ -484,7 +558,7 @@ def do_clube(cid, c=None):
 def campos_mercado(aid, c=None, cid=None):
     """(fotoPrivada, fotoInfo) do elenco da janela de transferências; a foto livre (Wikimedia) já vai em "foto".
     Com o clube, vale a decisão da verificação dos jogadores para homônimos (SUBST)."""
-    f = SUBST[(cid, str(aid))] if cid and (cid, str(aid)) in SUBST else foto_de(aid, c)
+    f = foto_clube(cid, aid, c) if cid else foto_de(aid, c)
     if not f or f["f"] == "Wikimedia":
         return None, None
     info = None if f["f"] == "TheSportsDB" else {"fonte": f["f"], **{k2: f[k1] for k1, k2 in (("a", "autor"), ("p", "pagina"), ("r", "rosto")) if f.get(k1)}}
@@ -499,15 +573,15 @@ def aplicar_mercado():
     """Põe a foto do monitor no elenco da janela de transferências (fotoPrivada e fotoInfo)."""
     c = _ler()
     with P.lock:
-        mercado = list((P.state.get("mercado") or {}).values())
+        mercado = list((P.state.get("mercado") or {}).items())
     campos = {}
-    for d in mercado:
+    for cid, d in mercado:
         for j in d.get("elenco", []) + d.get("emprestados", []):
-            campos[str(j["id"])] = campos_mercado(j["id"], c)  # fora da trava: foto_de pode pegá-la no modo venda
+            campos[(cid, str(j["id"]))] = campos_mercado(j["id"], c, cid)  # fora da trava: foto_de pode pegá-la no modo venda
     with P.lock:
-        for d in (P.state.get("mercado") or {}).values():
+        for cid, d in (P.state.get("mercado") or {}).items():
             for j in d.get("elenco", []) + d.get("emprestados", []):
-                j["fotoPrivada"], j["fotoInfo"] = campos.get(str(j["id"]), (None, None))
+                j["fotoPrivada"], j["fotoInfo"] = campos.get((cid, str(j["id"])), (None, None))
 
 
 def gravar_js():

@@ -470,7 +470,9 @@ def _troca_foto(c, cid, j, agora):
     """Foto própria para o homônimo que não tem a dele: TheSportsDB com o mesmo nome no mesmo clube (cache de 7 dias)."""
     k = f"{cid}:{j['id']}"
     t = c.setdefault("trocas", {}).get(k)
-    if t and agora - t.get("t", 0) < 7 * 86400 and (not t.get("u") or FOTO._existe(t["u"])):
+    if t and FOTO._existe(t.get("u")):
+        return t  # trava por clube: a foto própria do homônimo, uma vez guardada, não é baixada de novo
+    if t and agora - t.get("t", 0) < 7 * 86400 and not t.get("u"):
         return t
     achado = busca_tsdb(j.get("nome"), cid)
     reg = {"t": agora, "u": None, "dados": {k2: achado[k2] for k2 in ("nasc", "pais", "time") if achado and achado.get(k2)}}
@@ -543,7 +545,8 @@ def rodar():
                             pass
                     if dd.get("pais") and _norm(dd["pais"]) in PAIS and j.get("cadastro"):
                         j["pais"] = PAIS[_norm(dd["pais"])]
-                f = subst[(cid, aid)]
+                FOTO.SUBST[(cid, aid)] = subst[(cid, aid)]
+                f = FOTO.foto_clube(cid, aid, fotos_cache)  # a travada no clube vale mais que a decisão desta rodada
                 j["fotoPrivada"] = f["u"] if f and f.get("f") != "Wikimedia" else None
                 j["fotoInfo"] = {"fonte": f["f"]} if f and f.get("f") not in ("TheSportsDB", "Wikimedia") else None
             b = bases.get(f"{cid}:{aid}") or {}

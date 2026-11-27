@@ -104,7 +104,8 @@ for (const [perfil, vp] of [["celular", { width: 390, height: 844, isMobile: tru
   };
   const vCru = await fotoDe("cruzeiro", "176810"), vBot = await fotoDe("botafogo", "176810");
   ok(/jogadores\/cruzeiro\//.test(vCru), `${perfil}: Lucas Villalba do Cruzeiro com a foto do Cruzeiro`, vCru.split("/").slice(-2).join("/"));
-  ok(/jogadores\/botafogo\//.test(vBot), `${perfil}: Lucas Villalba do Botafogo com a foto do Botafogo`, vBot.split("/").slice(-2).join("/"));
+  // o Lucas Villalba do Botafogo (homônimo, mesmo id da ESPN) pode nem estar no elenco da janela; se estiver, nunca com a foto do Cruzeiro
+  ok(vBot === "sem cartão" || /jogadores\/botafogo\//.test(vBot), `${perfil}: Lucas Villalba do Botafogo com a foto do Botafogo (ou fora do elenco)`, vBot.split("/").slice(-2).join("/"));
   const mCor = await fotoDe("corinthians", "216098"), mCru = await fotoDe("cruzeiro", "216098");
   ok(!/jogadores\/cruzeiro\//.test(mCor), `${perfil}: Matheus Pereira do Corinthians não usa a foto do Cruzeiro`, mCor.split("/").slice(-2).join("/"));
   ok(/jogadores\/cruzeiro\//.test(mCru), `${perfil}: Matheus Pereira do Cruzeiro com a foto dele`);
