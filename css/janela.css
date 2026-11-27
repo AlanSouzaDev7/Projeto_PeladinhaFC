@@ -437,3 +437,31 @@ a.jt-nome:hover { color: var(--ink); text-decoration: underline; text-underline-
 
 /* foto do jogador não é arrastada como imagem (o arraste é o da escalação, js/mercado.js) */
 .jt-av img { -webkit-user-drag: none; user-select: none; }
+
+/* ---------- assistente de reforços (js/assistente-reforcos.js + js/mercado.js) ---------- */
+.jt-as .jt-bloco-h span { color: var(--text-3); }
+.jt-as-conversa { list-style: none; margin: 0; padding: 4px 16px 0; display: grid; gap: 10px; max-height: 560px; overflow-y: auto; overscroll-behavior: contain; }
+.jt-as-conversa > li > p { margin: 0; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.45; max-width: 92%; }
+.jt-as-bot > p { background: var(--surface-2); border-top-left-radius: 4px; }
+.jt-as-eu { display: flex; justify-content: flex-end; }
+.jt-as-eu > p { background: var(--accent); color: var(--on-accent, #fff); border-top-right-radius: 4px; font-weight: 600; }
+.jt-as-lista { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.jt-as-j { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line-soft, var(--line)); background: var(--surface); }
+.jt-as-j b { display: block; font: 700 14px/1.2 var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jt-as-j small { display: block; font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jt-as-v { font: 700 14px var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.jt-as-acoes { display: flex; gap: 6px; }
+.jt-as-acoes .jt-ver { margin-left: 0; }
+.jt-as-bot > .chip { margin-top: 8px; }
+.jt-as-f { display: flex; gap: 8px; padding: 12px 16px 8px; }
+.jt-as-f input { flex: 1; min-width: 0; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 500 15px var(--font); }
+.jt-as-f input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.jt-as-f .jt-btn { min-height: 44px; }
+.jt-as-sug { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 16px; }
+@media (max-width: 760px) {
+  .jt-as-j { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .jt-as-acoes { grid-column: 1 / -1; }
+  .jt-as-acoes .jt-contratar { flex: 1; }
+  .jt-as-conversa { max-height: 480px; }
+}
+.jt-as-j small .crest, .jt-as-j small img, .jt-as-j small svg { display: inline-block; width: 14px; height: 14px; margin-right: 3px; vertical-align: -2px; object-fit: contain; }

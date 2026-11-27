@@ -140,6 +140,8 @@ jobs:
         run: node tests/replay.mjs
       - name: Pergunte ao CazéStats (perguntas e respostas com dados reais)
         run: node tests/pergunte.mjs
+      - name: Assistente de reforços (a pergunta vira filtros; continentes)
+        run: node tests/assistente-reforcos.mjs
       - name: Conta com Google e sincronização (comprovantes e banco simulados)
         timeout-minutes: 2
         run: node tests/conta.mjs

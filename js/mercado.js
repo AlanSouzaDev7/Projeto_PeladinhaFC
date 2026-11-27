@@ -384,7 +384,7 @@
 
   /* ---------- 2) reforços ---------- */
   const filtros = {};
-  const FILTRO_PADRAO = { q: "", pos: "", lg: "", nac: "", idMin: 16, idMax: 40, vMax: 0, ord: "valor", semLes: true, n: 25, alt: "", lado: "", soReal: false };
+  const FILTRO_PADRAO = { q: "", pos: "", lg: "", nac: "", idMin: 16, idMax: 40, vMax: 0, ord: "valor", semLes: true, n: 25, alt: "", lado: "", soReal: false, cont: "", contPor: "liga" };
   const fichaAberta = {}; // jogador com a mini aba aberta nos reforços, por clube
   // (filtros guardados antes de 25/11: o de retorno defensivo e a ordem "Mais recompõem" saíram)
   const fil = (cid) => (filtros[cid] = filtros[cid] || ((f) => { delete f.def; if (f.ord === "def") f.ord = "valor"; return f; })({ ...FILTRO_PADRAO, ...(sessaoLe(cid)?.filtros || {}) }));
@@ -418,11 +418,79 @@
       && (!f.soReal || r[10])
       && (!(f.alt || f.lado) || ((z) => z && (!f.alt || z.t === f.alt) && (!f.lado || z.l === f.lado))(zonaDe(r)))
       && (!f.vMax || r[8] <= f.vMax) && (!f.lg || G.times[r[6]]?.[2] === f.lg) && (!f.semLes || !r[9])
-      && (!f.nac || (f.nac === "bra" ? r[4] === "bra" : f.nac === "est" ? r[4] !== "bra" : r[4] === f.nac)));
+      && (!f.nac || (f.nac === "bra" ? r[4] === "bra" : f.nac === "est" ? r[4] !== "bra" : r[4] === f.nac))
+      && (!f.cont || continenteDe(G, r, f.contPor) === f.cont));
     const escondidos = pelosNomes.filter((r) => !L.includes(r));
     const ord = { valor: (a, b) => b[8] - a[8], idade: (a, b) => (a[2] ?? 99) - (b[2] ?? 99), nome: (a, b) => a[1].localeCompare(b[1], "pt-BR"), barato: (a, b) => a[8] - b[8] }[f.ord] || ((a, b) => b[8] - a[8]);
     L.sort(ord);
     return { L, escolhidos, escondidos };
+  }
+  // continente pela liga onde joga ou pela nacionalidade (js/assistente-reforcos.js)
+  const AS = () => window.ASSISTENTE_REFORCOS;
+  const continenteDe = (G, r, por) => (por === "nacionalidade" ? AS()?.contDoPais(r[4]) : AS()?.contDaLiga(G.times[r[6]]?.[2])) || null;
+  // nota de promessa: valor de mercado, com bônus para quem é mais novo (aos 17, vale 1,6 vez o de 21)
+  const notaPromessa = (r) => (r[8] || 0) * (1 + Math.max(0, 21 - (r[2] ?? 21)) * 0.15);
+  /* assistente: a pergunta (já em filtros, js/assistente-reforcos.js) aplicada ao mercado global inteiro */
+  function buscaAssistente(cid, D, G, af) {
+    const meus = new Set(D.elenco.map((j) => j.id));
+    const meuTime = Object.entries(G.times).find(([, t]) => t[0] && norm(t[0]) === norm(byId[cid].name))?.[0];
+    const palavras = af.q ? norm(af.q).split(/[\s.'-]+/).filter(Boolean).map(som) : [];
+    const tagOk = (r) => !af.tags?.length || af.tags.every((t) => String(r[17] || "").slice(1, -1).includes(t));
+    const L = G.jogadores.filter((r) => !meus.has(r[0]) && r[6] !== meuTime && (!palavras.length || nomeBate(r[1], palavras)) && posBate(r, af.pos)
+      && (!af.lgs || af.lgs.includes(G.times[r[6]]?.[2])) && (!af.cont || continenteDe(G, r, af.contPor) === af.cont)
+      && (!af.nac || (af.nac === "bra" ? r[4] === "bra" : af.nac === "est" ? r[4] !== "bra" : r[4] === af.nac))
+      && (af.idMin == null || (r[2] != null && r[2] >= af.idMin)) && (af.idMax == null || (r[2] != null && r[2] <= af.idMax))
+      && (!af.vMax || r[8] <= af.vMax) && (!af.contrato || (r[13] && r[13] <= af.contrato)) && tagOk(r) && !r[9]);
+    const ord = { promessa: (a, b) => notaPromessa(b) - notaPromessa(a), barato: (a, b) => a[8] - b[8], idade: (a, b) => (a[2] ?? 99) - (b[2] ?? 99) }[af.ord] || ((a, b) => b[8] - a[8]);
+    return L.sort(ord);
+  }
+  const conversas = {}; // conversa do assistente por clube (só nesta visita)
+  function assistente(cid, D, G, k) {
+    const c = conversas[cid] || [], A = AS();
+    if (!A) return "";
+    const fala = (m) => {
+      if (m.eu) return `<li class="jt-as-eu"><p>${esc(m.texto)}</p></li>`;
+      const linhas = (m.ids || []).map((id) => {
+        const j = jogadorGlobal(G, id, D);
+        if (!j) return "";
+        const ja = k.chegadas.some((x) => x.id === id), semDinheiro = k.real && !ja && j.valor > k.caixa;
+        return `<li class="jt-as-j">${avatar(j, byId[cid], 34)}<div><b>${esc(j.nome)}</b><small>${j.timeLogo ? crestOutro(j.timeNome, j.timeLogo, 14) : ""} ${esc(j.timeNome)} · ${esc(SUB_NOME[j.sub] || POS_CURTO[j.pos] || "")} · ${j.idade ?? "—"} anos</small>${etiquetas(j.tat) ? `<span class="jt-perfil">${etiquetas(j.tat)}</span>` : ""}</div>
+          <span class="jt-as-v">${eur(j.valor)}</span><span class="jt-as-acoes"><button type="button" class="jt-contratar ${ja ? "ja" : ""}" data-jt-add="${esc(id)}" ${semDinheiro ? `disabled title="Sem caixa no modo real"` : ""}>${ja ? "Contratado" : semDinheiro ? "Sem caixa" : "Contratar"}</button><button type="button" class="jt-ver" data-jt-as-ver="${esc(id)}">Ficha</button></span></li>`;
+      }).join("");
+      return `<li class="jt-as-bot"><p>${m.texto}</p>${linhas ? `<ol class="jt-as-lista">${linhas}</ol>` : ""}${m.aplicar ? `<button type="button" class="chip" data-jt-as-aplica="${m.i}">Ver todos na lista do mercado</button>` : ""}</li>`;
+    };
+    return `<section class="jt-bloco jt-as" aria-labelledby="jt-as-t-${cid}"><div class="jt-bloco-h"><h3 id="jt-as-t-${cid}">Assistente de reforços</h3><span>pergunte do seu jeito</span></div>
+      <ol class="jt-as-conversa" aria-live="polite">${c.length ? c.map(fala).join("") : `<li class="jt-as-bot"><p>Diga o que procura e eu busco nos ${G.jogadores.length.toLocaleString("pt-BR")} jogadores do mercado: posição, liga, continente, nacionalidade, idade, valor, contrato e estilo (marca bem, recompõe).</p></li>`}</ol>
+      <form class="jt-as-f" data-jt-as-f><label class="sr-only" for="jt-as-q-${cid}">Pergunta para o assistente</label><input id="jt-as-q-${cid}" type="text" name="q" maxlength="160" autocomplete="off" placeholder="Ex.: promessas da Série B, pontas que recompõem até 5 milhões"><button type="submit" class="jt-btn">Buscar</button></form>
+      <div class="jt-as-sug" role="group" aria-label="Exemplos de perguntas">${A.SUGESTOES.map((x) => `<button type="button" class="chip" data-jt-as-q="${esc(x)}">${esc(x)}</button>`).join("")}</div></section>`;
+  }
+  // pergunta → resposta (a busca e a frase do que foi entendido)
+  function responde(cid, D, G, pergunta) {
+    const A = AS(), cambio = D.financas?.cambio?.valor || D.eurBrl || 6;
+    const { f: af, entendi, reconheceu } = A.entende(pergunta, { cambio });
+    const c = (conversas[cid] = conversas[cid] || []);
+    c.push({ eu: true, texto: pergunta });
+    if (!reconheceu) { c.push({ texto: "Não entendi. Tente com posição, liga, idade, valor ou estilo, como nos exemplos abaixo." }); return; }
+    const L = buscaAssistente(cid, D, G, af), mostra = L.slice(0, af.n || 8);
+    const crit = { promessa: "pelo valor de mercado, com peso para os mais novos", barato: "dos mais baratos para os mais caros", idade: "dos mais novos para os mais velhos" }[af.ord] || "pelo valor de mercado";
+    const texto = L.length
+      ? `Busquei ${af.pos ? "" : "jogadores "}${esc(entendi.join(", "))}. Achei <b>${L.length.toLocaleString("pt-BR")}</b> ${L.length === 1 ? "jogador" : "jogadores"}; ${mostra.length < L.length ? `os ${mostra.length} primeiros, ` : ""}${crit}:`
+      : `Busquei ${af.pos ? "" : "jogadores "}${esc(entendi.join(", "))}, mas não achei ninguém. Tente afrouxar um critério (idade, valor ou liga).`;
+    c.push({ texto, ids: mostra.map((r) => r[0]), aplicar: L.length > mostra.length || L.length > 0, af, i: c.length });
+  }
+  // o que dá para levar da pergunta para os filtros da lista
+  function aplicaNosFiltros(cid, af) {
+    const f = (filtros[cid] = { ...FILTRO_PADRAO, semLes: true });
+    if (af.q) f.q = af.q;
+    if (af.pos) f.pos = af.pos;
+    if (af.lgs?.length === 1) f.lg = af.lgs[0];
+    if (af.nac) f.nac = af.nac;
+    if (af.cont) { f.cont = af.cont; f.contPor = af.contPor || "liga"; }
+    if (af.idMin != null) f.idMin = af.idMin;
+    if (af.idMax != null) f.idMax = af.idMax;
+    if (af.vMax) f.vMax = [1e6, 3e6, 5e6, 10e6, 20e6, 40e6].find((v) => v >= af.vMax) || 0;
+    f.ord = af.ord === "barato" ? "barato" : af.ord === "idade" || af.ord === "promessa" ? (af.ord === "promessa" ? "valor" : "idade") : "valor";
+    return f;
   }
   const POS_FILTRO = [
     ["Setor", [["", "Todas"], ["G", "GOL", "Goleiros"], ["D", "DEF", "Defensores"], ["M", "MEI", "Meio-campistas"], ["A", "ATA", "Atacantes"]]],
@@ -458,6 +526,7 @@
         <div class="jt-f-pos" role="group" aria-label="Posição">${POS_FILTRO.map(([titulo, ops]) => `<div class="jt-f-pos-g"><span>${titulo}</span><div>${ops.map(([v, l, t]) => `<button type="button" class="chip ${f.pos === v ? "on" : ""}" data-jt-pos="${v}" aria-pressed="${f.pos === v}"${t ? ` title="${t}"` : ""}>${l}</button>`).join("")}</div></div>`).join("")}</div>
         <div class="jt-f-2"><label><span>Onde atua</span>${sel("alt", f.alt, [["", "Campo todo"], ["D", "Defesa"], ["M", "Meio-campo"], ["A", "Ataque"]])}</label><label><span>Lado</span>${sel("lado", f.lado, [["", "Qualquer"], ["E", "Esquerda"], ["C", "Centro"], ["D", "Direita"]])}</label></div>
         <label><span>Liga</span>${sel("lg", f.lg, [["", "Todas as ligas"], ...Object.entries(G.ligas).map(([k2, v]) => [k2, `${v[0]} (${v[1]})`])])}</label>
+        <div class="jt-f-2"><label><span>Continente</span>${sel("cont", f.cont, [["", "Todos"], ...Object.entries(AS()?.CONTINENTES || {})])}</label><label><span>Pelo quê</span>${sel("contPor", f.contPor, [["liga", "Onde joga"], ["nacionalidade", "Nacionalidade"]])}</label></div>
         <label><span>Nacionalidade</span>${sel("nac", f.nac, [["", "Todas"], ["bra", "Só brasileiros"], ["est", "Só estrangeiros"], ...topPaises.filter((p) => p !== "bra").map((p) => [p, nomePais[p] || p])])}</label>
         <div class="jt-f-2"><label><span>Idade mín.</span><input type="number" min="15" max="45" data-jt-f="idMin" value="${f.idMin}"></label><label><span>Idade máx.</span><input type="number" min="15" max="45" data-jt-f="idMax" value="${f.idMax}"></label></div>
         <label><span>Valor até</span>${sel("vMax", f.vMax, [[0, "Qualquer valor"], [1e6, "€ 1 mi"], [3e6, "€ 3 mi"], [5e6, "€ 5 mi"], [10e6, "€ 10 mi"], [20e6, "€ 20 mi"], [40e6, "€ 40 mi"]])}</label>
@@ -468,6 +537,7 @@
       <div>
         <div class="jt-bloco"><div class="jt-bloco-h"><h3>Chegadas</h3><span>${k.chegadas.length} · ${eur(k.chegadas.reduce((s, j) => s + j.valor, 0))}</span></div>
           ${k.chegadas.length ? `<ul class="jt-negocios">${k.chegadas.map((j) => negocio(cid, j, G)).join("")}</ul>` : `<div class="empty" style="padding:18px">Nenhum reforço ainda. Contrate na lista abaixo: cada negócio fechado aparece aqui.</div>`}</div>
+        ${assistente(cid, D, G, k)}
         <div class="jt-bloco jt-tab-card"><div class="jt-bloco-h"><h3>Mercado global</h3><span>${L.length.toLocaleString("pt-BR")} jogadores · ${Object.keys(G.ligas).length} ligas</span></div>
           <div class="jt-scroll"><table class="table jt-tabela"><thead><tr><th>Jogador</th><th>Pos.</th><th class="hide-sm">Idade</th><th class="hide-sm">Nac.</th><th>Valor · salário</th><th></th></tr></thead><tbody>${linhas || `<tr><td colspan="6"><div class="empty" style="padding:24px">Nenhum jogador com esses filtros.</div></td></tr>`}</tbody></table></div>
           ${escondidos.length ? `<p class="jt-escondidos" role="status">${escondidos.length === 1 ? `<b>${esc(escondidos[0][1])}</b> (${esc(G.times[escondidos[0][6]]?.[0] || "")}) tem esse nome mas está escondido pelos filtros` : `${escondidos.length} jogadores com esse nome estão escondidos pelos filtros`} (posição, idade, liga, valor, nacionalidade ou lesionados). <button type="button" class="chip" data-jt-limpa-f>Limpar os filtros</button></p>` : ""}
@@ -1023,6 +1093,9 @@
         if (d.jtAuto === "base") D.elenco.forEach((j) => { if ((j.idade || 99) <= 21 && !j.min && tipoDe(j) === "elenco") e.dec[j.id] = "emprestar"; });
         salva(); return pinta();
       }
+      if (d.jtAsQ && G) { responde(cid, D, G, d.jtAsQ); pinta(); return el.querySelector(".jt-as-conversa li:last-child")?.scrollIntoView({ block: "nearest", behavior: reduz() ? "auto" : "smooth" }); }
+      if (d.jtAsAplica != null) { const m = (conversas[cid] || [])[+d.jtAsAplica]; if (m?.af) { aplicaNosFiltros(cid, m.af); sessaoGrava(cid, { filtros: fil(cid) }); pinta(); el.querySelector(".jt-tab-card")?.scrollIntoView({ block: "start", behavior: reduz() ? "auto" : "smooth" }); } return; }
+      if (d.jtAsVer) { const j = G && jogadorGlobal(G, d.jtAsVer, D); if (j) { filtros[cid] = { ...FILTRO_PADRAO, q: j.nome, semLes: false, idMin: 15, idMax: 45 }; fichaAberta[cid] = j.id; sessaoGrava(cid, { filtros: filtros[cid] }); pinta(); el.querySelector("[data-jt-mini]")?.closest("tr")?.scrollIntoView({ block: "center", behavior: reduz() ? "auto" : "smooth" }); } return; }
       if (d.jtFicha) { fichaAberta[cid] = fichaAberta[cid] === d.jtFicha ? null : d.jtFicha; pinta(); el.querySelector(`[data-jt-mini]`)?.closest("tr")?.scrollIntoView({ block: "nearest", behavior: reduz() ? "auto" : "smooth" }); return; }
       if (d.jtPos != null) { fil(cid).pos = d.jtPos; fil(cid).n = 25; sessaoGrava(cid, { filtros: fil(cid) }); return pinta(); }
       if ("jtLimpaF" in d) { filtros[cid] = { ...FILTRO_PADRAO, q: fil(cid).q, semLes: false }; sessaoGrava(cid, { filtros: filtros[cid] }); return pinta(); }
@@ -1171,6 +1244,12 @@
     el.addEventListener("input", filtra);
     el.addEventListener("change", filtra);
     el.addEventListener("submit", (ev) => {
+      if (ev.target.matches("[data-jt-as-f]")) {
+        ev.preventDefault();
+        const q = String(new FormData(ev.target).get("q") || "").trim().slice(0, 160);
+        if (q && G) { responde(cid, D, G, q); pinta(); el.querySelector(".jt-as-f input")?.focus(); el.querySelector(".jt-as-conversa li:last-child")?.scrollIntoView({ block: "nearest", behavior: reduz() ? "auto" : "smooth" }); }
+        return;
+      }
       if (!ev.target.matches("[data-jt-caixa-f]")) return;
       ev.preventDefault();
       const n = parseFloat(String(ev.target.querySelector("[data-jt-caixa-v]").value).replace(",", "."));
